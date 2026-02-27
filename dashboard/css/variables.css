@@ -1,10 +1,12 @@
-/* Sigil Dashboard — shadcn/ui Zinc Dark Theme Tokens */
+/* Sigil Dashboard — Design Tokens
+   Aesthetic: Industrial-precision command center
+   Base: shadcn/ui Zinc dark · Elevated with atmospheric depth */
 
 :root {
   /* Zinc dark (default) */
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  --card: 240 10% 5.5%;
   --card-foreground: 0 0% 98%;
   --popover: 240 10% 3.9%;
   --popover-foreground: 0 0% 98%;
@@ -21,27 +23,39 @@
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
   --ring: 240 4.9% 83.9%;
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* Semantic */
-  --success: 142 76% 36%;
+  /* Semantic — vivid operational colors */
+  --success: 152 82% 39%;
   --success-foreground: 0 0% 98%;
-  --warning: 48 96% 53%;
+  --warning: 43 96% 56%;
   --warning-foreground: 0 0% 9%;
-  --info: 217 91% 60%;
+  --info: 213 94% 58%;
   --info-foreground: 0 0% 98%;
 
-  /* Chart palette */
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  /* Glow accents for command-center feel */
+  --glow-success: 152 82% 39%;
+  --glow-info: 213 94% 58%;
+  --glow-warning: 43 96% 56%;
+  --glow-destructive: 0 62.8% 30.6%;
 
-  /* Typography */
+  /* Chart palette — neon-tinted for dark bg */
+  --chart-1: 213 94% 58%;
+  --chart-2: 152 82% 45%;
+  --chart-3: 35 92% 60%;
+  --chart-4: 270 70% 62%;
+  --chart-5: 340 82% 58%;
+
+  /* Surface layers (for depth) */
+  --surface-0: 240 10% 3.9%;
+  --surface-1: 240 10% 5.5%;
+  --surface-2: 240 8% 8%;
+  --surface-3: 240 6% 11%;
+
+  /* Typography — Geist for display, JetBrains Mono for data */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-  --font-size-xs: 0.75rem;
+  --font-size-xs: 0.6875rem;
   --font-size-sm: 0.8125rem;
   --font-size-base: 0.875rem;
   --font-size-lg: 1rem;
@@ -50,6 +64,7 @@
   --font-size-3xl: 1.875rem;
 
   /* Spacing */
+  --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -59,13 +74,21 @@
   --space-8: 2rem;
 
   /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --transition-fast: 120ms var(--ease-out);
+  --transition-base: 200ms var(--ease-out);
+  --transition-slow: 350ms var(--ease-out-expo);
+
+  /* Shadows — layered for depth */
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+  --shadow-md: 0 2px 8px hsl(0 0% 0% / 0.25), 0 1px 2px hsl(0 0% 0% / 0.2);
+  --shadow-lg: 0 4px 24px hsl(0 0% 0% / 0.3), 0 2px 8px hsl(0 0% 0% / 0.2);
+  --shadow-glow: 0 0 20px hsl(var(--glow-info) / 0.08);
 }
 
 [data-theme="light"] {
-  --background: 0 0% 100%;
+  --background: 0 0% 99%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
@@ -84,7 +107,15 @@
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 240 5.9% 10%;
-  --success: 142 76% 36%;
-  --warning: 48 96% 53%;
-  --info: 217 91% 60%;
+  --success: 152 82% 32%;
+  --warning: 43 96% 46%;
+  --info: 213 94% 48%;
+  --surface-0: 0 0% 99%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 240 4.8% 97%;
+  --surface-3: 240 4.8% 95%;
+  --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.06);
+  --shadow-md: 0 2px 8px hsl(0 0% 0% / 0.06), 0 1px 2px hsl(0 0% 0% / 0.04);
+  --shadow-lg: 0 4px 24px hsl(0 0% 0% / 0.08), 0 2px 8px hsl(0 0% 0% / 0.04);
+  --shadow-glow: none;
 }

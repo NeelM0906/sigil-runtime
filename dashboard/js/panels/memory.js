@@ -5,44 +5,48 @@ export function renderMemory(el, state, api) {
 
   const cards = [
     {
-      title: 'Working / Episodic',
-      items: [
-        ['Notes', mem.working_notes || 0],
-      ],
+      title: 'Working',
+      icon: '&#128221;',
+      items: [['Notes', mem.working_notes || 0]],
     },
     {
       title: 'Semantic',
+      icon: '&#129504;',
       items: [
-        ['Memories', mem.semantic_memories || 0],
+        ['Active', mem.semantic_memories || 0],
         ['Archived', mem.archived_memories || 0],
       ],
     },
     {
       title: 'Procedural',
+      icon: '&#9881;',
       items: [
         ['Strategies', mem.procedural_strategies || 0],
         ['Avg success', `${((mem.procedural_avg_success || 0) * 100).toFixed(1)}%`],
       ],
     },
     {
-      title: 'Conversation',
+      title: 'History',
+      icon: '&#128172;',
       items: [
-        ['Turns stored', mem.conversation_turns || 0],
+        ['Turns', mem.conversation_turns || 0],
         ['Summaries', mem.session_summaries || 0],
       ],
     },
   ];
 
+  const totalCount = (mem.semantic_memories || 0) + (mem.procedural_strategies || 0) + (mem.working_notes || 0);
+
   el.innerHTML = `
     <div class="card" style="height:100%">
       <div class="card-header">
-        <span class="card-title">Memory System</span>
-        <span class="badge">${(mem.semantic_memories || 0) + (mem.procedural_strategies || 0)} total</span>
+        <span class="card-title">Memory</span>
+        <span class="badge">${totalCount} total</span>
       </div>
-      <div class="flex gap-3 flex-wrap">
+      <div class="flex gap-3 flex-wrap" role="group" aria-label="Memory subsystems">
         ${cards.map(c => `
-          <div style="flex:1;min-width:140px;border:1px solid hsl(var(--border)/0.5);border-radius:var(--radius);padding:var(--space-3)">
-            <div class="text-xs text-muted font-medium mb-2">${c.title}</div>
+          <div class="sub-card" style="flex:1;min-width:130px">
+            <div class="sub-card-title">${c.title}</div>
             ${c.items.map(([label, val]) => `
               <div class="stat-row">
                 <span class="stat-label">${label}</span>

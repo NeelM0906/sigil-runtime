@@ -6,7 +6,7 @@ function delta(curr, prev) {
   if (Math.abs(d) < 0.001) return '<span class="delta-flat">—</span>';
   const arrow = d > 0 ? '&#9650;' : '&#9660;';
   const cls = d > 0 ? 'delta-up' : 'delta-down';
-  return `<span class="${cls}">${arrow} ${Math.abs(d).toFixed(3)}</span>`;
+  return `<span class="${cls}" style="font-size:var(--font-size-xs)">${arrow} ${Math.abs(d).toFixed(3)}</span>`;
 }
 
 export function renderAdaptation(el, state, api) {
@@ -24,34 +24,43 @@ export function renderAdaptation(el, state, api) {
     ['Brier Score', latest.brier_score, prior.brier_score],
   ];
 
+  const hasMetrics = metricRows.some(([, c]) => c != null);
+
   el.innerHTML = `
     <div class="card" style="height:100%">
       <div class="card-header">
-        <span class="card-title">Adaptation Engine</span>
+        <span class="card-title">Adaptation</span>
         <span class="badge badge-outline">${policy.name || 'default'} v${policy.version || '?'}</span>
       </div>
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr><th>Metric</th><th class="text-right">Latest</th><th class="text-right">Prior</th><th class="text-right">Delta</th></tr>
-          </thead>
-          <tbody>
-            ${metricRows.map(([name, curr, prev]) => `
-              <tr>
-                <td>${name}</td>
-                <td class="text-right text-mono">${curr != null ? Number(curr).toFixed(3) : '—'}</td>
-                <td class="text-right text-mono">${prev != null ? Number(prev).toFixed(3) : '—'}</td>
-                <td class="text-right">${delta(curr, prev)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      <div class="separator"></div>
+      ${!hasMetrics ? `
+        <div class="empty-state">
+          <div class="empty-state-icon">&#9881;</div>
+          <div class="empty-state-text">No adaptation metrics yet. Metrics populate after active turns.</div>
+        </div>
+      ` : `
+        <div class="table-container">
+          <table class="table" role="table" aria-label="Adaptation metrics">
+            <thead>
+              <tr><th>Metric</th><th class="text-right">Latest</th><th class="text-right">Prior</th><th class="text-right">Delta</th></tr>
+            </thead>
+            <tbody>
+              ${metricRows.map(([name, curr, prev]) => `
+                <tr>
+                  <td class="text-xs">${name}</td>
+                  <td class="text-right text-mono text-xs">${curr != null ? Number(curr).toFixed(3) : '—'}</td>
+                  <td class="text-right text-mono text-xs" style="opacity:0.5">${prev != null ? Number(prev).toFixed(3) : '—'}</td>
+                  <td class="text-right">${delta(curr, prev)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="separator"></div>
+      `}
       <div class="stat-row">
         <span class="stat-label">Turns tracked</span>
         <span class="stat-value">${adapt.turn_count || 0}</span>
       </div>
-      ${policy.reason ? `<div class="text-xs text-muted mt-2">Reason: ${policy.reason}</div>` : ''}
+      ${policy.reason ? `<div class="text-xs text-muted mt-2" style="opacity:0.6">Reason: ${policy.reason}</div>` : ''}
     </div>`;
 }
