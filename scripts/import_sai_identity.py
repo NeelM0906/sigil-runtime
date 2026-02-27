@@ -35,6 +35,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print actions without writing files",
     )
+    parser.add_argument(
+        "--skip-memory-copy",
+        action="store_true",
+        help="Skip copying source memory/*.md files into destination workspace memory/ directories",
+    )
     return parser.parse_args()
 
 
@@ -57,6 +62,23 @@ def copy_identity_bundle(source_dir: Path, dest_dir: Path, dry_run: bool) -> dic
     return {"copied": copied, "missing": missing}
 
 
+def copy_memory_markdown_files(source_dir: Path, dest_dir: Path, dry_run: bool) -> dict[str, int]:
+    source_memory = source_dir / "memory"
+    dest_memory = dest_dir / "memory"
+    if not source_memory.exists():
+        return {"copied": 0, "missing_source": 1}
+    files = sorted(source_memory.glob("*.md"))
+    if not dry_run:
+        dest_memory.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for src in files:
+        dst = dest_memory / src.name
+        if not dry_run:
+            shutil.copy2(src, dst)
+        copied += 1
+    return {"copied": copied, "missing_source": 0}
+
+
 def main() -> int:
     args = parse_args()
     source_root = Path(args.source_root).expanduser().resolve()
@@ -76,17 +98,34 @@ def main() -> int:
 
     total_copied = 0
     total_missing = 0
+    total_memory_copied = 0
     for workspace, source_dir in workspace_map.items():
         dest_dir = dest_root / workspace
         result = copy_identity_bundle(source_dir=source_dir, dest_dir=dest_dir, dry_run=bool(args.dry_run))
+        memory_result = {"copied": 0, "missing_source": 0}
+        if not args.skip_memory_copy and workspace in {"prime", "recovery"}:
+            memory_result = copy_memory_markdown_files(
+                source_dir=source_dir,
+                dest_dir=dest_dir,
+                dry_run=bool(args.dry_run),
+            )
         total_copied += len(result["copied"])
         total_missing += len(result["missing"])
+        total_memory_copied += int(memory_result["copied"])
         print(f"[{workspace}] source={source_dir}")
         print(f"  copied ({len(result['copied'])}): {', '.join(result['copied']) if result['copied'] else '-'}")
         print(f"  missing ({len(result['missing'])}): {', '.join(result['missing']) if result['missing'] else '-'}")
+        if workspace in {"prime", "recovery"} and not args.skip_memory_copy:
+            if memory_result["missing_source"]:
+                print("  memory copied: 0 (source memory/ missing)")
+            else:
+                print(f"  memory copied: {memory_result['copied']}")
 
     print("")
-    print(f"Import complete. copied={total_copied}, missing={total_missing}")
+    print(
+        f"Import complete. copied={total_copied}, missing={total_missing}, "
+        f"memory_copied={total_memory_copied}"
+    )
     return 0
 
 
