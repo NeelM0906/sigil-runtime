@@ -168,11 +168,18 @@ def _embed_query(query: str) -> list[float]:
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not openai_key:
         raise ValueError("OPENAI_API_KEY is required for pinecone_query embeddings")
+    embed_model = (
+        os.getenv("BOMBA_PINECONE_EMBED_MODEL")
+        or os.getenv("OPENAI_EMBEDDING_MODEL")
+        or DEFAULT_EMBED_MODEL
+    ).strip()
+    if not embed_model:
+        raise ValueError("embedding model is required")
     payload = _http_json(
         "POST",
         OPENAI_EMBEDDINGS_API,
         headers={"Authorization": f"Bearer {openai_key}"},
-        payload={"model": DEFAULT_EMBED_MODEL, "input": query},
+        payload={"model": embed_model, "input": query},
     )
     data = payload.get("data")
     if not isinstance(data, list) or not data:

@@ -126,6 +126,37 @@ class PineconeToolTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 query_tool.execute({"query": "hello", "index_name": "../admin/keys"}, _context())
 
+    def test_embedding_model_reads_env_override(self) -> None:
+        seen_models: list[str] = []
+
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            if "api.pinecone.io/indexes" in url:
+                return {"indexes": [{"name": "ublib2", "host": "idx-host"}]}
+            if "openai.com/v1/embeddings" in url:
+                if isinstance(payload, dict):
+                    seen_models.append(str(payload.get("model")))
+                return {"data": [{"embedding": [0.1, 0.2, 0.3]}]}
+            if "idx-host/query" in url:
+                return {"matches": []}
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "PINECONE_API_KEY": "pc-key",
+                    "OPENAI_API_KEY": "oa-key",
+                    "BOMBA_PINECONE_EMBED_MODEL": "text-embedding-3-large",
+                },
+                clear=False,
+            ),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            query_tool = next(t for t in tools if t.name == "pinecone_query")
+            query_tool.execute({"query": "hello world"}, _context())
+            self.assertIn("text-embedding-3-large", seen_models)
+
 
 if __name__ == "__main__":
     unittest.main()
