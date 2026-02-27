@@ -185,7 +185,7 @@ PYTHONPATH=src .venv/bin/python -m pytest tests/test_wave1_capabilities.py::Test
 # With print output
 PYTHONPATH=src .venv/bin/python -m pytest -s tests/test_wave1_capabilities.py
 ```
-Test naming convention: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`.
+Test naming convention: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`, `test_builtin_*`, `test_import_*`, `test_soul_*`, `test_sisters*`.
 
 ## HTTP API Curl Templates (heredoc-safe for agents)
 ```bash
