@@ -60,8 +60,8 @@ export function renderSisters(el, state, api) {
                   <td class="text-xs text-mono" style="opacity:.7">${fmtTime(item.last_activity)}</td>
                   <td>
                     <div class="flex gap-1">
-                      <button class="button button-sm" data-sister-action="spawn" data-sister-id="${escapeHtml(item.sister_id)}">Start</button>
-                      <button class="button button-sm button-secondary" data-sister-action="stop" data-sister-id="${escapeHtml(item.sister_id)}">Stop</button>
+                      <button class="btn btn-sm btn-outline" data-sister-action="spawn" data-sister-id="${escapeHtml(item.sister_id)}">Start</button>
+                      <button class="btn btn-sm btn-outline" data-sister-action="stop" data-sister-id="${escapeHtml(item.sister_id)}">Stop</button>
                     </div>
                   </td>
                 </tr>
