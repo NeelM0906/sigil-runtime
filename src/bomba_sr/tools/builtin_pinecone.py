@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import threading
@@ -78,8 +79,9 @@ def _choose_pinecone_api_key(index_name: str) -> str:
 
 
 def _list_indexes_with_cache(api_key: str) -> dict[str, Any]:
+    cache_key = _cache_key_for_api_key(api_key)
     with _INDEX_CACHE_LOCK:
-        cached = _INDEX_CACHE.get(api_key)
+        cached = _INDEX_CACHE.get(cache_key)
     now = time.time()
     if cached is not None:
         ts, payload = cached
@@ -89,7 +91,7 @@ def _list_indexes_with_cache(api_key: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         payload = {}
     with _INDEX_CACHE_LOCK:
-        _INDEX_CACHE[api_key] = (now, payload)
+        _INDEX_CACHE[cache_key] = (now, payload)
     return payload
 
 
@@ -105,10 +107,11 @@ def _index_records(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _resolve_index_host(index_name: str, api_key: str) -> str:
+    cache_key = _cache_key_for_api_key(api_key)
     for force_refresh in (False, True):
         if force_refresh:
             with _INDEX_CACHE_LOCK:
-                _INDEX_CACHE.pop(api_key, None)
+                _INDEX_CACHE.pop(cache_key, None)
         payload = _list_indexes_with_cache(api_key)
         for item in _index_records(payload):
             if str(item.get("name") or "") == index_name:
@@ -161,6 +164,11 @@ def _sanitize_index_host(host: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9.:-]+", cleaned):
         raise ValueError("invalid Pinecone host")
     return cleaned
+
+
+def _cache_key_for_api_key(api_key: str) -> str:
+    digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
 
 
 def _embed_query(query: str) -> list[float]:
