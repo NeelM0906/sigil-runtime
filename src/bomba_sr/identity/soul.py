@@ -201,7 +201,10 @@ def _extract_energies(text: str) -> dict[str, str]:
     energies: dict[str, str] = {}
     if not text:
         return energies
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    section_lines = _extract_section_lines(text, heading_regex=r"^#{1,6}\s+.*\benergies\b")
+    lines = [line.strip() for line in section_lines if line.strip()]
+    if not lines:
+        return energies
     for key in ("fun", "aspirational", "goddess", "zeus"):
         for line in lines:
             if re.search(rf"\b{re.escape(key)}\b", line, flags=re.IGNORECASE):
@@ -225,3 +228,22 @@ def _first_line_matching(text: str, pattern: str) -> str | None:
         if stripped and regex.search(stripped):
             return _clean_inline_markup(stripped)
     return None
+
+
+def _extract_section_lines(text: str, heading_regex: str) -> list[str]:
+    if not text.strip():
+        return []
+    heading = re.compile(heading_regex, re.IGNORECASE)
+    lines = text.splitlines()
+    section: list[str] = []
+    in_section = False
+    for line in lines:
+        stripped = line.rstrip()
+        if not in_section and heading.match(stripped):
+            in_section = True
+            continue
+        if in_section:
+            if stripped.startswith("#"):
+                break
+            section.append(stripped)
+    return section

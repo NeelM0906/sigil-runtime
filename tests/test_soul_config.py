@@ -73,6 +73,28 @@ class SoulConfigTests(unittest.TestCase):
             self.assertEqual(soul.formula_text, "Formula text")
             self.assertEqual(soul.priorities_text, "Priorities text")
 
+    def test_energy_extraction_scoped_to_energies_section(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text(
+                "\n".join(
+                    [
+                        "# SOUL",
+                        "I focus on fundamental functions.",
+                        "## The 4 Energies",
+                        "- Fun: playful momentum",
+                        "- Zeus: strong command",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIn("fun", soul.energies)
+            self.assertIn("zeus", soul.energies)
+            self.assertNotIn("aspirational", soul.energies)
+
 
 if __name__ == "__main__":
     unittest.main()
