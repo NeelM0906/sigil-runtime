@@ -1815,6 +1815,55 @@ class RuntimeBridge:
         except Exception:
             governance_info = {"pending_approvals": 0}
 
+        # ── pinecone ──
+        pinecone_info: dict[str, Any] = {
+            "enabled": bool(self.config.pinecone_enabled),
+            "connected": False,
+            "index_count": 0,
+            "total_vector_count": 0,
+            "error": None,
+        }
+        if self.config.pinecone_enabled and "pinecone_list_indexes" in runtime.tool_executor.known_tool_names():
+            try:
+                policy = runtime.policy_pipeline.resolve(
+                    ToolPolicyContext(
+                        profile=self.config.tool_profile,
+                        tenant_id=tenant_id,
+                        provider_name=self.provider.provider_name,
+                    ),
+                    available_tools=runtime.tool_executor.known_tool_names(),
+                )
+                tool_ctx = ToolContext(
+                    tenant_id=tenant_id,
+                    session_id="dashboard",
+                    turn_id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    workspace_root=runtime.context.workspace_root,
+                    db=runtime.db,
+                    guard_path=lambda p: self.registry.guard_path(runtime.context, p),
+                )
+                result = runtime.tool_executor.execute(
+                    tool_name="pinecone_list_indexes",
+                    arguments={},
+                    context=tool_ctx,
+                    policy=policy,
+                    confidence=1.0,
+                )
+                if result.status == "executed":
+                    indexes = result.output.get("indexes")
+                    if isinstance(indexes, list):
+                        pinecone_info["connected"] = True
+                        pinecone_info["index_count"] = len(indexes)
+                        pinecone_info["total_vector_count"] = sum(
+                            int(item.get("vector_count") or 0)
+                            for item in indexes
+                            if isinstance(item, dict)
+                        )
+                else:
+                    pinecone_info["error"] = str(result.output.get("error") or result.output.get("reason") or result.status)
+            except Exception as exc:
+                pinecone_info["error"] = str(exc)
+
         # ── sisters ──
         try:
             sisters_info = {
@@ -1851,6 +1900,7 @@ class RuntimeBridge:
             "autonomy": autonomy_info,
             "skills": skills_info,
             "governance": governance_info,
+            "pinecone": pinecone_info,
             "sisters": sisters_info,
             "loop_telemetry": loop_telemetry,
         }

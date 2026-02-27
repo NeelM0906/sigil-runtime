@@ -61,6 +61,7 @@ export function renderHealth(el, state, api) {
   const sessions = state.get('sessions') || {};
   const tokens = state.get('tokens') || {};
   const telemetry = state.get('loop_telemetry') || [];
+  const pinecone = state.get('pinecone') || {};
   const cfg = rt.config || {};
 
   const budgetUsd = cfg.budget_limit_usd || 2.0;
@@ -133,6 +134,20 @@ export function renderHealth(el, state, api) {
         <div class="stat-row"><span class="stat-label">Avg iters</span><span class="stat-value">${sessions.avg_iterations || 0}</span></div>
         <div class="stat-row"><span class="stat-label">Max/turn</span><span class="stat-value">${cfg.max_iterations || 25}</span></div>
         <div class="mt-2">${miniBarSVG(iterHistory, { color: 'var(--chart-2)' })}</div>
+      </div>
+
+      <!-- Pinecone -->
+      <div class="card flex-1" style="min-width:200px">
+        <div class="card-header">
+          <span class="card-title">Pinecone</span>
+          <span class="badge ${pinecone.connected ? 'badge-success' : 'badge-outline'}">${pinecone.connected ? 'Connected' : 'Disconnected'}</span>
+        </div>
+        <div class="card-value">${fmtNumber(pinecone.index_count || 0)}</div>
+        <div class="card-subtitle">indexes accessible</div>
+        <div class="separator"></div>
+        <div class="stat-row"><span class="stat-label">Enabled</span><span class="stat-value">${pinecone.enabled ? 'yes' : 'no'}</span></div>
+        <div class="stat-row"><span class="stat-label">Vectors</span><span class="stat-value">${fmtNumber(pinecone.total_vector_count || 0)}</span></div>
+        <div class="text-xs text-mono mt-2" style="opacity:.65">${pinecone.error ? `error: ${pinecone.error}` : 'status OK'}</div>
       </div>
     </div>`;
 }
