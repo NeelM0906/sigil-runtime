@@ -84,13 +84,38 @@ def _index_records(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _resolve_index_host(index_name: str, api_key: str) -> str:
-    payload = _list_indexes_with_cache(api_key)
-    for item in _index_records(payload):
-        if str(item.get("name") or "") == index_name:
-            host = str(item.get("host") or "").strip()
-            if host:
-                return host
+    for force_refresh in (False, True):
+        if force_refresh and api_key in _INDEX_CACHE:
+            del _INDEX_CACHE[api_key]
+        payload = _list_indexes_with_cache(api_key)
+        for item in _index_records(payload):
+            if str(item.get("name") or "") == index_name:
+                host = str(item.get("host") or "").strip()
+                if host:
+                    return host
+    fallback = _fallback_host_map().get(index_name)
+    if isinstance(fallback, str) and fallback.strip():
+        return fallback.strip()
     raise ValueError(f"Pinecone index host not found for '{index_name}'")
+
+
+def _fallback_host_map() -> dict[str, str]:
+    import os
+
+    raw = os.getenv("BOMBA_PINECONE_INDEX_HOSTS", "").strip()
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in payload.items():
+        if isinstance(key, str) and isinstance(value, str) and key.strip() and value.strip():
+            out[key.strip()] = value.strip()
+    return out
 
 
 def _embed_query(query: str) -> list[float]:
