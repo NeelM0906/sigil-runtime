@@ -12,6 +12,7 @@ from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 
 def _task(i: int) -> SubAgentTask:
     return SubAgentTask(
+        tenant_id="tenant-crash",
         task_id=f"task-{i}",
         ticket_id=f"ticket-{i}",
         idempotency_key=f"idem-key-{i}-{uuid.uuid4().hex[:16]}",
@@ -22,6 +23,8 @@ def _task(i: int) -> SubAgentTask:
         priority="normal",
         run_timeout_seconds=30,
         cleanup="keep",
+        workspace_root=None,
+        model_id=None,
     )
 
 

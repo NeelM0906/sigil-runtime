@@ -212,6 +212,7 @@ def make_handler(bridge: RuntimeBridge):
         def _spawn_subagent(self) -> None:
             body = self._read_json()
             task = SubAgentTask(
+                tenant_id=str(body["tenant_id"]),
                 task_id=str(body.get("task_id") or uuid.uuid4()),
                 ticket_id=str(body.get("ticket_id") or uuid.uuid4()),
                 idempotency_key=str(body["idempotency_key"]),
@@ -222,6 +223,8 @@ def make_handler(bridge: RuntimeBridge):
                 priority=str(body.get("priority") or "normal"),
                 run_timeout_seconds=int(body.get("run_timeout_seconds") or 120),
                 cleanup=str(body.get("cleanup") or "keep"),
+                workspace_root=(str(body["workspace_root"]) if body.get("workspace_root") else None),
+                model_id=(str(body["model_id"]) if body.get("model_id") else None),
             )
             handle = bridge.spawn_subagent(
                 tenant_id=str(body["tenant_id"]),

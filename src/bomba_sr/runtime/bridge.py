@@ -541,6 +541,7 @@ class RuntimeBridge:
         loop_duration_ms = 0
         loop_estimated_cost_usd = 0.0
         loop_budget_exhausted = False
+        cascade_stopped_runs: list[str] = []
         rescue_info: dict[str, Any] = {"method": "disabled"}
         if self.config.agentic_loop_enabled:
             loop_started_at = datetime.now(timezone.utc)
@@ -601,6 +602,12 @@ class RuntimeBridge:
             loop_stopped_reason = loop_result.stopped_reason
             loop_estimated_cost_usd = loop_result.estimated_cost_usd
             loop_budget_exhausted = loop_result.budget_exhausted
+            if loop_stopped_reason in {"budget_exhausted", "max_iterations"}:
+                cascade_stopped_runs = runtime.protocol.cascade_stop_session(
+                    tenant_id=request.tenant_id,
+                    session_id=request.session_id,
+                    reason=f"parent_loop_{loop_stopped_reason}",
+                )
             if rescue is not None and loop_stopped_reason not in {"budget_exhausted", "error"}:
                 rescue.cleanup_ref()
         else:
@@ -823,6 +830,9 @@ class RuntimeBridge:
                 "subagent_p95_latency_ms": rollup.subagent_p95_latency_ms,
             },
             "rescue": rescue_info,
+            "subagents": {
+                "cascade_stopped_runs": cascade_stopped_runs,
+            },
         }
 
     def invoke_code_tool(
@@ -1298,6 +1308,10 @@ class RuntimeBridge:
             )
 
         protocol = SubAgentProtocol(db)
+        from bomba_sr.subagents.worker import SubAgentWorkerFactory
+
+        subagent_worker_factory = SubAgentWorkerFactory(self)
+        default_subagent_worker = subagent_worker_factory.create_worker()
         orchestrator = SubAgentOrchestrator(
             protocol,
             crash_storm_config=CrashStormConfig(
@@ -1305,6 +1319,8 @@ class RuntimeBridge:
                 max_crashes=self.config.subagent_crash_max,
                 cooldown_seconds=self.config.subagent_crash_cooldown_seconds,
             ),
+            max_spawn_depth=self.config.subagent_max_spawn_depth,
+            default_worker=default_subagent_worker,
         )
         codeintel = CodeIntelRouter(
             config=self.config,
@@ -1391,7 +1407,13 @@ class RuntimeBridge:
         tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_approval_tools(governance, memory))
-        tool_executor.register_many(builtin_subagent_tools(orchestrator=orchestrator, protocol=protocol))
+        tool_executor.register_many(
+            builtin_subagent_tools(
+                orchestrator=orchestrator,
+                protocol=protocol,
+                default_worker=default_subagent_worker,
+            )
+        )
         tool_executor.register_many(builtin_project_tools(projects))
         tool_executor.register_many(
             builtin_skill_tools(skill_loader, skills_registry, skills_ecosystem=skills_ecosystem)

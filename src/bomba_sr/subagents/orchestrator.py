@@ -63,10 +63,14 @@ class SubAgentOrchestrator:
         protocol: SubAgentProtocol,
         max_workers: int = 8,
         crash_storm_config: CrashStormConfig | None = None,
+        max_spawn_depth: int = 3,
+        default_worker: SubAgentWorker | None = None,
     ):
         self.protocol = protocol
         self.executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="bomba-subagent")
         self.crash_detector = CrashStormDetector(crash_storm_config)
+        self.max_spawn_depth = max(1, int(max_spawn_depth))
+        self.default_worker = default_worker
         self._futures: set[Future[dict[str, Any]]] = set()
         self._futures_lock = threading.Lock()
 
@@ -77,11 +81,16 @@ class SubAgentOrchestrator:
         parent_turn_id: str,
         parent_agent_id: str,
         child_agent_id: str,
-        worker: SubAgentWorker,
+        worker: SubAgentWorker | None = None,
         parent_run_id: str | None = None,
     ) -> SubAgentHandle:
         if self.crash_detector.is_in_cooldown():
             raise RuntimeError("Sub-agent spawn blocked: crash storm cooldown active")
+        if self._lineage_depth(parent_run_id) >= self.max_spawn_depth:
+            raise RuntimeError("max spawn depth exceeded")
+        active_worker = worker or self.default_worker
+        if active_worker is None:
+            raise RuntimeError("no sub-agent worker configured")
         run = self.protocol.spawn(
             task=task,
             parent_session_id=parent_session_id,
@@ -96,7 +105,7 @@ class SubAgentOrchestrator:
             self._run_worker,
             run_id,
             task,
-            worker,
+            active_worker,
         )
         with self._futures_lock:
             self._futures.add(future)
@@ -138,3 +147,15 @@ class SubAgentOrchestrator:
         for future in pending:
             if not future.done():
                 future.cancel()
+
+    def _lineage_depth(self, parent_run_id: str | None) -> int:
+        depth = 0
+        current = parent_run_id
+        while current:
+            run = self.protocol.get_run(current)
+            if run is None:
+                break
+            depth += 1
+            current_value = run.get("parent_run_id")
+            current = str(current_value) if current_value else None
+        return depth

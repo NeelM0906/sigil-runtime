@@ -11,6 +11,7 @@ from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 class SubAgentProtocolTests(unittest.TestCase):
     def _task(self, ticket_id: str, idempotency_key: str) -> SubAgentTask:
         return SubAgentTask(
+            tenant_id="tenant-wave2",
             task_id=str(uuid.uuid4()),
             ticket_id=ticket_id,
             idempotency_key=idempotency_key,
@@ -21,6 +22,8 @@ class SubAgentProtocolTests(unittest.TestCase):
             priority="normal",
             run_timeout_seconds=120,
             cleanup="keep",
+            workspace_root=None,
+            model_id=None,
         )
 
     def test_idempotent_spawn(self) -> None:
@@ -154,6 +157,33 @@ class SubAgentProtocolTests(unittest.TestCase):
             ok = p.announce_with_retry(done["run_id"], sender=sender, max_attempts=4, base_delay_seconds=0.001)
             self.assertTrue(ok)
             self.assertEqual(attempts["n"], 3)
+
+    def test_cascade_stop_session_stops_active_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            p = SubAgentProtocol(db)
+            session_id = str(uuid.uuid4())
+
+            run_a = p.spawn(
+                task=self._task(str(uuid.uuid4()), "turn-a::hash-12345"),
+                parent_session_id=session_id,
+                parent_turn_id="turn-a",
+                parent_agent_id=str(uuid.uuid4()),
+                child_agent_id=str(uuid.uuid4()),
+            )
+            run_b = p.spawn(
+                task=self._task(str(uuid.uuid4()), "turn-b::hash-67890"),
+                parent_session_id=session_id,
+                parent_turn_id="turn-b",
+                parent_agent_id=str(uuid.uuid4()),
+                child_agent_id=str(uuid.uuid4()),
+            )
+            p.start(run_a["run_id"])
+            p.start(run_b["run_id"])
+
+            stopped = p.cascade_stop_session("tenant-wave2", session_id, reason="session-ended")
+            self.assertIn(run_a["run_id"], stopped)
+            self.assertIn(run_b["run_id"], stopped)
 
 
 if __name__ == "__main__":

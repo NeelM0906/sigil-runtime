@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from bomba_sr.subagents.orchestrator import SubAgentOrchestrator
+from bomba_sr.subagents.orchestrator import SubAgentOrchestrator, SubAgentWorker
 from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
@@ -18,12 +18,13 @@ def _default_worker(run_id: str, task: SubAgentTask, protocol: SubAgentProtocol)
     }
 
 
-def _spawn_factory(orchestrator: SubAgentOrchestrator):
+def _spawn_factory(orchestrator: SubAgentOrchestrator, default_worker: SubAgentWorker | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         goal = str(arguments.get("goal") or "").strip()
         if not goal:
             raise ValueError("goal is required")
         task = SubAgentTask(
+            tenant_id=str(arguments.get("tenant_id") or context.tenant_id),
             task_id=str(arguments.get("task_id") or uuid.uuid4()),
             ticket_id=str(arguments.get("ticket_id") or uuid.uuid4()),
             idempotency_key=str(arguments.get("idempotency_key") or uuid.uuid4().hex),
@@ -34,6 +35,8 @@ def _spawn_factory(orchestrator: SubAgentOrchestrator):
             priority=str(arguments.get("priority") or "normal"),
             run_timeout_seconds=int(arguments.get("run_timeout_seconds") or 120),
             cleanup=str(arguments.get("cleanup") or "keep"),
+            workspace_root=str(arguments.get("workspace_root") or context.workspace_root),
+            model_id=(str(arguments.get("model_id")) if arguments.get("model_id") else None),
         )
         handle = orchestrator.spawn_async(
             task=task,
@@ -41,7 +44,7 @@ def _spawn_factory(orchestrator: SubAgentOrchestrator):
             parent_turn_id=context.turn_id,
             parent_agent_id="parent-agent",
             child_agent_id=str(arguments.get("child_agent_id") or "subagent"),
-            worker=_default_worker,
+            worker=default_worker or _default_worker,
             parent_run_id=(str(arguments.get("parent_run_id")) if arguments.get("parent_run_id") else None),
         )
         return {"run_id": handle.run_id}
@@ -98,7 +101,11 @@ def _list_factory(protocol: SubAgentProtocol):
     return run
 
 
-def builtin_subagent_tools(orchestrator: SubAgentOrchestrator, protocol: SubAgentProtocol) -> list[ToolDefinition]:
+def builtin_subagent_tools(
+    orchestrator: SubAgentOrchestrator,
+    protocol: SubAgentProtocol,
+    default_worker: SubAgentWorker | None = None,
+) -> list[ToolDefinition]:
     return [
         ToolDefinition(
             name="sessions_spawn",
@@ -117,13 +124,16 @@ def builtin_subagent_tools(orchestrator: SubAgentOrchestrator, protocol: SubAgen
                     "run_timeout_seconds": {"type": "integer"},
                     "cleanup": {"type": "string"},
                     "child_agent_id": {"type": "string"},
+                    "tenant_id": {"type": "string"},
+                    "workspace_root": {"type": "string"},
+                    "model_id": {"type": "string"},
                 },
                 "required": ["goal"],
                 "additionalProperties": False,
             },
             risk_level="high",
             action_type="execute",
-            execute=_spawn_factory(orchestrator),
+            execute=_spawn_factory(orchestrator, default_worker),
             aliases=("spawn_subagent",),
         ),
         ToolDefinition(

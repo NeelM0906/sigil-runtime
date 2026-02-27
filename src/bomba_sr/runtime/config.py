@@ -65,6 +65,7 @@ class RuntimeConfig:
     subagent_crash_window_seconds: float = float(os.getenv("BOMBA_SUBAGENT_CRASH_WINDOW", "60"))
     subagent_crash_max: int = int(os.getenv("BOMBA_SUBAGENT_CRASH_MAX", "3"))
     subagent_crash_cooldown_seconds: float = float(os.getenv("BOMBA_SUBAGENT_CRASH_COOLDOWN", "120"))
+    subagent_max_spawn_depth: int = int(os.getenv("BOMBA_SUBAGENT_MAX_SPAWN_DEPTH", "3"))
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
     skills_telemetry_enabled: bool = os.getenv("BOMBA_SKILLS_TELEMETRY_ENABLED", "true").lower() != "false"
     skill_nl_router_enabled: bool = os.getenv("BOMBA_SKILL_NL_ROUTER_ENABLED", "true").lower() != "false"
@@ -97,5 +98,7 @@ class RuntimeConfig:
             raise ValueError("subagent_crash_max must be >= 1")
         if self.subagent_crash_cooldown_seconds < 0:
             raise ValueError("subagent_crash_cooldown_seconds must be >= 0")
+        if self.subagent_max_spawn_depth < 1:
+            raise ValueError("subagent_max_spawn_depth must be >= 1")
         if not self.skill_catalog_sources:
             raise ValueError("skill_catalog_sources must not be empty")

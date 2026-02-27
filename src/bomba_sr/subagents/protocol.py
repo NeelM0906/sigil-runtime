@@ -27,6 +27,7 @@ TERMINAL_STATUSES = {STATUS_FAILED, STATUS_TIMED_OUT, STATUS_COMPLETED}
 
 @dataclass(frozen=True)
 class SubAgentTask:
+    tenant_id: str
     task_id: str
     ticket_id: str
     idempotency_key: str
@@ -37,8 +38,12 @@ class SubAgentTask:
     priority: str = "normal"
     run_timeout_seconds: int = 600
     cleanup: str = "keep"
+    workspace_root: str | None = None
+    model_id: str | None = None
 
     def validate(self) -> None:
+        if not self.tenant_id.strip():
+            raise ValueError("tenant_id is required")
         if not self.idempotency_key or len(self.idempotency_key) < 12:
             raise ValueError("idempotency_key must be at least 12 chars")
         if not self.goal.strip():
@@ -63,6 +68,7 @@ class SubAgentProtocol:
             """
             CREATE TABLE IF NOT EXISTS subagent_runs (
               run_id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL DEFAULT '',
               task_id TEXT NOT NULL,
               ticket_id TEXT NOT NULL,
               parent_run_id TEXT,
@@ -78,6 +84,8 @@ class SubAgentProtocol:
               priority TEXT NOT NULL,
               run_timeout_seconds INTEGER NOT NULL,
               cleanup TEXT NOT NULL,
+              workspace_root TEXT,
+              model_id TEXT,
               status TEXT NOT NULL,
               progress_pct INTEGER,
               accepted_at TEXT NOT NULL,
@@ -124,12 +132,17 @@ class SubAgentProtocol:
 
             CREATE INDEX IF NOT EXISTS idx_subagent_runs_parent
               ON subagent_runs(parent_run_id, status, accepted_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_subagent_runs_tenant_session
+              ON subagent_runs(tenant_id, parent_session_id, accepted_at DESC);
             CREATE INDEX IF NOT EXISTS idx_subagent_events_run
               ON subagent_events(run_id, seq ASC);
             CREATE INDEX IF NOT EXISTS idx_shared_writes_ticket
               ON shared_working_memory_writes(ticket_id, created_at DESC);
             """
         )
+        self._ensure_column("subagent_runs", "tenant_id", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_column("subagent_runs", "workspace_root", "TEXT")
+        self._ensure_column("subagent_runs", "model_id", "TEXT")
         self.db.commit()
 
     def spawn(
@@ -148,14 +161,15 @@ class SubAgentProtocol:
             self.db.execute(
                 """
                 INSERT INTO subagent_runs (
-                  run_id, task_id, ticket_id, parent_run_id, parent_session_id, parent_turn_id,
+                  run_id, tenant_id, task_id, ticket_id, parent_run_id, parent_session_id, parent_turn_id,
                   parent_agent_id, child_agent_id, idempotency_key, goal, done_when,
-                  input_context_refs, output_schema, priority, run_timeout_seconds, cleanup,
+                  input_context_refs, output_schema, priority, run_timeout_seconds, cleanup, workspace_root, model_id,
                   status, accepted_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
+                    task.tenant_id,
                     task.task_id,
                     task.ticket_id,
                     parent_run_id,
@@ -171,6 +185,8 @@ class SubAgentProtocol:
                     task.priority,
                     task.run_timeout_seconds,
                     task.cleanup,
+                    task.workspace_root,
+                    task.model_id,
                     STATUS_ACCEPTED,
                     now,
                 ),
@@ -401,6 +417,23 @@ class SubAgentProtocol:
             stopped.append(current)
         return stopped
 
+    def cascade_stop_session(self, tenant_id: str, session_id: str, reason: str = "session cascade stop") -> list[str]:
+        rows = self.db.execute(
+            """
+            SELECT run_id
+            FROM subagent_runs
+            WHERE tenant_id = ? AND parent_session_id = ? AND status NOT IN (?, ?, ?)
+            ORDER BY accepted_at DESC
+            """,
+            (tenant_id, session_id, STATUS_FAILED, STATUS_TIMED_OUT, STATUS_COMPLETED),
+        ).fetchall()
+        stopped: set[str] = set()
+        for row in rows:
+            run_id = str(row["run_id"])
+            for item in self.cascade_stop(run_id, reason=reason):
+                stopped.add(item)
+        return sorted(stopped)
+
     def announce_with_retry(
         self,
         run_id: str,
@@ -528,3 +561,10 @@ class SubAgentProtocol:
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if column in existing:
+            return
+        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")

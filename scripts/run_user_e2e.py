@@ -70,6 +70,7 @@ def main() -> int:
     )
 
     task = SubAgentTask(
+        tenant_id=args.tenant_id,
         task_id=str(uuid.uuid4()),
         ticket_id=str(uuid.uuid4()),
         idempotency_key=f"{turn['turn']['turn_id']}::demo-subagent",
@@ -80,6 +81,8 @@ def main() -> int:
         priority="normal",
         run_timeout_seconds=120,
         cleanup="keep",
+        workspace_root=str(workspace),
+        model_id=args.model_id,
     )
 
     handle = bridge.spawn_subagent(
