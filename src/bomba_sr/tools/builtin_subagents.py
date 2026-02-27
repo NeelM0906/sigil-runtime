@@ -73,10 +73,11 @@ def _list_factory(protocol: SubAgentProtocol):
             SELECT run_id, task_id, ticket_id, parent_session_id, parent_turn_id, parent_agent_id,
                    child_agent_id, status, progress_pct, accepted_at, started_at, ended_at
             FROM subagent_runs
+            WHERE tenant_id = ?
             ORDER BY accepted_at DESC
             LIMIT ?
             """,
-            (limit,),
+            (context.tenant_id, limit),
         ).fetchall()
         return {
             "runs": [
