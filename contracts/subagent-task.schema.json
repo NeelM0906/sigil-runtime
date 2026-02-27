@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/subagent-task.schema.json",
+  "title": "SubAgentTask",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId",
+    "idempotencyKey",
+    "goal",
+    "doneWhen",
+    "inputContextRefs",
+    "outputSchema",
+    "priority",
+    "runTimeoutSeconds",
+    "cleanup"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 256
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doneWhen": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inputContextRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high"]
+    },
+    "runTimeoutSeconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 86400
+    },
+    "cleanup": {
+      "type": "string",
+      "enum": ["keep", "archive"]
+    }
+  }
+}

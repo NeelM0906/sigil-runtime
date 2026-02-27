@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sigil/contracts/tool-definition.schema.json",
+  "title": "ToolDefinition",
+  "type": "object",
+  "required": ["name", "description", "parameters", "risk_level", "action_type"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "parameters": { "type": "object" },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "action_type": { "type": "string", "minLength": 1 },
+    "aliases": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

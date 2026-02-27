@@ -1,0 +1,1506 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from bomba_sr.adaptation.runtime_adaptation import RuntimeAdaptationEngine
+from bomba_sr.artifacts.store import ArtifactStore
+from bomba_sr.codeintel.router import CodeIntelRouter
+from bomba_sr.commands.disclosure import SkillDisclosure
+from bomba_sr.commands.parser import CommandParser
+from bomba_sr.commands.router import CommandContext, CommandRouter
+from bomba_sr.commands.skill_nl_router import parse_skill_nl_intent
+from bomba_sr.context.policy import ContextPolicyEngine, TurnProfile
+from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
+from bomba_sr.governance.tool_policy import ToolGovernanceService
+from bomba_sr.identity.profile import UserIdentityService
+from bomba_sr.info.retrieval import GenericInfoRetriever
+from bomba_sr.llm.providers import ChatMessage, LLMProvider, provider_from_env
+from bomba_sr.memory.embeddings import OpenAIEmbeddingProvider
+from bomba_sr.memory.hybrid import HybridMemoryStore
+from bomba_sr.models.capabilities import CapabilityError, ModelCapabilityService
+from bomba_sr.plugins.registry import PluginRegistry
+from bomba_sr.projects.service import ProjectService
+from bomba_sr.runtime.config import RuntimeConfig
+from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
+from bomba_sr.runtime.rescue import WorkspaceRescue
+from bomba_sr.runtime.tenancy import TenantContext, TenantRegistry
+from bomba_sr.search.agentic_search import AgenticSearchExecutor, SearchPlan, result_pack_to_dict
+from bomba_sr.skills.eligibility import EligibilityEngine
+from bomba_sr.skills.engine import SkillEngine
+from bomba_sr.skills.ecosystem import SkillEcosystemService
+from bomba_sr.skills.loader import SkillLoader
+from bomba_sr.skills.registry import SkillRegistry
+from bomba_sr.skills.skillmd_parser import SkillMdParser
+from bomba_sr.storage.db import RuntimeDB
+from bomba_sr.subagents.orchestrator import CrashStormConfig, SubAgentHandle, SubAgentOrchestrator, SubAgentWorker
+from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
+from bomba_sr.tools.base import ToolContext, ToolExecutor
+from bomba_sr.tools.builtin_approvals import builtin_approval_tools
+from bomba_sr.tools.builtin_compaction import builtin_compaction_tools
+from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
+from bomba_sr.tools.builtin_exec import builtin_exec_tools
+from bomba_sr.tools.builtin_fs import builtin_fs_tools
+from bomba_sr.tools.builtin_memory import builtin_memory_tools
+from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
+from bomba_sr.tools.builtin_projects import builtin_project_tools
+from bomba_sr.tools.builtin_search import builtin_search_tools
+from bomba_sr.tools.builtin_skills import builtin_skill_tools
+from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
+
+
+@dataclass(frozen=True)
+class TurnRequest:
+    tenant_id: str
+    session_id: str
+    user_id: str
+    user_message: str
+    turn_id: str | None = None
+    model_id: str | None = None
+    profile: TurnProfile = TurnProfile.CHAT
+    workspace_root: str | None = None
+    search_query: str | None = None
+    project_id: str | None = None
+    task_id: str | None = None
+
+
+@dataclass
+class _TenantRuntime:
+    context: TenantContext
+    db: RuntimeDB
+    capabilities: ModelCapabilityService
+    context_engine: ContextPolicyEngine
+    search: AgenticSearchExecutor
+    memory: HybridMemoryStore
+    protocol: SubAgentProtocol
+    orchestrator: SubAgentOrchestrator
+    adaptation: RuntimeAdaptationEngine
+    artifacts: ArtifactStore
+    codeintel: CodeIntelRouter
+    governance: ToolGovernanceService
+    projects: ProjectService
+    skills_registry: SkillRegistry
+    skills_engine: SkillEngine
+    skill_loader: SkillLoader
+    skills_ecosystem: SkillEcosystemService
+    plugin_registry: PluginRegistry
+    policy_pipeline: PolicyPipeline
+    tool_executor: ToolExecutor
+    command_parser: CommandParser
+    command_router: CommandRouter
+    skill_disclosure: SkillDisclosure
+    identity: UserIdentityService
+    info: GenericInfoRetriever
+
+
+class RuntimeBridge:
+    def __init__(
+        self,
+        config: RuntimeConfig | None = None,
+        provider: LLMProvider | None = None,
+        serena_transport: Any | None = None,
+        embedding_provider: OpenAIEmbeddingProvider | None = None,
+    ) -> None:
+        self.config = config or RuntimeConfig()
+        self.provider = provider or provider_from_env()
+        self.registry = TenantRegistry(self.config.runtime_home)
+        self.serena_transport = serena_transport
+        self.embedding_provider = embedding_provider
+        if self.embedding_provider is None and os.getenv("OPENAI_API_KEY"):
+            self.embedding_provider = OpenAIEmbeddingProvider(api_key=os.environ["OPENAI_API_KEY"])
+        self._tenants: dict[str, _TenantRuntime] = {}
+
+    def handle_turn(self, request: TurnRequest) -> dict[str, Any]:
+        runtime = self._tenant_runtime(request.tenant_id, request.workspace_root)
+        turn_id = request.turn_id or str(uuid.uuid4())
+        model_id = request.model_id or self.config.default_model_id
+
+        effective_user_message = request.user_message
+        selected_skill_context = ""
+
+        if runtime.command_parser.is_command(request.user_message):
+            parsed = runtime.command_parser.parse(request.user_message)
+            if parsed is not None:
+                command_policy = runtime.policy_pipeline.resolve(
+                    ToolPolicyContext(
+                        profile=self.config.tool_profile,
+                        tenant_id=request.tenant_id,
+                        provider_name=self.provider.provider_name,
+                    ),
+                    available_tools=runtime.tool_executor.known_tool_names(),
+                )
+                command_ctx = CommandContext(
+                    tool_context=ToolContext(
+                        tenant_id=request.tenant_id,
+                        session_id=request.session_id,
+                        turn_id=turn_id,
+                        user_id=request.user_id,
+                        workspace_root=runtime.context.workspace_root,
+                        db=runtime.db,
+                        guard_path=lambda p: self.registry.guard_path(runtime.context, p),
+                    ),
+                    policy=command_policy,
+                    profile_lookup=lambda: runtime.identity.get_profile(request.tenant_id, request.user_id),
+                )
+                cmd_result = runtime.command_router.route(parsed, command_ctx)
+                if cmd_result.handled and cmd_result.bypass_llm:
+                    payload_text = json.dumps(cmd_result.output or {}, indent=2, ensure_ascii=True)
+                    return {
+                        "tenant": {
+                            "tenant_id": request.tenant_id,
+                            "workspace_root": str(runtime.context.workspace_root),
+                            "db_path": str(runtime.context.db_path),
+                        },
+                        "turn": {
+                            "session_id": request.session_id,
+                            "turn_id": turn_id,
+                            "model_id": model_id,
+                            "capability_source": "n/a",
+                            "profile": request.profile.value,
+                            "mode": "command",
+                            "project_id": request.project_id,
+                            "task_id": request.task_id,
+                        },
+                        "assistant": {
+                            "text": payload_text,
+                            "provider": "command_router",
+                            "usage": None,
+                        },
+                        "memory": {"pending_approvals": runtime.memory.pending_approvals(request.tenant_id, request.user_id)},
+                        "identity": {
+                            "profile": runtime.identity.get_profile(request.tenant_id, request.user_id),
+                            "newly_applied_signals": [],
+                            "pending_signals": runtime.identity.list_pending_signals(request.tenant_id, request.user_id),
+                        },
+                        "artifacts": [],
+                    }
+                if cmd_result.handled and cmd_result.skill_body:
+                    selected_skill_context = cmd_result.skill_body
+                    effective_user_message = (
+                        f"Command: /{parsed.command_name}\n"
+                        f"Command args: {parsed.raw_args}\n\n"
+                        f"Selected skill instructions:\n{cmd_result.skill_body}"
+                    )
+                elif not cmd_result.handled:
+                    return {
+                        "tenant": {
+                            "tenant_id": request.tenant_id,
+                            "workspace_root": str(runtime.context.workspace_root),
+                            "db_path": str(runtime.context.db_path),
+                        },
+                        "turn": {
+                            "session_id": request.session_id,
+                            "turn_id": turn_id,
+                            "model_id": model_id,
+                            "capability_source": "n/a",
+                            "profile": request.profile.value,
+                            "mode": "command_error",
+                            "project_id": request.project_id,
+                            "task_id": request.task_id,
+                        },
+                        "assistant": {
+                            "text": cmd_result.error or "Unknown command",
+                            "provider": "command_router",
+                            "usage": None,
+                        },
+                        "memory": {"pending_approvals": runtime.memory.pending_approvals(request.tenant_id, request.user_id)},
+                        "identity": {
+                            "profile": runtime.identity.get_profile(request.tenant_id, request.user_id),
+                            "newly_applied_signals": [],
+                            "pending_signals": runtime.identity.list_pending_signals(request.tenant_id, request.user_id),
+                        },
+                        "artifacts": [],
+                    }
+
+        if self.config.skill_nl_router_enabled:
+            intent = parse_skill_nl_intent(request.user_message)
+            if intent is not None:
+                try:
+                    if intent.name == "catalog_list":
+                        rows = self.list_skill_catalog(
+                            tenant_id=request.tenant_id,
+                            workspace_root=str(runtime.context.workspace_root),
+                            source=intent.source,
+                            limit=intent.limit or 50,
+                        )
+                        payload = {"intent": intent.name, "skills": rows}
+                    elif intent.name == "trust_get":
+                        payload = {
+                            "intent": intent.name,
+                            "source_trust": self.get_skill_source_trust(
+                                tenant_id=request.tenant_id,
+                                workspace_root=str(runtime.context.workspace_root),
+                            ),
+                        }
+                    elif intent.name == "trust_set":
+                        if not intent.source or not intent.trust_mode:
+                            raise ValueError("missing source or trust mode")
+                        payload = {
+                            "intent": intent.name,
+                            "source_trust": self.set_skill_source_trust(
+                                tenant_id=request.tenant_id,
+                                source=intent.source,
+                                trust_mode=intent.trust_mode,
+                                workspace_root=str(runtime.context.workspace_root),
+                            ),
+                        }
+                    elif intent.name == "install_request":
+                        if not intent.source or not intent.skill_id:
+                            raise ValueError("missing source or skill id")
+                        install = self.create_skill_install_request(
+                            tenant_id=request.tenant_id,
+                            user_id=request.user_id,
+                            source=intent.source,
+                            skill_id=intent.skill_id,
+                            session_id=request.session_id,
+                            turn_id=turn_id,
+                            workspace_root=str(runtime.context.workspace_root),
+                            reason="requested_via_chat_nl",
+                        )
+                        payload = {
+                            "intent": intent.name,
+                            "install_request": install,
+                            "next_step": "Approve with /approve tool:<approval_id>, then apply using /apply-install <request_id>.",
+                        }
+                    elif intent.name == "install_apply":
+                        if not intent.request_id:
+                            raise ValueError("missing request id")
+                        payload = {
+                            "intent": intent.name,
+                            "result": self.execute_skill_install(
+                                tenant_id=request.tenant_id,
+                                request_id=intent.request_id,
+                                workspace_root=str(runtime.context.workspace_root),
+                            ),
+                        }
+                    elif intent.name == "install_requests_list":
+                        payload = {
+                            "intent": intent.name,
+                            "install_requests": self.list_skill_install_requests(
+                                tenant_id=request.tenant_id,
+                                workspace_root=str(runtime.context.workspace_root),
+                                status=None,
+                                limit=100,
+                            ),
+                        }
+                    elif intent.name == "diagnostics":
+                        payload = {
+                            "intent": intent.name,
+                            "diagnostics": self.skill_diagnostics(
+                                tenant_id=request.tenant_id,
+                                workspace_root=str(runtime.context.workspace_root),
+                            ),
+                        }
+                    elif intent.name == "telemetry":
+                        payload = {
+                            "intent": intent.name,
+                            "telemetry": self.list_skill_telemetry(
+                                tenant_id=request.tenant_id,
+                                workspace_root=str(runtime.context.workspace_root),
+                                limit=intent.limit or 50,
+                            ),
+                        }
+                    else:
+                        payload = {"intent": intent.name, "error": "unsupported_intent"}
+                    return {
+                        "tenant": {
+                            "tenant_id": request.tenant_id,
+                            "workspace_root": str(runtime.context.workspace_root),
+                            "db_path": str(runtime.context.db_path),
+                        },
+                        "turn": {
+                            "session_id": request.session_id,
+                            "turn_id": turn_id,
+                            "model_id": model_id,
+                            "capability_source": "n/a",
+                            "profile": request.profile.value,
+                            "mode": "skill_nl",
+                            "project_id": request.project_id,
+                            "task_id": request.task_id,
+                        },
+                        "assistant": {
+                            "text": json.dumps(payload, indent=2, ensure_ascii=True),
+                            "provider": "skill_nl_router",
+                            "usage": None,
+                        },
+                        "memory": {"pending_approvals": runtime.memory.pending_approvals(request.tenant_id, request.user_id)},
+                        "identity": {
+                            "profile": runtime.identity.get_profile(request.tenant_id, request.user_id),
+                            "newly_applied_signals": [],
+                            "pending_signals": runtime.identity.list_pending_signals(request.tenant_id, request.user_id),
+                        },
+                        "artifacts": [],
+                    }
+                except Exception as exc:
+                    return {
+                        "tenant": {
+                            "tenant_id": request.tenant_id,
+                            "workspace_root": str(runtime.context.workspace_root),
+                            "db_path": str(runtime.context.db_path),
+                        },
+                        "turn": {
+                            "session_id": request.session_id,
+                            "turn_id": turn_id,
+                            "model_id": model_id,
+                            "capability_source": "n/a",
+                            "profile": request.profile.value,
+                            "mode": "skill_nl_error",
+                            "project_id": request.project_id,
+                            "task_id": request.task_id,
+                        },
+                        "assistant": {
+                            "text": f"skill request could not be completed: {exc}",
+                            "provider": "skill_nl_router",
+                            "usage": None,
+                        },
+                        "memory": {"pending_approvals": runtime.memory.pending_approvals(request.tenant_id, request.user_id)},
+                        "identity": {
+                            "profile": runtime.identity.get_profile(request.tenant_id, request.user_id),
+                            "newly_applied_signals": [],
+                            "pending_signals": runtime.identity.list_pending_signals(request.tenant_id, request.user_id),
+                        },
+                        "artifacts": [],
+                    }
+
+        capabilities, capability_source = self._capabilities(runtime, model_id)
+
+        profile_before = runtime.identity.get_profile(request.tenant_id, request.user_id)
+        pending_learning_approvals = runtime.memory.pending_approvals(
+            tenant_id=request.tenant_id,
+            user_id=request.user_id,
+        )
+        pending_tool_approvals = runtime.governance.list_pending_approvals(request.tenant_id)
+        skill_diagnostics = runtime.skill_loader.diagnostics()
+        generic_mode = (
+            request.project_id is None
+            and request.task_id is None
+            and runtime.info.is_generic_query(effective_user_message)
+        )
+
+        search_query = (request.search_query or effective_user_message).strip()
+        search_result: dict[str, Any]
+        tool_results: list[dict[str, str]] = []
+        web_snippets: list[dict[str, Any]] = []
+
+        if generic_mode:
+            snippets = runtime.info.retrieve(search_query, limit=2)
+            web_snippets = [
+                {
+                    "title": s.title,
+                    "source": s.source_url,
+                    "snippet": s.snippet,
+                    "confidence": s.confidence,
+                }
+                for s in snippets
+            ]
+            search_result = {
+                "planId": str(uuid.uuid4()),
+                "executedAt": datetime.now(timezone.utc).timestamp(),
+                "pass": 0,
+                "escalated": False,
+                "executionMs": 0,
+                "lowValueHitRatio": 0.0,
+                "avgConfidence": (sum(s["confidence"] for s in web_snippets) / len(web_snippets)) if web_snippets else 0.0,
+                "commands": [],
+                "results": [
+                    {
+                        "path": s["source"],
+                        "lineStart": 0,
+                        "lineEnd": 0,
+                        "confidence": s["confidence"],
+                        "snippet": s["snippet"],
+                        "rationale": "generic_info_retrieval",
+                    }
+                    for s in web_snippets
+                ],
+            }
+        else:
+            search_pack = runtime.search.execute(
+                SearchPlan(
+                    query=search_query,
+                    intent="broad_discovery",
+                    scope=["."],
+                    file_types=["py", "ts", "js", "md", "sql", "json"],
+                    escalation_allowed=True,
+                    escalation_mode="balanced",
+                )
+            )
+            search_result = result_pack_to_dict(search_pack)
+            tool_results = [
+                {
+                    "source": f"search://{hit.path}#L{hit.line_start}",
+                    "text": hit.snippet,
+                }
+                for hit in search_pack.results[:8]
+            ]
+
+        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        semantic_candidates = self._semantic_candidates(recall)
+        for snippet in web_snippets:
+            semantic_candidates.append(
+                {
+                    "text": snippet["snippet"],
+                    "source": snippet["source"],
+                    "recency_label": datetime.now(timezone.utc).isoformat(),
+                    "contradictory": False,
+                }
+            )
+
+        task_state = {
+            "text": "Respond as a chat assistant while preserving memory and auditability.",
+        }
+        project_block = None
+        task_block = None
+        if request.project_id:
+            try:
+                project_block = runtime.projects.get_project(request.tenant_id, request.project_id)
+            except ValueError:
+                project_block = None
+        if request.task_id:
+            try:
+                task_block = runtime.projects.get_task(request.tenant_id, request.task_id)
+            except ValueError:
+                task_block = None
+
+        if project_block:
+            task_state["text"] += f" Active project={project_block['name']}({project_block['project_id']})."
+        if task_block:
+            task_state["text"] += f" Active task={task_block['title']}({task_block['task_id']}) status={task_block['status']}."
+
+        context_result = runtime.context_engine.assemble(
+            profile=request.profile,
+            model_context_length=capabilities.context_length,
+            system_contract=(
+                "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
+                "and prefer local-first retrieval before broad assumptions."
+            ),
+            user_message=effective_user_message,
+            inputs={
+                "explicit_user_constraints": ["Do not fabricate sources"],
+                "task_state": task_state,
+                "working_memory": [
+                    {"text": "Current goal: answer user and capture durable learnings."},
+                    {"text": f"pending_learning_approvals={len(pending_learning_approvals)}"},
+                    {"text": f"pending_tool_approvals={len(pending_tool_approvals)}"},
+                    {"text": f"skill_parse_warnings={sum(len(v) for v in skill_diagnostics.values())}"},
+                ],
+                "world_state": [
+                    {"text": f"workspace_root={runtime.context.workspace_root}"},
+                    {"text": f"persona_summary={profile_before['persona_summary']}"},
+                ],
+                "semantic_candidates": semantic_candidates,
+                "recent_history": [{"text": f"session_id={request.session_id}"}],
+                "procedural_candidates": [{"text": "Use local-first search then escalate only on low confidence."}],
+                "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
+                "tool_results": tool_results,
+            },
+        )
+
+        skill_index = runtime.skill_disclosure.format_skill_index_xml(runtime.skill_loader.snapshot())
+        system_prompt = (
+            "Answer directly and cite local evidence when available. "
+            "If the user asks to create or modify a skill, use skill_create or skill_update tools.\n\n"
+            + skill_index
+        )
+        if selected_skill_context:
+            system_prompt += f"\n\nUse selected skill instructions:\n{selected_skill_context}"
+
+        assistant_usage: dict[str, int] | None
+        assistant_text: str
+        loop_iterations = 1
+        loop_tool_calls: list[dict[str, Any]] = []
+        loop_stopped_reason: str | None = None
+        loop_duration_ms = 0
+        loop_estimated_cost_usd = 0.0
+        loop_budget_exhausted = False
+        rescue_info: dict[str, Any] = {"method": "disabled"}
+        if self.config.agentic_loop_enabled:
+            loop_started_at = datetime.now(timezone.utc)
+            rescue: WorkspaceRescue | None = None
+            if self.config.rescue_enabled:
+                rescue = WorkspaceRescue(runtime.context.workspace_root)
+                rescue_info = rescue.snapshot()
+            resolved_policy = runtime.policy_pipeline.resolve(
+                ToolPolicyContext(
+                    profile=self.config.tool_profile,
+                    tenant_id=request.tenant_id,
+                    provider_name=self.provider.provider_name,
+                ),
+                available_tools=runtime.tool_executor.known_tool_names(),
+            )
+            tool_context = ToolContext(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                turn_id=turn_id,
+                user_id=request.user_id,
+                workspace_root=runtime.context.workspace_root,
+                db=runtime.db,
+                guard_path=lambda p: self.registry.guard_path(runtime.context, p),
+            )
+            tool_format = "anthropic" if self.provider.provider_name == "anthropic" else "openai"
+            loop = AgenticLoop(
+                provider=self.provider,
+                tool_executor=runtime.tool_executor,
+                config=LoopConfig(
+                    max_iterations=self.config.max_loop_iterations,
+                    loop_detection_window=self.config.loop_detection_window,
+                    budget_limit_usd=self.config.budget_limit_usd,
+                    budget_hard_stop_pct=self.config.budget_hard_stop_pct,
+                    parallel_read_tools=self.config.parallel_read_tools,
+                ),
+            )
+            loop_result = loop.run(
+                initial_messages=[
+                    ChatMessage(role="system", content=system_prompt),
+                    ChatMessage(role="user", content=context_result.context_text),
+                ],
+                tool_schemas=runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format),
+                context=tool_context,
+                resolved_policy=resolved_policy,
+                model_id=model_id,
+                tool_format=tool_format,
+            )
+            assistant_text = loop_result.final_text
+            assistant_usage = {
+                "input_tokens": loop_result.total_input_tokens,
+                "output_tokens": loop_result.total_output_tokens,
+                "total_tokens": loop_result.total_input_tokens + loop_result.total_output_tokens,
+            }
+            loop_duration_ms = int((datetime.now(timezone.utc) - loop_started_at).total_seconds() * 1000)
+            loop_iterations = loop_result.iterations
+            loop_tool_calls = [item.as_dict() for item in loop_result.tool_calls]
+            loop_stopped_reason = loop_result.stopped_reason
+            loop_estimated_cost_usd = loop_result.estimated_cost_usd
+            loop_budget_exhausted = loop_result.budget_exhausted
+            if rescue is not None and loop_stopped_reason not in {"budget_exhausted", "error"}:
+                rescue.cleanup_ref()
+        else:
+            response = self.provider.generate(
+                model=model_id,
+                messages=[
+                    ChatMessage(role="system", content=system_prompt),
+                    ChatMessage(role="user", content=context_result.context_text),
+                ],
+            )
+            assistant_text = response.text
+            assistant_usage = response.usage
+
+        markdown_artifact = None
+        if self._should_create_markdown_artifact(effective_user_message):
+            markdown_artifact = runtime.artifacts.create_text_artifact(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                turn_id=turn_id,
+                project_id=request.project_id,
+                task_id=request.task_id,
+                artifact_type="markdown",
+                title="assistant-response",
+                content=assistant_text,
+            )
+
+        extracted_code = self._extract_first_code_block(assistant_text)
+        code_artifact = None
+        if extracted_code:
+            code_artifact = runtime.artifacts.create_text_artifact(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                turn_id=turn_id,
+                project_id=request.project_id,
+                task_id=request.task_id,
+                artifact_type="code",
+                title="assistant-code-snippet",
+                content=extracted_code,
+            )
+
+        note = runtime.memory.append_working_note(
+            user_id=request.user_id,
+            session_id=request.session_id,
+            title=f"turn-{turn_id[:8]}",
+            content=f"User: {effective_user_message}\n\nAssistant: {assistant_text}",
+            tags=["chat", "runtime", "generic_info" if generic_mode else "project_mode"],
+            confidence=1.0,
+        )
+
+        learning_signal = self._learning_signal(effective_user_message)
+        decision = None
+        if learning_signal is not None:
+            learning_key, learning_content, confidence, reason = learning_signal
+            decision = runtime.memory.learn_semantic(
+                tenant_id=request.tenant_id,
+                user_id=request.user_id,
+                memory_key=learning_key,
+                content=learning_content,
+                confidence=confidence,
+                evidence_refs=[note["note_id"]],
+                reason=reason,
+            )
+
+        identity_update = runtime.identity.ingest_turn(
+            tenant_id=request.tenant_id,
+            user_id=request.user_id,
+            text=effective_user_message,
+            source_ref=note["note_id"],
+        )
+
+        now = datetime.now(timezone.utc)
+        period_start = (now - timedelta(minutes=5)).isoformat()
+        period_end = now.isoformat()
+        runtime.adaptation.ingest_search_metric(
+            escalated=bool(search_result.get("escalated", False)),
+            precision_at_k=float(search_result.get("avgConfidence", 0.0)),
+            execution_ms=int(search_result.get("executionMs", 0)),
+            created_at=period_start,
+        )
+        rollup = runtime.adaptation.aggregate_period(period_start=period_start, period_end=period_end)
+        runtime.db.execute(
+            """
+            INSERT INTO loop_executions (
+              id, tenant_id, session_id, turn_id, iterations, tool_calls_json, stopped_reason,
+              total_input_tokens, total_output_tokens, duration_ms, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                request.tenant_id,
+                request.session_id,
+                turn_id,
+                loop_iterations,
+                json.dumps(loop_tool_calls, separators=(",", ":")),
+                loop_stopped_reason,
+                int((assistant_usage or {}).get("input_tokens") or 0),
+                int((assistant_usage or {}).get("output_tokens") or 0),
+                loop_duration_ms,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+        runtime.db.commit()
+
+        artifacts = []
+        if markdown_artifact is not None:
+            artifacts.append(markdown_artifact)
+        if code_artifact is not None:
+            artifacts.append(code_artifact)
+
+        return {
+            "tenant": {
+                "tenant_id": request.tenant_id,
+                "workspace_root": str(runtime.context.workspace_root),
+                "db_path": str(runtime.context.db_path),
+            },
+            "turn": {
+                "session_id": request.session_id,
+                "turn_id": turn_id,
+                "model_id": model_id,
+                "capability_source": capability_source,
+                "profile": request.profile.value,
+                "mode": "generic_info" if generic_mode else "project",
+                "project_id": request.project_id,
+                "task_id": request.task_id,
+            },
+            "codeintel": runtime.codeintel.availability(),
+            "search": search_result,
+            "context": {
+                "final_input_tokens": context_result.final_input_tokens,
+                "compressed": context_result.compressed,
+                "included_sections": context_result.included_sections,
+                "dropped_sections": context_result.dropped_sections,
+                "compression_summary": context_result.compression_summary,
+            },
+            "assistant": {
+                "text": assistant_text,
+                "provider": self.provider.provider_name,
+                "usage": assistant_usage,
+                "loop_iterations": loop_iterations,
+                "tool_calls": loop_tool_calls,
+                "stopped_reason": loop_stopped_reason,
+                "estimated_cost_usd": loop_estimated_cost_usd,
+                "budget_exhausted": loop_budget_exhausted,
+            },
+            "memory": {
+                "note": note,
+                "learning": (
+                    {
+                        "update_id": decision.update_id,
+                        "status": decision.status,
+                        "confidence": decision.confidence,
+                        "memory_id": decision.memory_id,
+                    }
+                    if decision is not None
+                    else {
+                        "update_id": None,
+                        "status": "skipped",
+                        "confidence": 0.0,
+                        "memory_id": None,
+                    }
+                ),
+                "pending_approvals": pending_learning_approvals,
+            },
+            "approvals": {
+                "pending_learning_approvals": pending_learning_approvals,
+                "pending_tool_approvals": pending_tool_approvals,
+                "pending_total": len(pending_learning_approvals) + len(pending_tool_approvals),
+            },
+            "skills": {
+                "parse_diagnostics": skill_diagnostics,
+                "telemetry_enabled": self.config.skills_telemetry_enabled,
+            },
+            "identity": {
+                "profile": identity_update["profile"],
+                "newly_applied_signals": identity_update["applied"],
+                "pending_signals": runtime.identity.list_pending_signals(request.tenant_id, request.user_id),
+            },
+            "artifacts": [self._artifact_dict(a) for a in artifacts],
+            "adaptation": {
+                "retrieval_precision_at_k": rollup.retrieval_precision_at_k,
+                "search_escalation_rate": rollup.search_escalation_rate,
+                "subagent_success_rate": rollup.subagent_success_rate,
+                "subagent_p95_latency_ms": rollup.subagent_p95_latency_ms,
+            },
+            "rescue": rescue_info,
+        }
+
+    def invoke_code_tool(
+        self,
+        tenant_id: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+        workspace_root: str | None = None,
+        session_id: str | None = None,
+        turn_id: str | None = None,
+        confidence: float = 1.0,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        policy = runtime.policy_pipeline.resolve(
+            ToolPolicyContext(
+                profile=self.config.tool_profile,
+                tenant_id=tenant_id,
+                provider_name=self.provider.provider_name,
+            ),
+            available_tools=runtime.tool_executor.known_tool_names(),
+        )
+        context = ToolContext(
+            tenant_id=tenant_id,
+            session_id=session_id or "session-tool",
+            turn_id=turn_id or str(uuid.uuid4()),
+            user_id="user-tool",
+            workspace_root=runtime.context.workspace_root,
+            db=runtime.db,
+            guard_path=lambda p: self.registry.guard_path(runtime.context, p),
+        )
+        outcome = runtime.tool_executor.execute(
+            tool_name=tool_name,
+            arguments=arguments,
+            context=context,
+            policy=policy,
+            confidence=confidence,
+        )
+        payload = {
+            "status": outcome.status,
+            "tool_name": outcome.tool_name,
+            "risk_class": outcome.risk_class,
+            "payload": outcome.output,
+            "duration_ms": outcome.duration_ms,
+        }
+        if outcome.status == "approval_required":
+            if "approval_id" in outcome.output:
+                payload["approval_id"] = outcome.output["approval_id"]
+            if "reason" in outcome.output:
+                payload["reason"] = outcome.output["reason"]
+        if outcome.status == "denied" and "reason" in outcome.output:
+            payload["reason"] = outcome.output["reason"]
+        return payload
+
+    def list_pending_approvals(self, tenant_id: str, workspace_root: str | None = None) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.governance.list_pending_approvals(tenant_id)
+
+    def list_pending_learning_approvals(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.memory.pending_approvals(tenant_id=tenant_id, user_id=user_id)
+
+    def decide_approval(
+        self,
+        tenant_id: str,
+        approval_id: str,
+        approved: bool,
+        decided_by: str,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.governance.decide_approval(tenant_id, approval_id, approved, decided_by)
+
+    def register_skill(
+        self,
+        tenant_id: str,
+        manifest: dict[str, Any],
+        status: str = "active",
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        skill = runtime.skills_registry.register_skill(tenant_id, manifest, status=status)
+        return {
+            "skill_id": skill.skill_id,
+            "version": skill.version,
+            "status": skill.status,
+            "name": skill.name,
+            "description": skill.description,
+        }
+
+    def list_skills(self, tenant_id: str, workspace_root: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        skills = runtime.skills_registry.list_skills(tenant_id, status=status)
+        return [
+            {
+                "skill_id": s.skill_id,
+                "version": s.version,
+                "status": s.status,
+                "name": s.name,
+                "description": s.description,
+                "source": s.source,
+                "source_path": s.source_path,
+                "intent_tags": s.manifest.get("intent_tags") or [],
+                "risk_level": s.manifest.get("risk_level"),
+            }
+            for s in skills
+        ]
+
+    def skill_diagnostics(self, tenant_id: str, workspace_root: str | None = None) -> dict[str, list[str]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skill_loader.diagnostics()
+
+    def list_skill_catalog(
+        self,
+        tenant_id: str,
+        workspace_root: str | None = None,
+        source: str | None = None,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return [item.__dict__ for item in runtime.skills_ecosystem.list_catalog_skills(source=source, limit=limit)]
+
+    def get_skill_source_trust(self, tenant_id: str, workspace_root: str | None = None) -> dict[str, str]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skills_ecosystem.trust_policy(tenant_id)
+
+    def set_skill_source_trust(
+        self,
+        tenant_id: str,
+        source: str,
+        trust_mode: str,
+        workspace_root: str | None = None,
+    ) -> dict[str, str]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skills_ecosystem.set_trust_override(tenant_id=tenant_id, source=source, trust_mode=trust_mode)
+
+    def create_skill_install_request(
+        self,
+        tenant_id: str,
+        user_id: str,
+        source: str,
+        skill_id: str,
+        session_id: str | None = None,
+        turn_id: str | None = None,
+        workspace_root: str | None = None,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        req = runtime.skills_ecosystem.create_install_request(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            source=source,
+            skill_id=skill_id,
+            workspace_root=str(runtime.context.workspace_root),
+            session_id=session_id,
+            turn_id=turn_id,
+            reason=reason,
+        )
+        return req.__dict__
+
+    def list_skill_install_requests(
+        self,
+        tenant_id: str,
+        workspace_root: str | None = None,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return [item.__dict__ for item in runtime.skills_ecosystem.list_install_requests(tenant_id, status=status, limit=limit)]
+
+    def execute_skill_install(
+        self,
+        tenant_id: str,
+        request_id: str,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skills_ecosystem.execute_install(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            workspace_root=str(runtime.context.workspace_root),
+        )
+
+    def list_skill_telemetry(
+        self,
+        tenant_id: str,
+        workspace_root: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skills_ecosystem.list_telemetry(tenant_id=tenant_id, limit=limit)
+
+    def list_commands(self, tenant_id: str, workspace_root: str | None = None) -> list[dict[str, str]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        runtime.command_router.rebuild_command_map(runtime.skill_loader.snapshot())
+        return runtime.command_router.available_commands()
+
+    def execute_command(
+        self,
+        tenant_id: str,
+        session_id: str,
+        user_id: str,
+        command_text: str,
+        workspace_root: str | None = None,
+        model_id: str | None = None,
+        profile: TurnProfile = TurnProfile.CHAT,
+    ) -> dict[str, Any]:
+        return self.handle_turn(
+            TurnRequest(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                user_id=user_id,
+                user_message=command_text,
+                model_id=model_id,
+                profile=profile,
+                workspace_root=workspace_root,
+            )
+        )
+
+    def execute_skill(
+        self,
+        tenant_id: str,
+        skill_id: str,
+        inputs: dict[str, Any],
+        workspace_root: str | None = None,
+        session_id: str | None = None,
+        turn_id: str | None = None,
+        confidence: float = 1.0,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+
+        def invoker(tool_name: str, tool_args: dict[str, Any]) -> dict[str, Any]:
+            return self.invoke_code_tool(
+                tenant_id=tenant_id,
+                tool_name=tool_name,
+                arguments=tool_args,
+                workspace_root=workspace_root,
+                session_id=session_id,
+                turn_id=turn_id,
+                confidence=confidence,
+            )
+
+        result = runtime.skills_engine.execute(
+            tenant_id=tenant_id,
+            skill_id=skill_id,
+            inputs=inputs,
+            session_id=session_id,
+            turn_id=turn_id,
+            tool_invoker=invoker,
+        )
+        return {
+            "execution_id": result.execution_id,
+            "status": result.status,
+            "output": result.output,
+            "tool_calls": result.tool_calls,
+            "error_detail": result.error_detail,
+            "duration_ms": result.duration_ms,
+        }
+
+    def list_skill_executions(self, tenant_id: str, workspace_root: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.skills_registry.list_executions(tenant_id=tenant_id, limit=limit)
+
+    def create_project(
+        self,
+        tenant_id: str,
+        name: str,
+        workspace_root: str,
+        description: str | None = None,
+        project_id: str | None = None,
+        status: str = "active",
+        runtime_workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, runtime_workspace_root)
+        return runtime.projects.create_project(
+            tenant_id=tenant_id,
+            name=name,
+            workspace_root=workspace_root,
+            description=description,
+            project_id=project_id,
+            status=status,
+        )
+
+    def list_projects(self, tenant_id: str, workspace_root: str | None = None) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.projects.list_projects(tenant_id)
+
+    def create_task(
+        self,
+        tenant_id: str,
+        project_id: str,
+        title: str,
+        description: str | None = None,
+        task_id: str | None = None,
+        status: str = "todo",
+        priority: str = "normal",
+        owner_agent_id: str | None = None,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.projects.create_task(
+            tenant_id=tenant_id,
+            project_id=project_id,
+            title=title,
+            description=description,
+            task_id=task_id,
+            status=status,
+            priority=priority,
+            owner_agent_id=owner_agent_id,
+        )
+
+    def list_tasks(
+        self,
+        tenant_id: str,
+        project_id: str | None = None,
+        status: str | None = None,
+        workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.projects.list_tasks(tenant_id, project_id=project_id, status=status)
+
+    def update_task(
+        self,
+        tenant_id: str,
+        task_id: str,
+        status: str | None = None,
+        priority: str | None = None,
+        owner_agent_id: str | None = None,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.projects.update_task(
+            tenant_id=tenant_id,
+            task_id=task_id,
+            status=status,
+            priority=priority,
+            owner_agent_id=owner_agent_id,
+        )
+
+    def get_user_profile(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.identity.get_profile(tenant_id, user_id)
+
+    def list_pending_profile_signals(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.identity.list_pending_signals(tenant_id, user_id)
+
+    def decide_profile_signal(
+        self,
+        tenant_id: str,
+        user_id: str,
+        signal_id: str,
+        approved: bool,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.identity.decide_signal(tenant_id, user_id, signal_id, approved)
+
+    def spawn_subagent(
+        self,
+        tenant_id: str,
+        task: SubAgentTask,
+        parent_session_id: str,
+        parent_turn_id: str,
+        parent_agent_id: str,
+        child_agent_id: str,
+        worker: SubAgentWorker,
+        workspace_root: str | None = None,
+        parent_run_id: str | None = None,
+    ) -> SubAgentHandle:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.orchestrator.spawn_async(
+            task=task,
+            parent_session_id=parent_session_id,
+            parent_turn_id=parent_turn_id,
+            parent_agent_id=parent_agent_id,
+            child_agent_id=child_agent_id,
+            worker=worker,
+            parent_run_id=parent_run_id,
+        )
+
+    def poll_subagent_events(
+        self,
+        tenant_id: str,
+        run_id: str,
+        after_seq: int = 0,
+        workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        return runtime.protocol.stream_events(run_id=run_id, after_seq=after_seq)
+
+    def approve_learning(
+        self,
+        tenant_id: str,
+        user_id: str,
+        update_id: str,
+        approved: bool,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        decision = runtime.memory.approve_learning(update_id=update_id, approved=approved)
+        return {
+            "update_id": decision.update_id,
+            "status": decision.status,
+            "confidence": decision.confidence,
+            "memory_id": decision.memory_id,
+            "pending_approvals": runtime.memory.pending_approvals(tenant_id=tenant_id, user_id=user_id),
+        }
+
+    def list_artifacts(
+        self,
+        tenant_id: str,
+        session_id: str,
+        workspace_root: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        rows = runtime.artifacts.list_session_artifacts(tenant_id=tenant_id, session_id=session_id, limit=limit)
+        return [self._artifact_dict(r) for r in rows]
+
+    def _tenant_runtime(self, tenant_id: str, workspace_root: str | None = None) -> _TenantRuntime:
+        key = tenant_id
+        if key in self._tenants:
+            existing = self._tenants[key]
+            if workspace_root is not None:
+                requested = os.path.realpath(os.path.abspath(os.path.expanduser(workspace_root)))
+                bound = os.path.realpath(str(existing.context.workspace_root))
+                if requested != bound:
+                    raise ValueError(
+                        f"tenant {tenant_id} already bound to workspace {bound}, requested {requested}"
+                    )
+            return existing
+
+        context = self.registry.ensure_tenant(tenant_id=tenant_id, workspace_root=workspace_root)
+        db = RuntimeDB(context.db_path)
+        db.script(
+            """
+            CREATE TABLE IF NOT EXISTS loop_executions (
+              id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL,
+              session_id TEXT NOT NULL,
+              turn_id TEXT NOT NULL,
+              iterations INTEGER NOT NULL,
+              tool_calls_json TEXT NOT NULL,
+              stopped_reason TEXT,
+              total_input_tokens INTEGER,
+              total_output_tokens INTEGER,
+              duration_ms INTEGER,
+              created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_loop_exec_tenant
+              ON loop_executions(tenant_id, created_at DESC);
+            """
+        )
+        db.commit()
+
+        if os.getenv("OPENROUTER_API_KEY"):
+            capabilities = ModelCapabilityService(
+                db=db,
+                api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
+            )
+        else:
+            capabilities = ModelCapabilityService(
+                db=db,
+                fetcher=self._fallback_catalog,
+                cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
+            )
+
+        protocol = SubAgentProtocol(db)
+        orchestrator = SubAgentOrchestrator(
+            protocol,
+            crash_storm_config=CrashStormConfig(
+                window_seconds=self.config.subagent_crash_window_seconds,
+                max_crashes=self.config.subagent_crash_max,
+                cooldown_seconds=self.config.subagent_crash_cooldown_seconds,
+            ),
+        )
+        codeintel = CodeIntelRouter(
+            config=self.config,
+            tenant_registry=self.registry,
+            serena_transport=self.serena_transport,
+        )
+
+        governance = ToolGovernanceService(db)
+        governance.upsert_default_policy(tenant_id)
+
+        plugin_registry = PluginRegistry(
+            allow=self.config.plugin_allow,
+            deny=self.config.plugin_deny,
+        )
+        plugin_paths = [Path(p).expanduser() for p in self.config.plugin_paths]
+        plugin_paths.append(context.workspace_root / ".bomba" / "plugins")
+        plugin_paths.append(Path.home() / ".sigil" / "plugins")
+        for manifest in plugin_registry.discover(plugin_paths):
+            try:
+                plugin_registry.load(manifest)
+            except Exception:
+                continue
+
+        skills_registry = SkillRegistry(db)
+        skills_engine = SkillEngine(skills_registry)
+        skill_roots: list[Path]
+        if self.config.skill_roots:
+            skill_roots = [Path(p).expanduser() for p in self.config.skill_roots]
+        else:
+            skill_roots = [
+                context.workspace_root / "skills",
+                Path.home() / ".sigil" / "skills",
+                Path(__file__).resolve().parents[1] / "skills" / "bundled",
+            ]
+        plugin_skill_dirs = plugin_registry.get_skill_dirs()
+        if plugin_skill_dirs:
+            skill_roots = [skill_roots[0], *plugin_skill_dirs, *skill_roots[1:]]
+        skill_parser = SkillMdParser(permissive=self.config.skill_parsing_permissive)
+        skill_loader = SkillLoader(
+            skill_roots=skill_roots,
+            eligibility=EligibilityEngine(),
+            parser=skill_parser,
+        )
+        for descriptor in skill_loader.scan().values():
+            skills_registry.register_from_descriptor(
+                tenant_id=tenant_id,
+                descriptor=descriptor,
+                status=("active" if descriptor.default_enabled else "validated"),
+            )
+        if self.config.skill_watcher_enabled:
+            skill_loader.start_watcher(self.config.skill_watcher_debounce_ms)
+
+        search = AgenticSearchExecutor(context.workspace_root)
+        memory = HybridMemoryStore(
+            db=db,
+            memory_root=context.memory_root,
+            auto_apply_confidence=self.config.learning_auto_apply_confidence,
+            embedding_provider=self.embedding_provider,
+        )
+        projects = ProjectService(db)
+        policy_pipeline = PolicyPipeline(
+            governance=governance,
+            global_allow=self.config.tool_allow,
+            global_deny=self.config.tool_deny,
+        )
+        skills_ecosystem = SkillEcosystemService(
+            db=db,
+            registry=skills_registry,
+            loader=skill_loader,
+            parser=skill_parser,
+            governance=governance,
+            enabled_sources=self.config.skill_catalog_sources,
+            telemetry_enabled=self.config.skills_telemetry_enabled,
+        )
+        tool_executor = ToolExecutor(
+            governance=governance,
+            pipeline=policy_pipeline,
+            tool_result_max_chars=self.config.tool_result_max_chars,
+        )
+        tool_executor.register_many(builtin_fs_tools())
+        tool_executor.register_many(
+            builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
+        )
+        tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
+        tool_executor.register_many(builtin_memory_tools(memory))
+        tool_executor.register_many(builtin_approval_tools(governance, memory))
+        tool_executor.register_many(builtin_subagent_tools(orchestrator=orchestrator, protocol=protocol))
+        tool_executor.register_many(builtin_project_tools(projects))
+        tool_executor.register_many(
+            builtin_skill_tools(skill_loader, skills_registry, skills_ecosystem=skills_ecosystem)
+        )
+        tool_executor.register_many(
+            builtin_compaction_tools(
+                provider=self.provider,
+                default_model_id=self.config.default_model_id,
+                compaction_model_id=os.getenv("BOMBA_COMPACTION_MODEL_ID"),
+            )
+        )
+        tool_executor.register_many(builtin_model_switch_tools())
+        tool_executor.register_many(builtin_discovery_tools())
+        for plugin_tool in plugin_registry.get_tools():
+            try:
+                tool_executor.register(plugin_tool)
+            except Exception:
+                continue
+        command_parser = CommandParser()
+        command_router = CommandRouter(skill_loader=skill_loader, tool_executor=tool_executor)
+        skill_disclosure = SkillDisclosure()
+
+        runtime = _TenantRuntime(
+            context=context,
+            db=db,
+            capabilities=capabilities,
+            context_engine=ContextPolicyEngine(),
+            search=search,
+            memory=memory,
+            protocol=protocol,
+            orchestrator=orchestrator,
+            adaptation=RuntimeAdaptationEngine(db),
+            artifacts=ArtifactStore(db=db, artifacts_root=context.artifacts_root),
+            codeintel=codeintel,
+            governance=governance,
+            projects=projects,
+            skills_registry=skills_registry,
+            skills_engine=skills_engine,
+            skill_loader=skill_loader,
+            skills_ecosystem=skills_ecosystem,
+            plugin_registry=plugin_registry,
+            policy_pipeline=policy_pipeline,
+            tool_executor=tool_executor,
+            command_parser=command_parser,
+            command_router=command_router,
+            skill_disclosure=skill_disclosure,
+            identity=UserIdentityService(db, auto_apply_confidence=self.config.learning_auto_apply_confidence),
+            info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
+        )
+        self._tenants[key] = runtime
+        return runtime
+
+    def _capabilities(self, runtime: _TenantRuntime, model_id: str):
+        try:
+            caps = runtime.capabilities.get_capabilities(model_id)
+            return caps, "openrouter_live"
+        except (CapabilityError, Exception):
+            fallback = ModelCapabilityService(
+                db=runtime.db,
+                fetcher=self._fallback_catalog,
+                cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
+            )
+            return fallback.get_capabilities(model_id), "fallback_catalog"
+
+    @staticmethod
+    def _fallback_catalog() -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "anthropic/claude-opus-4.6",
+                "context_length": 1_000_000,
+                "supported_parameters": ["tools", "response_format"],
+                "top_provider": {"context_length": 1_000_000, "max_completion_tokens": 128_000},
+            },
+            {
+                "id": "openai/gpt-5.2-codex",
+                "context_length": 400_000,
+                "supported_parameters": ["tools", "response_format"],
+                "top_provider": {"context_length": 400_000, "max_completion_tokens": 128_000},
+            },
+        ]
+
+    @staticmethod
+    def _semantic_candidates(recall: dict[str, Any]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for item in recall.get("semantic") or []:
+            out.append(
+                {
+                    "text": item.get("content", ""),
+                    "source": item.get("source", ""),
+                    "recency_label": item.get("recency_ts", ""),
+                    "contradictory": False,
+                }
+            )
+        for item in recall.get("markdown") or []:
+            out.append(
+                {
+                    "text": item.get("snippet", ""),
+                    "source": item.get("source", ""),
+                    "recency_label": item.get("created_at", ""),
+                    "contradictory": False,
+                }
+            )
+        return out
+
+    @staticmethod
+    def _learning_signal(user_message: str) -> tuple[str, str, float, str] | None:
+        cleaned = user_message.strip()
+        if not cleaned:
+            return None
+        if cleaned.endswith("?"):
+            return None
+
+        digest = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:12]
+        key = f"user_signal::{digest}"
+
+        high_conf_patterns = [
+            re.compile(r"\bmy name is\b", re.IGNORECASE),
+            re.compile(r"\bi prefer\b", re.IGNORECASE),
+            re.compile(r"\bi work on\b", re.IGNORECASE),
+            re.compile(r"\bremember that\b", re.IGNORECASE),
+            re.compile(r"\bcall me\b", re.IGNORECASE),
+            re.compile(r"\bmy timezone is\b", re.IGNORECASE),
+            re.compile(r"\bi use\b", re.IGNORECASE),
+        ]
+        for pattern in high_conf_patterns:
+            if pattern.search(cleaned):
+                return key, cleaned, 0.72, "explicit_user_profile_signal"
+
+        return None
+
+    @staticmethod
+    def _extract_first_code_block(text: str) -> str | None:
+        match = re.search(r"```(?:[a-zA-Z0-9_+-]*)\n(.*?)```", text, flags=re.DOTALL)
+        if match is None:
+            return None
+        return match.group(1).strip()
+
+    @staticmethod
+    def _should_create_markdown_artifact(user_message: str) -> bool:
+        text = user_message.strip().lower()
+        if not text:
+            return False
+
+        # Avoid artifact spam for pure conversational turns.
+        if text.endswith("?"):
+            return False
+
+        explicit_deliverable_patterns = [
+            r"\bcreate\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bwrite\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bgenerate\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bdraft\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bsave\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bexport\b.*\b(markdown|doc|document|readme|report|summary|plan|spec)\b",
+            r"\bartifact\b",
+        ]
+        return any(re.search(pattern, text) for pattern in explicit_deliverable_patterns)
+
+    @staticmethod
+    def _artifact_dict(a) -> dict[str, Any]:
+        return {
+            "artifact_id": a.artifact_id,
+            "type": a.artifact_type,
+            "title": a.title,
+            "path": a.path,
+            "preview": a.preview,
+            "mime_type": a.mime_type,
+            "project_id": a.project_id,
+            "task_id": a.task_id,
+            "created_at": a.created_at,
+        }

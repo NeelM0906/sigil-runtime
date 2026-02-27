@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/project.schema.json",
+  "type": "object",
+  "required": ["project_id", "tenant_id", "name", "workspace_root", "status", "created_at"],
+  "properties": {
+    "project_id": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "workspace_root": {"type": "string"},
+    "status": {"type": "string", "enum": ["active", "paused", "archived"]},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

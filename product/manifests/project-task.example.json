@@ -1,0 +1,18 @@
+{
+  "project": {
+    "project_id": "proj_123",
+    "tenant_id": "tenant-local",
+    "name": "Runtime Productization",
+    "description": "Build production runtime with skill/governance/task stack.",
+    "workspace_root": "/Users/zidane/Downloads/PROJEKT",
+    "status": "active"
+  },
+  "task": {
+    "task_id": "task_abc",
+    "project_id": "proj_123",
+    "title": "Implement skill runtime",
+    "description": "Add manifest loading and execution paths",
+    "status": "in_progress",
+    "priority": "high"
+  }
+}

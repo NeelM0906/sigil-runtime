@@ -1,0 +1,24 @@
+{
+  "policy_id": "default-v1",
+  "version": 1,
+  "rules": [
+    {
+      "action": "read",
+      "risk_class": "low",
+      "min_confidence": 0.2,
+      "result": "allow"
+    },
+    {
+      "action": "write",
+      "risk_class": "medium",
+      "min_confidence": 0.4,
+      "result": "allow_or_approval"
+    },
+    {
+      "action": "execute_shell_command",
+      "risk_class": "critical",
+      "min_confidence": 0.99,
+      "result": "deny_by_default"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "skill_id": "code_review",
+  "version": "1.0.0",
+  "name": "Code Review Skill",
+  "description": "Runs structured review over changed files and reports defects.",
+  "entrypoint": {
+    "type": "template",
+    "template": "Review project {{project_id}} task {{task_id}} for correctness, regressions, and missing tests."
+  },
+  "intent_tags": ["review", "quality", "coding"],
+  "inputs": {
+    "project_id": {"type": "string", "required": true},
+    "task_id": {"type": "string", "required": false, "default": ""}
+  },
+  "outputs": {
+    "summary": {"type": "string"},
+    "findings": {"type": "array"}
+  },
+  "tools_required": ["get_symbols_overview", "find_symbol", "find_referencing_symbols"],
+  "risk_level": "medium",
+  "default_enabled": true
+}

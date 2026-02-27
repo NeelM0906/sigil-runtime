@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/task.schema.json",
+  "type": "object",
+  "required": ["task_id", "project_id", "title", "status", "priority", "created_at"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "project_id": {"type": "string"},
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "status": {"type": "string", "enum": ["todo", "in_progress", "blocked", "review", "done", "cancelled"]},
+    "priority": {"type": "string", "enum": ["low", "normal", "high"]},
+    "owner_agent_id": {"type": "string"},
+    "created_at": {"type": "string"},
+    "updated_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

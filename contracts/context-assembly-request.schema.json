@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/context-assembly-request.schema.json",
+  "title": "ContextAssemblyRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessionId",
+    "turnId",
+    "profile",
+    "modelId",
+    "reservedOutputTokens",
+    "reservedSafetyTokens",
+    "inputs"
+  ],
+  "properties": {
+    "sessionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "turnId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "chat",
+        "task_execution",
+        "planning",
+        "memory_recall",
+        "subagent_orchestration"
+      ]
+    },
+    "modelId": {
+      "type": "string"
+    },
+    "reservedOutputTokens": {
+      "type": "integer",
+      "minimum": 256
+    },
+    "reservedSafetyTokens": {
+      "type": "integer",
+      "minimum": 256
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "systemContract",
+        "userMessage",
+        "workingMemory",
+        "worldState",
+        "semanticCandidates",
+        "recentHistory",
+        "proceduralCandidates",
+        "pendingPredictions"
+      ],
+      "properties": {
+        "systemContract": {
+          "type": "string"
+        },
+        "userMessage": {
+          "type": "string"
+        },
+        "workingMemory": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "worldState": {
+          "type": "object"
+        },
+        "semanticCandidates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "recentHistory": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "proceduralCandidates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "pendingPredictions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

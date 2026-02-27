@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/model-capabilities.schema.json",
+  "title": "ModelCapabilities",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "modelId",
+    "contextLength",
+    "maxCompletionTokens",
+    "supportsTools",
+    "supportsJsonMode",
+    "fetchedAt"
+  ],
+  "properties": {
+    "modelId": {
+      "type": "string",
+      "minLength": 3
+    },
+    "contextLength": {
+      "type": "integer",
+      "minimum": 8192
+    },
+    "maxCompletionTokens": {
+      "type": "integer",
+      "minimum": 256
+    },
+    "supportsTools": {
+      "type": "boolean"
+    },
+    "supportsJsonMode": {
+      "type": "boolean"
+    },
+    "providerContextLength": {
+      "type": ["integer", "null"],
+      "minimum": 8192
+    },
+    "rawMetadata": {
+      "type": "object"
+    },
+    "fetchedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  }
+}

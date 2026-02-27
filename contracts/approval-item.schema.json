@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/approval-item.schema.json",
+  "type": "object",
+  "required": [
+    "approval_id",
+    "tenant_id",
+    "action_type",
+    "risk_class",
+    "confidence",
+    "status",
+    "requested_at"
+  ],
+  "properties": {
+    "approval_id": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "turn_id": {"type": "string"},
+    "action_type": {"type": "string"},
+    "payload": {"type": "object"},
+    "risk_class": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "status": {"type": "string", "enum": ["pending", "approved", "rejected", "expired", "cancelled"]},
+    "reason": {"type": "string"},
+    "requested_at": {"type": "string"},
+    "decided_at": {"type": "string"},
+    "decided_by": {"type": "string"}
+  },
+  "additionalProperties": false
+}

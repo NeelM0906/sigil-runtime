@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/tool-governance-policy.schema.json",
+  "type": "object",
+  "required": ["policy_id", "version", "rules"],
+  "properties": {
+    "policy_id": {"type": "string"},
+    "version": {"type": "integer", "minimum": 1},
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "risk_class", "min_confidence", "result"],
+        "properties": {
+          "action": {"type": "string"},
+          "risk_class": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+          "min_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"type": "string", "enum": ["allow", "allow_or_approval", "approval", "deny", "deny_by_default"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

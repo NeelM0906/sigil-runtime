@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/user-profile.schema.json",
+  "type": "object",
+  "required": ["tenant_id", "user_id", "profile_version", "persona_summary", "updated_at"],
+  "properties": {
+    "tenant_id": {"type": "string"},
+    "user_id": {"type": "string"},
+    "display_name": {"type": "string"},
+    "preferences": {"type": "object"},
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "goals": {"type": "array", "items": {"type": "object"}},
+    "persona_summary": {"type": "string"},
+    "profile_version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

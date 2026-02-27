@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/runtime-metrics.schema.json",
+  "title": "RuntimeMetricsRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "recordId",
+    "sessionId",
+    "periodStart",
+    "periodEnd",
+    "retrievalPrecisionAtK",
+    "searchEscalationRate",
+    "subagentSuccessRate",
+    "subagentP95LatencyMs"
+  ],
+  "properties": {
+    "recordId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sessionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retrievalPrecisionAtK": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "searchEscalationRate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "subagentSuccessRate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "subagentP95LatencyMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "loopDetectorIncidents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "predictionBrierScore": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "predictionECE": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

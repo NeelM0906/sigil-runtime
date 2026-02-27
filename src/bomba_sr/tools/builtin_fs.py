@@ -1,0 +1,245 @@
+from __future__ import annotations
+
+import glob
+import fnmatch
+import os
+import re
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from bomba_sr.tools.base import ToolContext, ToolDefinition
+
+
+def _read_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    path = context.guard_path(str(arguments["path"]))
+    offset = int(arguments.get("offset") or 0)
+    limit = int(arguments.get("limit") or 0)
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if offset < 0:
+        offset = 0
+    if limit > 0:
+        sliced = lines[offset : offset + limit]
+    else:
+        sliced = lines[offset:]
+    return {
+        "path": str(path),
+        "content": "\n".join(sliced),
+        "lines": len(lines),
+        "returned_lines": len(sliced),
+    }
+
+
+def _write_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    path = context.guard_path(str(arguments["path"]))
+    content = str(arguments.get("content") or "")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return {"written": True, "path": str(path), "bytes": len(content.encode("utf-8"))}
+
+
+def _edit_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    path = context.guard_path(str(arguments["path"]))
+    old = str(arguments.get("old_string") or "")
+    new = str(arguments.get("new_string") or "")
+    if not old:
+        raise ValueError("old_string is required")
+    text = path.read_text(encoding="utf-8")
+    if old not in text:
+        raise ValueError("old_string not found")
+    updated = text.replace(old, new, 1)
+    path.write_text(updated, encoding="utf-8")
+    return {"edited": True, "path": str(path)}
+
+
+def _apply_patch_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    patch_text = str(arguments.get("patch") or "")
+    if not patch_text.strip():
+        raise ValueError("patch is required")
+    patch_bin = shutil.which("patch")
+    if patch_bin is None:
+        raise ValueError("patch binary not found")
+    proc = subprocess.run(
+        [patch_bin, "-p0", "-N", "--silent"],
+        input=patch_text,
+        text=True,
+        capture_output=True,
+        cwd=str(context.workspace_root),
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise ValueError(f"patch failed: {proc.stderr.strip() or proc.stdout.strip()}")
+    return {"applied": True}
+
+
+def _glob_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    pattern = str(arguments.get("pattern") or "*")
+    rel_root = str(arguments.get("path") or ".")
+    root = context.guard_path(rel_root)
+    glob_pattern = str(root / pattern)
+    files = [p for p in glob.glob(glob_pattern, recursive=True)]
+    files = [str(context.guard_path(f)) for f in files if Path(f).exists()]
+    return {"files": sorted(files)}
+
+
+def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    pattern = str(arguments.get("pattern") or "").strip()
+    if not pattern:
+        raise ValueError("pattern is required")
+    rel_root = str(arguments.get("path") or ".")
+    root = context.guard_path(rel_root)
+    file_glob = str(arguments.get("glob") or "**/*")
+
+    rg_bin = shutil.which("rg")
+    if rg_bin is not None:
+        cmd = [
+            rg_bin,
+            "-n",
+            "--hidden",
+            "--glob",
+            file_glob,
+            pattern,
+            str(root),
+        ]
+        proc = subprocess.run(cmd, text=True, capture_output=True, check=False)
+        if proc.returncode not in (0, 1):
+            raise ValueError(proc.stderr.strip() or "rg failed")
+        matches: list[dict[str, Any]] = []
+        for line in proc.stdout.splitlines():
+            parts = line.split(":", 2)
+            if len(parts) != 3:
+                continue
+            file_path, line_no, snippet = parts
+            matches.append(
+                {
+                    "path": str(context.guard_path(file_path)),
+                    "line": int(line_no),
+                    "snippet": snippet.strip(),
+                }
+            )
+        return {"matches": matches}
+
+    matches = []
+    matcher = re.compile(pattern)
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = str(path.relative_to(root))
+        if not fnmatch.fnmatch(rel, file_glob):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for idx, line in enumerate(text.splitlines(), start=1):
+            if matcher.search(line):
+                matches.append({"path": str(path), "line": idx, "snippet": line.strip()})
+    return {"matches": matches}
+
+
+def builtin_fs_tools() -> list[ToolDefinition]:
+    return [
+        ToolDefinition(
+            name="read",
+            description="Read file contents.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "offset": {"type": "integer"},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_read_tool,
+            aliases=("read_file",),
+        ),
+        ToolDefinition(
+            name="write",
+            description="Write file contents.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+            risk_level="medium",
+            action_type="write",
+            execute=_write_tool,
+            aliases=("write_file",),
+        ),
+        ToolDefinition(
+            name="edit",
+            description="Replace a single string occurrence in a file.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "old_string": {"type": "string"},
+                    "new_string": {"type": "string"},
+                },
+                "required": ["path", "old_string", "new_string"],
+                "additionalProperties": False,
+            },
+            risk_level="medium",
+            action_type="write",
+            execute=_edit_tool,
+            aliases=("edit_file",),
+        ),
+        ToolDefinition(
+            name="apply_patch",
+            description="Apply unified diff patch.",
+            parameters={
+                "type": "object",
+                "properties": {"patch": {"type": "string"}},
+                "required": ["patch"],
+                "additionalProperties": False,
+            },
+            risk_level="medium",
+            action_type="write",
+            execute=_apply_patch_tool,
+        ),
+        ToolDefinition(
+            name="glob",
+            description="Find files by glob pattern.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string"},
+                    "path": {"type": "string"},
+                },
+                "required": ["pattern"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_glob_tool,
+            aliases=("glob_files",),
+        ),
+        ToolDefinition(
+            name="grep",
+            description="Search file contents for a pattern.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string"},
+                    "path": {"type": "string"},
+                    "glob": {"type": "string"},
+                },
+                "required": ["pattern"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_grep_tool,
+            aliases=("grep_content",),
+        ),
+    ]

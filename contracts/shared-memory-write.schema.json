@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/shared-memory-write.schema.json",
+  "title": "SharedMemoryWrite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "writeId",
+    "writerAgentId",
+    "ticketId",
+    "scope",
+    "confidence",
+    "content",
+    "timestamp"
+  ],
+  "properties": {
+    "writeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "writerAgentId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ticketId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["scratch", "proposal", "committed"]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

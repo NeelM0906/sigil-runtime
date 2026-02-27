@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/skill-manifest.schema.json",
+  "type": "object",
+  "required": [
+    "skill_id",
+    "version",
+    "name",
+    "description",
+    "entrypoint",
+    "intent_tags",
+    "inputs",
+    "outputs",
+    "tools_required",
+    "risk_level",
+    "default_enabled"
+  ],
+  "properties": {
+    "skill_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,63}$"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "name": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "entrypoint": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"type": "string", "enum": ["template", "python_callable", "tool_chain"]},
+        "template": {"type": "string"},
+        "callable": {"type": "string"},
+        "steps": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "intent_tags": {"type": "array", "items": {"type": "string"}},
+    "inputs": {"type": "object"},
+    "outputs": {"type": "object"},
+    "tools_required": {"type": "array", "items": {"type": "string"}},
+    "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "default_enabled": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

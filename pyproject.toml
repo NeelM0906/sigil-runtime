@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bomba-sr-runtime"
+version = "0.1.0"
+description = "BOMBA SR v1.1 runtime implementation"
+readme = "bomba-sr-spec-v1.1.md"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
