@@ -48,6 +48,11 @@ MIME_TYPES = {
     ".woff": "font/woff",
     ".ttf": "font/ttf",
 }
+CORS_ALLOWED_ORIGINS = tuple(
+    origin.strip()
+    for origin in os.getenv("BOMBA_CORS_ALLOWED_ORIGINS", "http://127.0.0.1:8787,http://localhost:8787").split(",")
+    if origin.strip()
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,6 +86,24 @@ def _default_subagent_worker(run_id: str, task: SubAgentTask, protocol) -> dict:
 
 def make_handler(bridge: RuntimeBridge):
     class Handler(BaseHTTPRequestHandler):
+        def _cors_origin(self) -> str | None:
+            origin = str(self.headers.get("Origin") or "").strip()
+            if not origin:
+                return None
+            if "*" in CORS_ALLOWED_ORIGINS:
+                return "*"
+            if origin in CORS_ALLOWED_ORIGINS:
+                return origin
+            return None
+
+        def _is_origin_allowed(self) -> bool:
+            origin = str(self.headers.get("Origin") or "").strip()
+            if not origin:
+                return True
+            if "*" in CORS_ALLOWED_ORIGINS:
+                return True
+            return origin in CORS_ALLOWED_ORIGINS
+
         def _read_json(self) -> dict:
             content_length = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(content_length) if content_length else b"{}"
@@ -103,9 +126,12 @@ def make_handler(bridge: RuntimeBridge):
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(encoded)))
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            allowed_origin = self._cors_origin()
+            if allowed_origin:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin)
+                self.send_header("Vary", "Origin")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
             self.wfile.write(encoded)
 
@@ -140,10 +166,18 @@ def make_handler(bridge: RuntimeBridge):
             self.wfile.write(data)
 
         def do_OPTIONS(self) -> None:  # noqa: N802
+            if not self._is_origin_allowed():
+                self.send_response(403)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             self.send_response(204)
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            allowed_origin = self._cors_origin()
+            if allowed_origin:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin)
+                self.send_header("Vary", "Origin")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.send_header("Content-Length", "0")
             self.end_headers()
 
@@ -306,6 +340,9 @@ def make_handler(bridge: RuntimeBridge):
 
         def _dashboard_post(self, parsed) -> None:
             path = parsed.path
+            if not self._is_origin_allowed():
+                self._write_cors(403, {"error": "origin_not_allowed"})
+                return
             try:
                 body = self._read_json()
             except Exception:
