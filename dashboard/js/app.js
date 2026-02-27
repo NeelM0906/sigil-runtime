@@ -7,6 +7,7 @@ import { renderHealth } from './panels/health.js';
 import { renderAdaptation } from './panels/adaptation.js';
 import { renderMemory } from './panels/memory.js';
 import { renderSubagents } from './panels/subagents.js';
+import { renderSisters } from './panels/sisters.js';
 import { renderAutonomy } from './panels/autonomy.js';
 import { renderSkills } from './panels/skills.js';
 import { renderTelemetry } from './panels/telemetry.js';
@@ -59,6 +60,7 @@ const panels = [
   { id: 'panel-adaptation', key: 'adaptation', render: renderAdaptation },
   { id: 'panel-memory', key: 'memory', render: renderMemory },
   { id: 'panel-subagents', key: 'subagents', render: renderSubagents },
+  { id: 'panel-sisters', key: 'sisters', render: renderSisters },
   { id: 'panel-autonomy', key: 'autonomy', render: renderAutonomy },
   { id: 'panel-skills', key: 'skills', render: renderSkills },
   { id: 'panel-telemetry', key: 'loop_telemetry', render: renderTelemetry },

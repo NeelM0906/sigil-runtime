@@ -54,6 +54,7 @@ export class SigilAPI {
   // Autonomy controls
   heartbeatAction(action) { return this._post(`/api/dashboard/heartbeat/${action}`); }
   cronAction(action) { return this._post(`/api/dashboard/cron/${action}`); }
+  sisterAction(action, sisterId) { return this._post(`/api/dashboard/sisters/${action}`, { sister_id: sisterId }); }
 
   // Approvals
   decideApproval(approvalId, approved) {

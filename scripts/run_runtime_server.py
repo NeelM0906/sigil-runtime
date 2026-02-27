@@ -324,6 +324,18 @@ def make_handler(bridge: RuntimeBridge):
                     result = bridge.cron_start(tenant_id, user_id, workspace_root)
                 elif path == "/api/dashboard/cron/stop":
                     result = bridge.cron_stop(tenant_id, user_id, workspace_root)
+                elif path == "/api/dashboard/sisters/spawn":
+                    sister_id = str(body.get("sister_id") or "").strip()
+                    if not sister_id:
+                        self._write_cors(400, {"error": "sister_id is required"})
+                        return
+                    result = bridge.spawn_sister(tenant_id, sister_id, workspace_root)
+                elif path == "/api/dashboard/sisters/stop":
+                    sister_id = str(body.get("sister_id") or "").strip()
+                    if not sister_id:
+                        self._write_cors(400, {"error": "sister_id is required"})
+                        return
+                    result = bridge.stop_sister(tenant_id, sister_id, workspace_root)
                 else:
                     self._write_cors(404, {"error": "not_found"})
                     return
