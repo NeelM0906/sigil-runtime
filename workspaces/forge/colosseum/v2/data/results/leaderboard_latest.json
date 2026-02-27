@@ -1,0 +1,236 @@
+[
+  {
+    "id": "people_talent_client_facing",
+    "title": "Onboarding Coordinator",
+    "area": "People & Talent",
+    "average": 8.534993333333334
+  },
+  {
+    "id": "fun_magic_zone_action",
+    "title": "Awe Engineer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 8.414993333333333
+  },
+  {
+    "id": "marketing_inbound_zone_action",
+    "title": "Shared Experience Designer",
+    "area": "Marketing \u2014 Inbound",
+    "average": 8.074666666666667
+  },
+  {
+    "id": "fun_magic_leader",
+    "title": "Chief Experience Officer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 7.971666666666667
+  },
+  {
+    "id": "marketing_inbound_client_facing",
+    "title": "Funnel Architect",
+    "area": "Marketing \u2014 Inbound",
+    "average": 7.928000000000001
+  },
+  {
+    "id": "fun_magic_client_facing",
+    "title": "Client Journey Choreographer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 7.8566666666666665
+  },
+  {
+    "id": "vision_leadership_zone_action",
+    "title": "Vision Translator",
+    "area": "Vision & Leadership",
+    "average": 7.8233266666666665
+  },
+  {
+    "id": "client_success_zone_action",
+    "title": "Churn Prevention Analyst",
+    "area": "Client Success & Retention",
+    "average": 7.809993333333334
+  },
+  {
+    "id": "sales_influence_client_facing",
+    "title": "Discovery Call Specialist",
+    "area": "Sales & Influence",
+    "average": 7.643999999999999
+  },
+  {
+    "id": "client_success_client_facing",
+    "title": "Account Manager",
+    "area": "Client Success & Retention",
+    "average": 7.621666666666667
+  },
+  {
+    "id": "people_talent_leader",
+    "title": "Chief People Officer",
+    "area": "People & Talent",
+    "average": 7.5553333333333335
+  },
+  {
+    "id": "sales_influence_leader",
+    "title": "Sales Director",
+    "area": "Sales & Influence",
+    "average": 7.555
+  },
+  {
+    "id": "client_success_leader",
+    "title": "Client Success Director",
+    "area": "Client Success & Retention",
+    "average": 7.547999999999999
+  },
+  {
+    "id": "sales_influence_zone_action",
+    "title": "Truth-to-Pain Navigator",
+    "area": "Sales & Influence",
+    "average": 7.535
+  },
+  {
+    "id": "vision_leadership_client_facing",
+    "title": "Cross-Company Synergy Director",
+    "area": "Vision & Leadership",
+    "average": 7.45
+  },
+  {
+    "id": "legal_compliance_leader",
+    "title": "General Counsel",
+    "area": "Legal & Compliance",
+    "average": 7.435
+  },
+  {
+    "id": "finance_zone_action",
+    "title": "Cash Flow Analyst",
+    "area": "Finance & Revenue",
+    "average": 7.403333333333332
+  },
+  {
+    "id": "people_talent_zone_action",
+    "title": "Recruiter",
+    "area": "People & Talent",
+    "average": 7.398333333333333
+  },
+  {
+    "id": "client_fulfillment_client_facing",
+    "title": "Client Communication Lead",
+    "area": "Client Fulfillment & Delivery",
+    "average": 7.376666666666666
+  },
+  {
+    "id": "legal_compliance_client_facing",
+    "title": "Ethics Officer",
+    "area": "Legal & Compliance",
+    "average": 7.349999999999999
+  },
+  {
+    "id": "operations_leader",
+    "title": "COO",
+    "area": "Operations & Process Mastery",
+    "average": 7.346666666666667
+  },
+  {
+    "id": "marketing_outbound_zone_action",
+    "title": "Ecosystem Merger Specialist",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.303333333333334
+  },
+  {
+    "id": "operations_client_facing",
+    "title": "Meeting Optimization Specialist",
+    "area": "Operations & Process Mastery",
+    "average": 7.296666666666667
+  },
+  {
+    "id": "finance_client_facing",
+    "title": "Collections Specialist",
+    "area": "Finance & Revenue",
+    "average": 7.288333333333333
+  },
+  {
+    "id": "technology_leader",
+    "title": "CTO",
+    "area": "Technology & Infrastructure",
+    "average": 7.278333333333333
+  },
+  {
+    "id": "vision_leadership_leader",
+    "title": "Chief Vision Officer",
+    "area": "Vision & Leadership",
+    "average": 7.276666666666666
+  },
+  {
+    "id": "legal_compliance_zone_action",
+    "title": "Contract Drafter",
+    "area": "Legal & Compliance",
+    "average": 7.27
+  },
+  {
+    "id": "technology_client_facing",
+    "title": "CRM Administrator",
+    "area": "Technology & Infrastructure",
+    "average": 7.238333333333333
+  },
+  {
+    "id": "client_fulfillment_leader",
+    "title": "Fulfillment Director",
+    "area": "Client Fulfillment & Delivery",
+    "average": 7.213333333333334
+  },
+  {
+    "id": "marketing_outbound_leader",
+    "title": "Outbound Strategy Director",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.203333333333333
+  },
+  {
+    "id": "innovation_rd_leader",
+    "title": "Chief Innovation Officer",
+    "area": "Innovation & R&D",
+    "average": 7.155
+  },
+  {
+    "id": "finance_leader",
+    "title": "CFO",
+    "area": "Finance & Revenue",
+    "average": 7.146666666666667
+  },
+  {
+    "id": "innovation_rd_zone_action",
+    "title": "Being Evolution Architect",
+    "area": "Innovation & R&D",
+    "average": 7.075
+  },
+  {
+    "id": "marketing_outbound_client_facing",
+    "title": "Meeting Setter",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.039999999999999
+  },
+  {
+    "id": "client_fulfillment_zone_action",
+    "title": "Project Manager",
+    "area": "Client Fulfillment & Delivery",
+    "average": 6.991666666666667
+  },
+  {
+    "id": "marketing_inbound_leader",
+    "title": "Content Strategy Director",
+    "area": "Marketing \u2014 Inbound",
+    "average": 6.9316666666666675
+  },
+  {
+    "id": "innovation_rd_client_facing",
+    "title": "Scoring System Optimizer",
+    "area": "Innovation & R&D",
+    "average": 6.751666666666668
+  },
+  {
+    "id": "technology_zone_action",
+    "title": "AI/ML Engineer",
+    "area": "Technology & Infrastructure",
+    "average": 6.748333333333334
+  },
+  {
+    "id": "operations_zone_action",
+    "title": "Zone Action Tracker",
+    "area": "Operations & Process Mastery",
+    "average": 6.683333333333334
+  }
+]
