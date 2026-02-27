@@ -64,6 +64,7 @@ class SubAgentProtocol:
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
+        # Step 1: Create tables (without indexes that depend on migrated columns)
         self.db.script(
             """
             CREATE TABLE IF NOT EXISTS subagent_runs (
@@ -132,17 +133,21 @@ class SubAgentProtocol:
 
             CREATE INDEX IF NOT EXISTS idx_subagent_runs_parent
               ON subagent_runs(parent_run_id, status, accepted_at DESC);
-            CREATE INDEX IF NOT EXISTS idx_subagent_runs_tenant_session
-              ON subagent_runs(tenant_id, parent_session_id, accepted_at DESC);
             CREATE INDEX IF NOT EXISTS idx_subagent_events_run
               ON subagent_events(run_id, seq ASC);
             CREATE INDEX IF NOT EXISTS idx_shared_writes_ticket
               ON shared_working_memory_writes(ticket_id, created_at DESC);
             """
         )
+        # Step 2: Ensure migrated columns exist before creating indexes that use them
         self._ensure_column("subagent_runs", "tenant_id", "TEXT NOT NULL DEFAULT ''")
         self._ensure_column("subagent_runs", "workspace_root", "TEXT")
         self._ensure_column("subagent_runs", "model_id", "TEXT")
+        # Step 3: Now safe to create index on tenant_id
+        self.db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_subagent_runs_tenant_session "
+            "ON subagent_runs(tenant_id, parent_session_id, accepted_at DESC)"
+        )
         self.db.commit()
 
     def spawn(
