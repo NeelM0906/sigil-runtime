@@ -449,6 +449,7 @@ class RuntimeBridge:
             ]
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        procedural_memories = runtime.memory.recall_procedural(user_id=request.user_id, query=search_query, limit=5)
         recent_turn_messages = runtime.memory.get_recent_turns(
             tenant_id=request.tenant_id,
             session_id=request.session_id,
@@ -468,6 +469,16 @@ class RuntimeBridge:
                     "contradictory": False,
                 }
             )
+        procedural_candidates = [
+            {
+                "text": item["content"],
+                "source": f"memory://procedural/{item['id']}",
+                "recency_label": item["updated_at"],
+            }
+            for item in procedural_memories
+        ]
+        if not procedural_candidates:
+            procedural_candidates = [{"text": "Use local-first search then escalate only on low confidence."}]
 
         task_state = {
             "text": "Respond as a chat assistant while preserving memory and auditability.",
@@ -520,7 +531,7 @@ class RuntimeBridge:
                         else {"text": "session_summary=None"}
                     ),
                 ],
-                "procedural_candidates": [{"text": "Use local-first search then escalate only on low confidence."}],
+                "procedural_candidates": procedural_candidates,
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
             },
@@ -668,6 +679,39 @@ class RuntimeBridge:
             )
             assistant_text = response.text
             assistant_usage = response.usage
+
+        procedural_learning: dict[str, Any] | None = None
+        if loop_tool_calls:
+            ordered_tools: list[str] = []
+            statuses: list[str] = []
+            for item in loop_tool_calls:
+                tool_name = str(item.get("tool_name") or item.get("tool") or "").strip()
+                status = str(item.get("status") or "").strip().lower()
+                if tool_name:
+                    ordered_tools.append(tool_name)
+                if status:
+                    statuses.append(status)
+            if ordered_tools:
+                chain_signature = ",".join(ordered_tools)
+                digest = hashlib.sha1(chain_signature.encode("utf-8")).hexdigest()[:12]
+                strategy_key = f"toolchain_{digest}"
+                strategy_content = (
+                    f"Use tool chain: {chain_signature}. "
+                    f"Observed stop_reason={loop_stopped_reason or 'completed'}."
+                )
+                strategy_success = bool(statuses) and all(s == "executed" for s in statuses)
+                strategy_memory_id = runtime.memory.learn_procedural(
+                    user_id=request.user_id,
+                    strategy_key=strategy_key,
+                    content=strategy_content,
+                    success=strategy_success,
+                )
+                procedural_learning = {
+                    "memory_id": strategy_memory_id,
+                    "strategy_key": strategy_key,
+                    "success": strategy_success,
+                    "tool_chain": ordered_tools,
+                }
 
         markdown_artifact = None
         if self._should_create_markdown_artifact(effective_user_message):
@@ -886,6 +930,7 @@ class RuntimeBridge:
                         "memory_id": None,
                     }
                 ),
+                "procedural_learning": procedural_learning,
                 "pending_approvals": pending_learning_approvals,
             },
             "approvals": {

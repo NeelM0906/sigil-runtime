@@ -83,6 +83,22 @@ class MemoryConsolidator:
 
             CREATE INDEX IF NOT EXISTS idx_memories_active_user
               ON memories(user_id, tier, active, updated_at DESC);
+
+            CREATE TABLE IF NOT EXISTS procedural_memories (
+              id TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              strategy_key TEXT NOT NULL,
+              content TEXT NOT NULL,
+              success_count INTEGER NOT NULL DEFAULT 0,
+              failure_count INTEGER NOT NULL DEFAULT 0,
+              active INTEGER NOT NULL DEFAULT 1,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              UNIQUE(user_id, strategy_key)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_procedural_memories_user
+              ON procedural_memories(user_id, active, updated_at DESC);
             """
         )
         self.db.commit()
@@ -232,6 +248,103 @@ class MemoryConsolidator:
             (user_id, key),
         ).fetchone()
         return int(row["c"]) if row is not None else 0
+
+    def learn_procedural(self, user_id: str, strategy_key: str, content: str, success: bool) -> str:
+        normalized_key = strategy_key.strip()
+        normalized_content = content.strip()
+        if not normalized_key:
+            raise ValueError("strategy_key cannot be empty")
+        if not normalized_content:
+            raise ValueError("content cannot be empty")
+
+        now = utc_now_iso()
+        row = self.db.execute(
+            """
+            SELECT id, success_count, failure_count
+            FROM procedural_memories
+            WHERE user_id = ? AND strategy_key = ? AND active = 1
+            LIMIT 1
+            """,
+            (user_id, normalized_key),
+        ).fetchone()
+
+        if row is None:
+            memory_id = str(uuid.uuid4())
+            self.db.execute(
+                """
+                INSERT INTO procedural_memories (
+                  id, user_id, strategy_key, content, success_count, failure_count, active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """,
+                (
+                    memory_id,
+                    user_id,
+                    normalized_key,
+                    normalized_content,
+                    1 if success else 0,
+                    0 if success else 1,
+                    now,
+                    now,
+                ),
+            )
+            self.db.commit()
+            return memory_id
+
+        memory_id = str(row["id"])
+        success_count = int(row["success_count"]) + (1 if success else 0)
+        failure_count = int(row["failure_count"]) + (0 if success else 1)
+        self.db.execute(
+            """
+            UPDATE procedural_memories
+            SET content = ?, success_count = ?, failure_count = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                normalized_content,
+                success_count,
+                failure_count,
+                now,
+                memory_id,
+            ),
+        )
+        self.db.commit()
+        return memory_id
+
+    def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        rows = self.db.execute(
+            """
+            SELECT *
+            FROM procedural_memories
+            WHERE user_id = ? AND active = 1
+            ORDER BY updated_at DESC
+            LIMIT 200
+            """,
+            (user_id,),
+        ).fetchall()
+        scored: list[dict[str, Any]] = []
+        for row in rows:
+            content = str(row["content"])
+            lexical = self._lexical_score(query, content)
+            success_count = int(row["success_count"])
+            failure_count = int(row["failure_count"])
+            total = success_count + failure_count
+            success_ratio = (success_count + 1) / (total + 2)
+            score = lexical * success_ratio
+            scored.append(
+                {
+                    "id": str(row["id"]),
+                    "strategy_key": str(row["strategy_key"]),
+                    "content": content,
+                    "success_count": success_count,
+                    "failure_count": failure_count,
+                    "success_ratio": success_ratio,
+                    "lexical_score": lexical,
+                    "score": score,
+                    "updated_at": str(row["updated_at"]),
+                }
+            )
+        scored.sort(key=lambda item: item["score"], reverse=True)
+        return scored[: max(1, int(limit))]
 
     @staticmethod
     def _is_meta_noise(text: str) -> bool:

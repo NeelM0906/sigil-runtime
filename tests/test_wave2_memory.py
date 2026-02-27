@@ -92,6 +92,36 @@ class MemoryConsolidatorTests(unittest.TestCase):
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0].key, "substantive")
 
+    def test_procedural_memory_learn_and_recall(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            consolidator = MemoryConsolidator(db)
+            user = str(uuid.uuid4())
+
+            consolidator.learn_procedural(
+                user_id=user,
+                strategy_key="search_then_patch",
+                content="Use glob then read then apply_patch for multi-file edits.",
+                success=True,
+            )
+            consolidator.learn_procedural(
+                user_id=user,
+                strategy_key="search_then_patch",
+                content="Use glob then read then apply_patch for multi-file edits.",
+                success=True,
+            )
+            consolidator.learn_procedural(
+                user_id=user,
+                strategy_key="blind_patch",
+                content="Apply patch without reading context first.",
+                success=False,
+            )
+
+            results = consolidator.recall_procedural(user_id=user, query="multi-file edits", limit=2)
+            self.assertEqual(len(results), 2)
+            self.assertEqual(results[0]["strategy_key"], "search_then_patch")
+            self.assertGreater(results[0]["success_ratio"], results[1]["success_ratio"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -353,6 +353,23 @@ class HybridMemoryStore:
             for r in rows
         ]
 
+    def learn_procedural(
+        self,
+        user_id: str,
+        strategy_key: str,
+        content: str,
+        success: bool,
+    ) -> str:
+        return self.consolidator.learn_procedural(
+            user_id=user_id,
+            strategy_key=strategy_key,
+            content=content,
+            success=success,
+        )
+
+    def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        return self.consolidator.recall_procedural(user_id=user_id, query=query, limit=limit)
+
     def recall(
         self,
         user_id: str,
