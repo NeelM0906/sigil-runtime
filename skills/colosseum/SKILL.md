@@ -3,7 +3,7 @@ name: colosseum
 description: Run Colosseum tournament rounds, evaluate outcomes, and report leaderboard/evolution signals.
 license: MIT
 user-invocable: true
-allowed-tools: exec_command file_read file_write memory_note
+allowed-tools: exec read write memory_store
 ---
 # Colosseum Runner (Forge)
 

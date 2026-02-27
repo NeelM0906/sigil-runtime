@@ -3,7 +3,7 @@ name: zoom-ingest
 description: Extract and download transcripts from Zoom Cloud Recordings. Filters by priority keywords (heart of influence, mastery session, etc.)
 license: MIT
 user-invocable: true
-allowed-tools: web_fetch file_write memory_note
+allowed-tools: web_fetch write memory_store
 metadata:
   openclaw:
     requires:

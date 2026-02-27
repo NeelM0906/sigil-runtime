@@ -3,7 +3,7 @@ name: unblinded-translator
 description: Transform long transcripts into structured Unblinded Formula knowledge records.
 license: MIT
 user-invocable: true
-allowed-tools: read_file write_file memory_note pinecone_query
+allowed-tools: read write memory_store pinecone_query
 ---
 # Unblinded Translator Workflow
 
