@@ -19,6 +19,10 @@ class SoulConfig:
     contamination_checks: list[str]
     raw_soul_text: str
     raw_identity_text: str
+    mission_text: str | None = None
+    vision_text: str | None = None
+    formula_text: str | None = None
+    priorities_text: str | None = None
 
 
 def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
@@ -27,6 +31,10 @@ def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
     identity_path = root / "IDENTITY.md"
     soul_text = _read_text(soul_path)
     identity_text = _read_text(identity_path)
+    mission_text = _read_text(root / "MISSION.md")
+    vision_text = _read_text(root / "VISION.md")
+    formula_text = _read_text(root / "FORMULA.md")
+    priorities_text = _read_text(root / "PRIORITIES.md")
     if soul_text is None and identity_text is None:
         return None
 
@@ -78,6 +86,10 @@ def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
         contamination_checks=contamination_checks,
         raw_soul_text=soul_raw,
         raw_identity_text=identity_raw,
+        mission_text=mission_text,
+        vision_text=vision_text,
+        formula_text=formula_text,
+        priorities_text=priorities_text,
     )
 
 

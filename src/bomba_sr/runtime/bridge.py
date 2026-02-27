@@ -509,6 +509,15 @@ class RuntimeBridge:
                     "contradictory": False,
                 }
             )
+        if runtime.soul is not None and runtime.soul.formula_text and runtime.soul.formula_text.strip():
+            semantic_candidates.append(
+                {
+                    "text": runtime.soul.formula_text.strip()[:12000],
+                    "source": "workspace://FORMULA.md",
+                    "recency_label": "workspace_static",
+                    "contradictory": False,
+                }
+            )
         procedural_candidates = [
             {
                 "text": item["content"],
@@ -551,8 +560,28 @@ class RuntimeBridge:
                 soul_sections.append("<soul>\n" + runtime.soul.raw_soul_text.strip() + "\n</soul>")
             if runtime.soul.raw_identity_text.strip():
                 soul_sections.append("<identity>\n" + runtime.soul.raw_identity_text.strip() + "\n</identity>")
+            mission_block: list[str] = []
+            if runtime.soul.mission_text and runtime.soul.mission_text.strip():
+                mission_block.append("<mission>\n" + runtime.soul.mission_text.strip() + "\n</mission>")
+            if runtime.soul.vision_text and runtime.soul.vision_text.strip():
+                mission_block.append("<vision>\n" + runtime.soul.vision_text.strip() + "\n</vision>")
+            if mission_block:
+                soul_sections.append("\n".join(mission_block))
             if soul_sections:
                 system_contract = "\n\n".join(soul_sections + [system_contract])
+
+        working_memory_entries: list[dict[str, str]] = [
+            {"text": "Current goal: answer user and capture durable learnings."},
+            {"text": f"pending_learning_approvals={len(pending_learning_approvals)}"},
+            {"text": f"pending_tool_approvals={len(pending_tool_approvals)}"},
+            {"text": f"skill_parse_warnings={sum(len(v) for v in skill_diagnostics.values())}"},
+        ]
+        if runtime.soul is not None and runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
+            working_memory_entries.append(
+                {
+                    "text": f"priorities_reference={runtime.soul.priorities_text.strip()[:8000]}",
+                }
+            )
 
         context_result = runtime.context_engine.assemble(
             profile=request.profile,
@@ -562,12 +591,7 @@ class RuntimeBridge:
             inputs={
                 "explicit_user_constraints": ["Do not fabricate sources"],
                 "task_state": task_state,
-                "working_memory": [
-                    {"text": "Current goal: answer user and capture durable learnings."},
-                    {"text": f"pending_learning_approvals={len(pending_learning_approvals)}"},
-                    {"text": f"pending_tool_approvals={len(pending_tool_approvals)}"},
-                    {"text": f"skill_parse_warnings={sum(len(v) for v in skill_diagnostics.values())}"},
-                ],
+                "working_memory": working_memory_entries,
                 "world_state": [
                     {"text": f"workspace_root={runtime.context.workspace_root}"},
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
