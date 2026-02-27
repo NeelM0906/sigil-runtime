@@ -66,17 +66,39 @@ def copy_memory_markdown_files(source_dir: Path, dest_dir: Path, dry_run: bool) 
     source_memory = source_dir / "memory"
     dest_memory = dest_dir / "memory"
     if not source_memory.exists():
-        return {"copied": 0, "missing_source": 1}
-    files = sorted(source_memory.glob("*.md"))
+        return {"copied": 0, "skipped": 0, "missing_source": 1}
+    source_memory_resolved = source_memory.resolve()
+    files: list[Path] = []
+    skipped = 0
+    for candidate in sorted(source_memory.iterdir(), key=lambda p: p.name):
+        if candidate.suffix.lower() != ".md":
+            continue
+        if candidate.is_symlink():
+            skipped += 1
+            continue
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            skipped += 1
+            continue
+        if not resolved.is_file():
+            skipped += 1
+            continue
+        try:
+            resolved.relative_to(source_memory_resolved)
+        except ValueError:
+            skipped += 1
+            continue
+        files.append(candidate)
     if not dry_run:
         dest_memory.mkdir(parents=True, exist_ok=True)
     copied = 0
     for src in files:
         dst = dest_memory / src.name
         if not dry_run:
-            shutil.copy2(src, dst)
+            shutil.copy2(src, dst, follow_symlinks=False)
         copied += 1
-    return {"copied": copied, "missing_source": 0}
+    return {"copied": copied, "skipped": skipped, "missing_source": 0}
 
 
 def main() -> int:
@@ -119,7 +141,7 @@ def main() -> int:
             if memory_result["missing_source"]:
                 print("  memory copied: 0 (source memory/ missing)")
             else:
-                print(f"  memory copied: {memory_result['copied']}")
+                print(f"  memory copied: {memory_result['copied']} (skipped: {memory_result['skipped']})")
 
     print("")
     print(
