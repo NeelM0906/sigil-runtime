@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -21,6 +22,7 @@ STRATA_INDEXES = {
 }
 
 _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+SAFE_INDEX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
 
 def _http_json(
@@ -92,10 +94,10 @@ def _resolve_index_host(index_name: str, api_key: str) -> str:
             if str(item.get("name") or "") == index_name:
                 host = str(item.get("host") or "").strip()
                 if host:
-                    return host
+                    return _sanitize_index_host(host)
     fallback = _fallback_host_map().get(index_name)
     if isinstance(fallback, str) and fallback.strip():
-        return fallback.strip()
+        return _sanitize_index_host(fallback.strip())
     raise ValueError(f"Pinecone index host not found for '{index_name}'")
 
 
@@ -116,6 +118,29 @@ def _fallback_host_map() -> dict[str, str]:
         if isinstance(key, str) and isinstance(value, str) and key.strip() and value.strip():
             out[key.strip()] = value.strip()
     return out
+
+
+def _require_safe_index_name(index_name: str) -> str:
+    cleaned = index_name.strip()
+    if not cleaned:
+        raise ValueError("index_name is required")
+    if not SAFE_INDEX_PATTERN.fullmatch(cleaned):
+        raise ValueError("index_name contains invalid characters")
+    return cleaned
+
+
+def _sanitize_index_host(host: str) -> str:
+    cleaned = host.strip()
+    if cleaned.startswith("http://") or cleaned.startswith("https://"):
+        parsed = urllib.parse.urlparse(cleaned)
+        cleaned = parsed.netloc.strip()
+    if not cleaned:
+        raise ValueError("invalid Pinecone host")
+    if "/" in cleaned or "?" in cleaned or "#" in cleaned or "@" in cleaned:
+        raise ValueError("invalid Pinecone host")
+    if not re.fullmatch(r"[A-Za-z0-9.:-]+", cleaned):
+        raise ValueError("invalid Pinecone host")
+    return cleaned
 
 
 def _embed_query(query: str) -> list[float]:
@@ -146,9 +171,7 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         query = str(arguments.get("query") or "").strip()
         if not query:
             raise ValueError("query is required")
-        index_name = str(arguments.get("index_name") or default_index).strip()
-        if not index_name:
-            raise ValueError("index_name is required")
+        index_name = _require_safe_index_name(str(arguments.get("index_name") or default_index))
         namespace = arguments.get("namespace")
         namespace_value = (
             str(namespace).strip()

@@ -97,6 +97,19 @@ class VoiceToolTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 list_tool.execute({}, _ctx())
 
+    def test_rejects_unsafe_identifier_args(self) -> None:
+        with patch.dict("os.environ", {"BLAND_API_KEY": "bk"}, clear=False):
+            tools = builtin_voice_tools(provider="bland")
+            tr_tool = next(t for t in tools if t.name == "voice_get_transcript")
+            call_tool = next(t for t in tools if t.name == "voice_make_call")
+            with self.assertRaises(ValueError):
+                tr_tool.execute({"call_id": "../admin/keys"}, _ctx())
+            with self.assertRaises(ValueError):
+                call_tool.execute(
+                    {"to_number": "+12015550000", "pathway_id": "../pathway"},
+                    _ctx(),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

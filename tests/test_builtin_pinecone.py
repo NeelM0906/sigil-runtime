@@ -112,6 +112,20 @@ class PineconeToolTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 query_tool.execute({"query": "hello"}, _context())
 
+    def test_rejects_unsafe_index_name(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "PINECONE_API_KEY": "pc-key",
+                "OPENAI_API_KEY": "oa-key",
+            },
+            clear=False,
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            query_tool = next(t for t in tools if t.name == "pinecone_query")
+            with self.assertRaises(ValueError):
+                query_tool.execute({"query": "hello", "index_name": "../admin/keys"}, _context())
+
 
 if __name__ == "__main__":
     unittest.main()

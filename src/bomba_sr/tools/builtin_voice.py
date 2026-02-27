@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.parse
 import urllib.request
 from typing import Any
@@ -9,6 +10,7 @@ from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
 BLAND_API_BASE = "https://api.bland.ai/v1"
+SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 
 
 def _http_json(
@@ -60,6 +62,15 @@ def _safe_call_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: payload[key] for key in allowlist if key in payload}
 
 
+def _require_safe_identifier(value: str, field_name: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError(f"{field_name} is required")
+    if not SAFE_ID_PATTERN.fullmatch(cleaned):
+        raise ValueError(f"{field_name} contains invalid characters")
+    return cleaned
+
+
 def _list_calls(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     _ = context
     api_key = _require_api_key()
@@ -70,7 +81,7 @@ def _list_calls(arguments: dict[str, Any], context: ToolContext) -> dict[str, An
     if date_filter:
         query["date_filter"] = date_filter
     if pathway_id:
-        query["pathway_id"] = pathway_id
+        query["pathway_id"] = _require_safe_identifier(pathway_id, "pathway_id")
     url = BLAND_API_BASE + "/calls?" + urllib.parse.urlencode(query)
     payload = _http_json("GET", url, api_key=api_key)
     calls = payload.get("calls")
@@ -97,10 +108,12 @@ def _list_calls(arguments: dict[str, Any], context: ToolContext) -> dict[str, An
 def _get_transcript(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     _ = context
     api_key = _require_api_key()
-    call_id = str(arguments.get("call_id") or "").strip()
-    if not call_id:
-        raise ValueError("call_id is required")
-    payload = _http_json("GET", f"{BLAND_API_BASE}/calls/{call_id}", api_key=api_key)
+    call_id = _require_safe_identifier(str(arguments.get("call_id") or ""), "call_id")
+    payload = _http_json(
+        "GET",
+        f"{BLAND_API_BASE}/calls/{urllib.parse.quote(call_id, safe='')}",
+        api_key=api_key,
+    )
     transcript = payload.get("transcript")
     if not isinstance(transcript, list):
         transcript = payload.get("messages") if isinstance(payload.get("messages"), list) else []
@@ -116,11 +129,9 @@ def _make_call(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
     _ = context
     api_key = _require_api_key()
     to_number = str(arguments.get("to_number") or "").strip()
-    pathway_id = str(arguments.get("pathway_id") or "").strip()
+    pathway_id = _require_safe_identifier(str(arguments.get("pathway_id") or ""), "pathway_id")
     if not to_number:
         raise ValueError("to_number is required")
-    if not pathway_id:
-        raise ValueError("pathway_id is required")
     dynamic_data = arguments.get("dynamic_data")
     if dynamic_data is not None and not isinstance(dynamic_data, dict):
         raise ValueError("dynamic_data must be an object")
