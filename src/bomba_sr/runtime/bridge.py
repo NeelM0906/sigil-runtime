@@ -27,6 +27,7 @@ from bomba_sr.context.policy import ContextPolicyEngine, TurnProfile, calculate_
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
 from bomba_sr.identity.profile import UserIdentityService
+from bomba_sr.identity.soul import SoulConfig, load_soul_from_workspace
 from bomba_sr.info.retrieval import GenericInfoRetriever
 from bomba_sr.llm.providers import ChatMessage, LLMProvider, provider_from_env
 from bomba_sr.memory.embeddings import OpenAIEmbeddingProvider
@@ -108,6 +109,7 @@ class _TenantRuntime:
     command_router: CommandRouter
     skill_disclosure: SkillDisclosure
     identity: UserIdentityService
+    soul: SoulConfig | None
     info: GenericInfoRetriever
 
 
@@ -539,13 +541,23 @@ class RuntimeBridge:
         if task_block:
             task_state["text"] += f" Active task={task_block['title']}({task_block['task_id']}) status={task_block['status']}."
 
+        system_contract = (
+            "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
+            "and prefer local-first retrieval before broad assumptions."
+        )
+        if runtime.soul is not None:
+            soul_sections: list[str] = []
+            if runtime.soul.raw_soul_text.strip():
+                soul_sections.append("<soul>\n" + runtime.soul.raw_soul_text.strip() + "\n</soul>")
+            if runtime.soul.raw_identity_text.strip():
+                soul_sections.append("<identity>\n" + runtime.soul.raw_identity_text.strip() + "\n</identity>")
+            if soul_sections:
+                system_contract = "\n\n".join(soul_sections + [system_contract])
+
         context_result = runtime.context_engine.assemble(
             profile=request.profile,
             model_context_length=capabilities.context_length,
-            system_contract=(
-                "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
-                "and prefer local-first retrieval before broad assumptions."
-            ),
+            system_contract=system_contract,
             user_message=effective_user_message,
             inputs={
                 "explicit_user_constraints": ["Do not fabricate sources"],
@@ -1804,6 +1816,7 @@ class RuntimeBridge:
             return existing
 
         context = self.registry.ensure_tenant(tenant_id=tenant_id, workspace_root=workspace_root)
+        soul_config = load_soul_from_workspace(context.workspace_root)
         db = RuntimeDB(context.db_path)
         db.script(
             """
@@ -2006,6 +2019,7 @@ class RuntimeBridge:
             command_router=command_router,
             skill_disclosure=skill_disclosure,
             identity=UserIdentityService(db, auto_apply_confidence=self.config.learning_auto_apply_confidence),
+            soul=soul_config,
             info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
         )
         self._tenants[key] = runtime
