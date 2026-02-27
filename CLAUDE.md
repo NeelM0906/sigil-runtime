@@ -29,11 +29,15 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
         loop.py                  # AgenticLoop -- iterative tool-call loop
         health.py                # HealthSnapshot for loop system prompt
         rescue.py                # Git-based workspace rescue snapshots
+        sisters.py               # SisterConfig + SisterRegistry loader/lifecycle
         tenancy.py               # Multi-tenant context binding
       llm/providers.py           # LLM provider selection + ChatMessage model
       context/policy.py          # Context assembly + TurnProfile enum
       tools/                     # base.py (ToolExecutor) + builtin_*.py per domain
         builtin_web.py           # web_search (Brave/DuckDuckGo) + web_fetch tools
+        builtin_pinecone.py      # pinecone_query + pinecone_list_indexes tools
+        builtin_voice.py         # Bland.ai call management tools
+        builtin_sisters.py       # Prime sister management tools
         builtin_subagents.py     # sessions_spawn, sessions_poll, sessions_list tools
         builtin_scheduler.py     # schedule_task, list_schedules tools
       governance/                # tool_policy.py, policy_pipeline.py, tool_profiles.py
@@ -60,6 +64,7 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
       storage/db.py              # SQLite RuntimeDB wrapper (WAL mode, thread-safe RLock)
       models/capabilities.py     # OpenRouter capability fetch + cache
       identity/profile.py        # User profile + signal approvals
+      identity/soul.py           # SoulConfig loader from SOUL/IDENTITY mission files
       projects/service.py        # Project/task service
       artifacts/store.py         # Artifact persistence
       info/retrieval.py          # Wikipedia/generic info retrieval
@@ -68,6 +73,8 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
     run_chat_cli.py              # Interactive CLI entry point
     run_runtime_server.py        # HTTP server entry point
     run_user_e2e.py              # E2E scripted test
+    import_sai_identity.py       # SAI identity/mission file import
+    import_sai_memory.py         # SAI memory + formula import
   contracts/                     # JSON Schema files for all domain models
   tests/                         # pytest tests (all phases + ouroboros)
   sql/migrations/                # SQL migration scripts (reference schemas, 001-008)
@@ -132,6 +139,21 @@ curl -s http://127.0.0.1:8787/health | python -m json.tool
 | **Web Search** | | | |
 | `BOMBA_WEB_SEARCH_ENABLED` | No | `true` | Enable web search/fetch tools |
 | `BRAVE_API_KEY` | No | none | Brave Search API key (falls back to DuckDuckGo) |
+| **Pinecone** | | | |
+| `BOMBA_PINECONE_ENABLED` | No | `false` | Enable Pinecone retrieval tools |
+| `BOMBA_PINECONE_DEFAULT_INDEX` | No | `ublib2` | Default Pinecone index |
+| `BOMBA_PINECONE_DEFAULT_NAMESPACE` | No | `longterm` | Default Pinecone namespace |
+| `PINECONE_API_KEY` | Conditional | none | Primary Pinecone API key |
+| `PINECONE_API_KEY_STRATA` | No | none | Optional key for STRATA indexes |
+| `BOMBA_PINECONE_INDEX_HOSTS` | No | none | Optional JSON host map fallback |
+| **Voice (Bland.ai)** | | | |
+| `BOMBA_VOICE_ENABLED` | No | `false` | Enable voice call management tools |
+| `BOMBA_VOICE_PROVIDER` | No | `bland` | Voice provider selector |
+| `BLAND_API_KEY` | Conditional | none | Bland API key |
+| **Zoom Skill Prereqs** | | | |
+| `ZOOM_ACCOUNT_ID` | No | none | Zoom S2S OAuth account id |
+| `ZOOM_CLIENT_ID` | No | none | Zoom S2S OAuth client id |
+| `ZOOM_CLIENT_SECRET` | No | none | Zoom S2S OAuth client secret |
 | **Sub-agents** | | | |
 | `BOMBA_SUBAGENT_MAX_SPAWN_DEPTH` | No | `3` | Max sub-agent nesting depth |
 | `BOMBA_SUBAGENT_CRASH_WINDOW` | No | `60` | Crash detection window (seconds) |
@@ -241,6 +263,14 @@ curl -s http://127.0.0.1:8787/codeintel \
 - **Crash recovery** — crash window/max/cooldown prevents rapid respawning.
 - **Shared memory writes** require: `writer_agent_id`, `ticket_id`, `timestamp`, `confidence`, `scope` (scratch|proposal|committed).
 
+### Sister Architecture (Prime + Persistent Sisters)
+- Sister config lives in `workspaces/prime/sisters.json` and is loaded by `runtime/sisters.py`.
+- `SisterRegistry` exposes `list_sisters`, `get_sister`, `spawn_sister`, and `stop_sister`.
+- Prime runtime bridges sister control to:
+  - dashboard (`sisters` section)
+  - tools (`sisters_list`, `sisters_spawn`, `sisters_stop`, `sisters_message`, `sisters_status`)
+  - direct bridge methods (`spawn_sister`, `stop_sister`, `message_sister`).
+
 ### Proactive Autonomy
 - **Heartbeat** — `HeartbeatEngine` runs a background daemon thread. Reads `HEARTBEAT.md` checklist from workspace root at configured interval (default 30min). Invokes `bridge.handle_turn()` with the checklist content. Reports only actionable items.
 - **Cron** — `CronScheduler` polls for due tasks every 15s. Stores tasks in `scheduled_tasks` table. Uses `croniter` for full cron expression parsing, with built-in fallback for `@hourly`, `@daily`, `*/N * * * *`. Each execution gets a unique session ID.
@@ -254,6 +284,26 @@ curl -s http://127.0.0.1:8787/codeintel \
 - `web_search` tool — Brave Search API (if `BRAVE_API_KEY` set), falls back to DuckDuckGo instant answers.
 - `web_fetch` tool — fetches URL content, strips HTML to text.
 - Gated by `BOMBA_WEB_SEARCH_ENABLED` config.
+
+### SoulConfig Identity Injection
+- `identity/soul.py` parses workspace identity artifacts:
+  - `SOUL.md`, `IDENTITY.md`, `MISSION.md`, `VISION.md`, `FORMULA.md`, `PRIORITIES.md`.
+- Runtime behavior:
+  - SOUL + IDENTITY + MISSION + VISION are prepended into system contract context.
+  - FORMULA is injected into semantic candidates.
+  - PRIORITIES are injected into working memory.
+
+### Pinecone Tools
+- `pinecone_query`: embeds query via OpenAI and retrieves matches from Pinecone index host.
+- `pinecone_list_indexes`: enumerates indexes and attempts vector stats retrieval.
+- Host routing: control-plane index discovery + cache, with optional `BOMBA_PINECONE_INDEX_HOSTS` fallback map.
+- Default index/namespace: `ublib2` / `longterm` (configurable). STRATA key routing supported for known STRATA indexes.
+- Registration is gated by `BOMBA_PINECONE_ENABLED`.
+
+### Voice Tools
+- `voice_list_calls`, `voice_get_transcript`, `voice_make_call`, `voice_list_pathways`.
+- Outbound calls are high-risk (`voice_make_call`) and flow through governance approval logic.
+- Registration is gated by `BOMBA_VOICE_ENABLED`.
 
 ### Skills System
 - **Agent Skills standard** (agentskills.io) compliant `SKILL.md` files with YAML frontmatter.
