@@ -92,6 +92,8 @@ class RuntimeConfig:
     pinecone_enabled: bool = os.getenv("BOMBA_PINECONE_ENABLED", "false").lower() != "false"
     pinecone_default_index: str = os.getenv("BOMBA_PINECONE_DEFAULT_INDEX", "ublib2")
     pinecone_default_namespace: str = os.getenv("BOMBA_PINECONE_DEFAULT_NAMESPACE", "longterm")
+    voice_enabled: bool = os.getenv("BOMBA_VOICE_ENABLED", "false").lower() != "false"
+    voice_provider: str = os.getenv("BOMBA_VOICE_PROVIDER", "bland")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
     skills_telemetry_enabled: bool = os.getenv("BOMBA_SKILLS_TELEMETRY_ENABLED", "true").lower() != "false"
     skill_nl_router_enabled: bool = os.getenv("BOMBA_SKILL_NL_ROUTER_ENABLED", "true").lower() != "false"
@@ -142,3 +144,5 @@ class RuntimeConfig:
             raise ValueError("skill_catalog_sources must not be empty")
         if not self.pinecone_default_index.strip():
             raise ValueError("pinecone_default_index must not be empty")
+        if not self.voice_provider.strip():
+            raise ValueError("voice_provider must not be empty")

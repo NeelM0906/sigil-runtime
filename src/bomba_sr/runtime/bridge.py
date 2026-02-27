@@ -65,6 +65,7 @@ from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
 from bomba_sr.tools.builtin_sisters import builtin_sister_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
+from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 
 logger = logging.getLogger(__name__)
@@ -2061,6 +2062,8 @@ class RuntimeBridge:
                     default_namespace=self.config.pinecone_default_namespace,
                 )
             )
+        if self.config.voice_enabled:
+            tool_executor.register_many(builtin_voice_tools(provider=self.config.voice_provider))
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(
