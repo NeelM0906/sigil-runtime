@@ -4,7 +4,8 @@ import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from bomba_sr.subagents.orchestrator import SubAgentHandle, SubAgentOrchestrator
 from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
@@ -21,7 +22,7 @@ class SisterConfig:
     role: str
     auto_start: bool
     heartbeat_enabled: bool
-    cron_tasks: list[dict[str, Any]]
+    cron_tasks: tuple[Mapping[str, Any], ...]
 
 
 class SisterRegistry:
@@ -54,7 +55,7 @@ class SisterRegistry:
                     "role": sister.role,
                     "auto_start": sister.auto_start,
                     "heartbeat_enabled": sister.heartbeat_enabled,
-                    "cron_tasks": sister.cron_tasks,
+                    "cron_tasks": [dict(task) for task in sister.cron_tasks],
                     **status,
                 }
             )
@@ -194,6 +195,14 @@ class SisterRegistry:
             workspace_root = Path(raw_workspace).expanduser()
             if not workspace_root.is_absolute():
                 workspace_root = (Path.cwd() / workspace_root).resolve()
+            raw_cron = item.get("cron_tasks")
+            cron_tasks = ()
+            if isinstance(raw_cron, list):
+                cron_tasks = tuple(
+                    MappingProxyType(dict(task))
+                    for task in raw_cron
+                    if isinstance(task, dict)
+                )
             out[sister_id] = SisterConfig(
                 sister_id=sister_id,
                 display_name=str(item.get("display_name") or sister_id),
@@ -204,6 +213,6 @@ class SisterRegistry:
                 role=str(item.get("role") or ""),
                 auto_start=bool(item.get("auto_start", False)),
                 heartbeat_enabled=bool(item.get("heartbeat_enabled", False)),
-                cron_tasks=list(item.get("cron_tasks") or []),
+                cron_tasks=cron_tasks,
             )
         return out

@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
+from typing import Mapping
 
 
 @dataclass(frozen=True)
@@ -12,11 +14,11 @@ class SoulConfig:
     emoji: str
     voice_id: str | None
     phone: str | None
-    core_functions: list[str]
-    personality_traits: list[str]
-    energies: dict[str, str]
-    never_do: list[str]
-    contamination_checks: list[str]
+    core_functions: tuple[str, ...]
+    personality_traits: tuple[str, ...]
+    energies: Mapping[str, str]
+    never_do: tuple[str, ...]
+    contamination_checks: tuple[str, ...]
     raw_soul_text: str
     raw_identity_text: str
     mission_text: str | None = None
@@ -79,11 +81,11 @@ def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
         emoji=emoji.strip(),
         voice_id=voice_id.strip() if isinstance(voice_id, str) and voice_id.strip() else None,
         phone=phone.strip() if isinstance(phone, str) and phone.strip() else None,
-        core_functions=core_functions,
-        personality_traits=personality_traits,
-        energies=energies,
-        never_do=never_do,
-        contamination_checks=contamination_checks,
+        core_functions=tuple(core_functions),
+        personality_traits=tuple(personality_traits),
+        energies=MappingProxyType(dict(energies)),
+        never_do=tuple(never_do),
+        contamination_checks=tuple(contamination_checks),
         raw_soul_text=soul_raw,
         raw_identity_text=identity_raw,
         mission_text=mission_text,
