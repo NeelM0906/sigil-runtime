@@ -36,6 +36,9 @@ class UserIdentityService:
               preferences_json TEXT NOT NULL,
               constraints_json TEXT NOT NULL,
               goals_json TEXT NOT NULL,
+              communication_style_json TEXT NOT NULL DEFAULT '{}',
+              contact_info_json TEXT NOT NULL DEFAULT '{}',
+              relationship_notes TEXT NOT NULL DEFAULT '',
               persona_summary TEXT NOT NULL,
               profile_version INTEGER NOT NULL,
               updated_at TEXT NOT NULL,
@@ -60,6 +63,9 @@ class UserIdentityService:
               ON user_profile_signals(tenant_id, user_id, created_at DESC);
             """
         )
+        self._ensure_column("user_profiles", "communication_style_json", "TEXT NOT NULL DEFAULT '{}'")
+        self._ensure_column("user_profiles", "contact_info_json", "TEXT NOT NULL DEFAULT '{}'")
+        self._ensure_column("user_profiles", "relationship_notes", "TEXT NOT NULL DEFAULT ''")
         self.db.commit()
 
     def ensure_profile(self, tenant_id: str, user_id: str) -> dict:
@@ -75,8 +81,9 @@ class UserIdentityService:
             """
             INSERT INTO user_profiles (
               id, tenant_id, user_id, display_name, preferences_json,
-              constraints_json, goals_json, persona_summary, profile_version, updated_at
-            ) VALUES (?, ?, ?, NULL, '{}', '[]', '[]', '', 1, ?)
+              constraints_json, goals_json, communication_style_json, contact_info_json,
+              relationship_notes, persona_summary, profile_version, updated_at
+            ) VALUES (?, ?, ?, NULL, '{}', '[]', '[]', '{}', '{}', '', '', 1, ?)
             """,
             (str(uuid.uuid4()), tenant_id, user_id, now),
         )
@@ -301,6 +308,9 @@ class UserIdentityService:
             "preferences": json.loads(str(row["preferences_json"])),
             "constraints": json.loads(str(row["constraints_json"])),
             "goals": json.loads(str(row["goals_json"])),
+            "communication_style": json.loads(str(row["communication_style_json"])),
+            "contact_info": json.loads(str(row["contact_info_json"])),
+            "relationship_notes": str(row["relationship_notes"]) if row["relationship_notes"] is not None else "",
             "persona_summary": str(row["persona_summary"]),
             "profile_version": int(row["profile_version"]),
             "updated_at": str(row["updated_at"]),
@@ -325,3 +335,10 @@ class UserIdentityService:
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if column in existing:
+            return
+        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
