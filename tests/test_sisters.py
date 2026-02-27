@@ -73,6 +73,33 @@ class SisterRegistryTests(unittest.TestCase):
             self.assertEqual(stop["sister_id"], "forge")
             self.assertIn("stopped", stop)
 
+    def test_rejects_workspace_outside_base(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            prime_root = root / "workspaces" / "prime"
+            prime_root.mkdir(parents=True)
+            sisters_path = prime_root / "sisters.json"
+            sisters_path.write_text(
+                json.dumps(
+                    {
+                        "sisters": [
+                            {
+                                "sister_id": "forge",
+                                "display_name": "Sai Forge",
+                                "tenant_id": "tenant-forge",
+                                "workspace_root": "/etc",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            db = RuntimeDB(root / "runtime.db")
+            protocol = SubAgentProtocol(db)
+            orchestrator = SubAgentOrchestrator(protocol=protocol, default_worker=_worker, max_workers=1)
+            registry = SisterRegistry(config_path=sisters_path, orchestrator=orchestrator, protocol=protocol)
+            self.assertEqual(registry.list_sisters(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

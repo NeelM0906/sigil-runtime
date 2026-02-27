@@ -182,6 +182,7 @@ class SisterRegistry:
         raw_sisters = payload.get("sisters") if isinstance(payload, dict) else None
         if not isinstance(raw_sisters, list):
             return {}
+        workspace_base = config_path.resolve().parent.parent
         out: dict[str, SisterConfig] = {}
         for item in raw_sisters:
             if not isinstance(item, dict):
@@ -195,6 +196,10 @@ class SisterRegistry:
             workspace_root = Path(raw_workspace).expanduser()
             if not workspace_root.is_absolute():
                 workspace_root = (Path.cwd() / workspace_root).resolve()
+            else:
+                workspace_root = workspace_root.resolve()
+            if not SisterRegistry._is_within(workspace_root, workspace_base):
+                continue
             raw_cron = item.get("cron_tasks")
             cron_tasks = ()
             if isinstance(raw_cron, list):
@@ -216,3 +221,11 @@ class SisterRegistry:
                 cron_tasks=cron_tasks,
             )
         return out
+
+    @staticmethod
+    def _is_within(path: Path, base: Path) -> bool:
+        try:
+            path.resolve().relative_to(base.resolve())
+            return True
+        except ValueError:
+            return False
