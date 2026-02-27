@@ -413,7 +413,12 @@ class HybridMemoryStore:
         return scores
 
     def _read_note_body(self, relative_path: str) -> str:
-        text = (self.memory_root / relative_path).read_text(encoding="utf-8")
+        try:
+            text = (self.memory_root / relative_path).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return ""
+        except OSError:
+            return ""
         parts = text.split("---", 2)
         if len(parts) >= 3:
             return parts[2].strip()

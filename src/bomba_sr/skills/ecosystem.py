@@ -276,7 +276,11 @@ class SkillEcosystemService:
         catalog_item = json.loads(str(row["catalog_json"]))
         raw = self.fetcher(str(catalog_item["download_url"])).decode("utf-8", errors="replace")
 
-        skill_dir = Path(workspace_root).expanduser().resolve() / "skills" / request.skill_id
+        safe_id = re.sub(r"[^a-z0-9_-]", "", request.skill_id.lower())
+        if not safe_id or ".." in safe_id:
+            raise ValueError(f"invalid skill_id: {request.skill_id}")
+
+        skill_dir = Path(workspace_root).expanduser().resolve() / "skills" / safe_id
         skill_dir.mkdir(parents=True, exist_ok=True)
         skill_path = skill_dir / "SKILL.md"
         skill_path.write_text(raw, encoding="utf-8")
@@ -303,7 +307,7 @@ class SkillEcosystemService:
         return {
             "installed": True,
             "request_id": request_id,
-            "skill_id": request.skill_id,
+            "skill_id": safe_id,
             "path": str(skill_path),
             "warnings": warnings,
         }
