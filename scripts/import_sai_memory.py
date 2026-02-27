@@ -286,6 +286,19 @@ def _import_semantic_memory(
     created_at: str,
     dry_run: bool,
 ) -> bool:
+    normalized_content = _normalize_semantic_text(content)
+    existing = consolidator.db.execute(
+        """
+        SELECT content
+        FROM memories
+        WHERE user_id = ? AND memory_key = ? AND active = 1
+        ORDER BY version DESC
+        LIMIT 1
+        """,
+        (user_id, memory_key),
+    ).fetchone()
+    if existing is not None and _normalize_semantic_text(str(existing["content"])) == normalized_content:
+        return False
     if dry_run:
         print(f"  [dry-run] semantic -> {memory_key}")
         return True
@@ -293,7 +306,7 @@ def _import_semantic_memory(
         MemoryCandidate(
             user_id=user_id,
             key=memory_key,
-            content=content.strip(),
+            content=normalized_content,
             tier="semantic",
             entities=tuple(_tags_from_filename(source_file.stem)),
             evidence_refs=(str(source_file),),
@@ -319,6 +332,10 @@ def _call_meta_tags(content: str) -> list[str]:
 
 def _tags_from_filename(stem: str) -> list[str]:
     return [part for part in re.split(r"[-_]+", stem.lower()) if part]
+
+
+def _normalize_semantic_text(content: str) -> str:
+    return re.sub(r"\s+", " ", content or "").strip()
 
 
 def _iso_from_mtime(path: Path) -> str:

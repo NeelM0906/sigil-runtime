@@ -102,6 +102,62 @@ class ImportSaiMemoryTests(unittest.TestCase):
                 self.assertGreaterEqual(int(procedural_count), 1)
                 db.close()
 
+    def test_semantic_import_is_idempotent_for_whitespace_changes(self) -> None:
+        module = _load_import_module()
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "workspace"
+            memory = source / "memory"
+            memory.mkdir(parents=True, exist_ok=True)
+
+            semantic_path = memory / "heart-of-influence-research.md"
+            semantic_path.write_text("line one\nline two", encoding="utf-8")
+            (source / "FORMULA.md").write_text("", encoding="utf-8")
+
+            runtime_home = root / "runtime-home"
+
+            class _Cfg:
+                def __init__(self):
+                    self.runtime_home = runtime_home
+
+            with mock.patch.object(module, "RuntimeConfig", _Cfg):
+                module.import_workspace_memory(
+                    source_workspace=source,
+                    tenant_id="tenant-prime",
+                    user_id="sai-prime",
+                    dry_run=False,
+                )
+                semantic_path.write_text("line one   \n\nline two  ", encoding="utf-8")
+                module.import_workspace_memory(
+                    source_workspace=source,
+                    tenant_id="tenant-prime",
+                    user_id="sai-prime",
+                    dry_run=False,
+                )
+
+                cfg = RuntimeConfig(runtime_home=runtime_home)
+                tenant_ctx = TenantRegistry(cfg.runtime_home).ensure_tenant("tenant-prime")
+                db = RuntimeDB(tenant_ctx.db_path)
+                row = db.execute(
+                    """
+                    SELECT COUNT(*) AS active_count
+                    FROM memories
+                    WHERE user_id = ? AND memory_key = ? AND active = 1
+                    """,
+                    ("sai-prime", "import::workspace::heart-of-influence-research"),
+                ).fetchone()
+                archive = db.execute(
+                    """
+                    SELECT COUNT(*) AS archive_count
+                    FROM memory_archive
+                    WHERE user_id = ? AND memory_key = ?
+                    """,
+                    ("sai-prime", "import::workspace::heart-of-influence-research"),
+                ).fetchone()
+                self.assertEqual(int(row["active_count"]), 1)
+                self.assertEqual(int(archive["archive_count"]), 0)
+                db.close()
+
 
 if __name__ == "__main__":
     unittest.main()
