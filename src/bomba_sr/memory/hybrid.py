@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import re
 import uuid
@@ -15,6 +16,8 @@ from bomba_sr.storage.db import RuntimeDB
 
 if TYPE_CHECKING:
     from bomba_sr.llm.providers import LLMProvider
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now_iso() -> str:
@@ -693,8 +696,11 @@ class HybridMemoryStore:
             summary = (response.text or "").strip()
             if summary:
                 return summary[:8000]
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "session summary LLM call failed; using fallback summary",
+                exc_info=exc,
+            )
         fallback = f"{prior}\n\n{transcript[:4000]}".strip()
         return fallback[:8000]
 

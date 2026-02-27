@@ -145,6 +145,28 @@ class HybridMemoryTests(unittest.TestCase):
             store = HybridMemoryStore(db=db, memory_root=Path(td) / "memory", auto_apply_confidence=0.4)
             self.assertEqual(store._read_note_body("does/not/exist.md"), "")
 
+    def test_generate_session_summary_logs_on_provider_error(self) -> None:
+        class _FailProvider:
+            def generate(self, model, messages):  # noqa: ANN001
+                _ = (model, messages)
+                raise RuntimeError("provider_unavailable")
+
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            store = HybridMemoryStore(db=db, memory_root=Path(td) / "memory", auto_apply_confidence=0.4)
+            turns = [
+                {"turn_number": 1, "user_message": "hello", "assistant_message": "hi"},
+                {"turn_number": 2, "user_message": "status?", "assistant_message": "working"},
+            ]
+            with self.assertLogs("bomba_sr.memory.hybrid", level="WARNING") as captured:
+                summary = store.generate_session_summary(
+                    turns=turns,
+                    provider=_FailProvider(),  # type: ignore[arg-type]
+                    model_id="anthropic/claude-opus-4.6",
+                )
+            self.assertTrue(summary)
+            self.assertTrue(any("session summary LLM call failed" in line for line in captured.output))
+
 
 if __name__ == "__main__":
     unittest.main()
