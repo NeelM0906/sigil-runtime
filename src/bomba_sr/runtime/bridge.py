@@ -442,6 +442,15 @@ class RuntimeBridge:
             ]
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        recent_turn_messages = runtime.memory.get_recent_turns(
+            tenant_id=request.tenant_id,
+            session_id=request.session_id,
+            limit=5,
+        )
+        session_summary = runtime.memory.get_session_summary(
+            tenant_id=request.tenant_id,
+            session_id=request.session_id,
+        )
         semantic_candidates = self._semantic_candidates(recall)
         for snippet in web_snippets:
             semantic_candidates.append(
@@ -496,7 +505,14 @@ class RuntimeBridge:
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
                 ],
                 "semantic_candidates": semantic_candidates,
-                "recent_history": [{"text": f"session_id={request.session_id}"}],
+                "recent_history": [
+                    {"text": f"session_id={request.session_id}"},
+                    (
+                        {"text": f"session_summary={session_summary['summary_text']}"}
+                        if session_summary is not None
+                        else {"text": "session_summary=None"}
+                    ),
+                ],
                 "procedural_candidates": [{"text": "Use local-first search then escalate only on low confidence."}],
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
@@ -511,6 +527,11 @@ class RuntimeBridge:
         )
         if selected_skill_context:
             system_prompt += f"\n\nUse selected skill instructions:\n{selected_skill_context}"
+
+        replay_messages = [
+            ChatMessage(role=item["role"], content=item["content"])
+            for item in recent_turn_messages
+        ]
 
         assistant_usage: dict[str, int] | None
         assistant_text: str
@@ -559,6 +580,7 @@ class RuntimeBridge:
             loop_result = loop.run(
                 initial_messages=[
                     ChatMessage(role="system", content=system_prompt),
+                    *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],
                 tool_schemas=runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format),
@@ -586,6 +608,7 @@ class RuntimeBridge:
                 model=model_id,
                 messages=[
                     ChatMessage(role="system", content=system_prompt),
+                    *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],
             )
@@ -627,6 +650,42 @@ class RuntimeBridge:
             tags=["chat", "runtime", "generic_info" if generic_mode else "project_mode"],
             confidence=1.0,
         )
+        turn_number = runtime.memory.record_turn(
+            tenant_id=request.tenant_id,
+            session_id=request.session_id,
+            turn_id=turn_id,
+            user_id=request.user_id,
+            user_message=effective_user_message,
+            assistant_message=assistant_text,
+        )
+        if turn_number % 5 == 0:
+            previous_summary = runtime.memory.get_session_summary(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+            )
+            covered_turn = int(previous_summary["covers_through_turn"]) if previous_summary is not None else 0
+            turns_to_summarize = runtime.memory.get_turns_for_summary(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                covers_through_turn=covered_turn,
+                recent_window=5,
+                limit=200,
+            )
+            if turns_to_summarize:
+                merged_summary = runtime.memory.generate_session_summary(
+                    turns=turns_to_summarize,
+                    provider=self.provider,
+                    model_id=model_id,
+                    existing_summary=(previous_summary["summary_text"] if previous_summary else None),
+                )
+                if merged_summary.strip():
+                    runtime.memory.update_session_summary(
+                        tenant_id=request.tenant_id,
+                        session_id=request.session_id,
+                        user_id=request.user_id,
+                        summary_text=merged_summary,
+                        covers_through_turn=int(turns_to_summarize[-1]["turn_number"]),
+                    )
 
         learning_signal = self._learning_signal(effective_user_message)
         decision = None

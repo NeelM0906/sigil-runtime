@@ -7,11 +7,14 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from bomba_sr.memory.consolidation import MemoryCandidate, MemoryConsolidator
 from bomba_sr.memory.embeddings import EmbeddingProvider
 from bomba_sr.storage.db import RuntimeDB
+
+if TYPE_CHECKING:
+    from bomba_sr.llm.providers import LLMProvider
 
 
 def utc_now_iso() -> str:
@@ -96,6 +99,38 @@ class HybridMemoryStore:
 
             CREATE INDEX IF NOT EXISTS idx_learning_updates_user
               ON learning_updates(tenant_id, user_id, created_at DESC);
+
+            CREATE TABLE IF NOT EXISTS conversation_turns (
+              id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL,
+              session_id TEXT NOT NULL,
+              turn_id TEXT NOT NULL,
+              user_id TEXT NOT NULL,
+              user_message TEXT NOT NULL,
+              assistant_message TEXT NOT NULL,
+              turn_number INTEGER NOT NULL,
+              token_estimate INTEGER NOT NULL,
+              created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_conv_turns_session
+              ON conversation_turns(tenant_id, session_id, turn_number DESC);
+
+            CREATE TABLE IF NOT EXISTS session_summaries (
+              id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL,
+              session_id TEXT NOT NULL,
+              user_id TEXT NOT NULL,
+              summary_text TEXT NOT NULL,
+              covers_through_turn INTEGER NOT NULL,
+              token_estimate INTEGER NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              UNIQUE(tenant_id, session_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_session_summaries
+              ON session_summaries(tenant_id, session_id, covers_through_turn DESC);
             """
         )
         self.db.commit()
@@ -411,6 +446,240 @@ class HybridMemoryStore:
             vec = json.loads(str(row["vector_json"]))
             scores[note_id] = self._cosine(query_vec, [float(x) for x in vec])
         return scores
+
+    def record_turn(
+        self,
+        tenant_id: str,
+        session_id: str,
+        turn_id: str,
+        user_id: str,
+        user_message: str,
+        assistant_message: str,
+    ) -> int:
+        latest = self.db.execute(
+            """
+            SELECT COALESCE(MAX(turn_number), 0) AS max_turn
+            FROM conversation_turns
+            WHERE tenant_id = ? AND session_id = ?
+            """,
+            (tenant_id, session_id),
+        ).fetchone()
+        next_turn = int(latest["max_turn"]) + 1 if latest is not None else 1
+        token_estimate = max(1, int((len(user_message) + len(assistant_message)) / 4))
+        now = utc_now_iso()
+        self.db.execute(
+            """
+            INSERT INTO conversation_turns (
+              id, tenant_id, session_id, turn_id, user_id, user_message, assistant_message,
+              turn_number, token_estimate, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid.uuid4()),
+                tenant_id,
+                session_id,
+                turn_id,
+                user_id,
+                user_message,
+                assistant_message,
+                next_turn,
+                token_estimate,
+                now,
+            ),
+        )
+        self.db.commit()
+        return next_turn
+
+    def get_recent_turn_records(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, Any]]:
+        rows = self.db.execute(
+            """
+            SELECT turn_number, turn_id, user_message, assistant_message, created_at
+            FROM conversation_turns
+            WHERE tenant_id = ? AND session_id = ?
+            ORDER BY turn_number DESC
+            LIMIT ?
+            """,
+            (tenant_id, session_id, max(1, limit)),
+        ).fetchall()
+        ordered = list(reversed(rows))
+        return [
+            {
+                "turn_number": int(row["turn_number"]),
+                "turn_id": str(row["turn_id"]),
+                "user_message": str(row["user_message"]),
+                "assistant_message": str(row["assistant_message"]),
+                "created_at": str(row["created_at"]),
+            }
+            for row in ordered
+        ]
+
+    def get_recent_turns(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, str]]:
+        out: list[dict[str, str]] = []
+        for row in self.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=limit):
+            out.append({"role": "user", "content": row["user_message"]})
+            out.append({"role": "assistant", "content": row["assistant_message"]})
+        return out
+
+    def get_turns_for_summary(
+        self,
+        tenant_id: str,
+        session_id: str,
+        covers_through_turn: int,
+        recent_window: int = 5,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        latest = self.db.execute(
+            """
+            SELECT COALESCE(MAX(turn_number), 0) AS max_turn
+            FROM conversation_turns
+            WHERE tenant_id = ? AND session_id = ?
+            """,
+            (tenant_id, session_id),
+        ).fetchone()
+        max_turn = int(latest["max_turn"]) if latest is not None else 0
+        summary_cutoff = max(0, max_turn - max(1, recent_window))
+        if summary_cutoff <= covers_through_turn:
+            return []
+
+        rows = self.db.execute(
+            """
+            SELECT turn_number, user_message, assistant_message
+            FROM conversation_turns
+            WHERE tenant_id = ? AND session_id = ?
+              AND turn_number > ? AND turn_number <= ?
+            ORDER BY turn_number ASC
+            LIMIT ?
+            """,
+            (
+                tenant_id,
+                session_id,
+                int(covers_through_turn),
+                summary_cutoff,
+                max(1, limit),
+            ),
+        ).fetchall()
+        return [
+            {
+                "turn_number": int(row["turn_number"]),
+                "user_message": str(row["user_message"]),
+                "assistant_message": str(row["assistant_message"]),
+            }
+            for row in rows
+        ]
+
+    def get_session_summary(self, tenant_id: str, session_id: str) -> dict[str, Any] | None:
+        row = self.db.execute(
+            """
+            SELECT summary_text, covers_through_turn, token_estimate, created_at, updated_at
+            FROM session_summaries
+            WHERE tenant_id = ? AND session_id = ?
+            ORDER BY covers_through_turn DESC
+            LIMIT 1
+            """,
+            (tenant_id, session_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "summary_text": str(row["summary_text"]),
+            "covers_through_turn": int(row["covers_through_turn"]),
+            "token_estimate": int(row["token_estimate"]),
+            "created_at": str(row["created_at"]),
+            "updated_at": str(row["updated_at"]),
+        }
+
+    def update_session_summary(
+        self,
+        tenant_id: str,
+        session_id: str,
+        user_id: str,
+        summary_text: str,
+        covers_through_turn: int,
+    ) -> dict[str, Any]:
+        normalized = summary_text.strip()
+        if not normalized:
+            raise ValueError("summary_text cannot be empty")
+        now = utc_now_iso()
+        token_estimate = max(1, int(len(normalized) / 4))
+        self.db.execute(
+            """
+            INSERT INTO session_summaries (
+              id, tenant_id, session_id, user_id, summary_text, covers_through_turn,
+              token_estimate, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(tenant_id, session_id) DO UPDATE SET
+              summary_text = excluded.summary_text,
+              covers_through_turn = excluded.covers_through_turn,
+              token_estimate = excluded.token_estimate,
+              updated_at = excluded.updated_at
+            """,
+            (
+                str(uuid.uuid4()),
+                tenant_id,
+                session_id,
+                user_id,
+                normalized,
+                int(covers_through_turn),
+                token_estimate,
+                now,
+                now,
+            ),
+        )
+        self.db.commit()
+        return {
+            "summary_text": normalized,
+            "covers_through_turn": int(covers_through_turn),
+            "token_estimate": token_estimate,
+            "updated_at": now,
+        }
+
+    def generate_session_summary(
+        self,
+        turns: list[dict[str, Any]],
+        provider: "LLMProvider",
+        model_id: str,
+        existing_summary: str | None = None,
+    ) -> str:
+        if not turns:
+            return ""
+        from bomba_sr.llm.providers import ChatMessage
+
+        transcript_lines: list[str] = []
+        for row in turns:
+            transcript_lines.append(f"Turn {row['turn_number']} user: {row['user_message']}")
+            transcript_lines.append(f"Turn {row['turn_number']} assistant: {row['assistant_message']}")
+        transcript = "\n".join(transcript_lines)
+        if len(transcript) > 24000:
+            transcript = transcript[:24000]
+        prior = existing_summary.strip() if isinstance(existing_summary, str) and existing_summary.strip() else "None"
+
+        prompt = (
+            "Summarize this conversation history into key facts, decisions, preferences, and pending tasks. "
+            "Preserve durable user-specific details. Keep it concise.\n\n"
+            f"Previous summary:\n{prior}\n\n"
+            f"New turns:\n{transcript}"
+        )
+        try:
+            response = provider.generate(
+                model=model_id,
+                messages=[
+                    ChatMessage(
+                        role="system",
+                        content=(
+                            "Produce a compact session summary with only durable context. "
+                            "Max length: 200 tokens."
+                        ),
+                    ),
+                    ChatMessage(role="user", content=prompt),
+                ],
+            )
+            summary = (response.text or "").strip()
+            if summary:
+                return summary[:8000]
+        except Exception:
+            pass
+        fallback = f"{prior}\n\n{transcript[:4000]}".strip()
+        return fallback[:8000]
 
     def _read_note_body(self, relative_path: str) -> str:
         try:

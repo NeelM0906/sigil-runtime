@@ -6,9 +6,28 @@ import uuid
 from pathlib import Path
 
 from bomba_sr.context.policy import TurnProfile
-from bomba_sr.llm.providers import StaticEchoProvider
+from bomba_sr.llm.providers import LLMResponse, StaticEchoProvider
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 from bomba_sr.runtime.config import RuntimeConfig
+
+
+class CaptureProvider:
+    provider_name = "capture"
+
+    def __init__(self) -> None:
+        self.calls: list[list] = []
+        self.counter = 0
+
+    def generate(self, model: str, messages: list, tools=None) -> LLMResponse:  # noqa: ANN001
+        self.calls.append(list(messages))
+        self.counter += 1
+        return LLMResponse(
+            text=f"assistant-{self.counter}",
+            model=model,
+            usage={"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+            raw={"echo": True},
+            stop_reason="stop",
+        )
 
 
 class RuntimeBridgeTests(unittest.TestCase):
@@ -64,6 +83,44 @@ class RuntimeBridgeTests(unittest.TestCase):
 
             self.assertTrue(result["artifacts"])
             self.assertEqual(result["artifacts"][0]["type"], "markdown")
+
+    def test_replays_recent_conversation_turns_in_same_session(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            provider = CaptureProvider()
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=provider,
+            )
+            session_id = str(uuid.uuid4())
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-replay",
+                    session_id=session_id,
+                    user_id="user-replay",
+                    user_message="first-message",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-replay",
+                    session_id=session_id,
+                    user_id="user-replay",
+                    user_message="second-message",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            self.assertGreaterEqual(len(provider.calls), 2)
+            second_messages = provider.calls[1]
+            replay_user = [m for m in second_messages if getattr(m, "role", "") == "user" and m.content == "first-message"]
+            replay_assistant = [m for m in second_messages if getattr(m, "role", "") == "assistant" and m.content == "assistant-1"]
+            self.assertTrue(replay_user)
+            self.assertTrue(replay_assistant)
 
 
 if __name__ == "__main__":
