@@ -17,6 +17,25 @@ from bomba_sr.subagents.protocol import SubAgentTask
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
 
+
+def _load_dotenv(path: Path) -> None:
+    """Read .env file into os.environ (does not overwrite existing vars)."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#"):
+            continue
+        if raw.startswith("export "):
+            raw = raw[len("export "):].strip()
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and (key not in os.environ or not os.environ.get(key)):
+            os.environ[key] = value
+
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -731,6 +750,7 @@ def make_handler(bridge: RuntimeBridge):
 
 def main() -> int:
     args = parse_args()
+    _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     bridge = RuntimeBridge()
     server = ThreadingHTTPServer((args.host, args.port), make_handler(bridge))
     print(f"runtime server listening on http://{args.host}:{args.port}")
