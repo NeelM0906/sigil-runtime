@@ -3,14 +3,32 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
+import os
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 from bomba_sr.subagents.protocol import SubAgentTask
+
+DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
+
+MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -61,6 +79,55 @@ def make_handler(bridge: RuntimeBridge):
             self.end_headers()
             self.wfile.write(encoded)
 
+        def _write_cors(self, status: int, payload: dict | list) -> None:
+            encoded = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+            self.wfile.write(encoded)
+
+        def _serve_static(self, rel_path: str) -> None:
+            if ".." in rel_path or "\\" in rel_path:
+                self._write(403, {"error": "forbidden"})
+                return
+            file_path = DASHBOARD_DIR / rel_path
+            if not file_path.is_file():
+                self._write(404, {"error": "not_found"})
+                return
+            try:
+                resolved = file_path.resolve()
+                if not str(resolved).startswith(str(DASHBOARD_DIR.resolve())):
+                    self._write(403, {"error": "forbidden"})
+                    return
+            except Exception:
+                self._write(403, {"error": "forbidden"})
+                return
+            suffix = file_path.suffix.lower()
+            content_type = MIME_TYPES.get(suffix, "application/octet-stream")
+            try:
+                data = file_path.read_bytes()
+            except Exception:
+                self._write(500, {"error": "read_error"})
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_OPTIONS(self) -> None:  # noqa: N802
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
         def do_POST(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             if parsed.path == "/chat":
@@ -108,10 +175,29 @@ def make_handler(bridge: RuntimeBridge):
             if parsed.path == "/commands/execute":
                 self._execute_command()
                 return
+            # ── Dashboard control POST routes ──
+            if parsed.path.startswith("/api/dashboard/"):
+                self._dashboard_post(parsed)
+                return
             self._write(404, {"error": "not_found"})
 
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
+            # ── Dashboard static files ──
+            if parsed.path == "/dashboard" or parsed.path == "/dashboard/":
+                self._serve_static("index.html")
+                return
+            if parsed.path.startswith("/dashboard/"):
+                rel = parsed.path[len("/dashboard/"):]
+                self._serve_static(rel)
+                return
+            # ── Dashboard API ──
+            if parsed.path == "/api/dashboard":
+                self._dashboard_overview(parsed)
+                return
+            if parsed.path == "/api/dashboard/activity":
+                self._dashboard_activity(parsed)
+                return
             if parsed.path == "/artifacts":
                 self._artifacts(parsed)
                 return
@@ -164,6 +250,69 @@ def make_handler(bridge: RuntimeBridge):
                 self._list_commands(parsed)
                 return
             self._write(404, {"error": "not_found"})
+
+        # ── Dashboard API handlers ──
+
+        def _dashboard_overview(self, parsed) -> None:
+            query = parse_qs(parsed.query)
+            tenant_id = query.get("tenant_id", ["tenant-local"])[0]
+            user_id = query.get("user_id", ["user-local"])[0]
+            workspace_root = query.get("workspace_root", [None])[0]
+            try:
+                data = bridge.dashboard_overview(
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    workspace_root=workspace_root,
+                )
+                self._write_cors(200, data)
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _dashboard_activity(self, parsed) -> None:
+            query = parse_qs(parsed.query)
+            tenant_id = query.get("tenant_id", ["tenant-local"])[0]
+            user_id = query.get("user_id", ["user-local"])[0]
+            workspace_root = query.get("workspace_root", [None])[0]
+            limit = int(query.get("limit", ["50"])[0])
+            try:
+                data = bridge.dashboard_activity(
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    workspace_root=workspace_root,
+                    limit=limit,
+                )
+                self._write_cors(200, {"events": data})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _dashboard_post(self, parsed) -> None:
+            path = parsed.path
+            try:
+                body = self._read_json()
+            except Exception:
+                return
+            tenant_id = str(body.get("tenant_id", "tenant-local"))
+            user_id = str(body.get("user_id", "user-local"))
+            workspace_root = str(body["workspace_root"]) if body.get("workspace_root") else None
+            try:
+                if path == "/api/dashboard/heartbeat/start":
+                    result = bridge.heartbeat_start(tenant_id, user_id, workspace_root)
+                elif path == "/api/dashboard/heartbeat/stop":
+                    result = bridge.heartbeat_stop(tenant_id, user_id, workspace_root)
+                elif path == "/api/dashboard/heartbeat/tick":
+                    result = bridge.heartbeat_tick(tenant_id, user_id, workspace_root)
+                elif path == "/api/dashboard/cron/start":
+                    result = bridge.cron_start(tenant_id, user_id, workspace_root)
+                elif path == "/api/dashboard/cron/stop":
+                    result = bridge.cron_stop(tenant_id, user_id, workspace_root)
+                else:
+                    self._write_cors(404, {"error": "not_found"})
+                    return
+                self._write_cors(200, result)
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        # ── Existing handlers ──
 
         def _chat(self) -> None:
             body = self._read_json()
@@ -585,6 +734,7 @@ def main() -> int:
     bridge = RuntimeBridge()
     server = ThreadingHTTPServer((args.host, args.port), make_handler(bridge))
     print(f"runtime server listening on http://{args.host}:{args.port}")
+    print(f"dashboard available at http://{args.host}:{args.port}/dashboard")
     server.serve_forever()
     return 0
 

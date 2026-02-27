@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sigil Control Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/css/variables.css">
+  <link rel="stylesheet" href="/dashboard/css/layout.css">
+  <link rel="stylesheet" href="/dashboard/css/components.css">
+  <link rel="stylesheet" href="/dashboard/css/chat.css">
+  <style>
+    /* Inline critical: prevent FOUC */
+    body { opacity: 0; transition: opacity 0.15s; }
+    body.loaded { opacity: 1; }
+  </style>
+</head>
+<body data-theme="dark">
+  <div id="app">
+    <div id="header"></div>
+    <div id="alerts"></div>
+    <div id="main-layout">
+      <div id="grid">
+        <!-- Health row -->
+        <div id="panel-health" class="panel span-4"></div>
+        <!-- Adaptation + Memory -->
+        <div id="panel-adaptation" class="panel span-2"></div>
+        <div id="panel-memory" class="panel span-2"></div>
+        <!-- Sub-agents + Autonomy -->
+        <div id="panel-subagents" class="panel span-2"></div>
+        <div id="panel-autonomy" class="panel span-2"></div>
+        <!-- Skills + Telemetry -->
+        <div id="panel-skills" class="panel span-2"></div>
+        <div id="panel-telemetry" class="panel span-2"></div>
+        <!-- Activity -->
+        <div id="panel-activity" class="panel span-4"></div>
+      </div>
+      <div id="chat-sidebar"></div>
+    </div>
+  </div>
+  <script type="module" src="/dashboard/js/app.js"></script>
+</body>
+</html>

@@ -5,6 +5,8 @@ import json
 import logging
 import os
 import re
+import threading
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -127,6 +129,7 @@ class RuntimeBridge:
         self._tenants: dict[str, _TenantRuntime] = {}
         self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
         self._cron_schedulers: dict[str, CronScheduler] = {}
+        self._start_time: float = time.time()
 
     def handle_turn(self, request: TurnRequest) -> dict[str, Any]:
         runtime = self._tenant_runtime(request.tenant_id, request.workspace_root)
@@ -1542,6 +1545,250 @@ class RuntimeBridge:
     ) -> list[dict[str, Any]]:
         scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
         return scheduler.run_due_once()
+
+    # ── Dashboard aggregation ────────────────────────────────────────
+
+    def dashboard_overview(
+        self, tenant_id: str, user_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        db = runtime.db
+        now_iso = datetime.now(timezone.utc).isoformat()
+        uptime_seconds = time.time() - self._start_time
+
+        # ── runtime ──
+        runtime_info = {
+            "uptime_seconds": round(uptime_seconds, 1),
+            "tenant_count": len(self._tenants),
+            "config": {
+                "model_id": self.config.default_model_id,
+                "provider": self.provider.provider_name,
+                "agentic_loop": self.config.agentic_loop_enabled,
+                "max_iterations": self.config.max_loop_iterations,
+                "budget_limit_usd": self.config.budget_limit_usd,
+                "tool_profile": self.config.tool_profile,
+            },
+            "active_threads": threading.active_count(),
+        }
+
+        # ── sessions ──
+        try:
+            row = db.execute(
+                "SELECT COUNT(DISTINCT session_id) AS cnt FROM conversation_turns WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+            session_count = row["cnt"] if row else 0
+        except Exception:
+            session_count = 0
+
+        try:
+            row = db.execute(
+                "SELECT COUNT(*) AS cnt FROM conversation_turns WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+            turn_count = row["cnt"] if row else 0
+        except Exception:
+            turn_count = 0
+
+        try:
+            row = db.execute(
+                "SELECT AVG(iterations) AS avg_iter FROM loop_executions WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+            avg_iterations = round(row["avg_iter"], 2) if row and row["avg_iter"] else 0
+        except Exception:
+            avg_iterations = 0
+
+        sessions_info = {
+            "total_sessions": session_count,
+            "total_turns": turn_count,
+            "avg_iterations": avg_iterations,
+        }
+
+        # ── tokens ──
+        tokens_info = {"input_24h": 0, "output_24h": 0, "input_7d": 0, "output_7d": 0, "input_all": 0, "output_all": 0}
+        try:
+            for period, hours in [("24h", 24), ("7d", 168)]:
+                cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+                row = db.execute(
+                    "SELECT COALESCE(SUM(total_input_tokens),0) AS inp, COALESCE(SUM(total_output_tokens),0) AS outp "
+                    "FROM loop_executions WHERE tenant_id = ? AND created_at >= ?",
+                    (tenant_id, cutoff),
+                ).fetchone()
+                if row:
+                    tokens_info[f"input_{period}"] = row["inp"]
+                    tokens_info[f"output_{period}"] = row["outp"]
+            row = db.execute(
+                "SELECT COALESCE(SUM(total_input_tokens),0) AS inp, COALESCE(SUM(total_output_tokens),0) AS outp "
+                "FROM loop_executions WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+            if row:
+                tokens_info["input_all"] = row["inp"]
+                tokens_info["output_all"] = row["outp"]
+        except Exception:
+            pass
+
+        # ── memory ──
+        memory_info: dict[str, Any] = {}
+        for table, key in [
+            ("markdown_notes", "working_notes"),
+            ("memories", "semantic_memories"),
+            ("memory_archive", "archived_memories"),
+            ("procedural_memories", "procedural_strategies"),
+            ("conversation_turns", "conversation_turns"),
+            ("session_summaries", "session_summaries"),
+        ]:
+            try:
+                row = db.execute(f"SELECT COUNT(*) AS cnt FROM {table}").fetchone()
+                memory_info[key] = row["cnt"] if row else 0
+            except Exception:
+                memory_info[key] = 0
+        try:
+            row = db.execute(
+                "SELECT AVG(CAST(success_count AS REAL) / MAX(success_count + failure_count, 1)) AS avg_sr "
+                "FROM procedural_memories"
+            ).fetchone()
+            memory_info["procedural_avg_success"] = round(row["avg_sr"], 3) if row and row["avg_sr"] else 0
+        except Exception:
+            memory_info["procedural_avg_success"] = 0
+
+        # ── adaptation ──
+        adaptation_info: dict[str, Any] = {}
+        try:
+            policy = runtime.adaptation.get_policy("default")
+            adaptation_info["policy"] = policy if isinstance(policy, dict) else {"name": "default"}
+        except Exception:
+            adaptation_info["policy"] = {"name": "default"}
+        try:
+            rows = db.execute(
+                "SELECT * FROM runtime_metrics_rollup ORDER BY rowid DESC LIMIT 2"
+            ).fetchall()
+            adaptation_info["recent_metrics"] = [dict(r) for r in rows]
+        except Exception:
+            adaptation_info["recent_metrics"] = []
+        adaptation_info["turn_count"] = turn_count
+
+        # ── sub-agents ──
+        subagents_info: dict[str, Any] = {"active": 0, "completed": 0, "failed": 0, "runs": []}
+        try:
+            for status_val in ["running", "completed", "failed"]:
+                row = db.execute(
+                    "SELECT COUNT(*) AS cnt FROM subagent_runs WHERE status = ?",
+                    (status_val,),
+                ).fetchone()
+                key_name = status_val if status_val != "running" else "active"
+                subagents_info[key_name] = row["cnt"] if row else 0
+            rows = db.execute(
+                "SELECT * FROM subagent_runs ORDER BY created_at DESC LIMIT 20"
+            ).fetchall()
+            subagents_info["runs"] = [dict(r) for r in rows]
+        except Exception:
+            pass
+
+        # ── autonomy ──
+        autonomy_info: dict[str, Any] = {}
+        try:
+            autonomy_info["heartbeat"] = self.heartbeat_status(tenant_id, user_id, workspace_root)
+        except Exception:
+            autonomy_info["heartbeat"] = {"running": False}
+        try:
+            autonomy_info["cron"] = self.cron_status(tenant_id, user_id, workspace_root)
+        except Exception:
+            autonomy_info["cron"] = {"running": False}
+        try:
+            autonomy_info["schedules"] = self.list_schedules(tenant_id, user_id, workspace_root)
+        except Exception:
+            autonomy_info["schedules"] = []
+
+        # ── skills ──
+        try:
+            skills_list = self.list_skills(tenant_id, workspace_root)
+            skills_info = {
+                "total": len(skills_list),
+                "active": sum(1 for s in skills_list if s.get("status") == "active"),
+            }
+        except Exception:
+            skills_info = {"total": 0, "active": 0}
+
+        # ── governance ──
+        try:
+            approvals = self.list_pending_approvals(tenant_id, workspace_root)
+            governance_info = {"pending_approvals": len(approvals)}
+        except Exception:
+            governance_info = {"pending_approvals": 0}
+
+        # ── loop telemetry ──
+        loop_telemetry: list[dict[str, Any]] = []
+        try:
+            rows = db.execute(
+                "SELECT * FROM loop_executions WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 20",
+                (tenant_id,),
+            ).fetchall()
+            loop_telemetry = [dict(r) for r in rows]
+        except Exception:
+            pass
+
+        return {
+            "timestamp": now_iso,
+            "runtime": runtime_info,
+            "sessions": sessions_info,
+            "tokens": tokens_info,
+            "memory": memory_info,
+            "adaptation": adaptation_info,
+            "subagents": subagents_info,
+            "autonomy": autonomy_info,
+            "skills": skills_info,
+            "governance": governance_info,
+            "loop_telemetry": loop_telemetry,
+        }
+
+    def dashboard_activity(
+        self, tenant_id: str, user_id: str, workspace_root: str | None = None, limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        db = runtime.db
+        events: list[dict[str, Any]] = []
+
+        try:
+            rows = db.execute(
+                "SELECT id, session_id, turn_id, iterations, stopped_reason, "
+                "total_input_tokens, total_output_tokens, duration_ms, created_at "
+                "FROM loop_executions WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?",
+                (tenant_id, limit),
+            ).fetchall()
+            for r in rows:
+                rd = dict(r)
+                events.append({
+                    "type": "TURN",
+                    "timestamp": rd.get("created_at", ""),
+                    "session": rd.get("session_id", ""),
+                    "description": f"Loop: {rd.get('iterations', 0)} iters, {rd.get('stopped_reason', 'unknown')}, "
+                                   f"{rd.get('total_input_tokens', 0)}+{rd.get('total_output_tokens', 0)} tok",
+                    "data": rd,
+                })
+        except Exception:
+            pass
+
+        try:
+            rows = db.execute(
+                "SELECT * FROM subagent_runs ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            for r in rows:
+                rd = dict(r)
+                events.append({
+                    "type": "SUBAGT",
+                    "timestamp": rd.get("created_at", ""),
+                    "session": rd.get("parent_session_id", ""),
+                    "description": f"Sub-agent {rd.get('status', 'unknown')}: {rd.get('goal', '')[:80]}",
+                    "data": rd,
+                })
+        except Exception:
+            pass
+
+        events.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+        return events[:limit]
 
     def _tenant_runtime(self, tenant_id: str, workspace_root: str | None = None) -> _TenantRuntime:
         key = tenant_id
