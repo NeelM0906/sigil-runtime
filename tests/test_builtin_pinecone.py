@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext
+from bomba_sr.tools import builtin_pinecone as pinecone_mod
 from bomba_sr.tools.builtin_pinecone import builtin_pinecone_tools
 
 
@@ -64,7 +65,7 @@ class PineconeToolTests(unittest.TestCase):
             raise AssertionError(f"unexpected URL: {url}")
 
         with (
-            patch.dict("os.environ", {"PINECONE_API_KEY": "pc-key"}, clear=False),
+            patch.dict("os.environ", {"PINECONE_API_KEY": "pc-key-many"}, clear=False),
             patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
         ):
             tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
@@ -156,6 +157,35 @@ class PineconeToolTests(unittest.TestCase):
             query_tool = next(t for t in tools if t.name == "pinecone_query")
             query_tool.execute({"query": "hello world"}, _context())
             self.assertIn("text-embedding-3-large", seen_models)
+
+    def test_list_indexes_caps_describe_calls(self) -> None:
+        describe_calls = 0
+        with pinecone_mod._INDEX_CACHE_LOCK:
+            pinecone_mod._INDEX_CACHE.clear()
+
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            nonlocal describe_calls
+            if "api.pinecone.io/indexes" in url:
+                return {
+                    "indexes": [
+                        {"name": f"idx-{i}", "host": f"idx-{i}.example.test", "metric": "cosine"}
+                        for i in range(8)
+                    ]
+                }
+            if "/describe_index_stats" in url:
+                describe_calls += 1
+                return {"totalVectorCount": 10}
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict("os.environ", {"PINECONE_API_KEY": "pc-key"}, clear=False),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            list_tool = next(t for t in tools if t.name == "pinecone_list_indexes")
+            result = list_tool.execute({}, _context())
+            self.assertEqual(len(result["indexes"]), 8)
+            self.assertEqual(describe_calls, 5)
 
 
 if __name__ == "__main__":

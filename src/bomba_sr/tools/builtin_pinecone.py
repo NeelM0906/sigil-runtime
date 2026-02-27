@@ -21,6 +21,7 @@ STRATA_INDEXES = {
     "ultimatestratabrain",
     "athenacontextualmemory",
 }
+MAX_DESCRIBE_INDEXES = 5
 
 _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INDEX_CACHE_LOCK = threading.Lock()
@@ -264,12 +265,12 @@ def _pinecone_list_indexes_factory(default_index: str, default_namespace: str | 
         payload = _list_indexes_with_cache(api_key)
         indexes = _index_records(payload)
         out: list[dict[str, Any]] = []
-        for item in indexes:
+        for idx, item in enumerate(indexes):
             name = str(item.get("name") or "")
             host = str(item.get("host") or "")
             stats: dict[str, Any] = {}
             vector_count = 0
-            if host:
+            if host and idx < MAX_DESCRIBE_INDEXES:
                 try:
                     query: dict[str, Any] = {}
                     if default_namespace:
