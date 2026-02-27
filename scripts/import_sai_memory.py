@@ -26,6 +26,7 @@ class ImportStats:
     call_transcripts: int = 0
     memory_index: int = 0
     semantic_memories: int = 0
+    procedural_memories: int = 0
     skipped: int = 0
 
     def as_dict(self) -> dict[str, int]:
@@ -34,6 +35,7 @@ class ImportStats:
             "call_transcripts": self.call_transcripts,
             "memory_index": self.memory_index,
             "semantic_memories": self.semantic_memories,
+            "procedural_memories": self.procedural_memories,
             "skipped": self.skipped,
         }
 
@@ -188,6 +190,17 @@ def import_workspace_memory(source_workspace: Path, tenant_id: str, user_id: str
         else:
             stats.skipped += 1
 
+    formula_path = source_workspace / "FORMULA.md"
+    if formula_path.exists():
+        imported_proc, skipped_proc = _import_formula_procedural(
+            consolidator=consolidator,
+            user_id=user_id,
+            formula_path=formula_path,
+            dry_run=dry_run,
+        )
+        stats.procedural_memories += imported_proc
+        stats.skipped += skipped_proc
+
     if not dry_run:
         db.commit()
     db.close()
@@ -310,6 +323,165 @@ def _tags_from_filename(stem: str) -> list[str]:
 
 def _iso_from_mtime(path: Path) -> str:
     return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat()
+
+
+def _import_formula_procedural(
+    consolidator: MemoryConsolidator,
+    user_id: str,
+    formula_path: Path,
+    dry_run: bool,
+) -> tuple[int, int]:
+    text = formula_path.read_text(encoding="utf-8")
+    components = _extract_formula_components(text)
+    imported = 0
+    skipped = 0
+    for strategy_key, content in components:
+        exists = (
+            consolidator.db.execute(
+                """
+                SELECT id FROM procedural_memories
+                WHERE user_id = ? AND strategy_key = ? AND active = 1
+                LIMIT 1
+                """,
+                (user_id, strategy_key),
+            ).fetchone()
+            is not None
+        )
+        if exists:
+            skipped += 1
+            continue
+        if dry_run:
+            print(f"  [dry-run] procedural -> {strategy_key}")
+            imported += 1
+            continue
+        consolidator.learn_procedural(
+            user_id=user_id,
+            strategy_key=strategy_key,
+            content=f"[source=unblinded_formula] {content.strip()}",
+            success=True,
+        )
+        imported += 1
+    return imported, skipped
+
+
+def _extract_formula_components(text: str) -> list[tuple[str, str]]:
+    rows: list[tuple[str, str]] = []
+    if not text.strip():
+        return rows
+    rows.extend(_parse_self_mastery_pairs(text))
+    rows.extend(_parse_numbered_section(text, "#### The 4 Steps of Integrity-Based Human Influence", "influence_step"))
+    rows.extend(_parse_numbered_section(text, "#### The 12 Indispensable Elements", "element"))
+    rows.extend(_parse_numbered_section(text, "#### The 4 Energies", "energy"))
+    rows.extend(_parse_numbered_section(text, "### Process Mastery (4)", "process_mastery"))
+    rows.extend(_parse_levers(text))
+    dedup: dict[str, str] = {}
+    for key, content in rows:
+        dedup[key] = content
+    return sorted(dedup.items(), key=lambda item: item[0])
+
+
+def _parse_self_mastery_pairs(text: str) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    in_section = False
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        if not in_section and line.strip().startswith("### Self Mastery"):
+            in_section = True
+            continue
+        if in_section and line.strip().startswith("### "):
+            break
+        if not in_section:
+            continue
+        if not line.strip().startswith("|"):
+            continue
+        if "---" in line or "| # |" in line:
+            continue
+        parts = [part.strip() for part in line.strip("|").split("|")]
+        if len(parts) < 4:
+            continue
+        idx, liberator, destroyer, notes = parts[0], parts[1], parts[2], parts[3]
+        try:
+            idx_num = int(float(idx.strip()))
+        except ValueError:
+            continue
+        if idx_num < 1 or idx_num > 7:
+            continue
+        idx_key = str(idx_num)
+        body = (
+            f"Self Mastery {idx_num}: Liberator='{liberator}' / Destroyer='{destroyer}'. "
+            f"Notes: {notes}"
+        )
+        out.append((f"formula_self_mastery_{idx_key}", body))
+    return out
+
+
+def _parse_numbered_section(text: str, heading: str, prefix: str) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    lines = text.splitlines()
+    start = -1
+    for i, line in enumerate(lines):
+        if line.strip() == heading.strip():
+            start = i + 1
+            break
+    if start < 0:
+        return out
+    for j in range(start, len(lines)):
+        line = lines[j].rstrip()
+        if line.startswith("#### ") or line.startswith("### "):
+            break
+        match = re.match(r"^\s*(\d+(?:\.\d+)?)\.\s+(.*)$", line.strip())
+        if not match:
+            continue
+        idx = match.group(1)
+        value = match.group(2).strip()
+        key = re.sub(r"[^0-9a-zA-Z]+", "_", idx.lower()).strip("_")
+        out.append((f"formula_{prefix}_{key}", value))
+    return out
+
+
+def _parse_levers(text: str) -> list[tuple[str, str]]:
+    out: dict[str, str] = {}
+    lines = text.splitlines()
+    in_section = False
+    fallback_line = ""
+    for raw in lines:
+        line = raw.rstrip()
+        stripped = line.strip()
+        if not in_section and stripped.startswith("### The 7 Levers"):
+            in_section = True
+            continue
+        if in_section and stripped.startswith("### "):
+            break
+        if not in_section:
+            continue
+        bullet = re.match(r"^\s*-\s+(.*)$", stripped)
+        if not bullet:
+            continue
+        content = bullet.group(1).strip()
+        if not fallback_line:
+            fallback_line = content
+        if "Lever" not in content and "Levers" not in content:
+            continue
+        content_plain = content.strip("* ")
+        match = re.search(r"Lever(?:s)?\s+([0-9]+(?:\.[0-9]+)?)", content_plain, flags=re.IGNORECASE)
+        if match:
+            raw_idx = match.group(1)
+            idx_key = raw_idx.replace(".", "_")
+            out[f"formula_lever_{idx_key}"] = content_plain
+        elif "2-7" in content_plain:
+            for idx in range(2, 8):
+                out[f"formula_lever_{idx}"] = f"Lever {idx}: {content_plain}"
+
+    if "formula_lever_0_5" not in out:
+        out["formula_lever_0_5"] = "Lever 0.5: Shared Experiences"
+    if "formula_lever_1" not in out:
+        out["formula_lever_1"] = "Lever 1: Ecosystem Merging (O's and B's)"
+    for idx in range(2, 8):
+        key = f"formula_lever_{idx}"
+        if key not in out:
+            base = fallback_line or "Levers 2-7 require full articulation from Sean."
+            out[key] = f"Lever {idx}: {base}"
+    return sorted(out.items(), key=lambda item: item[0])
 
 
 if __name__ == "__main__":
