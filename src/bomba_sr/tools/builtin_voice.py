@@ -11,6 +11,7 @@ from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 BLAND_API_BASE = "https://api.bland.ai/v1"
 SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+E164_PATTERN = re.compile(r"^\+[1-9][0-9]{7,14}$")
 
 
 def _http_json(
@@ -71,6 +72,15 @@ def _require_safe_identifier(value: str, field_name: str) -> str:
     return cleaned
 
 
+def _require_e164_phone(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError("to_number is required")
+    if not E164_PATTERN.fullmatch(cleaned):
+        raise ValueError("to_number must be E.164 formatted (for example: +12015550123)")
+    return cleaned
+
+
 def _list_calls(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     _ = context
     api_key = _require_api_key()
@@ -128,10 +138,8 @@ def _get_transcript(arguments: dict[str, Any], context: ToolContext) -> dict[str
 def _make_call(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     _ = context
     api_key = _require_api_key()
-    to_number = str(arguments.get("to_number") or "").strip()
+    to_number = _require_e164_phone(str(arguments.get("to_number") or ""))
     pathway_id = _require_safe_identifier(str(arguments.get("pathway_id") or ""), "pathway_id")
-    if not to_number:
-        raise ValueError("to_number is required")
     dynamic_data = arguments.get("dynamic_data")
     if dynamic_data is not None and not isinstance(dynamic_data, dict):
         raise ValueError("dynamic_data must be an object")

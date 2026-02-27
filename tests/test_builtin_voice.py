@@ -109,6 +109,11 @@ class VoiceToolTests(unittest.TestCase):
                     {"to_number": "+12015550000", "pathway_id": "../pathway"},
                     _ctx(),
                 )
+            with self.assertRaises(ValueError):
+                call_tool.execute(
+                    {"to_number": "2015550000", "pathway_id": "path-1"},
+                    _ctx(),
+                )
 
 
 if __name__ == "__main__":
