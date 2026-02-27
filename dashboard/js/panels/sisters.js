@@ -60,8 +60,8 @@ export function renderSisters(el, state, api) {
                   <td class="text-xs text-mono" style="opacity:.7">${fmtTime(item.last_activity)}</td>
                   <td>
                     <div class="flex gap-1">
-                      <button class="btn btn-sm btn-outline" data-sister-action="spawn" data-sister-id="${escapeHtml(item.sister_id)}">Start</button>
-                      <button class="btn btn-sm btn-outline" data-sister-action="stop" data-sister-id="${escapeHtml(item.sister_id)}">Stop</button>
+                      <button class="btn btn-sm btn-outline" data-sister-action="spawn" data-sister-id="${escapeHtml(item.sister_id)}" ${item.running ? 'disabled' : ''}>Start</button>
+                      <button class="btn btn-sm btn-outline" data-sister-action="stop" data-sister-id="${escapeHtml(item.sister_id)}" ${item.running ? '' : 'disabled'}>Stop</button>
                     </div>
                   </td>
                 </tr>
@@ -70,18 +70,23 @@ export function renderSisters(el, state, api) {
           </table>
         </div>
       `}
+      <div data-sister-feedback class="text-xs text-mono mt-2" style="opacity:.75"></div>
     </div>`;
 
+  const feedbackEl = el.querySelector('[data-sister-feedback]');
   el.querySelectorAll('[data-sister-action]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const action = btn.getAttribute('data-sister-action');
       const sisterId = btn.getAttribute('data-sister-id');
       if (!action || !sisterId) return;
       btn.disabled = true;
+      if (feedbackEl) feedbackEl.textContent = `${action} ${sisterId}...`;
       try {
         await api.sisterAction(action, sisterId);
+        if (feedbackEl) feedbackEl.textContent = `${action} ${sisterId}: success`;
       } catch (err) {
         console.error(`sister ${action} failed`, err);
+        if (feedbackEl) feedbackEl.textContent = `${action} ${sisterId}: failed`;
       } finally {
         btn.disabled = false;
       }
