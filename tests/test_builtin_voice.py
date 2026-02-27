@@ -46,6 +46,9 @@ class VoiceToolTests(unittest.TestCase):
                     "call_id": "c1",
                     "duration": 25,
                     "transcript": [{"role": "assistant", "text": "hi"}],
+                    "status": "completed",
+                    "account_id": "acct-secret",
+                    "webhook_url": "https://example.invalid/hook",
                 }
             raise AssertionError(f"unexpected url {url}")
 
@@ -62,6 +65,9 @@ class VoiceToolTests(unittest.TestCase):
             tr = tr_tool.execute({"call_id": "c1"}, _ctx())
             self.assertEqual(tr["call_id"], "c1")
             self.assertEqual(len(tr["transcript"]), 1)
+            self.assertEqual(tr["metadata"].get("status"), "completed")
+            self.assertNotIn("account_id", tr["metadata"])
+            self.assertNotIn("webhook_url", tr["metadata"])
 
     def test_make_call_and_risk(self) -> None:
         def fake_http(method, url, api_key, payload=None, timeout=30):  # noqa: ANN001

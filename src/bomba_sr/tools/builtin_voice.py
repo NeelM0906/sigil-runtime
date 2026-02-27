@@ -45,6 +45,21 @@ def _require_api_key() -> str:
     return api_key
 
 
+def _safe_call_metadata(payload: dict[str, Any]) -> dict[str, Any]:
+    allowlist = (
+        "status",
+        "pathway_id",
+        "pathway_name",
+        "from_number",
+        "to_number",
+        "created_at",
+        "ended_at",
+        "ended_reason",
+        "call_length",
+    )
+    return {key: payload[key] for key in allowlist if key in payload}
+
+
 def _list_calls(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     _ = context
     api_key = _require_api_key()
@@ -93,7 +108,7 @@ def _get_transcript(arguments: dict[str, Any], context: ToolContext) -> dict[str
         "call_id": call_id,
         "transcript": transcript,
         "duration": payload.get("duration"),
-        "metadata": payload,
+        "metadata": _safe_call_metadata(payload),
     }
 
 
