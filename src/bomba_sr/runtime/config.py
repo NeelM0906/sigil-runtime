@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 def _split_env(value: str | None) -> tuple[str, ...]:
@@ -15,6 +17,18 @@ def _split_env(value: str | None) -> tuple[str, ...]:
         if item:
             out.append(item)
     return tuple(out)
+
+
+def _json_dict_env(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return dict(payload)
 
 
 @dataclass(frozen=True)
@@ -66,12 +80,18 @@ class RuntimeConfig:
     subagent_crash_max: int = int(os.getenv("BOMBA_SUBAGENT_CRASH_MAX", "3"))
     subagent_crash_cooldown_seconds: float = float(os.getenv("BOMBA_SUBAGENT_CRASH_COOLDOWN", "120"))
     subagent_max_spawn_depth: int = int(os.getenv("BOMBA_SUBAGENT_MAX_SPAWN_DEPTH", "3"))
+    web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
+    brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
     skills_telemetry_enabled: bool = os.getenv("BOMBA_SKILLS_TELEMETRY_ENABLED", "true").lower() != "false"
     skill_nl_router_enabled: bool = os.getenv("BOMBA_SKILL_NL_ROUTER_ENABLED", "true").lower() != "false"
     skill_catalog_sources: tuple[str, ...] = field(
         default_factory=lambda: _split_env(os.getenv("BOMBA_SKILL_CATALOG_SOURCES", "clawhub,anthropic_skills"))
     )
+    skill_source_repo_overrides: dict[str, Any] = field(
+        default_factory=lambda: _json_dict_env(os.getenv("BOMBA_SKILL_SOURCE_REPO_OVERRIDES"))
+    )
+    clawhub_api_base: str | None = os.getenv("CLAWHUB_API_BASE")
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.learning_auto_apply_confidence <= 1.0):

@@ -54,8 +54,9 @@ class SkillMdParser:
         command_dispatch = frontmatter.get("command-dispatch")
         command_tool = frontmatter.get("command-tool")
         command_arg_mode = str(frontmatter.get("command-arg-mode") or "raw")
+        allowed_tools = self._parse_allowed_tools(frontmatter.get("allowed-tools"))
 
-        return SkillDescriptor(
+        descriptor = SkillDescriptor(
             skill_id=skill_id,
             version=str(frontmatter.get("version") or "1.0.0"),
             name=str(frontmatter["name"]),
@@ -74,6 +75,9 @@ class SkillMdParser:
             command_arg_mode=command_arg_mode,
             eligibility=eligibility,
             metadata=metadata,
+            license=(str(frontmatter.get("license")) if frontmatter.get("license") is not None else None),
+            compatibility=(str(frontmatter.get("compatibility")) if frontmatter.get("compatibility") is not None else None),
+            allowed_tools=allowed_tools,
             _body_loaded=include_body,
         )
         if warnings:
@@ -129,6 +133,9 @@ class SkillMdParser:
                 command_arg_mode="raw",
                 eligibility=SkillEligibility(),
                 metadata={"sigil_warnings": [f"fallback parse: {exc}"]},
+                license=None,
+                compatibility=None,
+                allowed_tools=(),
                 _body_loaded=include_body,
             )
             return fallback, [f"fallback parse: {exc}"]
@@ -205,3 +212,11 @@ class SkillMdParser:
         if not isinstance(raw, list):
             return ()
         return tuple(str(x) for x in raw if str(x).strip())
+
+    @staticmethod
+    def _parse_allowed_tools(raw: Any) -> tuple[str, ...]:
+        if isinstance(raw, list):
+            return tuple(str(x) for x in raw if str(x).strip())
+        if isinstance(raw, str):
+            return tuple(part for part in (x.strip() for x in raw.split()) if part)
+        return ()

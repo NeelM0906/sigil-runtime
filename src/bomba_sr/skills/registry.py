@@ -164,6 +164,9 @@ class SkillRegistry:
             "command_dispatch": descriptor.command_dispatch,
             "command_tool": descriptor.command_tool,
             "command_arg_mode": descriptor.command_arg_mode,
+            "license": descriptor.license,
+            "compatibility": descriptor.compatibility,
+            "allowed_tools": list(descriptor.allowed_tools),
         }
         return self.register_skill(
             tenant_id=tenant_id,

@@ -58,6 +58,21 @@ Use rg and serena when available.
         self.assertEqual(descriptor.eligibility.required_env, ("SERENA_BASE_URL",))
         self.assertEqual(descriptor.eligibility.os_filter, ("darwin",))
 
+    def test_parse_agentskills_extended_fields(self) -> None:
+        content = """---
+name: web-search
+description: Search web content
+license: MIT
+compatibility: agentskills/v1
+allowed-tools: web_search web_fetch
+---
+Use web tools for current information.
+"""
+        descriptor = self.parser.parse_string(content, skill_id="web-search")
+        self.assertEqual(descriptor.license, "MIT")
+        self.assertEqual(descriptor.compatibility, "agentskills/v1")
+        self.assertEqual(descriptor.allowed_tools, ("web_search", "web_fetch"))
+
 
 if __name__ == "__main__":
     unittest.main()

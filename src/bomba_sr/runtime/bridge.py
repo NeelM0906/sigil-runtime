@@ -54,6 +54,7 @@ from bomba_sr.tools.builtin_projects import builtin_project_tools
 from bomba_sr.tools.builtin_search import builtin_search_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
+from bomba_sr.tools.builtin_web import builtin_web_tools
 
 
 @dataclass(frozen=True)
@@ -1394,6 +1395,8 @@ class RuntimeBridge:
             governance=governance,
             enabled_sources=self.config.skill_catalog_sources,
             telemetry_enabled=self.config.skills_telemetry_enabled,
+            source_repos=self.config.skill_source_repo_overrides,
+            clawhub_api_base=self.config.clawhub_api_base,
         )
         tool_executor = ToolExecutor(
             governance=governance,
@@ -1405,6 +1408,8 @@ class RuntimeBridge:
             builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
         )
         tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
+        if self.config.web_search_enabled:
+            tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(

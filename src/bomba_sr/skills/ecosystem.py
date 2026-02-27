@@ -31,6 +31,11 @@ SHARED_TRUST_DEFAULTS = {
     SOURCE_CLAWHUB: TRUST_ALLOW_WITH_APPROVAL,
 }
 
+DEFAULT_SOURCE_REPOS = {
+    SOURCE_ANTHROPIC: "anthropics/skills",
+    SOURCE_CLAWHUB: "openclaw/clawhub",
+}
+
 
 @dataclass(frozen=True)
 class CatalogSkill:
@@ -68,6 +73,8 @@ class SkillEcosystemService:
         *,
         enabled_sources: tuple[str, ...] = (SOURCE_CLAWHUB, SOURCE_ANTHROPIC),
         telemetry_enabled: bool = True,
+        source_repos: dict[str, str] | None = None,
+        clawhub_api_base: str | None = None,
         fetcher: Callable[[str], bytes] | None = None,
     ) -> None:
         self.db = db
@@ -77,6 +84,12 @@ class SkillEcosystemService:
         self.governance = governance
         self.enabled_sources = tuple(s for s in enabled_sources if s in KNOWN_SOURCES)
         self.telemetry_enabled = telemetry_enabled
+        self.source_repos = dict(DEFAULT_SOURCE_REPOS)
+        if source_repos:
+            for key, value in source_repos.items():
+                if key in KNOWN_SOURCES and isinstance(value, str) and value.strip():
+                    self.source_repos[key] = value.strip()
+        self.clawhub_api_base = clawhub_api_base.rstrip("/") if isinstance(clawhub_api_base, str) and clawhub_api_base.strip() else None
         self.fetcher = fetcher or self._default_fetch
         self._ensure_schema()
 
@@ -89,9 +102,14 @@ class SkillEcosystemService:
         sources = [selected] if selected else list(self.enabled_sources)
         for item in sources:
             if item == SOURCE_ANTHROPIC:
-                out.extend(self._fetch_repo_catalog("anthropics/skills", source=item))
+                repo = self.source_repos.get(item, DEFAULT_SOURCE_REPOS[SOURCE_ANTHROPIC])
+                out.extend(self._fetch_repo_catalog(repo, source=item))
             elif item == SOURCE_CLAWHUB:
-                out.extend(self._fetch_repo_catalog("openclaw/clawhub", source=item))
+                if self.clawhub_api_base:
+                    out.extend(self._fetch_clawhub_api_catalog(source=item))
+                else:
+                    repo = self.source_repos.get(item, DEFAULT_SOURCE_REPOS[SOURCE_CLAWHUB])
+                    out.extend(self._fetch_repo_catalog(repo, source=item))
         out.sort(key=lambda x: (x.source, x.skill_id))
         return out[: max(1, int(limit))]
 
@@ -389,6 +407,42 @@ class SkillEcosystemService:
                 )
             )
         self._telemetry("shared", None, "catalog_listed", {"source": source, "count": len(out)})
+        return out
+
+    def _fetch_clawhub_api_catalog(self, source: str) -> list[CatalogSkill]:
+        if not self.clawhub_api_base:
+            return []
+        url = f"{self.clawhub_api_base}/skills"
+        payload = json.loads(self.fetcher(url).decode("utf-8", errors="replace"))
+        rows: list[dict[str, Any]]
+        if isinstance(payload, list):
+            rows = [x for x in payload if isinstance(x, dict)]
+        elif isinstance(payload, dict) and isinstance(payload.get("skills"), list):
+            rows = [x for x in payload["skills"] if isinstance(x, dict)]
+        else:
+            rows = []
+
+        out: list[CatalogSkill] = []
+        for item in rows:
+            skill_id = str(item.get("id") or item.get("skill_id") or "").strip().lower()
+            if not skill_id:
+                continue
+            download_url = str(item.get("download_url") or item.get("url") or "").strip()
+            if not download_url:
+                continue
+            out.append(
+                CatalogSkill(
+                    source=source,
+                    skill_id=skill_id,
+                    name=str(item.get("name") or skill_id),
+                    description=str(item.get("description") or ""),
+                    repo=str(item.get("repo") or "clawhub"),
+                    branch=str(item.get("branch") or "main"),
+                    path=str(item.get("path") or f"{skill_id}/SKILL.md"),
+                    download_url=download_url,
+                )
+            )
+        self._telemetry("shared", None, "catalog_listed", {"source": source, "count": len(out), "mode": "api"})
         return out
 
     def _get_git_tree(self, repo: str, branch: str) -> list[dict[str, Any]] | None:

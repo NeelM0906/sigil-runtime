@@ -37,6 +37,9 @@ class SkillDescriptor:
     command_arg_mode: str
     eligibility: SkillEligibility
     metadata: dict[str, Any]
+    license: str | None = None
+    compatibility: str | None = None
+    allowed_tools: tuple[str, ...] = ()
     _body_loaded: bool = False
 
     def with_body(self, body_text: str) -> "SkillDescriptor":
@@ -80,5 +83,12 @@ def descriptor_from_manifest(
         command_arg_mode="raw",
         eligibility=SkillEligibility(),
         metadata={},
+        license=(str(manifest.get("license")) if manifest.get("license") is not None else None),
+        compatibility=(str(manifest.get("compatibility")) if manifest.get("compatibility") is not None else None),
+        allowed_tools=tuple(
+            str(x)
+            for x in (manifest.get("allowed_tools") or [])
+            if str(x).strip()
+        ),
         _body_loaded=False,
     )

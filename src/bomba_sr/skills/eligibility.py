@@ -3,18 +3,24 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from typing import Mapping
+from typing import Any, Mapping
 
 from bomba_sr.skills.descriptor import SkillDescriptor
 
 
 class EligibilityEngine:
-    def check(self, skill: SkillDescriptor, env: Mapping[str, str] | None = None) -> bool:
+    def check(
+        self,
+        skill: SkillDescriptor,
+        env: Mapping[str, str] | None = None,
+        config: Mapping[str, Any] | None = None,
+    ) -> bool:
         rules = skill.eligibility
         if rules.always:
             return True
 
         env_map = env or os.environ
+        config_map = config or {}
         if not self._check_os(rules.os_filter):
             return False
         if not self._check_bins(rules.required_bins, require_all=True):
@@ -22,6 +28,8 @@ class EligibilityEngine:
         if not self._check_bins(rules.any_bins, require_all=False):
             return False
         if not self._check_env(rules.required_env, env_map):
+            return False
+        if not self._check_config(rules.required_config, config_map):
             return False
         return True
 
@@ -52,6 +60,16 @@ class EligibilityEngine:
             return True
         for key in keys:
             if key in env and str(env[key]).strip():
+                continue
+            return False
+        return True
+
+    @staticmethod
+    def _check_config(keys: tuple[str, ...], config: Mapping[str, Any]) -> bool:
+        if not keys:
+            return True
+        for key in keys:
+            if key in config and config[key]:
                 continue
             return False
         return True
