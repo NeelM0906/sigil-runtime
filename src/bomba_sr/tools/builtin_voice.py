@@ -24,10 +24,11 @@ def _http_json(
     timeout: int = 30,
 ) -> dict[str, Any]:
     data = None
+    auth_value = api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
     headers = {
         "Accept": "application/json",
         "User-Agent": "sigil-runtime/1.0",
-        "authorization": api_key,
+        "Authorization": auth_value,
     }
     if payload is not None:
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
