@@ -83,6 +83,9 @@ class RuntimeConfig:
     adaptation_metrics_interval: int = int(os.getenv("BOMBA_ADAPTATION_METRICS_INTERVAL", "5"))
     adaptation_llm_eval_interval: int = int(os.getenv("BOMBA_ADAPTATION_LLM_EVAL_INTERVAL", "10"))
     adaptation_auto_correct: bool = os.getenv("BOMBA_ADAPTATION_AUTO_CORRECT", "true").lower() != "false"
+    heartbeat_enabled: bool = os.getenv("BOMBA_HEARTBEAT_ENABLED", "false").lower() != "false"
+    heartbeat_interval_seconds: int = int(os.getenv("BOMBA_HEARTBEAT_INTERVAL", "1800"))
+    cron_enabled: bool = os.getenv("BOMBA_CRON_ENABLED", "false").lower() != "false"
     web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
     brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
@@ -127,5 +130,7 @@ class RuntimeConfig:
             raise ValueError("adaptation_metrics_interval must be >= 1")
         if self.adaptation_llm_eval_interval < 1:
             raise ValueError("adaptation_llm_eval_interval must be >= 1")
+        if self.heartbeat_interval_seconds < 1:
+            raise ValueError("heartbeat_interval_seconds must be >= 1")
         if not self.skill_catalog_sources:
             raise ValueError("skill_catalog_sources must not be empty")

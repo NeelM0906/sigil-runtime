@@ -12,6 +12,8 @@ from typing import Any
 
 from bomba_sr.adaptation.runtime_adaptation import RuntimeAdaptationEngine
 from bomba_sr.adaptation.self_evaluation import SelfEvaluator
+from bomba_sr.autonomy.heartbeat import HeartbeatEngine
+from bomba_sr.autonomy.scheduler import CronScheduler
 from bomba_sr.artifacts.store import ArtifactStore
 from bomba_sr.codeintel.router import CodeIntelRouter
 from bomba_sr.commands.disclosure import SkillDisclosure
@@ -53,6 +55,7 @@ from bomba_sr.tools.builtin_memory import builtin_memory_tools
 from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
 from bomba_sr.tools.builtin_projects import builtin_project_tools
 from bomba_sr.tools.builtin_search import builtin_search_tools
+from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
@@ -118,6 +121,8 @@ class RuntimeBridge:
         if self.embedding_provider is None and os.getenv("OPENAI_API_KEY"):
             self.embedding_provider = OpenAIEmbeddingProvider(api_key=os.environ["OPENAI_API_KEY"])
         self._tenants: dict[str, _TenantRuntime] = {}
+        self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
+        self._cron_schedulers: dict[str, CronScheduler] = {}
 
     def handle_turn(self, request: TurnRequest) -> dict[str, Any]:
         runtime = self._tenant_runtime(request.tenant_id, request.workspace_root)
@@ -1335,6 +1340,113 @@ class RuntimeBridge:
         rows = runtime.artifacts.list_session_artifacts(tenant_id=tenant_id, session_id=session_id, limit=limit)
         return [self._artifact_dict(r) for r in rows]
 
+    def start_autonomy(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        status: dict[str, Any] = {}
+        if self.config.heartbeat_enabled:
+            heartbeat = self._ensure_heartbeat_engine(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+            heartbeat.start()
+            status["heartbeat"] = heartbeat.status()
+        else:
+            status["heartbeat"] = {"running": False, "reason": "disabled_by_config"}
+
+        if self.config.cron_enabled:
+            scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+            scheduler.start()
+            status["cron"] = scheduler.status()
+        else:
+            status["cron"] = {"running": False, "reason": "disabled_by_config"}
+        return status
+
+    def heartbeat_status(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        heartbeat = self._ensure_heartbeat_engine(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return heartbeat.status()
+
+    def heartbeat_start(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        heartbeat = self._ensure_heartbeat_engine(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        heartbeat.start()
+        return heartbeat.status()
+
+    def heartbeat_stop(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        key = self._autonomy_key(tenant_id, user_id, workspace_root)
+        heartbeat = self._heartbeat_engines.get(key)
+        if heartbeat is None:
+            return {"running": False, "reason": "not_started"}
+        heartbeat.stop()
+        return heartbeat.status()
+
+    def heartbeat_tick(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        heartbeat = self._ensure_heartbeat_engine(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return heartbeat.run_once()
+
+    def cron_status(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.status()
+
+    def cron_start(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        scheduler.start()
+        return scheduler.status()
+
+    def cron_stop(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        key = self._autonomy_key(tenant_id, user_id, workspace_root)
+        scheduler = self._cron_schedulers.get(key)
+        if scheduler is None:
+            return {"running": False, "reason": "not_started"}
+        scheduler.stop()
+        return scheduler.status()
+
+    def list_schedules(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str | None = None,
+        include_disabled: bool = True,
+    ) -> list[dict[str, Any]]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.list_tasks(include_disabled=include_disabled)
+
+    def add_schedule(
+        self,
+        tenant_id: str,
+        user_id: str,
+        cron_expression: str,
+        task_goal: str,
+        workspace_root: str | None = None,
+        enabled: bool = True,
+    ) -> dict[str, Any]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.add_task(cron_expression=cron_expression, task_goal=task_goal, enabled=enabled)
+
+    def remove_schedule(
+        self,
+        tenant_id: str,
+        user_id: str,
+        task_id: str,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.remove_task(task_id=task_id)
+
+    def set_schedule_enabled(
+        self,
+        tenant_id: str,
+        user_id: str,
+        task_id: str,
+        enabled: bool,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.set_enabled(task_id=task_id, enabled=enabled)
+
+    def run_due_schedules_once(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        return scheduler.run_due_once()
+
     def _tenant_runtime(self, tenant_id: str, workspace_root: str | None = None) -> _TenantRuntime:
         key = tenant_id
         if key in self._tenants:
@@ -1501,6 +1613,14 @@ class RuntimeBridge:
             builtin_skill_tools(skill_loader, skills_registry, skills_ecosystem=skills_ecosystem)
         )
         tool_executor.register_many(
+            builtin_scheduler_tools(
+                add_schedule=self.add_schedule,
+                list_schedules=self.list_schedules,
+                remove_schedule=self.remove_schedule,
+                set_schedule_enabled=self.set_schedule_enabled,
+            )
+        )
+        tool_executor.register_many(
             builtin_compaction_tools(
                 provider=self.provider,
                 default_model_id=self.config.default_model_id,
@@ -1547,6 +1667,121 @@ class RuntimeBridge:
         )
         self._tenants[key] = runtime
         return runtime
+
+    def _autonomy_key(self, tenant_id: str, user_id: str, workspace_root: str | None) -> str:
+        runtime = self._tenant_runtime(tenant_id=tenant_id, workspace_root=workspace_root)
+        return f"{tenant_id}:{user_id}:{runtime.context.workspace_root}"
+
+    def _ensure_heartbeat_engine(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str | None = None,
+    ) -> HeartbeatEngine:
+        key = self._autonomy_key(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        existing = self._heartbeat_engines.get(key)
+        if existing is not None:
+            return existing
+        runtime = self._tenant_runtime(tenant_id=tenant_id, workspace_root=workspace_root)
+
+        def _runner(heartbeat_md: str) -> dict[str, Any]:
+            return self._run_heartbeat_turn(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                workspace_root=str(runtime.context.workspace_root),
+                heartbeat_md=heartbeat_md,
+            )
+
+        engine = HeartbeatEngine(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            workspace_root=runtime.context.workspace_root,
+            runner=_runner,
+            interval_seconds=self.config.heartbeat_interval_seconds,
+        )
+        self._heartbeat_engines[key] = engine
+        return engine
+
+    def _ensure_cron_scheduler(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str | None = None,
+    ) -> CronScheduler:
+        key = self._autonomy_key(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
+        existing = self._cron_schedulers.get(key)
+        if existing is not None:
+            return existing
+        runtime = self._tenant_runtime(tenant_id=tenant_id, workspace_root=workspace_root)
+
+        def _runner(task_goal: str, task_id: str) -> dict[str, Any]:
+            return self._run_scheduled_turn(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                workspace_root=str(runtime.context.workspace_root),
+                task_goal=task_goal,
+                task_id=task_id,
+            )
+
+        scheduler = CronScheduler(
+            db=runtime.db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            runner=_runner,
+        )
+        self._cron_schedulers[key] = scheduler
+        return scheduler
+
+    def _run_heartbeat_turn(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str,
+        heartbeat_md: str,
+    ) -> dict[str, Any]:
+        result = self.handle_turn(
+            TurnRequest(
+                tenant_id=tenant_id,
+                session_id=f"heartbeat-{uuid.uuid4()}",
+                user_id=user_id,
+                user_message=(
+                    "[HEARTBEAT] Review the checklist below and act if needed. "
+                    "Summarize any action taken.\n\n"
+                    f"{heartbeat_md}"
+                ),
+                profile=TurnProfile.TASK_EXECUTION,
+                workspace_root=workspace_root,
+            )
+        )
+        return {
+            "session_id": result.get("turn", {}).get("session_id"),
+            "turn_id": result.get("turn", {}).get("turn_id"),
+            "assistant_text": result.get("assistant", {}).get("text", ""),
+        }
+
+    def _run_scheduled_turn(
+        self,
+        tenant_id: str,
+        user_id: str,
+        workspace_root: str,
+        task_goal: str,
+        task_id: str,
+    ) -> dict[str, Any]:
+        result = self.handle_turn(
+            TurnRequest(
+                tenant_id=tenant_id,
+                session_id=f"scheduled-{task_id}",
+                user_id=user_id,
+                user_message=f"[SCHEDULED TASK:{task_id}] {task_goal}",
+                profile=TurnProfile.TASK_EXECUTION,
+                workspace_root=workspace_root,
+            )
+        )
+        return {
+            "session_id": result.get("turn", {}).get("session_id"),
+            "turn_id": result.get("turn", {}).get("turn_id"),
+            "assistant_text": result.get("assistant", {}).get("text", ""),
+        }
 
     def _capabilities(self, runtime: _TenantRuntime, model_id: str):
         try:

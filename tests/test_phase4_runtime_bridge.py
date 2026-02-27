@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from bomba_sr.context.policy import TurnProfile
@@ -121,6 +122,55 @@ class RuntimeBridgeTests(unittest.TestCase):
             replay_assistant = [m for m in second_messages if getattr(m, "role", "") == "assistant" and m.content == "assistant-1"]
             self.assertTrue(replay_user)
             self.assertTrue(replay_assistant)
+
+    def test_autonomy_scheduler_management(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(
+                    runtime_home=runtime_home,
+                    cron_enabled=True,
+                    heartbeat_enabled=False,
+                ),
+                provider=StaticEchoProvider(),
+            )
+            bridge.start_autonomy(tenant_id="tenant-autonomy", user_id="user-autonomy", workspace_root=str(workspace))
+            created = bridge.add_schedule(
+                tenant_id="tenant-autonomy",
+                user_id="user-autonomy",
+                cron_expression="*/1 * * * *",
+                task_goal="check TODOs",
+                workspace_root=str(workspace),
+            )
+            schedules = bridge.list_schedules(
+                tenant_id="tenant-autonomy",
+                user_id="user-autonomy",
+                workspace_root=str(workspace),
+            )
+            self.assertEqual(len(schedules), 1)
+
+            runtime = bridge._tenant_runtime("tenant-autonomy", str(workspace))
+            runtime.db.execute(
+                "UPDATE scheduled_tasks SET next_run_at = ? WHERE id = ?",
+                ((datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat(), created["id"]),
+            )
+            runtime.db.commit()
+
+            due = bridge.run_due_schedules_once(
+                tenant_id="tenant-autonomy",
+                user_id="user-autonomy",
+                workspace_root=str(workspace),
+            )
+            self.assertEqual(len(due), 1)
+            removed = bridge.remove_schedule(
+                tenant_id="tenant-autonomy",
+                user_id="user-autonomy",
+                task_id=created["id"],
+                workspace_root=str(workspace),
+            )
+            self.assertTrue(removed["removed"])
 
 
 if __name__ == "__main__":

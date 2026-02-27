@@ -106,6 +106,8 @@ def _print_help() -> None:
     print("  /exit                    Exit SIGIL")
     print("  /session                 Show current session context")
     print("  /reset-session           Start a fresh session id")
+    print("  /heartbeat [status|start|stop|tick]  Manage proactive heartbeat")
+    print("  /cron <status|start|stop|list|add|remove|enable|disable|run-due>  Manage scheduled tasks")
     print("  /use-project <project>   Set active project context")
     print("  /use-task <task>         Set active task context")
     print("  /clear-context           Clear active project/task")
@@ -156,6 +158,97 @@ def _handle_command(line: str, state: SessionState, bridge: RuntimeBridge, state
 
     if cmd == "/session":
         print(json.dumps(state.__dict__, indent=2))
+        return True
+
+    if cmd == "/heartbeat":
+        action = parts[1].lower() if len(parts) > 1 else "status"
+        if action == "status":
+            print(json.dumps(bridge.heartbeat_status(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "start":
+            print(json.dumps(bridge.heartbeat_start(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "stop":
+            print(json.dumps(bridge.heartbeat_stop(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "tick":
+            print(json.dumps(bridge.heartbeat_tick(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        print("usage: /heartbeat [status|start|stop|tick]")
+        return True
+
+    if cmd == "/cron":
+        action = parts[1].lower() if len(parts) > 1 else "status"
+        if action == "status":
+            print(json.dumps(bridge.cron_status(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "start":
+            print(json.dumps(bridge.cron_start(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "stop":
+            print(json.dumps(bridge.cron_stop(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        if action == "list":
+            include_disabled = not (len(parts) > 2 and parts[2].lower() == "enabled-only")
+            payload = bridge.list_schedules(
+                tenant_id=state.tenant_id,
+                user_id=state.user_id,
+                workspace_root=state.workspace,
+                include_disabled=include_disabled,
+            )
+            print(json.dumps(payload, indent=2))
+            return True
+        if action == "add":
+            if len(parts) < 4:
+                print('usage: /cron add "<cron_expression>" "<task_goal>"')
+                return True
+            created = bridge.add_schedule(
+                tenant_id=state.tenant_id,
+                user_id=state.user_id,
+                cron_expression=parts[2],
+                task_goal=" ".join(parts[3:]),
+                workspace_root=state.workspace,
+                enabled=True,
+            )
+            print(json.dumps(created, indent=2))
+            return True
+        if action == "remove":
+            if len(parts) < 3:
+                print("usage: /cron remove <task_id>")
+                return True
+            print(
+                json.dumps(
+                    bridge.remove_schedule(
+                        tenant_id=state.tenant_id,
+                        user_id=state.user_id,
+                        task_id=parts[2],
+                        workspace_root=state.workspace,
+                    ),
+                    indent=2,
+                )
+            )
+            return True
+        if action in {"enable", "disable"}:
+            if len(parts) < 3:
+                print(f"usage: /cron {action} <task_id>")
+                return True
+            print(
+                json.dumps(
+                    bridge.set_schedule_enabled(
+                        tenant_id=state.tenant_id,
+                        user_id=state.user_id,
+                        task_id=parts[2],
+                        enabled=(action == "enable"),
+                        workspace_root=state.workspace,
+                    ),
+                    indent=2,
+                )
+            )
+            return True
+        if action == "run-due":
+            print(json.dumps(bridge.run_due_schedules_once(state.tenant_id, state.user_id, workspace_root=state.workspace), indent=2))
+            return True
+        print("usage: /cron <status|start|stop|list|add|remove|enable|disable|run-due>")
         return True
 
     if cmd == "/reset-session":
@@ -542,6 +635,11 @@ def main() -> int:
     _save_state(state_file, state)
 
     bridge = RuntimeBridge()
+    bridge.start_autonomy(
+        tenant_id=state.tenant_id,
+        user_id=state.user_id,
+        workspace_root=state.workspace,
+    )
     _print_welcome(state)
 
     while True:
