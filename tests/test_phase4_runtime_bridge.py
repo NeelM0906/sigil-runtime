@@ -319,6 +319,36 @@ class RuntimeBridgeTests(unittest.TestCase):
             self.assertEqual(rows[0]["user_message"], message)
             self.assertIn("catalog_list", rows[0]["assistant_message"])
 
+    def test_web_tools_registration_respects_config_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home_disabled = Path(td) / "runtime-home-disabled"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            bridge_disabled = RuntimeBridge(
+                config=RuntimeConfig(
+                    runtime_home=runtime_home_disabled,
+                    web_search_enabled=False,
+                ),
+                provider=StaticEchoProvider(),
+            )
+            runtime_disabled = bridge_disabled._tenant_runtime("tenant-web-disabled", str(workspace))
+            names_disabled = runtime_disabled.tool_executor.known_tool_names()
+            self.assertNotIn("web_search", names_disabled)
+            self.assertNotIn("web_fetch", names_disabled)
+
+            runtime_home_enabled = Path(td) / "runtime-home-enabled"
+            bridge_enabled = RuntimeBridge(
+                config=RuntimeConfig(
+                    runtime_home=runtime_home_enabled,
+                    web_search_enabled=True,
+                ),
+                provider=StaticEchoProvider(),
+            )
+            runtime_enabled = bridge_enabled._tenant_runtime("tenant-web-enabled", str(workspace))
+            names_enabled = runtime_enabled.tool_executor.known_tool_names()
+            self.assertIn("web_search", names_enabled)
+            self.assertIn("web_fetch", names_enabled)
+
 
 if __name__ == "__main__":
     unittest.main()
