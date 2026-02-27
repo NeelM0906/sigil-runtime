@@ -76,6 +76,7 @@ class HeartbeatEngine:
         return {"ran": True, "result": result}
 
     def status(self) -> dict[str, Any]:
+        has_heartbeat_file = bool(self._load_heartbeat_md())
         with self._lock:
             return {
                 "running": self.is_running(),
@@ -83,7 +84,7 @@ class HeartbeatEngine:
                 "runs": self._runs,
                 "last_run_at": self._last_run_at,
                 "last_error": self._last_error,
-                "has_heartbeat_file": bool(self._load_heartbeat_md()),
+                "has_heartbeat_file": has_heartbeat_file,
                 "last_result": self._last_result,
             }
 
