@@ -10,7 +10,14 @@
       "role": "Colosseum operator - runs tournaments 24/7, evolves and scores ACT-I beings",
       "auto_start": false,
       "heartbeat_enabled": false,
-      "cron_tasks": []
+      "cron_tasks": [
+        {
+          "name": "colosseum-round",
+          "cron_expr": "*/30 * * * *",
+          "goal": "Run one Colosseum v2 tournament round with all 39 beings",
+          "skill": "colosseum"
+        }
+      ]
     },
     {
       "sister_id": "scholar",
