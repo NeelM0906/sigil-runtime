@@ -492,6 +492,22 @@ class SubAgentProtocol:
             return None
         return self._run_row_to_dict(record)
 
+    def latest_run_for_child_agent(self, child_agent_id: str) -> dict[str, Any] | None:
+        row = self.db.execute(
+            """
+            SELECT *
+            FROM subagent_runs
+            WHERE child_agent_id = ?
+            ORDER BY accepted_at DESC
+            LIMIT 1
+            """,
+            (child_agent_id,),
+        ).fetchone()
+        record = dict_from_row(row)
+        if record is None:
+            return None
+        return self._run_row_to_dict(record)
+
     def _children_of(self, run_id: str) -> list[str]:
         rows = self.db.execute(
             "SELECT run_id FROM subagent_runs WHERE parent_run_id = ?",

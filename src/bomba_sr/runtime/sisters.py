@@ -161,16 +161,7 @@ class SisterRegistry:
         }
 
     def _latest_run_for_sister(self, sister_id: str):
-        return self.protocol.db.execute(
-            """
-            SELECT run_id, status, accepted_at, started_at, ended_at
-            FROM subagent_runs
-            WHERE child_agent_id = ?
-            ORDER BY accepted_at DESC
-            LIMIT 1
-            """,
-            (f"sister-{sister_id}",),
-        ).fetchone()
+        return self.protocol.latest_run_for_child_agent(f"sister-{sister_id}")
 
     def _require_sister(self, sister_id: str) -> SisterConfig:
         if not SAFE_SISTER_ID_PATTERN.fullmatch(sister_id.strip().lower()):
