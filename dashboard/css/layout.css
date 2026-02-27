@@ -19,8 +19,8 @@ body {
   line-height: 1.5;
   color: hsl(var(--foreground));
   background: hsl(var(--surface-0));
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
   /* Subtle noise texture for depth */
   background-image:
     radial-gradient(ellipse 80% 60% at 50% -10%, hsl(var(--glow-info) / 0.03), transparent),
@@ -30,7 +30,8 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ── Header ── */
@@ -38,6 +39,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 50;
+  flex-shrink: 0;
   border-bottom: 1px solid hsl(var(--border) / 0.6);
   background: hsl(var(--surface-0) / 0.85);
   backdrop-filter: blur(12px) saturate(1.2);
@@ -48,6 +50,7 @@ body {
 /* ── Alerts ── */
 #alerts {
   padding: 0 var(--space-6);
+  flex-shrink: 0;
 }
 
 #alerts:empty {
@@ -58,6 +61,7 @@ body {
 #main-layout {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
