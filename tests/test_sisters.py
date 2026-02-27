@@ -129,6 +129,50 @@ class SisterRegistryTests(unittest.TestCase):
             registry = SisterRegistry(config_path=sisters_path, orchestrator=orchestrator, protocol=protocol)
             self.assertEqual(registry.list_sisters(), [])
 
+    def test_spawn_unknown_sister_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(Path(td) / "runtime.db")
+            protocol = SubAgentProtocol(db)
+            orchestrator = SubAgentOrchestrator(protocol=protocol, default_worker=_worker, max_workers=1)
+            registry = SisterRegistry(
+                config_path=Path(td) / "missing-sisters.json",
+                orchestrator=orchestrator,
+                protocol=protocol,
+            )
+            with self.assertRaises(ValueError):
+                registry.spawn_sister("unknown")
+
+    def test_stop_non_running_sister_returns_not_running(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            prime_root = root / "workspaces" / "prime"
+            forge_root = root / "workspaces" / "forge"
+            prime_root.mkdir(parents=True)
+            forge_root.mkdir(parents=True)
+            sisters_path = prime_root / "sisters.json"
+            sisters_path.write_text(
+                json.dumps(
+                    {
+                        "sisters": [
+                            {
+                                "sister_id": "forge",
+                                "display_name": "Sai Forge",
+                                "tenant_id": "tenant-forge",
+                                "workspace_root": str(forge_root),
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            db = RuntimeDB(root / "runtime.db")
+            protocol = SubAgentProtocol(db)
+            orchestrator = SubAgentOrchestrator(protocol=protocol, default_worker=_worker, max_workers=1)
+            registry = SisterRegistry(config_path=sisters_path, orchestrator=orchestrator, protocol=protocol)
+            result = registry.stop_sister("forge")
+            self.assertFalse(result["stopped"])
+            self.assertEqual(result["reason"], "not_running")
+
 
 if __name__ == "__main__":
     unittest.main()
