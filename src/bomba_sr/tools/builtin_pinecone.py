@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -22,6 +23,7 @@ STRATA_INDEXES = {
 }
 
 _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_INDEX_CACHE_LOCK = threading.Lock()
 SAFE_INDEX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
 
@@ -61,7 +63,8 @@ def _choose_pinecone_api_key(index_name: str) -> str:
 
 
 def _list_indexes_with_cache(api_key: str) -> dict[str, Any]:
-    cached = _INDEX_CACHE.get(api_key)
+    with _INDEX_CACHE_LOCK:
+        cached = _INDEX_CACHE.get(api_key)
     now = time.time()
     if cached is not None:
         ts, payload = cached
@@ -70,7 +73,8 @@ def _list_indexes_with_cache(api_key: str) -> dict[str, Any]:
     payload = _http_json("GET", PINECONE_CONTROL_API, headers={"Api-Key": api_key})
     if not isinstance(payload, dict):
         payload = {}
-    _INDEX_CACHE[api_key] = (now, payload)
+    with _INDEX_CACHE_LOCK:
+        _INDEX_CACHE[api_key] = (now, payload)
     return payload
 
 
@@ -87,8 +91,9 @@ def _index_records(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _resolve_index_host(index_name: str, api_key: str) -> str:
     for force_refresh in (False, True):
-        if force_refresh and api_key in _INDEX_CACHE:
-            del _INDEX_CACHE[api_key]
+        if force_refresh:
+            with _INDEX_CACHE_LOCK:
+                _INDEX_CACHE.pop(api_key, None)
         payload = _list_indexes_with_cache(api_key)
         for item in _index_records(payload):
             if str(item.get("name") or "") == index_name:
