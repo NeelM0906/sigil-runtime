@@ -1866,9 +1866,9 @@ class RuntimeBridge:
         result = self.handle_turn(
             TurnRequest(
                 tenant_id=tenant_id,
-                session_id=f"scheduled-{task_id}",
+                session_id=f"scheduled-{task_id}-{uuid.uuid4().hex[:8]}",
                 user_id=user_id,
-                user_message=f"[SCHEDULED TASK:{task_id}] {task_goal}",
+                user_message=f"scheduled task {task_id}: {task_goal}",
                 profile=TurnProfile.TASK_EXECUTION,
                 workspace_root=workspace_root,
             )

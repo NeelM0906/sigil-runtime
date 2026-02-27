@@ -164,6 +164,23 @@ class RuntimeBridgeTests(unittest.TestCase):
                 workspace_root=str(workspace),
             )
             self.assertEqual(len(due), 1)
+            first_session_id = due[0]["result"]["session_id"]
+
+            runtime.db.execute(
+                "UPDATE scheduled_tasks SET next_run_at = ? WHERE id = ?",
+                ((datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat(), created["id"]),
+            )
+            runtime.db.commit()
+            due_again = bridge.run_due_schedules_once(
+                tenant_id="tenant-autonomy",
+                user_id="user-autonomy",
+                workspace_root=str(workspace),
+            )
+            self.assertEqual(len(due_again), 1)
+            second_session_id = due_again[0]["result"]["session_id"]
+            self.assertNotEqual(first_session_id, second_session_id)
+            self.assertTrue(first_session_id.startswith(f"scheduled-{created['id']}-"))
+            self.assertTrue(second_session_id.startswith(f"scheduled-{created['id']}-"))
             removed = bridge.remove_schedule(
                 tenant_id="tenant-autonomy",
                 user_id="user-autonomy",
