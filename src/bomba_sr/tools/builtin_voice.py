@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
@@ -32,11 +33,25 @@ def _http_json(
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read().decode("utf-8", errors="replace")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        error_body = ""
+        try:
+            error_body = exc.read().decode("utf-8", errors="replace").strip()
+        except OSError:
+            error_body = ""
+        detail = f": {error_body[:200]}" if error_body else ""
+        raise ValueError(f"Bland API request failed (HTTP {exc.code}){detail}") from exc
+    except urllib.error.URLError as exc:
+        raise ValueError(f"Bland API request failed: {exc.reason}") from exc
     if not body.strip():
         return {}
-    return json.loads(body)
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Bland API returned invalid JSON") from exc
 
 
 def _require_api_key() -> str:
