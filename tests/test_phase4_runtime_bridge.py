@@ -245,6 +245,63 @@ class RuntimeBridgeTests(unittest.TestCase):
             ]
             self.assertEqual(replayed_large, [])
 
+    def test_command_turn_is_persisted_in_conversation_history(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=StaticEchoProvider(),
+            )
+            tenant_id = "tenant-command-history"
+            session_id = str(uuid.uuid4())
+            user_id = "user-command-history"
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id=tenant_id,
+                    session_id=session_id,
+                    user_id=user_id,
+                    user_message="/help",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            runtime = bridge._tenant_runtime(tenant_id, str(workspace))
+            rows = runtime.memory.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=1)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["user_message"], "/help")
+            self.assertIn("commands", rows[0]["assistant_message"])
+
+    def test_skill_nl_turn_is_persisted_in_conversation_history(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=StaticEchoProvider(),
+            )
+            tenant_id = "tenant-nl-history"
+            session_id = str(uuid.uuid4())
+            user_id = "user-nl-history"
+            message = "list skills from clawhub"
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id=tenant_id,
+                    session_id=session_id,
+                    user_id=user_id,
+                    user_message=message,
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            runtime = bridge._tenant_runtime(tenant_id, str(workspace))
+            rows = runtime.memory.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=1)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["user_message"], message)
+            self.assertIn("catalog_list", rows[0]["assistant_message"])
+
 
 if __name__ == "__main__":
     unittest.main()

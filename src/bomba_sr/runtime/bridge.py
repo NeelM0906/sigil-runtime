@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import uuid
@@ -59,6 +60,8 @@ from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -160,6 +163,13 @@ class RuntimeBridge:
                 cmd_result = runtime.command_router.route(parsed, command_ctx)
                 if cmd_result.handled and cmd_result.bypass_llm:
                     payload_text = json.dumps(cmd_result.output or {}, indent=2, ensure_ascii=True)
+                    self._record_conversation_turn(
+                        runtime=runtime,
+                        request=request,
+                        turn_id=turn_id,
+                        user_message=request.user_message,
+                        assistant_message=payload_text,
+                    )
                     return {
                         "tenant": {
                             "tenant_id": request.tenant_id,
@@ -197,6 +207,14 @@ class RuntimeBridge:
                         f"Selected skill instructions:\n{cmd_result.skill_body}"
                     )
                 elif not cmd_result.handled:
+                    error_text = cmd_result.error or "Unknown command"
+                    self._record_conversation_turn(
+                        runtime=runtime,
+                        request=request,
+                        turn_id=turn_id,
+                        user_message=request.user_message,
+                        assistant_message=error_text,
+                    )
                     return {
                         "tenant": {
                             "tenant_id": request.tenant_id,
@@ -214,7 +232,7 @@ class RuntimeBridge:
                             "task_id": request.task_id,
                         },
                         "assistant": {
-                            "text": cmd_result.error or "Unknown command",
+                            "text": error_text,
                             "provider": "command_router",
                             "usage": None,
                         },
@@ -317,6 +335,14 @@ class RuntimeBridge:
                         }
                     else:
                         payload = {"intent": intent.name, "error": "unsupported_intent"}
+                    payload_text = json.dumps(payload, indent=2, ensure_ascii=True)
+                    self._record_conversation_turn(
+                        runtime=runtime,
+                        request=request,
+                        turn_id=turn_id,
+                        user_message=request.user_message,
+                        assistant_message=payload_text,
+                    )
                     return {
                         "tenant": {
                             "tenant_id": request.tenant_id,
@@ -334,7 +360,7 @@ class RuntimeBridge:
                             "task_id": request.task_id,
                         },
                         "assistant": {
-                            "text": json.dumps(payload, indent=2, ensure_ascii=True),
+                            "text": payload_text,
                             "provider": "skill_nl_router",
                             "usage": None,
                         },
@@ -347,6 +373,14 @@ class RuntimeBridge:
                         "artifacts": [],
                     }
                 except Exception as exc:
+                    error_text = f"skill request could not be completed: {exc}"
+                    self._record_conversation_turn(
+                        runtime=runtime,
+                        request=request,
+                        turn_id=turn_id,
+                        user_message=request.user_message,
+                        assistant_message=error_text,
+                    )
                     return {
                         "tenant": {
                             "tenant_id": request.tenant_id,
@@ -364,7 +398,7 @@ class RuntimeBridge:
                             "task_id": request.task_id,
                         },
                         "assistant": {
-                            "text": f"skill request could not be completed: {exc}",
+                            "text": error_text,
                             "provider": "skill_nl_router",
                             "usage": None,
                         },
@@ -1929,6 +1963,26 @@ class RuntimeBridge:
         if isinstance(raw, (int, float)):
             return bool(raw)
         return default
+
+    def _record_conversation_turn(
+        self,
+        runtime: _TenantRuntime,
+        request: TurnRequest,
+        turn_id: str,
+        user_message: str,
+        assistant_message: str,
+    ) -> None:
+        try:
+            runtime.memory.record_turn(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                turn_id=turn_id,
+                user_id=request.user_id,
+                user_message=user_message,
+                assistant_message=assistant_message,
+            )
+        except Exception as exc:  # pragma: no cover - defensive persistence path
+            logger.warning("failed to persist early-turn conversation record", exc_info=exc)
 
     @staticmethod
     def _cap_recent_turn_messages(
