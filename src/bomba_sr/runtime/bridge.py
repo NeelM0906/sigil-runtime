@@ -1628,7 +1628,7 @@ class RuntimeBridge:
         result = self.handle_turn(
             TurnRequest(
                 tenant_id=sister.tenant_id,
-                session_id=f"sister-msg-{sister.sister_id}-{uuid.uuid4().hex[:8]}",
+                session_id=f"sister-chat-{sister.sister_id}",
                 user_id=f"prime->{sister.sister_id}",
                 user_message=message,
                 model_id=sister.model_id or None,
