@@ -95,6 +95,38 @@ class SoulConfigTests(unittest.TestCase):
             self.assertIn("zeus", soul.energies)
             self.assertNotIn("aspirational", soul.energies)
 
+    def test_loads_when_only_soul_file_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL\n## How I Talk\n- Direct", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertEqual(soul.raw_identity_text, "")
+            self.assertIn("Direct", soul.personality_traits)
+
+    def test_loads_when_only_identity_file_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "IDENTITY.md").write_text("- **Name:** Solo", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertEqual(soul.name, "Solo")
+            self.assertEqual(soul.raw_soul_text, "")
+
+    def test_empty_files_still_load_stable_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("", encoding="utf-8")
+            (root / "IDENTITY.md").write_text("", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertEqual(soul.name, "Unknown")
+            self.assertEqual(soul.raw_soul_text, "")
+            self.assertEqual(soul.raw_identity_text, "")
+
 
 if __name__ == "__main__":
     unittest.main()
