@@ -1,0 +1,40 @@
+{
+  "sisters": [
+    {
+      "sister_id": "forge",
+      "display_name": "Sai Forge",
+      "emoji": "sword",
+      "tenant_id": "tenant-forge",
+      "workspace_root": "workspaces/forge",
+      "model_id": "anthropic/claude-sonnet-4",
+      "role": "Colosseum operator - runs tournaments 24/7, evolves and scores ACT-I beings",
+      "auto_start": false,
+      "heartbeat_enabled": false,
+      "cron_tasks": []
+    },
+    {
+      "sister_id": "scholar",
+      "display_name": "Sai Scholar",
+      "emoji": "scroll",
+      "tenant_id": "tenant-scholar",
+      "workspace_root": "workspaces/scholar",
+      "model_id": "anthropic/claude-sonnet-4",
+      "role": "Pattern learner - extracts teachings and structures from long-form source material",
+      "auto_start": false,
+      "heartbeat_enabled": false,
+      "cron_tasks": []
+    },
+    {
+      "sister_id": "recovery",
+      "display_name": "Sai Recovery",
+      "emoji": "seedling",
+      "tenant_id": "tenant-recovery",
+      "workspace_root": "workspaces/recovery",
+      "model_id": "anthropic/claude-sonnet-4",
+      "role": "Stability and recovery operations - safeguards continuity and restores drifted workflows",
+      "auto_start": false,
+      "heartbeat_enabled": false,
+      "cron_tasks": []
+    }
+  ]
+}
