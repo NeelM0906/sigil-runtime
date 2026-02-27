@@ -62,6 +62,7 @@ from bomba_sr.tools.builtin_projects import builtin_project_tools
 from bomba_sr.tools.builtin_search import builtin_search_tools
 from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
+from bomba_sr.tools.builtin_sisters import builtin_sister_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 
@@ -1597,6 +1598,49 @@ class RuntimeBridge:
                 return item
         raise ValueError(f"sister not found: {sister_id}")
 
+    def spawn_sister(self, tenant_id: str, sister_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.sisters is None:
+            raise ValueError("sister registry is not configured for this tenant")
+        return runtime.sisters.spawn_sister(sister_id)
+
+    def stop_sister(self, tenant_id: str, sister_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.sisters is None:
+            raise ValueError("sister registry is not configured for this tenant")
+        return runtime.sisters.stop_sister(sister_id)
+
+    def message_sister(
+        self,
+        tenant_id: str,
+        sister_id: str,
+        message: str,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.sisters is None:
+            raise ValueError("sister registry is not configured for this tenant")
+        sister = runtime.sisters.get_sister(sister_id)
+        if sister is None:
+            raise ValueError(f"sister not found: {sister_id}")
+        result = self.handle_turn(
+            TurnRequest(
+                tenant_id=sister.tenant_id,
+                session_id=f"sister-msg-{sister.sister_id}-{uuid.uuid4().hex[:8]}",
+                user_id=f"prime->{sister.sister_id}",
+                user_message=message,
+                model_id=sister.model_id or None,
+                profile=TurnProfile.TASK_EXECUTION,
+                workspace_root=str(sister.workspace_root),
+            )
+        )
+        return {
+            "sister_id": sister_id,
+            "session_id": result.get("turn", {}).get("session_id"),
+            "turn_id": result.get("turn", {}).get("turn_id"),
+            "response": result.get("assistant", {}).get("text", ""),
+        }
+
     # ── Dashboard aggregation ────────────────────────────────────────
 
     def dashboard_overview(
@@ -2039,6 +2083,21 @@ class RuntimeBridge:
         )
         tool_executor.register_many(builtin_model_switch_tools())
         tool_executor.register_many(builtin_discovery_tools())
+        if sisters_registry is not None and sisters_registry.list_sisters():
+            tool_executor.register_many(
+                builtin_sister_tools(
+                    list_sisters=lambda: self.list_sisters(tenant_id, str(context.workspace_root)),
+                    spawn_sister=lambda sister_id: self.spawn_sister(tenant_id, sister_id, str(context.workspace_root)),
+                    stop_sister=lambda sister_id: self.stop_sister(tenant_id, sister_id, str(context.workspace_root)),
+                    sister_status=lambda sister_id: self.sister_status(tenant_id, sister_id, str(context.workspace_root)),
+                    message_sister=lambda sister_id, message: self.message_sister(
+                        tenant_id,
+                        sister_id,
+                        message,
+                        str(context.workspace_root),
+                    ),
+                )
+            )
         for plugin_tool in plugin_registry.get_tools():
             try:
                 tool_executor.register(plugin_tool)
