@@ -2093,6 +2093,15 @@ class RuntimeBridge:
             source_repos=self.config.skill_source_repo_overrides,
             clawhub_api_base=self.config.clawhub_api_base,
         )
+        sisters_registry: SisterRegistry | None = None
+        sisters_config_path = context.workspace_root / "sisters.json"
+        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "prime"}:
+            sisters_registry = SisterRegistry(
+                config_path=sisters_config_path,
+                orchestrator=orchestrator,
+                protocol=protocol,
+                parent_agent_id="prime",
+            )
         tool_executor = ToolExecutor(
             governance=governance,
             pipeline=policy_pipeline,
@@ -2167,15 +2176,6 @@ class RuntimeBridge:
         command_parser = CommandParser()
         command_router = CommandRouter(skill_loader=skill_loader, tool_executor=tool_executor)
         skill_disclosure = SkillDisclosure()
-        sisters_registry: SisterRegistry | None = None
-        sisters_config_path = context.workspace_root / "sisters.json"
-        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "prime"}:
-            sisters_registry = SisterRegistry(
-                config_path=sisters_config_path,
-                orchestrator=orchestrator,
-                protocol=protocol,
-                parent_agent_id="prime",
-            )
 
         runtime = _TenantRuntime(
             context=context,
