@@ -172,6 +172,36 @@ class RuntimeBridgeTests(unittest.TestCase):
             )
             self.assertTrue(removed["removed"])
 
+    def test_summary_generated_on_fifth_turn_with_three_turn_window(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=StaticEchoProvider(),
+            )
+            tenant_id = "tenant-summary-5"
+            session_id = str(uuid.uuid4())
+            user_id = "user-summary-5"
+            for idx in range(1, 6):
+                bridge.handle_turn(
+                    TurnRequest(
+                        tenant_id=tenant_id,
+                        session_id=session_id,
+                        user_id=user_id,
+                        user_message=f"message {idx}",
+                        profile=TurnProfile.CHAT,
+                        workspace_root=str(workspace),
+                    )
+                )
+
+            runtime = bridge._tenant_runtime(tenant_id, str(workspace))
+            summary = runtime.memory.get_session_summary(tenant_id=tenant_id, session_id=session_id)
+            self.assertIsNotNone(summary)
+            assert summary is not None
+            self.assertEqual(int(summary["covers_through_turn"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

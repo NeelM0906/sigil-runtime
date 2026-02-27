@@ -756,7 +756,8 @@ class RuntimeBridge:
             user_message=effective_user_message,
             assistant_message=assistant_text,
         )
-        if turn_number % 5 == 0:
+        summary_recent_window = 3
+        if turn_number % 5 == 0 and turn_number > summary_recent_window:
             previous_summary = runtime.memory.get_session_summary(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
@@ -766,7 +767,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 covers_through_turn=covered_turn,
-                recent_window=5,
+                recent_window=summary_recent_window,
                 limit=200,
             )
             if turns_to_summarize:

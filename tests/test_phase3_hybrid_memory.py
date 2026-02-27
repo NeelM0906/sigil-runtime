@@ -114,6 +114,31 @@ class HybridMemoryTests(unittest.TestCase):
             assert loaded is not None
             self.assertEqual(loaded["covers_through_turn"], 4)
 
+    def test_first_summary_boundary_with_three_turn_window(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            store = HybridMemoryStore(db=db, memory_root=Path(td) / "memory", auto_apply_confidence=0.4)
+            tenant_id = "tenant-boundary"
+            user_id = "user-boundary"
+            session_id = "session-boundary"
+            for idx in range(1, 6):
+                store.record_turn(
+                    tenant_id=tenant_id,
+                    session_id=session_id,
+                    turn_id=f"turn-{idx}",
+                    user_id=user_id,
+                    user_message=f"user says {idx}",
+                    assistant_message=f"assistant says {idx}",
+                )
+
+            turns = store.get_turns_for_summary(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                covers_through_turn=0,
+                recent_window=3,
+            )
+            self.assertEqual([item["turn_number"] for item in turns], [1, 2])
+
     def test_missing_markdown_file_is_safe(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             db = RuntimeDB(f"{td}/runtime.db")
