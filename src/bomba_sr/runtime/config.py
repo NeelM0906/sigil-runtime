@@ -80,6 +80,9 @@ class RuntimeConfig:
     subagent_crash_max: int = int(os.getenv("BOMBA_SUBAGENT_CRASH_MAX", "3"))
     subagent_crash_cooldown_seconds: float = float(os.getenv("BOMBA_SUBAGENT_CRASH_COOLDOWN", "120"))
     subagent_max_spawn_depth: int = int(os.getenv("BOMBA_SUBAGENT_MAX_SPAWN_DEPTH", "3"))
+    adaptation_metrics_interval: int = int(os.getenv("BOMBA_ADAPTATION_METRICS_INTERVAL", "5"))
+    adaptation_llm_eval_interval: int = int(os.getenv("BOMBA_ADAPTATION_LLM_EVAL_INTERVAL", "10"))
+    adaptation_auto_correct: bool = os.getenv("BOMBA_ADAPTATION_AUTO_CORRECT", "true").lower() != "false"
     web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
     brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
@@ -120,5 +123,9 @@ class RuntimeConfig:
             raise ValueError("subagent_crash_cooldown_seconds must be >= 0")
         if self.subagent_max_spawn_depth < 1:
             raise ValueError("subagent_max_spawn_depth must be >= 1")
+        if self.adaptation_metrics_interval < 1:
+            raise ValueError("adaptation_metrics_interval must be >= 1")
+        if self.adaptation_llm_eval_interval < 1:
+            raise ValueError("adaptation_llm_eval_interval must be >= 1")
         if not self.skill_catalog_sources:
             raise ValueError("skill_catalog_sources must not be empty")

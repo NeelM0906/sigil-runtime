@@ -80,6 +80,40 @@ class RuntimeAdaptationTests(unittest.TestCase):
             self.assertIn("retrieval_precision_declined", verdict["reasons"])
             self.assertIn("search_escalation_increased", verdict["reasons"])
 
+    def test_turn_count_is_session_scoped(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            engine = RuntimeAdaptationEngine(db)
+
+            self.assertEqual(engine.increment_turn("s1"), 1)
+            self.assertEqual(engine.increment_turn("s1"), 2)
+            self.assertEqual(engine.increment_turn("s2"), 1)
+            self.assertEqual(engine.ingest_turn_metrics("s1"), 3)
+
+    def test_check_and_correct_adjusts_on_single_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            engine = RuntimeAdaptationEngine(db)
+            engine.update_policy("default", {"budget_hard_stop_pct": 0.9}, reason="seed")
+
+            now = datetime.now(timezone.utc)
+            a0 = (now - timedelta(hours=4)).isoformat()
+            a1 = (now - timedelta(hours=3)).isoformat()
+            b0 = (now - timedelta(hours=2)).isoformat()
+            b1 = (now - timedelta(hours=1)).isoformat()
+
+            engine.ingest_search_metric(escalated=False, precision_at_k=0.8, execution_ms=90, created_at=a0)
+            engine.aggregate_period(period_start=a0, period_end=a1)
+
+            # Only escalation increase (single reason) to trigger targeted adjustment.
+            engine.ingest_search_metric(escalated=True, precision_at_k=0.8, execution_ms=110, created_at=b0)
+            engine.aggregate_period(period_start=b0, period_end=b1)
+
+            result = engine.check_and_correct("default")
+            self.assertEqual(result["action"], "adjust")
+            self.assertIn("search_escalation_increased", result["reasons"])
+            self.assertLess(float(result["policy"]["budget_hard_stop_pct"]), 0.9)
+
 
 if __name__ == "__main__":
     unittest.main()

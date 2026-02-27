@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from bomba_sr.adaptation.runtime_adaptation import RuntimeAdaptationEngine
+from bomba_sr.adaptation.self_evaluation import SelfEvaluator
 from bomba_sr.artifacts.store import ArtifactStore
 from bomba_sr.codeintel.router import CodeIntelRouter
 from bomba_sr.commands.disclosure import SkillDisclosure
@@ -544,12 +545,52 @@ class RuntimeBridge:
         loop_budget_exhausted = False
         cascade_stopped_runs: list[str] = []
         rescue_info: dict[str, Any] = {"method": "disabled"}
+        adaptation_turn_count = 0
+        adaptation_correction: dict[str, Any] = {"action": "none", "reasons": []}
+        adaptation_evaluation: dict[str, Any] | None = None
         if self.config.agentic_loop_enabled:
             loop_started_at = datetime.now(timezone.utc)
             rescue: WorkspaceRescue | None = None
             if self.config.rescue_enabled:
                 rescue = WorkspaceRescue(runtime.context.workspace_root)
                 rescue_info = rescue.snapshot()
+            runtime_policy = runtime.adaptation.get_policy("default")
+            runtime_policy_values = (
+                dict(runtime_policy.get("policy") or {})
+                if runtime_policy is not None and isinstance(runtime_policy.get("policy"), dict)
+                else {}
+            )
+            effective_max_iterations = self._policy_int(
+                runtime_policy_values,
+                key="max_loop_iterations",
+                default=self.config.max_loop_iterations,
+                min_value=1,
+            )
+            effective_loop_detection = self._policy_int(
+                runtime_policy_values,
+                key="loop_detection_window",
+                default=self.config.loop_detection_window,
+                min_value=1,
+            )
+            effective_budget_limit = self._policy_float(
+                runtime_policy_values,
+                key="budget_limit_usd",
+                default=self.config.budget_limit_usd,
+                min_value=0.01,
+            )
+            effective_budget_stop_pct = self._policy_float(
+                runtime_policy_values,
+                key="budget_hard_stop_pct",
+                default=self.config.budget_hard_stop_pct,
+                min_value=0.01,
+            )
+            if effective_budget_stop_pct > 1.0:
+                effective_budget_stop_pct = 1.0
+            effective_parallel_reads = self._policy_bool(
+                runtime_policy_values,
+                key="parallel_read_tools",
+                default=self.config.parallel_read_tools,
+            )
             resolved_policy = runtime.policy_pipeline.resolve(
                 ToolPolicyContext(
                     profile=self.config.tool_profile,
@@ -572,11 +613,11 @@ class RuntimeBridge:
                 provider=self.provider,
                 tool_executor=runtime.tool_executor,
                 config=LoopConfig(
-                    max_iterations=self.config.max_loop_iterations,
-                    loop_detection_window=self.config.loop_detection_window,
-                    budget_limit_usd=self.config.budget_limit_usd,
-                    budget_hard_stop_pct=self.config.budget_hard_stop_pct,
-                    parallel_read_tools=self.config.parallel_read_tools,
+                    max_iterations=effective_max_iterations,
+                    loop_detection_window=effective_loop_detection,
+                    budget_limit_usd=effective_budget_limit,
+                    budget_hard_stop_pct=effective_budget_stop_pct,
+                    parallel_read_tools=effective_parallel_reads,
                 ),
             )
             loop_result = loop.run(
@@ -726,6 +767,39 @@ class RuntimeBridge:
             created_at=period_start,
         )
         rollup = runtime.adaptation.aggregate_period(period_start=period_start, period_end=period_end)
+        adaptation_turn_count = runtime.adaptation.ingest_turn_metrics(request.session_id)
+        if self.config.adaptation_auto_correct and adaptation_turn_count % self.config.adaptation_metrics_interval == 0:
+            adaptation_correction = runtime.adaptation.check_and_correct("default")
+        if adaptation_turn_count % self.config.adaptation_llm_eval_interval == 0:
+            try:
+                evaluator = SelfEvaluator(self.provider, runtime.db)
+                adaptation_evaluation = evaluator.evaluate(
+                    tenant_id=request.tenant_id,
+                    session_id=request.session_id,
+                    model_id=model_id,
+                )
+                suggested_updates = adaptation_evaluation.get("policy_updates")
+                if self.config.adaptation_auto_correct and isinstance(suggested_updates, dict) and suggested_updates:
+                    current_policy = runtime.adaptation.get_policy("default")
+                    current_values = (
+                        dict(current_policy.get("policy") or {})
+                        if current_policy is not None and isinstance(current_policy.get("policy"), dict)
+                        else {}
+                    )
+                    merged = dict(current_values)
+                    merged.update(suggested_updates)
+                    runtime.adaptation.update_policy(
+                        policy_name="default",
+                        new_policy=merged,
+                        reason="llm_self_evaluation",
+                    )
+            except Exception as exc:
+                adaptation_evaluation = {
+                    "error": str(exc),
+                    "evaluated_loops": 0,
+                    "policy_updates": {},
+                    "recommendations": [],
+                }
         runtime.db.execute(
             """
             INSERT INTO loop_executions (
@@ -829,6 +903,9 @@ class RuntimeBridge:
                 "search_escalation_rate": rollup.search_escalation_rate,
                 "subagent_success_rate": rollup.subagent_success_rate,
                 "subagent_p95_latency_ms": rollup.subagent_p95_latency_ms,
+                "turn_count": adaptation_turn_count,
+                "correction": adaptation_correction,
+                "self_evaluation": adaptation_evaluation,
             },
             "rescue": rescue_info,
             "subagents": {
@@ -1522,6 +1599,39 @@ class RuntimeBridge:
                 }
             )
         return out
+
+    @staticmethod
+    def _policy_int(policy_values: dict[str, Any], key: str, default: int, min_value: int = 1) -> int:
+        raw = policy_values.get(key, default)
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return default
+        return max(min_value, value)
+
+    @staticmethod
+    def _policy_float(policy_values: dict[str, Any], key: str, default: float, min_value: float = 0.0) -> float:
+        raw = policy_values.get(key, default)
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return default
+        return max(min_value, value)
+
+    @staticmethod
+    def _policy_bool(policy_values: dict[str, Any], key: str, default: bool) -> bool:
+        raw = policy_values.get(key, default)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            lowered = raw.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off"}:
+                return False
+        if isinstance(raw, (int, float)):
+            return bool(raw)
+        return default
 
     @staticmethod
     def _learning_signal(user_message: str) -> tuple[str, str, float, str] | None:

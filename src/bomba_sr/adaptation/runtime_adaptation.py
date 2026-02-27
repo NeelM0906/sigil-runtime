@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from bomba_sr.storage.db import RuntimeDB, dict_from_row
+from bomba_sr.storage.db import RuntimeDB
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ class RuntimeMetrics:
 class RuntimeAdaptationEngine:
     def __init__(self, db: RuntimeDB):
         self.db = db
+        self._turn_counts: dict[str, int] = {}
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
@@ -303,11 +304,115 @@ class RuntimeAdaptationEngine:
             "created_at": latest["created_at"],
         }
 
+    def increment_turn(self, session_id: str) -> int:
+        key = (session_id or "session-default").strip() or "session-default"
+        next_turn = int(self._turn_counts.get(key, 0)) + 1
+        self._turn_counts[key] = next_turn
+        return next_turn
+
+    def ingest_turn_metrics(self, session_id: str) -> int:
+        return self.increment_turn(session_id)
+
+    def check_and_correct(self, policy_name: str) -> dict[str, Any]:
+        verdict = self.detect_regression(policy_name=policy_name, window=2)
+        reasons = list(verdict.get("reasons") or [])
+        latest = self.get_policy(policy_name) or {
+            "version": 0,
+            "policy": {},
+        }
+        current_policy = dict(latest.get("policy") or {})
+
+        if bool(verdict.get("regression")):
+            latest_version = int(latest.get("version") or 0)
+            if latest_version >= 2:
+                rollback = self.rollback_policy(
+                    policy_name=policy_name,
+                    reason="metrics_regression_autocorrect",
+                )
+                return {
+                    "action": "rollback",
+                    "reasons": reasons,
+                    "target_version": int(rollback["version"]),
+                    "rolled_back_from": int(rollback.get("rolled_back_from") or latest_version),
+                    "policy": rollback["policy"],
+                }
+
+            adjustments = self._targeted_adjustments(current_policy, reasons)
+            if adjustments:
+                merged = dict(current_policy)
+                merged.update(adjustments)
+                created = self.update_policy(
+                    policy_name=policy_name,
+                    new_policy=merged,
+                    reason="metrics_regression_adjust",
+                )
+                return {
+                    "action": "adjust",
+                    "reasons": reasons,
+                    "adjustments": adjustments,
+                    "target_version": int(created["version"]),
+                    "policy": created["policy"],
+                }
+
+            return {
+                "action": "none",
+                "reasons": reasons,
+                "target_version": int(latest.get("version") or 0),
+                "policy": current_policy,
+            }
+
+        if len(reasons) == 1:
+            adjustments = self._targeted_adjustments(current_policy, reasons)
+            if adjustments:
+                merged = dict(current_policy)
+                merged.update(adjustments)
+                created = self.update_policy(
+                    policy_name=policy_name,
+                    new_policy=merged,
+                    reason="metrics_targeted_adjust",
+                )
+                return {
+                    "action": "adjust",
+                    "reasons": reasons,
+                    "adjustments": adjustments,
+                    "target_version": int(created["version"]),
+                    "policy": created["policy"],
+                }
+
+        return {
+            "action": "none",
+            "reasons": reasons,
+            "target_version": int(latest.get("version") or 0),
+            "policy": current_policy,
+        }
+
     def _latest_policy(self, policy_name: str):
         return self.db.execute(
             "SELECT * FROM policy_versions WHERE policy_name = ? ORDER BY version DESC LIMIT 1",
             (policy_name,),
         ).fetchone()
+
+    @staticmethod
+    def _targeted_adjustments(current_policy: dict[str, Any], reasons: list[str]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+
+        if "loop_incidents_increased" in reasons:
+            current_window = int(current_policy.get("loop_detection_window", 5))
+            out["loop_detection_window"] = min(20, max(1, current_window + 1))
+
+        if "search_escalation_increased" in reasons:
+            current_budget = float(current_policy.get("budget_hard_stop_pct", 0.9))
+            out["budget_hard_stop_pct"] = max(0.5, min(1.0, round(current_budget - 0.05, 2)))
+
+        if "subagent_success_declined" in reasons:
+            current_depth = int(current_policy.get("subagent_max_spawn_depth", 3))
+            out["subagent_max_spawn_depth"] = max(1, current_depth - 1)
+
+        if "retrieval_precision_declined" in reasons:
+            current_iterations = int(current_policy.get("max_loop_iterations", 25))
+            out["max_loop_iterations"] = max(5, current_iterations - 1)
+
+        return out
 
     @staticmethod
     def _diff(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
