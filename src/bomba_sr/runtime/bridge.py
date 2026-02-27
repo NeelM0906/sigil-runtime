@@ -58,6 +58,7 @@ from bomba_sr.tools.builtin_exec import builtin_exec_tools
 from bomba_sr.tools.builtin_fs import builtin_fs_tools
 from bomba_sr.tools.builtin_memory import builtin_memory_tools
 from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
+from bomba_sr.tools.builtin_pinecone import builtin_pinecone_tools
 from bomba_sr.tools.builtin_projects import builtin_project_tools
 from bomba_sr.tools.builtin_search import builtin_search_tools
 from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
@@ -2053,6 +2054,13 @@ class RuntimeBridge:
         tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
         if self.config.web_search_enabled:
             tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
+        if self.config.pinecone_enabled:
+            tool_executor.register_many(
+                builtin_pinecone_tools(
+                    default_index=self.config.pinecone_default_index,
+                    default_namespace=self.config.pinecone_default_namespace,
+                )
+            )
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(

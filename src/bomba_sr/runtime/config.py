@@ -89,6 +89,9 @@ class RuntimeConfig:
     replay_history_budget_fraction: float = float(os.getenv("BOMBA_REPLAY_HISTORY_BUDGET_FRACTION", "0.3"))
     web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
     brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
+    pinecone_enabled: bool = os.getenv("BOMBA_PINECONE_ENABLED", "false").lower() != "false"
+    pinecone_default_index: str = os.getenv("BOMBA_PINECONE_DEFAULT_INDEX", "ublib2")
+    pinecone_default_namespace: str = os.getenv("BOMBA_PINECONE_DEFAULT_NAMESPACE", "longterm")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
     skills_telemetry_enabled: bool = os.getenv("BOMBA_SKILLS_TELEMETRY_ENABLED", "true").lower() != "false"
     skill_nl_router_enabled: bool = os.getenv("BOMBA_SKILL_NL_ROUTER_ENABLED", "true").lower() != "false"
@@ -137,3 +140,5 @@ class RuntimeConfig:
             raise ValueError("replay_history_budget_fraction must be in (0,1]")
         if not self.skill_catalog_sources:
             raise ValueError("skill_catalog_sources must not be empty")
+        if not self.pinecone_default_index.strip():
+            raise ValueError("pinecone_default_index must not be empty")
