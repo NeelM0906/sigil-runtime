@@ -38,6 +38,7 @@ from bomba_sr.projects.service import ProjectService
 from bomba_sr.runtime.config import RuntimeConfig
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
 from bomba_sr.runtime.rescue import WorkspaceRescue
+from bomba_sr.runtime.sisters import SisterRegistry
 from bomba_sr.runtime.tenancy import TenantContext, TenantRegistry
 from bomba_sr.search.agentic_search import AgenticSearchExecutor, SearchPlan, result_pack_to_dict
 from bomba_sr.skills.eligibility import EligibilityEngine
@@ -110,6 +111,7 @@ class _TenantRuntime:
     skill_disclosure: SkillDisclosure
     identity: UserIdentityService
     soul: SoulConfig | None
+    sisters: SisterRegistry | None
     info: GenericInfoRetriever
 
 
@@ -1582,6 +1584,19 @@ class RuntimeBridge:
         scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
         return scheduler.run_due_once()
 
+    def list_sisters(self, tenant_id: str, workspace_root: str | None = None) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.sisters is None:
+            return []
+        return runtime.sisters.list_sisters()
+
+    def sister_status(self, tenant_id: str, sister_id: str, workspace_root: str | None = None) -> dict[str, Any]:
+        sisters = self.list_sisters(tenant_id=tenant_id, workspace_root=workspace_root)
+        for item in sisters:
+            if str(item.get("sister_id")) == sister_id:
+                return item
+        raise ValueError(f"sister not found: {sister_id}")
+
     # ── Dashboard aggregation ────────────────────────────────────────
 
     def dashboard_overview(
@@ -1754,6 +1769,20 @@ class RuntimeBridge:
         except Exception:
             governance_info = {"pending_approvals": 0}
 
+        # ── sisters ──
+        try:
+            sisters_info = {
+                "total": 0,
+                "running": 0,
+                "items": [],
+            }
+            items = self.list_sisters(tenant_id=tenant_id, workspace_root=workspace_root)
+            sisters_info["items"] = items
+            sisters_info["total"] = len(items)
+            sisters_info["running"] = sum(1 for item in items if bool(item.get("running")))
+        except Exception:
+            sisters_info = {"total": 0, "running": 0, "items": []}
+
         # ── loop telemetry ──
         loop_telemetry: list[dict[str, Any]] = []
         try:
@@ -1776,6 +1805,7 @@ class RuntimeBridge:
             "autonomy": autonomy_info,
             "skills": skills_info,
             "governance": governance_info,
+            "sisters": sisters_info,
             "loop_telemetry": loop_telemetry,
         }
 
@@ -2017,6 +2047,15 @@ class RuntimeBridge:
         command_parser = CommandParser()
         command_router = CommandRouter(skill_loader=skill_loader, tool_executor=tool_executor)
         skill_disclosure = SkillDisclosure()
+        sisters_registry: SisterRegistry | None = None
+        sisters_config_path = context.workspace_root / "sisters.json"
+        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "prime"}:
+            sisters_registry = SisterRegistry(
+                config_path=sisters_config_path,
+                orchestrator=orchestrator,
+                protocol=protocol,
+                parent_agent_id="prime",
+            )
 
         runtime = _TenantRuntime(
             context=context,
@@ -2044,8 +2083,22 @@ class RuntimeBridge:
             skill_disclosure=skill_disclosure,
             identity=UserIdentityService(db, auto_apply_confidence=self.config.learning_auto_apply_confidence),
             soul=soul_config,
+            sisters=sisters_registry,
             info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
         )
+        if sisters_registry is not None:
+            for sister in sisters_registry.list_sisters():
+                if not bool(sister.get("auto_start")):
+                    continue
+                if bool(sister.get("running")):
+                    continue
+                try:
+                    sisters_registry.spawn_sister(
+                        str(sister["sister_id"]),
+                        parent_session_id="sisters-autostart",
+                    )
+                except Exception:
+                    continue
         self._tenants[key] = runtime
         return runtime
 
