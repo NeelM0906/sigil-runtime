@@ -4,8 +4,10 @@ import tempfile
 import unittest
 import uuid
 
+from bomba_sr.runtime.bridge import TurnRequest
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
+from bomba_sr.subagents.worker import SubAgentWorkerFactory
 
 
 class SubAgentProtocolTests(unittest.TestCase):
@@ -184,6 +186,36 @@ class SubAgentProtocolTests(unittest.TestCase):
             stopped = p.cascade_stop_session("tenant-wave2", session_id, reason="session-ended")
             self.assertIn(run_a["run_id"], stopped)
             self.assertIn(run_b["run_id"], stopped)
+
+    def test_worker_factory_passes_max_loop_iterations(self) -> None:
+        class _BridgeStub:
+            def __init__(self) -> None:
+                self.request: TurnRequest | None = None
+
+            def handle_turn(self, request: TurnRequest) -> dict:
+                self.request = request
+                return {
+                    "assistant": {
+                        "text": "done",
+                        "loop_iterations": 1,
+                        "usage": {"input_tokens": 1, "output_tokens": 1},
+                    }
+                }
+
+        class _ProtocolStub:
+            def progress(self, run_id: str, pct: int, summary: str | None = None) -> None:  # noqa: ANN001
+                _ = (run_id, pct, summary)
+
+            def write_shared_memory(self, **kwargs):  # noqa: ANN001
+                _ = kwargs
+
+        bridge = _BridgeStub()
+        factory = SubAgentWorkerFactory(bridge)
+        worker = factory.create_worker(max_iterations=7)
+        task = self._task(str(uuid.uuid4()), "turn-worker::hash-11223")
+        worker("run-1", task, _ProtocolStub())
+        assert bridge.request is not None
+        self.assertEqual(bridge.request.max_loop_iterations, 7)
 
 
 if __name__ == "__main__":

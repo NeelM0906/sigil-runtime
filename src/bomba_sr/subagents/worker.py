@@ -12,8 +12,6 @@ class SubAgentWorkerFactory:
         self.bridge = bridge
 
     def create_worker(self, max_iterations: int = 10) -> SubAgentWorker:
-        _ = max_iterations
-
         def worker(run_id, task, protocol):
             protocol.progress(run_id, 10, summary="Sub-agent initializing")
             sub_session_id = f"subagent-{run_id}"
@@ -30,6 +28,7 @@ class SubAgentWorkerFactory:
                     model_id=task.model_id or None,
                     profile=TurnProfile.TASK_EXECUTION,
                     workspace_root=task.workspace_root,
+                    max_loop_iterations=max(1, int(max_iterations)),
                 )
             )
             protocol.progress(run_id, 90, summary="Sub-agent completed work")

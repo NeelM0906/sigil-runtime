@@ -74,6 +74,7 @@ class TurnRequest:
     search_query: str | None = None
     project_id: str | None = None
     task_id: str | None = None
+    max_loop_iterations: int | None = None
 
 
 @dataclass
@@ -587,6 +588,16 @@ class RuntimeBridge:
                 default=self.config.max_loop_iterations,
                 min_value=1,
             )
+            if request.max_loop_iterations is not None:
+                effective_max_iterations = min(
+                    effective_max_iterations,
+                    self._policy_int(
+                        policy_values={"requested": request.max_loop_iterations},
+                        key="requested",
+                        default=effective_max_iterations,
+                        min_value=1,
+                    ),
+                )
             effective_loop_detection = self._policy_int(
                 runtime_policy_values,
                 key="loop_detection_window",
