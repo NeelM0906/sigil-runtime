@@ -143,6 +143,20 @@ class CommandRouter:
                 error=None,
             )
 
+        if descriptor.disable_model_invocation:
+            return CommandResult(
+                handled=True,
+                bypass_llm=True,
+                output={
+                    "error": "model_invocation_disabled",
+                    "skill_id": skill_id,
+                    "skill_name": descriptor.name,
+                },
+                skill_id=skill_id,
+                skill_body=None,
+                error=None,
+            )
+
         body = self.skill_loader.load_skill_body(skill_id)
         return CommandResult(
             handled=True,

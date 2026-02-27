@@ -50,6 +50,21 @@ class CommandRouterTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (skill_root / "ops-only").mkdir(parents=True, exist_ok=True)
+            (skill_root / "ops-only" / "SKILL.md").write_text(
+                "\n".join(
+                    [
+                        "---",
+                        "name: ops-only",
+                        "description: Hidden skill for explicit ops dispatch",
+                        "user-invocable: true",
+                        "disable-model-invocation: true",
+                        "---",
+                        "This skill should never invoke the model.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
 
             loader = SkillLoader(
                 skill_roots=[skill_root],
@@ -110,6 +125,11 @@ class CommandRouterTests(unittest.TestCase):
             self.assertFalse(skill_result.bypass_llm)
             self.assertEqual(skill_result.skill_id, "summarize")
             self.assertIn("Summarize the current project state.", skill_result.skill_body or "")
+
+            disabled_result = router.route(parser.parse("/ops-only"), ctx)  # type: ignore[arg-type]
+            self.assertTrue(disabled_result.handled)
+            self.assertTrue(disabled_result.bypass_llm)
+            self.assertEqual((disabled_result.output or {}).get("error"), "model_invocation_disabled")
 
             unknown_result = router.route(parser.parse("/does-not-exist"), ctx)  # type: ignore[arg-type]
             self.assertFalse(unknown_result.handled)
