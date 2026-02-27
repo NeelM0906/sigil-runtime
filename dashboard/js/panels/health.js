@@ -1,5 +1,14 @@
 // Sigil Dashboard — Health / Cost / Tokens / Sessions Panel
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function fmtUptime(seconds) {
   if (!seconds || seconds < 0) return '0s';
   if (seconds < 60) return `${Math.floor(seconds)}s`;
@@ -86,8 +95,8 @@ export function renderHealth(el, state, api) {
         <div class="separator"></div>
         <div class="stat-row"><span class="stat-label">Tenants</span><span class="stat-value">${rt.tenant_count || 0}</span></div>
         <div class="stat-row"><span class="stat-label">Threads</span><span class="stat-value">${rt.active_threads || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">Provider</span><span class="stat-value">${cfg.provider || '—'}</span></div>
-        <div class="stat-row"><span class="stat-label">Model</span><span class="stat-value truncate" style="max-width:110px" title="${cfg.model_id || ''}">${(cfg.model_id || '—').split('/').pop()}</span></div>
+        <div class="stat-row"><span class="stat-label">Provider</span><span class="stat-value">${escapeHtml(cfg.provider || '—')}</span></div>
+        <div class="stat-row"><span class="stat-label">Model</span><span class="stat-value truncate" style="max-width:110px" title="${escapeHtml(cfg.model_id || '')}">${escapeHtml((cfg.model_id || '—').split('/').pop())}</span></div>
       </div>
 
       <!-- Cost -->
@@ -147,7 +156,7 @@ export function renderHealth(el, state, api) {
         <div class="separator"></div>
         <div class="stat-row"><span class="stat-label">Enabled</span><span class="stat-value">${pinecone.enabled ? 'yes' : 'no'}</span></div>
         <div class="stat-row"><span class="stat-label">Vectors</span><span class="stat-value">${fmtNumber(pinecone.total_vector_count || 0)}</span></div>
-        <div class="text-xs text-mono mt-2" style="opacity:.65">${pinecone.error ? `error: ${pinecone.error}` : 'status OK'}</div>
+        <div class="text-xs text-mono mt-2" style="opacity:.65">${pinecone.error ? `error: ${escapeHtml(pinecone.error)}` : 'status OK'}</div>
       </div>
     </div>`;
 }

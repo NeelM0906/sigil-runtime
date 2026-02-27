@@ -1,7 +1,16 @@
 // Sigil Dashboard — Sisters Panel
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function statusBadge(item) {
-  const status = item?.status || 'unknown';
+  const status = escapeHtml(item?.status || 'unknown');
   const running = Boolean(item?.running);
   if (running) return `<span class="badge badge-success">${status}</span>`;
   if (status === 'failed' || status === 'timed_out') return `<span class="badge badge-destructive">${status}</span>`;
@@ -13,7 +22,7 @@ function fmtTime(value) {
   try {
     return new Date(value).toLocaleString();
   } catch {
-    return String(value);
+    return escapeHtml(String(value));
   }
 }
 
@@ -44,15 +53,15 @@ export function renderSisters(el, state, api) {
               ${items.map(item => `
                 <tr>
                   <td>
-                    <div class="text-sm"><strong>${item.display_name || item.sister_id}</strong></div>
-                    <div class="text-xs text-mono" style="opacity:.65">${item.sister_id}</div>
+                    <div class="text-sm"><strong>${escapeHtml(item.display_name || item.sister_id)}</strong></div>
+                    <div class="text-xs text-mono" style="opacity:.65">${escapeHtml(item.sister_id)}</div>
                   </td>
                   <td>${statusBadge(item)}</td>
                   <td class="text-xs text-mono" style="opacity:.7">${fmtTime(item.last_activity)}</td>
                   <td>
                     <div class="flex gap-1">
-                      <button class="button button-sm" data-sister-action="spawn" data-sister-id="${item.sister_id}">Start</button>
-                      <button class="button button-sm button-secondary" data-sister-action="stop" data-sister-id="${item.sister_id}">Stop</button>
+                      <button class="button button-sm" data-sister-action="spawn" data-sister-id="${escapeHtml(item.sister_id)}">Start</button>
+                      <button class="button button-sm button-secondary" data-sister-action="stop" data-sister-id="${escapeHtml(item.sister_id)}">Stop</button>
                     </div>
                   </td>
                 </tr>
