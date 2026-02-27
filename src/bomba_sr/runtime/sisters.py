@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,9 @@ from typing import Any, Mapping
 
 from bomba_sr.subagents.orchestrator import SubAgentHandle, SubAgentOrchestrator
 from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
+
+
+SAFE_SISTER_ID_PATTERN = re.compile(r"^[a-z0-9_-]{1,64}$")
 
 
 @dataclass(frozen=True)
@@ -169,6 +173,8 @@ class SisterRegistry:
         ).fetchone()
 
     def _require_sister(self, sister_id: str) -> SisterConfig:
+        if not SAFE_SISTER_ID_PATTERN.fullmatch(sister_id.strip().lower()):
+            raise ValueError(f"invalid sister_id: {sister_id}")
         sister = self._sisters.get(sister_id)
         if sister is None:
             raise ValueError(f"sister not found: {sister_id}")
@@ -187,8 +193,10 @@ class SisterRegistry:
         for item in raw_sisters:
             if not isinstance(item, dict):
                 continue
-            sister_id = str(item.get("sister_id") or "").strip()
+            sister_id = str(item.get("sister_id") or "").strip().lower()
             if not sister_id:
+                continue
+            if not SAFE_SISTER_ID_PATTERN.fullmatch(sister_id):
                 continue
             raw_workspace = str(item.get("workspace_root") or "").strip()
             if not raw_workspace:

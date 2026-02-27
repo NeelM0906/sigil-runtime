@@ -100,6 +100,35 @@ class SisterRegistryTests(unittest.TestCase):
             registry = SisterRegistry(config_path=sisters_path, orchestrator=orchestrator, protocol=protocol)
             self.assertEqual(registry.list_sisters(), [])
 
+    def test_rejects_invalid_sister_id(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            prime_root = root / "workspaces" / "prime"
+            forge_root = root / "workspaces" / "forge"
+            prime_root.mkdir(parents=True)
+            forge_root.mkdir(parents=True)
+            sisters_path = prime_root / "sisters.json"
+            sisters_path.write_text(
+                json.dumps(
+                    {
+                        "sisters": [
+                            {
+                                "sister_id": "../forge",
+                                "display_name": "Bad",
+                                "tenant_id": "tenant-forge",
+                                "workspace_root": str(forge_root),
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            db = RuntimeDB(root / "runtime.db")
+            protocol = SubAgentProtocol(db)
+            orchestrator = SubAgentOrchestrator(protocol=protocol, default_worker=_worker, max_workers=1)
+            registry = SisterRegistry(config_path=sisters_path, orchestrator=orchestrator, protocol=protocol)
+            self.assertEqual(registry.list_sisters(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
