@@ -107,7 +107,15 @@ class PineconeToolTests(unittest.TestCase):
             self.assertIn("strata-key", seen_keys)
 
     def test_missing_key_raises(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
+        with patch.dict(
+            "os.environ",
+            {
+                "PINECONE_API_KEY": "",
+                "PINECONE_API_KEY_STRATA": "",
+                "OPENAI_API_KEY": "",
+            },
+            clear=False,
+        ):
             tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
             query_tool = next(t for t in tools if t.name == "pinecone_query")
             with self.assertRaises(ValueError):

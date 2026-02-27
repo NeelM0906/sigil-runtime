@@ -91,7 +91,7 @@ class VoiceToolTests(unittest.TestCase):
             self.assertEqual(pathways["pathways"][0]["pathway_id"], "p1")
 
     def test_missing_api_key_raises(self) -> None:
-        with patch.dict("os.environ", {}, clear=True):
+        with patch.dict("os.environ", {"BLAND_API_KEY": ""}, clear=False):
             tools = builtin_voice_tools(provider="bland")
             list_tool = next(t for t in tools if t.name == "voice_list_calls")
             with self.assertRaises(ValueError):
