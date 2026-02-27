@@ -204,9 +204,9 @@ def builtin_voice_tools(provider: str = "bland") -> list[ToolDefinition]:
             parameters={
                 "type": "object",
                 "properties": {
-                    "limit": {"type": "integer"},
-                    "date_filter": {"type": "string"},
-                    "pathway_id": {"type": "string"},
+                    "limit": {"type": "integer", "description": "Max calls to return (1-100)."},
+                    "date_filter": {"type": "string", "description": "Optional date filter accepted by Bland API."},
+                    "pathway_id": {"type": "string", "description": "Optional Bland pathway identifier."},
                 },
                 "additionalProperties": False,
             },
@@ -219,7 +219,7 @@ def builtin_voice_tools(provider: str = "bland") -> list[ToolDefinition]:
             description="Fetch a call transcript from Bland.ai.",
             parameters={
                 "type": "object",
-                "properties": {"call_id": {"type": "string"}},
+                "properties": {"call_id": {"type": "string", "description": "Bland call identifier."}},
                 "required": ["call_id"],
                 "additionalProperties": False,
             },
@@ -233,9 +233,9 @@ def builtin_voice_tools(provider: str = "bland") -> list[ToolDefinition]:
             parameters={
                 "type": "object",
                 "properties": {
-                    "to_number": {"type": "string"},
-                    "pathway_id": {"type": "string"},
-                    "dynamic_data": {"type": "object"},
+                    "to_number": {"type": "string", "description": "Destination number in E.164 format."},
+                    "pathway_id": {"type": "string", "description": "Bland pathway identifier to execute."},
+                    "dynamic_data": {"type": "object", "description": "Optional template variables for the pathway."},
                 },
                 "required": ["to_number", "pathway_id"],
                 "additionalProperties": False,
@@ -247,7 +247,12 @@ def builtin_voice_tools(provider: str = "bland") -> list[ToolDefinition]:
         ToolDefinition(
             name="voice_list_pathways",
             description="List available Bland.ai pathways.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "description": "No arguments.",
+                "properties": {},
+                "additionalProperties": False,
+            },
             risk_level="low",
             action_type="read",
             execute=_list_pathways,

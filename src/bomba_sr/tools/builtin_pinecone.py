@@ -314,11 +314,11 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
             parameters={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string"},
-                    "index_name": {"type": "string"},
-                    "namespace": {"type": ["string", "null"]},
-                    "top_k": {"type": "integer"},
-                    "score_threshold": {"type": "number"},
+                    "query": {"type": "string", "description": "Natural-language search query."},
+                    "index_name": {"type": "string", "description": "Pinecone index name (defaults to configured default)."},
+                    "namespace": {"type": ["string", "null"], "description": "Optional namespace filter."},
+                    "top_k": {"type": "integer", "description": "Maximum matches to return (1-20)."},
+                    "score_threshold": {"type": "number", "description": "Minimum similarity score to keep a match."},
                 },
                 "required": ["query"],
                 "additionalProperties": False,
@@ -330,7 +330,12 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ToolDefinition(
             name="pinecone_list_indexes",
             description="List accessible Pinecone indexes and vector counts.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "description": "No arguments.",
+                "properties": {},
+                "additionalProperties": False,
+            },
             risk_level="low",
             action_type="read",
             execute=_pinecone_list_indexes_factory(default_index=default_index, default_namespace=default_namespace),
