@@ -86,6 +86,7 @@ class RuntimeConfig:
     heartbeat_enabled: bool = os.getenv("BOMBA_HEARTBEAT_ENABLED", "false").lower() != "false"
     heartbeat_interval_seconds: int = int(os.getenv("BOMBA_HEARTBEAT_INTERVAL", "1800"))
     cron_enabled: bool = os.getenv("BOMBA_CRON_ENABLED", "false").lower() != "false"
+    replay_history_budget_fraction: float = float(os.getenv("BOMBA_REPLAY_HISTORY_BUDGET_FRACTION", "0.3"))
     web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
     brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
@@ -132,5 +133,7 @@ class RuntimeConfig:
             raise ValueError("adaptation_llm_eval_interval must be >= 1")
         if self.heartbeat_interval_seconds < 1:
             raise ValueError("heartbeat_interval_seconds must be >= 1")
+        if not (0.0 < self.replay_history_budget_fraction <= 1.0):
+            raise ValueError("replay_history_budget_fraction must be in (0,1]")
         if not self.skill_catalog_sources:
             raise ValueError("skill_catalog_sources must not be empty")

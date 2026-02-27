@@ -20,7 +20,7 @@ from bomba_sr.commands.disclosure import SkillDisclosure
 from bomba_sr.commands.parser import CommandParser
 from bomba_sr.commands.router import CommandContext, CommandRouter
 from bomba_sr.commands.skill_nl_router import parse_skill_nl_intent
-from bomba_sr.context.policy import ContextPolicyEngine, TurnProfile
+from bomba_sr.context.policy import ContextPolicyEngine, TurnProfile, calculate_budget, estimate_tokens
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
 from bomba_sr.identity.profile import UserIdentityService
@@ -546,10 +546,15 @@ class RuntimeBridge:
         if selected_skill_context:
             system_prompt += f"\n\nUse selected skill instructions:\n{selected_skill_context}"
 
-        replay_messages = [
-            ChatMessage(role=item["role"], content=item["content"])
-            for item in recent_turn_messages
-        ]
+        context_budget = calculate_budget(capabilities.context_length)
+        total_available_input_tokens = int(context_budget.available_input_tokens)
+        replay_hard_cap_tokens = int(total_available_input_tokens * self.config.replay_history_budget_fraction)
+        replay_remaining_tokens = max(0, total_available_input_tokens - int(context_result.final_input_tokens))
+        replay_token_budget = max(0, min(replay_hard_cap_tokens, replay_remaining_tokens))
+        replay_messages = self._cap_recent_turn_messages(
+            recent_turn_messages=recent_turn_messages,
+            replay_token_budget=replay_token_budget,
+        )
 
         assistant_usage: dict[str, int] | None
         assistant_text: str
@@ -1913,6 +1918,35 @@ class RuntimeBridge:
         if isinstance(raw, (int, float)):
             return bool(raw)
         return default
+
+    @staticmethod
+    def _cap_recent_turn_messages(
+        recent_turn_messages: list[dict[str, Any]],
+        replay_token_budget: int,
+    ) -> list[ChatMessage]:
+        if replay_token_budget <= 0 or not recent_turn_messages:
+            return []
+
+        selected_reversed: list[dict[str, Any]] = []
+        used_tokens = 0
+        for item in reversed(recent_turn_messages):
+            role = str(item.get("role") or "").strip().lower()
+            if role not in {"user", "assistant"}:
+                continue
+            content = item.get("content")
+            if isinstance(content, str):
+                token_cost = estimate_tokens(content)
+            else:
+                token_cost = estimate_tokens(json.dumps(content, ensure_ascii=True))
+            if token_cost > replay_token_budget:
+                continue
+            if used_tokens + token_cost > replay_token_budget:
+                continue
+            selected_reversed.append({"role": role, "content": content})
+            used_tokens += token_cost
+
+        selected = list(reversed(selected_reversed))
+        return [ChatMessage(role=item["role"], content=item["content"]) for item in selected]
 
     @staticmethod
     def _learning_signal(user_message: str) -> tuple[str, str, float, str] | None:

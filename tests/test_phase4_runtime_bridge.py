@@ -202,6 +202,49 @@ class RuntimeBridgeTests(unittest.TestCase):
             assert summary is not None
             self.assertEqual(int(summary["covers_through_turn"]), 2)
 
+    def test_replay_messages_are_capped_by_token_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            provider = CaptureProvider()
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(
+                    runtime_home=runtime_home,
+                    replay_history_budget_fraction=0.001,
+                ),
+                provider=provider,
+            )
+            session_id = str(uuid.uuid4())
+            large_message = "A" * 12000
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-replay-cap",
+                    session_id=session_id,
+                    user_id="user-replay-cap",
+                    user_message=large_message,
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-replay-cap",
+                    session_id=session_id,
+                    user_id="user-replay-cap",
+                    user_message="follow-up",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            self.assertGreaterEqual(len(provider.calls), 2)
+            second_messages = provider.calls[1]
+            replayed_large = [
+                m for m in second_messages
+                if getattr(m, "role", "") == "user" and getattr(m, "content", "") == large_message
+            ]
+            self.assertEqual(replayed_large, [])
+
 
 if __name__ == "__main__":
     unittest.main()
