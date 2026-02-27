@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
 
-from bomba_sr.runtime.config import RuntimeConfig
 from bomba_sr.runtime.tenancy import TenantRegistry
 from bomba_sr.storage.db import RuntimeDB
 
@@ -72,35 +69,30 @@ class ImportSaiMemoryTests(unittest.TestCase):
             )
 
             runtime_home = root / "runtime-home"
-            class _Cfg:
-                def __init__(self):
-                    self.runtime_home = runtime_home
+            stats = module.import_workspace_memory(
+                source_workspace=source,
+                tenant_id="tenant-prime",
+                user_id="sai-prime",
+                dry_run=False,
+                runtime_home=runtime_home,
+            )
 
-            with mock.patch.object(module, "RuntimeConfig", _Cfg):
-                stats = module.import_workspace_memory(
-                    source_workspace=source,
-                    tenant_id="tenant-prime",
-                    user_id="sai-prime",
-                    dry_run=False,
-                )
+            self.assertGreaterEqual(stats.daily_logs, 1)
+            self.assertGreaterEqual(stats.call_transcripts, 1)
+            self.assertGreaterEqual(stats.memory_index, 1)
+            self.assertGreaterEqual(stats.semantic_memories, 1)
+            self.assertGreaterEqual(stats.procedural_memories, 1)
 
-                self.assertGreaterEqual(stats.daily_logs, 1)
-                self.assertGreaterEqual(stats.call_transcripts, 1)
-                self.assertGreaterEqual(stats.memory_index, 1)
-                self.assertGreaterEqual(stats.semantic_memories, 1)
-                self.assertGreaterEqual(stats.procedural_memories, 1)
-
-                cfg = RuntimeConfig(runtime_home=runtime_home)
-                tenant_ctx = TenantRegistry(cfg.runtime_home).ensure_tenant("tenant-prime")
-                self.assertTrue(tenant_ctx.db_path.resolve().is_relative_to(runtime_home.resolve()))
-                db = RuntimeDB(tenant_ctx.db_path)
-                note_count = db.execute("SELECT COUNT(*) AS c FROM markdown_notes").fetchone()["c"]
-                semantic_count = db.execute("SELECT COUNT(*) AS c FROM memories").fetchone()["c"]
-                procedural_count = db.execute("SELECT COUNT(*) AS c FROM procedural_memories").fetchone()["c"]
-                self.assertGreaterEqual(int(note_count), 3)
-                self.assertGreaterEqual(int(semantic_count), 1)
-                self.assertGreaterEqual(int(procedural_count), 1)
-                db.close()
+            tenant_ctx = TenantRegistry(runtime_home).ensure_tenant("tenant-prime")
+            self.assertTrue(tenant_ctx.db_path.resolve().is_relative_to(runtime_home.resolve()))
+            db = RuntimeDB(tenant_ctx.db_path)
+            note_count = db.execute("SELECT COUNT(*) AS c FROM markdown_notes").fetchone()["c"]
+            semantic_count = db.execute("SELECT COUNT(*) AS c FROM memories").fetchone()["c"]
+            procedural_count = db.execute("SELECT COUNT(*) AS c FROM procedural_memories").fetchone()["c"]
+            self.assertGreaterEqual(int(note_count), 3)
+            self.assertGreaterEqual(int(semantic_count), 1)
+            self.assertGreaterEqual(int(procedural_count), 1)
+            db.close()
 
     def test_semantic_import_is_idempotent_for_whitespace_changes(self) -> None:
         module = _load_import_module()
@@ -120,43 +112,43 @@ class ImportSaiMemoryTests(unittest.TestCase):
                 def __init__(self):
                     self.runtime_home = runtime_home
 
-            with mock.patch.object(module, "RuntimeConfig", _Cfg):
-                module.import_workspace_memory(
-                    source_workspace=source,
-                    tenant_id="tenant-prime",
-                    user_id="sai-prime",
-                    dry_run=False,
-                )
-                semantic_path.write_text("line one   \n\nline two  ", encoding="utf-8")
-                module.import_workspace_memory(
-                    source_workspace=source,
-                    tenant_id="tenant-prime",
-                    user_id="sai-prime",
-                    dry_run=False,
-                )
+            module.import_workspace_memory(
+                source_workspace=source,
+                tenant_id="tenant-prime",
+                user_id="sai-prime",
+                dry_run=False,
+                runtime_home=runtime_home,
+            )
+            semantic_path.write_text("line one   \n\nline two  ", encoding="utf-8")
+            module.import_workspace_memory(
+                source_workspace=source,
+                tenant_id="tenant-prime",
+                user_id="sai-prime",
+                dry_run=False,
+                runtime_home=runtime_home,
+            )
 
-                cfg = RuntimeConfig(runtime_home=runtime_home)
-                tenant_ctx = TenantRegistry(cfg.runtime_home).ensure_tenant("tenant-prime")
-                db = RuntimeDB(tenant_ctx.db_path)
-                row = db.execute(
-                    """
-                    SELECT COUNT(*) AS active_count
-                    FROM memories
-                    WHERE user_id = ? AND memory_key = ? AND active = 1
-                    """,
-                    ("sai-prime", "import::workspace::heart-of-influence-research"),
-                ).fetchone()
-                archive = db.execute(
-                    """
-                    SELECT COUNT(*) AS archive_count
-                    FROM memory_archive
-                    WHERE user_id = ? AND memory_key = ?
-                    """,
-                    ("sai-prime", "import::workspace::heart-of-influence-research"),
-                ).fetchone()
-                self.assertEqual(int(row["active_count"]), 1)
-                self.assertEqual(int(archive["archive_count"]), 0)
-                db.close()
+            tenant_ctx = TenantRegistry(runtime_home).ensure_tenant("tenant-prime")
+            db = RuntimeDB(tenant_ctx.db_path)
+            row = db.execute(
+                """
+                SELECT COUNT(*) AS active_count
+                FROM memories
+                WHERE user_id = ? AND memory_key = ? AND active = 1
+                """,
+                ("sai-prime", "import::workspace::heart-of-influence-research"),
+            ).fetchone()
+            archive = db.execute(
+                """
+                SELECT COUNT(*) AS archive_count
+                FROM memory_archive
+                WHERE user_id = ? AND memory_key = ?
+                """,
+                ("sai-prime", "import::workspace::heart-of-influence-research"),
+            ).fetchone()
+            self.assertEqual(int(row["active_count"]), 1)
+            self.assertEqual(int(archive["archive_count"]), 0)
+            db.close()
 
 
 if __name__ == "__main__":

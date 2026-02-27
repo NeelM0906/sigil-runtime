@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import uuid
 from dataclasses import dataclass
@@ -11,7 +12,6 @@ from pathlib import Path
 
 from bomba_sr.memory.consolidation import MemoryCandidate, MemoryConsolidator
 from bomba_sr.memory.hybrid import HybridMemoryStore
-from bomba_sr.runtime.config import RuntimeConfig
 from bomba_sr.runtime.tenancy import TenantRegistry
 from bomba_sr.storage.db import RuntimeDB
 
@@ -62,16 +62,23 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only print what would be imported",
     )
+    parser.add_argument(
+        "--runtime-home",
+        default=os.getenv("BOMBA_RUNTIME_HOME", ".bomba-runtime"),
+        help="Runtime home path used for tenant DB/memory resolution",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     source_dir = Path(args.source_dir).expanduser().resolve()
+    runtime_home = Path(args.runtime_home).expanduser().resolve()
     if not source_dir.exists():
         raise SystemExit(f"source dir not found: {source_dir}")
 
     print(f"Source workspace: {source_dir}")
+    print(f"Runtime home: {runtime_home}")
     print(f"Primary tenant/user: {args.tenant_id}/{args.user_id}")
     print(f"Dry run: {bool(args.dry_run)}")
     print("")
@@ -81,6 +88,7 @@ def main() -> int:
         tenant_id=args.tenant_id,
         user_id=args.user_id,
         dry_run=bool(args.dry_run),
+        runtime_home=runtime_home,
     )
 
     recovery_source = source_dir / "sisters" / "sai-recovery"
@@ -92,6 +100,7 @@ def main() -> int:
             tenant_id="tenant-recovery",
             user_id="sai-recovery",
             dry_run=bool(args.dry_run),
+            runtime_home=runtime_home,
         )
     else:
         print("\nRecovery source not found, skipping tenant-recovery import.")
@@ -102,9 +111,14 @@ def main() -> int:
     return 0
 
 
-def import_workspace_memory(source_workspace: Path, tenant_id: str, user_id: str, dry_run: bool) -> ImportStats:
-    cfg = RuntimeConfig()
-    registry = TenantRegistry(cfg.runtime_home)
+def import_workspace_memory(
+    source_workspace: Path,
+    tenant_id: str,
+    user_id: str,
+    dry_run: bool,
+    runtime_home: Path,
+) -> ImportStats:
+    registry = TenantRegistry(runtime_home)
     context = registry.ensure_tenant(tenant_id=tenant_id, workspace_root=None)
     db = RuntimeDB(context.db_path)
     # Ensure schemas exist.
