@@ -12,7 +12,7 @@ import { renderAutonomy } from './panels/autonomy.js';
 import { renderSkills } from './panels/skills.js';
 import { renderTelemetry } from './panels/telemetry.js';
 import { renderActivity } from './panels/activity.js';
-import { initChat } from './panels/chat.js';
+import { initChat, updateSistersForAutocomplete } from './panels/chat.js';
 
 // ── Config from URL params ──
 const params = new URLSearchParams(window.location.search);
@@ -86,6 +86,9 @@ async function fetchDashboardData() {
     online = true;
     state.update(dashboard);
     renderAllPanels();
+
+    // Keep autocomplete sister mentions in sync with dashboard state
+    updateSistersForAutocomplete(dashboard.sisters);
 
     if (activityData) {
       const el = document.getElementById('panel-activity');

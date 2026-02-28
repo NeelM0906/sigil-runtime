@@ -1,5 +1,7 @@
 // Sigil Dashboard — Chat Panel
 
+import { ChatAutocomplete } from '../autocomplete.js';
+
 let chatState = {
   sessionId: null,
   messages: [],
@@ -106,6 +108,51 @@ function renderMessages(container) {
   }
 }
 
+// ── Autocomplete data cache ──
+let cachedCommands = [];
+let cachedSisters = [];
+let autocompleteInstance = null;
+
+async function loadCommandsForAutocomplete(api) {
+  try {
+    const data = await api.listCommands();
+    const commands = data.commands || [];
+    cachedCommands = commands.map(cmd => ({
+      type: 'command',
+      value: cmd.command,
+      label: cmd.command,
+      description: cmd.description || '',
+      icon: cmd.command.startsWith('/') && ['help', 'skills', 'approvals', 'profile'].some(b => cmd.command === '/' + b)
+        ? 'command'
+        : 'skill',
+    }));
+  } catch (err) {
+    console.warn('autocomplete: failed to load commands', err);
+    // Provide hardcoded fallback
+    cachedCommands = [
+      { type: 'command', value: '/help', label: '/help', description: 'Show available commands', icon: 'command' },
+      { type: 'command', value: '/skills', label: '/skills', description: 'List loaded skills', icon: 'command' },
+      { type: 'command', value: '/approvals', label: '/approvals', description: 'List pending approvals', icon: 'command' },
+      { type: 'command', value: '/profile', label: '/profile', description: 'Show user profile', icon: 'command' },
+    ];
+  }
+}
+
+/** Called from app.js whenever dashboard state refreshes to update sister list. */
+export function updateSistersForAutocomplete(sistersData) {
+  const items = (sistersData && Array.isArray(sistersData.items)) ? sistersData.items : [];
+  cachedSisters = items.map(s => ({
+    type: 'mention',
+    value: '@' + (s.sister_id || ''),
+    label: '@' + (s.sister_id || ''),
+    description: (s.display_name || s.sister_id || '') + (s.running ? ' (running)' : ''),
+    icon: 'sister',
+  }));
+  if (autocompleteInstance) {
+    autocompleteInstance.refresh();
+  }
+}
+
 export function initChat(container, api, config) {
   if (!container) return;
   chatState.sessionId = generateSessionId();
@@ -200,11 +247,25 @@ export function initChat(container, api, config) {
 
   sendBtn.addEventListener('click', sendMessage);
   input.addEventListener('keydown', (e) => {
+    // Don't send message when autocomplete is active — it handles Enter/Tab itself
+    if (autocompleteInstance && autocompleteInstance.isActive) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+
+  // ── Initialize autocomplete ──
+  autocompleteInstance = new ChatAutocomplete(input, {
+    getCommands: () => cachedCommands,
+    getMentions: () => cachedSisters,
+    onAccept: () => {
+      // Focus remains on input; nothing else needed
+    },
+  });
+
+  // Load commands asynchronously
+  loadCommandsForAutocomplete(api);
 
   container.querySelector('#chat-new-session')?.addEventListener('click', () => {
     chatState.sessionId = generateSessionId();

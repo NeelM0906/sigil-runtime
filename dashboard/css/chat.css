@@ -359,3 +359,122 @@
   max-width: 220px;
   line-height: 1.6;
 }
+
+/* ── Autocomplete Popup ── */
+.autocomplete-popup {
+  position: absolute;
+  bottom: 100%;
+  left: var(--space-3);
+  right: var(--space-3);
+  max-height: 280px;
+  overflow-y: auto;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+  margin-bottom: var(--space-1);
+  animation: autocomplete-in 0.15s var(--ease-out);
+  overscroll-behavior: contain;
+}
+
+@keyframes autocomplete-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.autocomplete-header {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: hsl(var(--muted-foreground) / 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid hsl(var(--border) / 0.3);
+  position: sticky;
+  top: 0;
+  background: hsl(var(--popover));
+  z-index: 1;
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid hsl(var(--border) / 0.1);
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover {
+  background: hsl(var(--accent) / 0.5);
+}
+
+.autocomplete-item.selected {
+  background: hsl(var(--accent) / 0.7);
+}
+
+.autocomplete-item.selected .autocomplete-label {
+  color: hsl(var(--foreground));
+}
+
+.autocomplete-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--muted-foreground) / 0.6);
+  border-radius: 3px;
+  background: hsl(var(--surface-2));
+}
+
+.autocomplete-item.selected .autocomplete-icon {
+  color: hsl(var(--info));
+  background: hsl(var(--info) / 0.1);
+}
+
+.autocomplete-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: hsl(var(--foreground) / 0.9);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.autocomplete-desc {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--muted-foreground) / 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.autocomplete-item.selected .autocomplete-desc {
+  color: hsl(var(--muted-foreground) / 0.75);
+}
+
+/* Keyboard hint for first-time users */
+.autocomplete-popup::after {
+  content: '\2191\2193 navigate \00a0\00a0 \21B5 select \00a0\00a0 esc dismiss';
+  display: block;
+  padding: 4px var(--space-3);
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  color: hsl(var(--muted-foreground) / 0.35);
+  text-align: center;
+  border-top: 1px solid hsl(var(--border) / 0.2);
+  position: sticky;
+  bottom: 0;
+  background: hsl(var(--popover));
+}

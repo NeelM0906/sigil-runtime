@@ -66,6 +66,10 @@ export class SigilAPI {
     return this._post('/commands/execute', { session_id: sessionId, command });
   }
 
+  listCommands() {
+    return this._get('/commands');
+  }
+
   // Health check
   async health() {
     try {
