@@ -65,6 +65,7 @@ class LoopState:
     active_tool_overrides: set[str] = field(default_factory=set)
     denied_tools: set[str] = field(default_factory=set)
     health_message_idx: int | None = None
+    tool_schemas_dirty: bool = False
 
 
 @dataclass(frozen=True)
@@ -195,9 +196,11 @@ class AgenticLoop:
                 overrides=state.active_tool_overrides,
                 format=tool_format,
             )
-        # Recompute each iteration to keep schema state fresh.
-        recomputed = self.tool_executor.available_tool_schemas(policy=resolved_policy, format=tool_format)
-        return recomputed if recomputed else list(base_tool_schemas)
+        if state.tool_schemas_dirty:
+            state.tool_schemas_dirty = False
+            recomputed = self.tool_executor.available_tool_schemas(policy=resolved_policy, format=tool_format)
+            return recomputed if recomputed else list(base_tool_schemas)
+        return list(base_tool_schemas)
 
     def _execute_tool_calls(
         self,

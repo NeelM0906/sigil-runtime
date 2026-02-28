@@ -86,6 +86,8 @@ def builtin_skill_tools(
             status=("active" if descriptor.default_enabled else "validated"),
         )
         loader.scan()
+        if context.loop_state_ref is not None:
+            context.loop_state_ref.tool_schemas_dirty = True
         return {
             "created": True,
             "skill_id": skill_id,
@@ -131,6 +133,8 @@ def builtin_skill_tools(
             status="active",
         )
         loader.scan()
+        if context.loop_state_ref is not None:
+            context.loop_state_ref.tool_schemas_dirty = True
         return {
             "updated": True,
             "skill_id": skill_id,
