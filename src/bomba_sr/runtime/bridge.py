@@ -514,15 +514,6 @@ class RuntimeBridge:
                     "contradictory": False,
                 }
             )
-        if runtime.soul is not None and runtime.soul.formula_text and runtime.soul.formula_text.strip():
-            semantic_candidates.append(
-                {
-                    "text": runtime.soul.formula_text.strip()[:12000],
-                    "source": "workspace://FORMULA.md",
-                    "recency_label": "workspace_static",
-                    "contradictory": False,
-                }
-            )
         procedural_candidates = [
             {
                 "text": item["content"],
@@ -555,25 +546,42 @@ class RuntimeBridge:
         if task_block:
             task_state["text"] += f" Active task={task_block['title']}({task_block['task_id']}) status={task_block['status']}."
 
-        system_contract = (
-            "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
-            "and prefer local-first retrieval before broad assumptions."
-        )
+        system_prefix_parts: list[str] = []
         if runtime.soul is not None:
-            soul_sections: list[str] = []
             if runtime.soul.raw_soul_text.strip():
-                soul_sections.append("<soul>\n" + runtime.soul.raw_soul_text.strip() + "\n</soul>")
+                system_prefix_parts.append("<soul>\n" + runtime.soul.raw_soul_text.strip() + "\n</soul>")
             if runtime.soul.raw_identity_text.strip():
-                soul_sections.append("<identity>\n" + runtime.soul.raw_identity_text.strip() + "\n</identity>")
+                system_prefix_parts.append("<identity>\n" + runtime.soul.raw_identity_text.strip() + "\n</identity>")
             mission_block: list[str] = []
             if runtime.soul.mission_text and runtime.soul.mission_text.strip():
                 mission_block.append("<mission>\n" + runtime.soul.mission_text.strip() + "\n</mission>")
             if runtime.soul.vision_text and runtime.soul.vision_text.strip():
                 mission_block.append("<vision>\n" + runtime.soul.vision_text.strip() + "\n</vision>")
             if mission_block:
-                soul_sections.append("\n".join(mission_block))
-            if soul_sections:
-                system_contract = "\n\n".join(soul_sections + [system_contract])
+                system_prefix_parts.append("\n".join(mission_block))
+            if runtime.soul.formula_text and runtime.soul.formula_text.strip():
+                system_prefix_parts.append("<formula>\n" + runtime.soul.formula_text.strip()[:12000] + "\n</formula>")
+            if runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
+                system_prefix_parts.append("<priorities>\n" + runtime.soul.priorities_text.strip()[:8000] + "\n</priorities>")
+
+        system_prefix_parts.append(
+            "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
+            "and prefer local-first retrieval before broad assumptions."
+        )
+        skill_index = runtime.skill_disclosure.format_skill_index_xml(runtime.skill_loader.snapshot())
+        system_prefix_parts.append(
+            "Answer directly and cite local evidence when available. "
+            "If the user asks to create or modify a skill, use skill_create or skill_update tools.\n\n"
+            + skill_index
+        )
+        if selected_skill_context:
+            system_prefix_parts.append(f"Use selected skill instructions:\n{selected_skill_context}")
+        system_prompt = "\n\n".join(system_prefix_parts)
+
+        system_contract = (
+            "Use cited evidence, respect explicit constraints, "
+            "and prefer local-first retrieval before broad assumptions."
+        )
 
         working_memory_entries: list[dict[str, str]] = [
             {"text": "Current goal: answer user and capture durable learnings."},
@@ -581,12 +589,6 @@ class RuntimeBridge:
             {"text": f"pending_tool_approvals={len(pending_tool_approvals)}"},
             {"text": f"skill_parse_warnings={sum(len(v) for v in skill_diagnostics.values())}"},
         ]
-        if runtime.soul is not None and runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
-            working_memory_entries.append(
-                {
-                    "text": f"priorities_reference={runtime.soul.priorities_text.strip()[:8000]}",
-                }
-            )
 
         context_result = runtime.context_engine.assemble(
             profile=request.profile,
@@ -615,15 +617,6 @@ class RuntimeBridge:
                 "tool_results": tool_results,
             },
         )
-
-        skill_index = runtime.skill_disclosure.format_skill_index_xml(runtime.skill_loader.snapshot())
-        system_prompt = (
-            "Answer directly and cite local evidence when available. "
-            "If the user asks to create or modify a skill, use skill_create or skill_update tools.\n\n"
-            + skill_index
-        )
-        if selected_skill_context:
-            system_prompt += f"\n\nUse selected skill instructions:\n{selected_skill_context}"
 
         context_budget = calculate_budget(capabilities.context_length)
         total_available_input_tokens = int(context_budget.available_input_tokens)
