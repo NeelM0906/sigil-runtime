@@ -15,6 +15,9 @@ IDENTITY_FILES = (
     "FORMULA.md",
     "PRIORITIES.md",
     "SECURITY.md",
+    "HEARTBEAT.md",
+    "AGENTS.md",
+    "TOOLS.md",
 )
 
 
