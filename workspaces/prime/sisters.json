@@ -39,7 +39,6 @@
       "workspace_root": "workspaces/recovery",
       "model_id": "anthropic/claude-sonnet-4",
       "role": "Medical revenue recovery automation - runs Callagy Recovery's 7-stage pipeline",
-      "identity_loaded": true,
       "auto_start": false,
       "heartbeat_enabled": false,
       "cron_tasks": []
