@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--runtime-home",
-        default=os.getenv("BOMBA_RUNTIME_HOME", ".bomba-runtime"),
+        default=os.getenv("BOMBA_RUNTIME_HOME", ".runtime"),
         help="Runtime home path used for tenant DB/memory resolution",
     )
     return parser.parse_args()
