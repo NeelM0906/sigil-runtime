@@ -33,15 +33,40 @@ class _HealthProbeProvider:
     provider_name = "openai"
 
     def __init__(self) -> None:
-        self.system_seen: list[str] = []
+        self._calls = 0
+        self.messages_seen: list[list[ChatMessage]] = []
 
     def generate(self, model: str, messages, tools=None) -> LLMResponse:
-        if messages and messages[0].role == "system" and isinstance(messages[0].content, str):
-            self.system_seen.append(messages[0].content)
+        self.messages_seen.append(list(messages))
+        self._calls += 1
+        if self._calls == 1:
+            return LLMResponse(
+                text="",
+                model=model,
+                usage={"prompt_tokens": 12, "completion_tokens": 3},
+                raw={
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "",
+                                "tool_calls": [
+                                    {
+                                        "id": "call-health",
+                                        "type": "function",
+                                        "function": {"name": "missing_read_tool", "arguments": "{}"},
+                                    }
+                                ],
+                            },
+                            "finish_reason": "tool_calls",
+                        }
+                    ]
+                },
+                stop_reason="tool_calls",
+            )
         return LLMResponse(
             text="done",
             model=model,
-            usage={"prompt_tokens": 12, "completion_tokens": 3},
+            usage={"prompt_tokens": 8, "completion_tokens": 4},
             raw={"choices": [{"message": {"content": "done"}, "finish_reason": "stop"}]},
             stop_reason="stop",
         )
@@ -68,7 +93,7 @@ class OuroborosHealthTests(unittest.TestCase):
         self.assertIn("$1.0000 / $2.00", text)
         self.assertIn("1 failed", text)
 
-    def test_loop_injects_health_status_every_iteration(self) -> None:
+    def test_loop_injects_health_as_replaceable_user_message(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td) / "ws"
             root.mkdir(parents=True, exist_ok=True)
@@ -99,8 +124,14 @@ class OuroborosHealthTests(unittest.TestCase):
                 resolved_policy=policy,
                 model_id="anthropic/claude-opus-4.6",
             )
-            self.assertTrue(provider.system_seen)
-            self.assertIn("<health_status>", provider.system_seen[0])
+            self.assertGreaterEqual(len(provider.messages_seen), 2)
+            first_call_system = provider.messages_seen[0][0].content
+            self.assertIsInstance(first_call_system, str)
+            self.assertNotIn("<health_status>", first_call_system)
+            second_call_user_messages = [
+                m.content for m in provider.messages_seen[1] if m.role == "user" and isinstance(m.content, str)
+            ]
+            self.assertTrue(any("<health_status>" in text for text in second_call_user_messages))
 
 
 if __name__ == "__main__":

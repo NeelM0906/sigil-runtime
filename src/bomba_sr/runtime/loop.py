@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -65,6 +64,7 @@ class LoopState:
     current_model_id: str = ""
     active_tool_overrides: set[str] = field(default_factory=set)
     denied_tools: set[str] = field(default_factory=set)
+    health_message_idx: int | None = None
 
 
 @dataclass(frozen=True)
@@ -108,7 +108,7 @@ class AgenticLoop:
 
         while state.iteration < self.config.max_iterations:
             state.iteration += 1
-            self._inject_health_status(state, model_id)
+            self._inject_health_as_message(state, model_id)
 
             effective_schemas = self._effective_tool_schemas(
                 base_tool_schemas=tool_schemas,
@@ -255,22 +255,16 @@ class AgenticLoop:
             results.append(result)
         return results
 
-    def _inject_health_status(self, state: LoopState, model_id: str) -> None:
-        if not state.messages or state.messages[0].role != "system":
+    def _inject_health_as_message(self, state: LoopState, model_id: str) -> None:
+        if state.iteration <= 1:
             return
-        first = state.messages[0]
-        if isinstance(first.content, str):
-            base_system = first.content
-        else:
-            base_system = json.dumps(first.content, ensure_ascii=True)
-        base_system = re.sub(
-            r"\n?\s*<health_status>.*?</health_status>\s*",
-            "\n",
-            base_system,
-            flags=re.DOTALL,
-        ).rstrip()
         health = build_health_snapshot(state, self.config, model_id)
-        state.messages[0] = ChatMessage(role="system", content=base_system + "\n\n" + health.as_system_text())
+        health_msg = ChatMessage(role="user", content=health.as_system_text())
+        if state.health_message_idx is not None and state.health_message_idx < len(state.messages):
+            state.messages[state.health_message_idx] = health_msg
+            return
+        state.health_message_idx = len(state.messages)
+        state.messages.append(health_msg)
 
     def _parse_tool_calls(self, response: LLMResponse) -> list[ToolCall]:
         raw = response.raw
