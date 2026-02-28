@@ -732,7 +732,7 @@ class RuntimeBridge:
             )
             loop_result = loop.run(
                 initial_messages=[
-                    ChatMessage(role="system", content=system_prompt),
+                    ChatMessage(role="system", content=system_prompt, cache_control={"type": "ephemeral"}),
                     *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],
@@ -766,7 +766,7 @@ class RuntimeBridge:
             response = self.provider.generate(
                 model=model_id,
                 messages=[
-                    ChatMessage(role="system", content=system_prompt),
+                    ChatMessage(role="system", content=system_prompt, cache_control={"type": "ephemeral"}),
                     *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],

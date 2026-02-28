@@ -14,6 +14,7 @@ class ChatMessage:
     content: str | list[dict[str, Any]]
     tool_calls: list[dict[str, Any]] | None = None
     tool_call_id: str | None = None
+    cache_control: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -94,9 +95,12 @@ class OpenAICompatibleProvider:
 
     @staticmethod
     def _message_dict(message: ChatMessage) -> dict[str, Any]:
+        content: str | list[dict[str, Any]] = message.content
+        if message.cache_control and isinstance(content, str):
+            content = [{"type": "text", "text": content, "cache_control": message.cache_control}]
         payload: dict[str, Any] = {
             "role": message.role,
-            "content": message.content,
+            "content": content,
         }
         if message.tool_calls:
             payload["tool_calls"] = message.tool_calls
@@ -112,21 +116,43 @@ class AnthropicProvider:
     provider_name: str = "anthropic"
 
     def generate(self, model: str, messages: list[ChatMessage], tools: list[dict[str, Any]] | None = None) -> LLMResponse:
-        system_chunks = [str(m.content) for m in messages if m.role == "system"]
+        system_blocks: list[dict[str, Any]] = []
+        for msg in messages:
+            if msg.role != "system":
+                continue
+            text = str(msg.content) if isinstance(msg.content, str) else json.dumps(msg.content, ensure_ascii=True)
+            block: dict[str, Any] = {"type": "text", "text": text}
+            if msg.cache_control:
+                block["cache_control"] = msg.cache_control
+            system_blocks.append(block)
+
         api_messages: list[dict[str, Any]] = []
         for item in messages:
             if item.role == "system":
                 continue
             role = "assistant" if item.role == "assistant" else "user"
-            payload: dict[str, Any] = {"role": role, "content": item.content}
+            content: str | list[dict[str, Any]] = item.content
+            if item.cache_control and isinstance(content, str):
+                content = [{"type": "text", "text": content, "cache_control": item.cache_control}]
+            elif item.cache_control and isinstance(content, list):
+                content_copy = list(content)
+                if content_copy and isinstance(content_copy[-1], dict):
+                    content_copy[-1] = {**content_copy[-1], "cache_control": item.cache_control}
+                content = content_copy
+            payload: dict[str, Any] = {"role": role, "content": content}
             if item.tool_calls:
                 payload["tool_calls"] = item.tool_calls
             api_messages.append(payload)
 
+        if len(system_blocks) == 1 and "cache_control" not in system_blocks[0]:
+            system_payload: str | list[dict[str, Any]] = system_blocks[0]["text"]
+        else:
+            system_payload = system_blocks
+
         payload: dict[str, Any] = {
             "model": model,
             "max_tokens": 4096,
-            "system": "\n\n".join(system_chunks),
+            "system": system_payload,
             "messages": api_messages if api_messages else [{"role": "user", "content": ""}],
         }
         if tools:
@@ -140,6 +166,7 @@ class AnthropicProvider:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "anthropic-version": "2023-06-01",
+                "anthropic-beta": "prompt-caching-2024-07-31",
                 "x-api-key": self.api_key,
             },
         )
