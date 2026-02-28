@@ -34,11 +34,12 @@
     {
       "sister_id": "recovery",
       "display_name": "Sai Recovery",
-      "emoji": "seedling",
+      "emoji": "🌱",
       "tenant_id": "tenant-recovery",
       "workspace_root": "workspaces/recovery",
       "model_id": "anthropic/claude-sonnet-4",
-      "role": "Stability and recovery operations - safeguards continuity and restores drifted workflows",
+      "role": "Medical revenue recovery automation - runs Callagy Recovery's 7-stage pipeline",
+      "identity_loaded": true,
       "auto_start": false,
       "heartbeat_enabled": false,
       "cron_tasks": []
