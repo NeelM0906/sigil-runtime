@@ -16,6 +16,8 @@ from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 from bomba_sr.subagents.protocol import SubAgentTask
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PRIME_WORKSPACE = PROJECT_ROOT / "workspaces" / "prime"
 
 
 def _load_dotenv(path: Path) -> None:
@@ -82,6 +84,24 @@ def _default_subagent_worker(run_id: str, task: SubAgentTask, protocol) -> dict:
         "runtime_ms": 20,
         "token_usage": {"input": 64, "output": 22, "total": 86},
     }
+
+
+def _resolve_sisters_tenant(
+    tenant_id: str,
+    workspace_root: str | None,
+) -> tuple[str, str | None]:
+    """Return (tenant_id, workspace_root) that has sisters configured.
+
+    If the caller's workspace already contains a sisters.json, use it as-is.
+    Otherwise fall back to the prime workspace (workspaces/prime) where the
+    canonical sisters.json lives.
+    """
+    if workspace_root and Path(workspace_root).expanduser().resolve().joinpath("sisters.json").exists():
+        return tenant_id, workspace_root
+    sisters_path = PRIME_WORKSPACE / "sisters.json"
+    if sisters_path.is_file():
+        return "tenant-prime", str(PRIME_WORKSPACE)
+    return tenant_id, workspace_root
 
 
 def make_handler(bridge: RuntimeBridge):
@@ -317,6 +337,25 @@ def make_handler(bridge: RuntimeBridge):
                     user_id=user_id,
                     workspace_root=workspace_root,
                 )
+                # If the current tenant has no sisters, fall back to the
+                # prime workspace where sisters.json is expected to live.
+                sisters = data.get("sisters") or {}
+                if not sisters.get("items") and PRIME_WORKSPACE.is_dir():
+                    try:
+                        prime_items = bridge.list_sisters(
+                            tenant_id="tenant-prime",
+                            workspace_root=str(PRIME_WORKSPACE),
+                        )
+                        if prime_items:
+                            data["sisters"] = {
+                                "total": len(prime_items),
+                                "running": sum(
+                                    1 for s in prime_items if s.get("running")
+                                ),
+                                "items": prime_items,
+                            }
+                    except Exception:
+                        pass  # prime tenant not available; keep empty sisters
                 self._write_cors(200, data)
             except Exception as exc:
                 self._write_cors(500, {"error": str(exc)})
@@ -366,13 +405,17 @@ def make_handler(bridge: RuntimeBridge):
                     if not sister_id:
                         self._write_cors(400, {"error": "sister_id is required"})
                         return
-                    result = bridge.spawn_sister(tenant_id, sister_id, workspace_root)
+                    # Sisters live under tenant-prime; resolve the correct
+                    # tenant/workspace so spawn works from any dashboard tenant.
+                    s_tenant, s_ws = _resolve_sisters_tenant(tenant_id, workspace_root)
+                    result = bridge.spawn_sister(s_tenant, sister_id, s_ws)
                 elif path == "/api/dashboard/sisters/stop":
                     sister_id = str(body.get("sister_id") or "").strip()
                     if not sister_id:
                         self._write_cors(400, {"error": "sister_id is required"})
                         return
-                    result = bridge.stop_sister(tenant_id, sister_id, workspace_root)
+                    s_tenant, s_ws = _resolve_sisters_tenant(tenant_id, workspace_root)
+                    result = bridge.stop_sister(s_tenant, sister_id, s_ws)
                 else:
                     self._write_cors(404, {"error": "not_found"})
                     return

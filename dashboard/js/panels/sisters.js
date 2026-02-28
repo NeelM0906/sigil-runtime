@@ -55,6 +55,7 @@ export function renderSisters(el, state, api) {
                   <td>
                     <div class="text-sm"><strong>${escapeHtml(item.display_name || item.sister_id)}</strong></div>
                     <div class="text-xs text-mono" style="opacity:.65">${escapeHtml(item.sister_id)}</div>
+                    ${item.role ? `<div class="text-xs" style="opacity:.55;margin-top:2px">${escapeHtml(item.role)}</div>` : ''}
                   </td>
                   <td>${statusBadge(item)}</td>
                   <td class="text-xs text-mono" style="opacity:.7">${fmtTime(item.last_activity)}</td>
