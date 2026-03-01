@@ -113,8 +113,16 @@ COLOSSEUM_WEIGHTS = {
 # ---------------------------------------------------------------------------
 
 
+def _guard_workspace_path(workspace_root: Path, relative: str) -> Path:
+    resolved_root = workspace_root.resolve()
+    path = (resolved_root / relative).resolve()
+    if not path.is_relative_to(resolved_root):
+        raise ValueError(f"Path traversal denied: {relative}")
+    return path
+
+
 def _db_path(workspace_root: Path) -> Path:
-    return (workspace_root / _COMPETITORS_DB).resolve()
+    return _guard_workspace_path(workspace_root, _COMPETITORS_DB)
 
 
 def _read_competitors(workspace_root: Path, include_act_i: bool = False) -> list[dict[str, Any]]:
@@ -126,9 +134,9 @@ def _read_competitors(workspace_root: Path, include_act_i: bool = False) -> list
     try:
         rows = conn.execute("SELECT * FROM competitors ORDER BY company_name").fetchall()
     except sqlite3.OperationalError:
-        conn.close()
         raise ValueError("competitors table not found in database")
-    conn.close()
+    finally:
+        conn.close()
     competitors = []
     for row in rows:
         entry = dict(row)
@@ -236,6 +244,10 @@ def _sentence_count(text: str) -> int:
 
 
 def _score_response(text: str, style: str) -> dict[str, float]:
+    # NOTE: Heuristic scoring is calibrated against the fallback response text.
+    # Live LLM responses using different phrasing may score lower even if they
+    # are subjectively better. This is acceptable for directional comparison;
+    # for production use, replace with LLM-based judging.
     lower = text.lower()
 
     rapport = 4
@@ -346,7 +358,7 @@ def _prove_ahead_benchmark_factory(
         use_cached = bool(arguments.get("use_cached", False))
 
         # Try to load cached results first
-        cached_path = (ws / _BENCHMARK_FILE).resolve()
+        cached_path = _guard_workspace_path(ws, _BENCHMARK_FILE)
         if use_cached and cached_path.exists():
             return json.loads(cached_path.read_text(encoding="utf-8"))
 
@@ -407,7 +419,7 @@ def _prove_ahead_report_factory(workspace_root: Path | None):
         matrix_data = _build_matrix(competitors)
 
         # Load benchmark if available
-        benchmark_path = (ws / _BENCHMARK_FILE).resolve()
+        benchmark_path = _guard_workspace_path(ws, _BENCHMARK_FILE)
         benchmark: dict[str, Any] | None = None
         if benchmark_path.exists():
             try:
@@ -416,7 +428,7 @@ def _prove_ahead_report_factory(workspace_root: Path | None):
                 pass
 
         # Load existing report markdown if available
-        report_path = (ws / _REPORT_FILE).resolve()
+        report_path = _guard_workspace_path(ws, _REPORT_FILE)
         report_md = ""
         if report_path.exists():
             report_md = report_path.read_text(encoding="utf-8")

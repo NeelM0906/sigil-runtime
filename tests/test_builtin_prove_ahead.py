@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import sqlite3
 import tempfile
@@ -118,6 +117,9 @@ class ProveAheadToolTests(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp())
         _setup_prove_ahead_data(self.tmpdir)
         self.provider = _FakeProvider()
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_tools_are_created(self) -> None:
         tools = builtin_prove_ahead_tools(

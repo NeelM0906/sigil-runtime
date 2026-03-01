@@ -508,8 +508,11 @@ def _parse_levers(text: str) -> list[tuple[str, str]]:
         if range_match:
             range_start = int(range_match.group(1))
             range_end = int(range_match.group(2))
+            # Strip the "Levers N-M:" prefix to avoid redundant "Lever 5: Levers 2-7: ..."
+            range_detail = re.sub(r"Levers?\s+\d+-\d+:\s*", "", content_plain, count=1).strip()
             for idx in range(range_start, range_end + 1):
-                out[f"formula_lever_{idx}"] = f"Lever {idx}: {content_plain}"
+                label = f"Lever {idx}: {range_detail}" if range_detail else f"Lever {idx}"
+                out[f"formula_lever_{idx}"] = label
             continue
         # Single lever match (e.g. "Lever 0.5: Shared Experiences")
         match = re.search(

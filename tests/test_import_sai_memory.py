@@ -151,5 +151,45 @@ class ImportSaiMemoryTests(unittest.TestCase):
             db.close()
 
 
+    def test_parse_levers_produces_distinct_content_for_all_levers(self) -> None:
+        """Regression: levers 3-7 must NOT all contain 'Lever 0.5: Shared Experiences'."""
+        module = _load_import_module()
+        formula_text = "\n".join([
+            "### The 7 Levers of Marketing & Sales Process Mastery (8 including 0.5)",
+            "- **Lever 0.5: Shared Experiences** — Building common ground through events",
+            "- Lever 1: Ecosystem Merging (O's and B's) — Strategic network merging",
+            "- Levers 2-7: Speaking Engagements, Meetings, Sales, Disposable Income, Contribution, Fun & Magic",
+            "### Another Section",
+        ])
+        levers = module._parse_levers(formula_text)
+        lever_dict = dict(levers)
+
+        # All 9 keys should be present (0.5, 1, 2, 3, 4, 5, 6, 7)
+        self.assertIn("formula_lever_0_5", lever_dict)
+        self.assertIn("formula_lever_1", lever_dict)
+        for idx in range(2, 8):
+            self.assertIn(f"formula_lever_{idx}", lever_dict, f"Lever {idx} missing")
+
+        # Lever 0.5 should reference Shared Experiences
+        self.assertIn("Shared Experiences", lever_dict["formula_lever_0_5"])
+
+        # Lever 1 should reference Ecosystem Merging
+        self.assertIn("Ecosystem Merging", lever_dict["formula_lever_1"])
+
+        # Levers 2-7 should NOT contain "Lever 0.5" or "Shared Experiences"
+        for idx in range(2, 8):
+            key = f"formula_lever_{idx}"
+            self.assertNotIn("Lever 0.5", lever_dict[key], f"{key} wrongly contains Lever 0.5 content")
+            self.assertNotIn("Shared Experiences", lever_dict[key], f"{key} wrongly contains Shared Experiences")
+
+        # All lever values should be distinct (no duplicates)
+        values = list(lever_dict.values())
+        self.assertEqual(len(values), len(set(values)), "Lever values are not all distinct")
+
+        # Levers 2-7 should not have redundant "Levers 2-7:" prefix
+        for idx in range(2, 8):
+            self.assertNotIn("Levers 2-7:", lever_dict[f"formula_lever_{idx}"])
+
+
 if __name__ == "__main__":
     unittest.main()

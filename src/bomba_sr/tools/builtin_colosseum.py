@@ -5,6 +5,7 @@ All LLM calls route through BOMBA's LLMProvider (synchronous).
 """
 from __future__ import annotations
 
+import copy
 import json
 import random
 import time
@@ -25,15 +26,23 @@ _SCENARIOS_FILE = "colosseum/v2/data/scenarios.json"
 _RESULTS_DIR = "colosseum/v2/data/results"
 
 
+def _guard_workspace_path(workspace_root: Path, relative: str) -> Path:
+    resolved_root = workspace_root.resolve()
+    path = (resolved_root / relative).resolve()
+    if not path.is_relative_to(resolved_root):
+        raise ValueError(f"Path traversal denied: {relative}")
+    return path
+
+
 def _load_json(workspace_root: Path, relative: str) -> Any:
-    path = (workspace_root / relative).resolve()
+    path = _guard_workspace_path(workspace_root, relative)
     if not path.exists():
         raise ValueError(f"Colosseum data file not found: {relative}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _save_json(workspace_root: Path, relative: str, data: Any) -> Path:
-    path = (workspace_root / relative).resolve()
+    path = _guard_workspace_path(workspace_root, relative)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return path
@@ -120,6 +129,12 @@ def _colosseum_run_round_factory(
         beings = _load_json(ws, _BEINGS_FILE)
         judges = _load_json(ws, _JUDGES_FILE)
         scenarios = _load_json(ws, _SCENARIOS_FILE)
+        if not isinstance(beings, list):
+            raise ValueError("beings.json must be a JSON array")
+        if not isinstance(judges, dict):
+            raise ValueError("judges.json must be a JSON object")
+        if not isinstance(scenarios, dict):
+            raise ValueError("scenarios.json must be a JSON object")
         model = arguments.get("model") or default_model_id
 
         # Optional filters
@@ -171,22 +186,37 @@ def _colosseum_run_round_factory(
         results_file = f"{_RESULTS_DIR}/round_{int(time.time())}.json"
         _save_json(ws, results_file, all_results)
 
-        # Update leaderboard
+        # Update leaderboard — persist full scores list so history survives across rounds
         try:
             existing_lb = _load_json(ws, _LEADERBOARD_FILE)
         except ValueError:
             existing_lb = []
-        lb_map: dict[str, dict[str, Any]] = {e["id"]: e for e in existing_lb if isinstance(e, dict)}
+        lb_map: dict[str, dict[str, Any]] = {}
+        for e in existing_lb:
+            if not isinstance(e, dict):
+                continue
+            lb_map[e["id"]] = {
+                "id": e["id"],
+                "title": e.get("title", ""),
+                "area": e.get("area", ""),
+                "scores": list(e.get("scores", [])),
+            }
         for r in all_results:
             bid = r["being_id"]
             if bid not in lb_map:
                 lb_map[bid] = {"id": bid, "title": r["being_title"], "area": r["area"], "scores": []}
-            lb_map[bid].setdefault("scores", []).append(r["average_overall"])
+            lb_map[bid]["scores"].append(r["average_overall"])
         new_lb = []
         for bid, data in lb_map.items():
-            scores_list = data.get("scores", [])
+            scores_list = data["scores"]
             avg = sum(scores_list) / len(scores_list) if scores_list else 0.0
-            new_lb.append({"id": bid, "title": data["title"], "area": data.get("area", ""), "average": round(avg, 4)})
+            new_lb.append({
+                "id": bid,
+                "title": data["title"],
+                "area": data.get("area", ""),
+                "average": round(avg, 4),
+                "scores": scores_list,
+            })
         new_lb.sort(key=lambda x: x["average"], reverse=True)
         _save_json(ws, _LEADERBOARD_FILE, new_lb)
 
@@ -273,7 +303,7 @@ def _colosseum_evolve_factory(
 
         # Top 30% survive unchanged but increment generation
         for b in top_30:
-            new_b = dict(b)
+            new_b = copy.deepcopy(b)
             new_b["generation"] = b.get("generation", 0) + 1
             evolved.append(new_b)
 
@@ -291,7 +321,7 @@ def _colosseum_evolve_factory(
                 messages=[ChatMessage(role="user", content=mutation_prompt)],
             )
             new_focus = resp.content.strip() if resp.content else b.get("focus", "")
-            new_b = dict(b)
+            new_b = copy.deepcopy(b)
             new_b["focus"] = new_focus[:500]
             new_b["generation"] = b.get("generation", 0) + 1
             new_b["mutation"] = "llm_refine"
@@ -314,7 +344,7 @@ def _colosseum_evolve_factory(
                 messages=[ChatMessage(role="user", content=crossover_prompt)],
             )
             new_focus = resp.content.strip() if resp.content else b.get("focus", "")
-            new_b = dict(b)
+            new_b = copy.deepcopy(b)
             new_b["focus"] = new_focus[:500]
             new_b["generation"] = b.get("generation", 0) + 1
             new_b["mutation"] = "crossover"
@@ -341,6 +371,8 @@ def _colosseum_scenario_list_factory(workspace_root: Path | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         ws = workspace_root or context.workspace_root
         scenarios = _load_json(ws, _SCENARIOS_FILE)
+        if not isinstance(scenarios, dict):
+            raise ValueError("scenarios.json must be a JSON object")
         area_filter = arguments.get("area_filter")
         summaries: list[dict[str, Any]] = []
         for sid, s in scenarios.items():

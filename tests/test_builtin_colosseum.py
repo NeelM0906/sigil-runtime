@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -103,6 +103,9 @@ class ColosseumToolTests(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp())
         _setup_colosseum_data(self.tmpdir)
         self.provider = _FakeProvider()
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_tools_are_created(self) -> None:
         tools = builtin_colosseum_tools(
