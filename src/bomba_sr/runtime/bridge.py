@@ -52,6 +52,7 @@ from bomba_sr.subagents.orchestrator import CrashStormConfig, SubAgentHandle, Su
 from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 from bomba_sr.tools.base import ToolContext, ToolExecutor
 from bomba_sr.tools.builtin_approvals import builtin_approval_tools
+from bomba_sr.tools.builtin_colosseum import builtin_colosseum_tools
 from bomba_sr.tools.builtin_compaction import builtin_compaction_tools
 from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
 from bomba_sr.tools.builtin_exec import builtin_exec_tools
@@ -60,6 +61,7 @@ from bomba_sr.tools.builtin_memory import builtin_memory_tools
 from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
 from bomba_sr.tools.builtin_pinecone import builtin_pinecone_tools
 from bomba_sr.tools.builtin_projects import builtin_project_tools
+from bomba_sr.tools.builtin_prove_ahead import builtin_prove_ahead_tools
 from bomba_sr.tools.builtin_search import builtin_search_tools
 from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
@@ -2116,6 +2118,22 @@ class RuntimeBridge:
             )
         if self.config.voice_enabled:
             tool_executor.register_many(builtin_voice_tools(provider=self.config.voice_provider))
+        if self.config.colosseum_enabled:
+            tool_executor.register_many(
+                builtin_colosseum_tools(
+                    provider=self.provider,
+                    default_model_id=self.config.colosseum_model_id,
+                    workspace_root=context.workspace_root,
+                )
+            )
+        if self.config.prove_ahead_enabled:
+            tool_executor.register_many(
+                builtin_prove_ahead_tools(
+                    provider=self.provider,
+                    default_model_id=self.config.default_model_id,
+                    workspace_root=context.workspace_root,
+                )
+            )
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(
