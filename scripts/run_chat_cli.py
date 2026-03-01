@@ -9,7 +9,6 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from bomba_sr.cli.renderers import build_collapsed_state, check_and_maybe_expand, render_collapsed
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 
@@ -682,10 +681,7 @@ def main() -> int:
         mode = result.get("turn", {}).get("mode")
         if mode:
             print(f"[mode: {mode}]")
-
-        collapsed = build_collapsed_state(result)
-        render_collapsed(collapsed)
-        check_and_maybe_expand(collapsed)
+        print("sigil>", result.get("assistant", {}).get("text", ""))
 
         approvals = result.get("approvals", {}) if isinstance(result.get("approvals"), dict) else {}
         pending_learning_approvals = approvals.get("pending_learning_approvals", [])
