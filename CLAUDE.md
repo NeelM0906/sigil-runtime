@@ -37,6 +37,8 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
         builtin_web.py           # web_search (Brave/DuckDuckGo) + web_fetch tools
         builtin_pinecone.py      # pinecone_query + pinecone_list_indexes tools
         builtin_voice.py         # Bland.ai call management tools
+        builtin_colosseum.py     # CHDDIA² Colosseum v2 tournament tools (5 tools)
+        builtin_prove_ahead.py   # Prove-Ahead competitive intelligence tools (4 tools)
         builtin_sisters.py       # Prime sister management tools
         builtin_subagents.py     # sessions_spawn, sessions_poll, sessions_list tools
         builtin_scheduler.py     # schedule_task, list_schedules tools
@@ -81,6 +83,14 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
   docs/                          # Authoritative runtime documentation
   skills/                        # Workspace skill definitions (SKILL.md files)
     web_search/SKILL.md          # Bundled web search skill
+  workspaces/
+    prime/
+      configs/                   # Agent JSON configs (Mylo, Callie, Athena)
+      tools/                     # SAI reference tool scripts (bland, pinecone, voice, zoom)
+      prove-ahead/               # Prove-Ahead competitive intelligence data + reports
+      memory/                    # Imported memory state files
+    forge/
+      colosseum/v2/              # Colosseum v2 source + data (beings, judges, scenarios)
   acceptance/                    # Acceptance criteria documents
   product/                       # Product specs and manifests
   .runtime/                      # Runtime state dir (SQLite DB, tenant data)
@@ -150,6 +160,11 @@ curl -s http://127.0.0.1:8787/health | python -m json.tool
 | `BOMBA_VOICE_ENABLED` | No | `false` | Enable voice call management tools |
 | `BOMBA_VOICE_PROVIDER` | No | `bland` | Voice provider selector |
 | `BLAND_API_KEY` | Conditional | none | Bland API key |
+| **Colosseum** | | | |
+| `BOMBA_COLOSSEUM_ENABLED` | No | `false` | Enable Colosseum v2 tournament tools |
+| `BOMBA_COLOSSEUM_MODEL_ID` | No | `gpt-4o-mini` | Model for being/judge LLM calls |
+| **Prove-Ahead** | | | |
+| `BOMBA_PROVE_AHEAD_ENABLED` | No | `false` | Enable Prove-Ahead competitive intelligence tools |
 | **Zoom Skill Prereqs** | | | |
 | `ZOOM_ACCOUNT_ID` | No | none | Zoom S2S OAuth account id |
 | `ZOOM_CLIENT_ID` | No | none | Zoom S2S OAuth client id |
