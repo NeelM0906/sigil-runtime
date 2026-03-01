@@ -63,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         help="Only print what would be imported",
     )
     parser.add_argument(
+        "--formula-only",
+        action="store_true",
+        help="Only re-import FORMULA.md procedural memories (skip daily logs, calls, semantic)",
+    )
+    parser.add_argument(
         "--runtime-home",
         default=os.getenv("BOMBA_RUNTIME_HOME", ".runtime"),
         help="Runtime home path used for tenant DB/memory resolution",
@@ -89,6 +94,7 @@ def main() -> int:
         user_id=args.user_id,
         dry_run=bool(args.dry_run),
         runtime_home=runtime_home,
+        formula_only=bool(args.formula_only),
     )
 
     recovery_source = source_dir / "sisters" / "sai-recovery"
@@ -101,6 +107,7 @@ def main() -> int:
             user_id="sai-recovery",
             dry_run=bool(args.dry_run),
             runtime_home=runtime_home,
+            formula_only=bool(args.formula_only),
         )
     else:
         print("\nRecovery source not found, skipping tenant-recovery import.")
@@ -117,6 +124,7 @@ def import_workspace_memory(
     user_id: str,
     dry_run: bool,
     runtime_home: Path,
+    formula_only: bool = False,
 ) -> ImportStats:
     registry = TenantRegistry(runtime_home)
     context = registry.ensure_tenant(tenant_id=tenant_id, workspace_root=None)
@@ -129,7 +137,9 @@ def import_workspace_memory(
     memory_dir = source_workspace / "memory"
     print(f"[{tenant_id}] source={source_workspace}")
     print(f"[{tenant_id}] db={context.db_path}")
-    if memory_dir.exists():
+    if formula_only:
+        print(f"[{tenant_id}] formula-only mode -- skipping daily logs, calls, semantic, memory index")
+    if memory_dir.exists() and not formula_only:
         for file_path in sorted(memory_dir.glob("*.md")):
             text = file_path.read_text(encoding="utf-8")
             created_at = _iso_from_mtime(file_path)
@@ -187,7 +197,7 @@ def import_workspace_memory(
                 stats.skipped += 1
 
     index_path = source_workspace / "MEMORY.md"
-    if index_path.exists():
+    if index_path.exists() and not formula_only:
         if _import_markdown_note(
             db=db,
             memory_root=context.memory_root,
@@ -474,7 +484,6 @@ def _parse_levers(text: str) -> list[tuple[str, str]]:
     out: dict[str, str] = {}
     lines = text.splitlines()
     in_section = False
-    fallback_line = ""
     for raw in lines:
         line = raw.rstrip()
         stripped = line.strip()
@@ -489,29 +498,46 @@ def _parse_levers(text: str) -> list[tuple[str, str]]:
         if not bullet:
             continue
         content = bullet.group(1).strip()
-        if not fallback_line:
-            fallback_line = content
         if "Lever" not in content and "Levers" not in content:
             continue
-        content_plain = content.strip("* ")
-        match = re.search(r"Lever(?:s)?\s+([0-9]+(?:\.[0-9]+)?)", content_plain, flags=re.IGNORECASE)
+        content_plain = content.replace("**", "").strip("* ")
+        # Check for range patterns like "Levers 1-7" or "Levers 2-7" first
+        range_match = re.search(
+            r"Levers?\s+(\d+)-(\d+)", content_plain, flags=re.IGNORECASE
+        )
+        if range_match:
+            range_start = int(range_match.group(1))
+            range_end = int(range_match.group(2))
+            for idx in range(range_start, range_end + 1):
+                out[f"formula_lever_{idx}"] = f"Lever {idx}: {content_plain}"
+            continue
+        # Single lever match (e.g. "Lever 0.5: Shared Experiences")
+        match = re.search(
+            r"Lever\s+([0-9]+(?:\.[0-9]+)?)", content_plain, flags=re.IGNORECASE
+        )
         if match:
             raw_idx = match.group(1)
             idx_key = raw_idx.replace(".", "_")
             out[f"formula_lever_{idx_key}"] = content_plain
-        elif "2-7" in content_plain:
-            for idx in range(2, 8):
-                out[f"formula_lever_{idx}"] = f"Lever {idx}: {content_plain}"
 
+    # Ensure minimum coverage with accurate defaults
     if "formula_lever_0_5" not in out:
         out["formula_lever_0_5"] = "Lever 0.5: Shared Experiences"
     if "formula_lever_1" not in out:
         out["formula_lever_1"] = "Lever 1: Ecosystem Merging (O's and B's)"
+    _lever_names = {
+        2: "Speaking Engagements",
+        3: "Meetings",
+        4: "Sales",
+        5: "Disposable Income",
+        6: "Contribution",
+        7: "Fun & Magic",
+    }
     for idx in range(2, 8):
         key = f"formula_lever_{idx}"
         if key not in out:
-            base = fallback_line or "Levers 2-7 require full articulation from Sean."
-            out[key] = f"Lever {idx}: {base}"
+            name = _lever_names.get(idx, "")
+            out[key] = f"Lever {idx}: {name} (requires Sean's full articulation)"
     return sorted(out.items(), key=lambda item: item[0])
 
 
