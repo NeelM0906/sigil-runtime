@@ -733,3 +733,2099 @@
     display: none;
   }
 }
+
+/* ====================================================================
+   NEW SECTIONS — Appended for rich node editors, context menus,
+   context hub, settings, wizard, dialogs, toasts, etc.
+   ==================================================================== */
+
+/* ── 1. CSS Custom Properties for Kind Colors ── */
+
+:root {
+  --tm-group-color: #4a9eff;
+  --tm-agent-color: #f0883e;
+  --tm-skill-color: #3fb950;
+  --tm-pipeline-color: #d946ef;
+  --tm-human-color: #d29922;
+  --tm-context-color: #8b5cf6;
+  --tm-settings-color: #6e7681;
+  --tm-note-color: #fbbf24;
+  --tm-accent-color: #4a9eff;
+  --tm-danger-color: #f85149;
+}
+
+/* ── 2. Search & Filter Toolbar ── */
+
+.tm-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  min-width: 180px;
+  max-width: 280px;
+  flex: 1;
+}
+
+.tm-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e6edf3;
+  font-size: 12px;
+  font-family: inherit;
+  width: 100%;
+  padding: 2px 20px 2px 0;
+}
+
+.tm-search-input::placeholder {
+  color: rgba(139, 148, 158, 0.6);
+}
+
+.tm-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(139, 148, 158, 0.8);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.tm-search-clear:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tm-filter-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tm-filter-pill {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(230, 237, 243, 0.7);
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.tm-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e6edf3;
+}
+
+.tm-filter-pill--active {
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.tm-filter-pill--active[data-kind="group"]    { background: var(--tm-group-color); }
+.tm-filter-pill--active[data-kind="agent"]    { background: var(--tm-agent-color); }
+.tm-filter-pill--active[data-kind="skill"]    { background: var(--tm-skill-color); }
+.tm-filter-pill--active[data-kind="pipeline"] { background: var(--tm-pipeline-color); }
+.tm-filter-pill--active[data-kind="human"]    { background: var(--tm-human-color); }
+.tm-filter-pill--active[data-kind="context"]  { background: var(--tm-context-color); }
+.tm-filter-pill--active[data-kind="note"]     { background: var(--tm-note-color); color: #1a1a2e; }
+
+.tm-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+/* ── 3. Per-Kind Editor Styles ── */
+
+.tm-editor-section {
+  margin-bottom: 16px;
+  padding: 0 0 8px 0;
+}
+
+.tm-editor-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(139, 148, 158, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: default;
+  user-select: none;
+}
+
+.tm-editor-section-header[onclick],
+.tm-editor-section-header[style*="cursor: pointer"] {
+  cursor: pointer;
+}
+
+.tm-editor-section-header:hover {
+  color: rgba(230, 237, 243, 0.9);
+}
+
+.tm-editor-section-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(230, 237, 243, 0.8);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.tm-editor-section-arrow {
+  font-size: 11px;
+  display: inline-block;
+  transition: transform 150ms ease;
+  color: rgba(139, 148, 158, 0.7);
+}
+
+.tm-editor-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(139, 148, 158, 0.9);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tm-editor-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tm-editor-field {
+  margin-bottom: 12px;
+}
+
+.tm-editor-input {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  box-sizing: border-box;
+}
+
+.tm-editor-input:focus {
+  border-color: var(--tm-accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
+}
+
+.tm-editor-input::placeholder {
+  color: rgba(139, 148, 158, 0.5);
+}
+
+.tm-editor-textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.5;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  box-sizing: border-box;
+}
+
+.tm-editor-textarea:focus {
+  border-color: var(--tm-accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
+}
+
+.tm-editor-textarea::placeholder {
+  color: rgba(139, 148, 158, 0.5);
+}
+
+.tm-editor-textarea--prompt {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  min-height: 400px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.tm-editor-select {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  transition: border-color 150ms ease;
+  box-sizing: border-box;
+}
+
+.tm-editor-select:focus {
+  border-color: var(--tm-accent-color);
+}
+
+.tm-editor-select option {
+  background: #1a1a2e;
+  color: #e6edf3;
+}
+
+.tm-editor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, opacity 100ms ease;
+  white-space: nowrap;
+}
+
+.tm-editor-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tm-editor-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tm-editor-btn--generate {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+}
+
+.tm-editor-btn--generate:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.25);
+}
+
+.tm-editor-btn--generate::before {
+  content: '\2728';
+  margin-right: 2px;
+}
+
+.tm-editor-btn--save {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: rgba(63, 185, 80, 0.3);
+  color: var(--tm-skill-color);
+}
+
+.tm-editor-btn--save:hover:not(:disabled) {
+  background: rgba(63, 185, 80, 0.25);
+}
+
+.tm-editor-btn--discard {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(139, 148, 158, 0.9);
+}
+
+.tm-editor-btn--discard:hover:not(:disabled) {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: rgba(248, 81, 73, 0.3);
+  color: var(--tm-danger-color);
+}
+
+.tm-editor-btn--danger {
+  background: rgba(248, 81, 73, 0.1);
+  border-color: rgba(248, 81, 73, 0.3);
+  color: var(--tm-danger-color);
+}
+
+.tm-editor-btn--danger:hover:not(:disabled) {
+  background: rgba(248, 81, 73, 0.2);
+}
+
+.tm-editor-btn--outline {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tm-editor-btn--outline:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tm-editor-btn--small {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.tm-editor-btn--dashed {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(139, 148, 158, 0.8);
+  width: 100%;
+  justify-content: center;
+  padding: 8px;
+}
+
+.tm-editor-btn--dashed:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tm-editor-btn--deploy {
+  background: rgba(240, 136, 62, 0.15);
+  border-color: rgba(240, 136, 62, 0.3);
+  color: var(--tm-agent-color);
+}
+
+.tm-editor-btn--deploy:hover:not(:disabled) {
+  background: rgba(240, 136, 62, 0.25);
+}
+
+.tm-editor-btn--pipeline-deploy {
+  background: rgba(217, 70, 239, 0.15);
+  border-color: rgba(217, 70, 239, 0.3);
+  color: var(--tm-pipeline-color);
+}
+
+.tm-editor-btn--pipeline-deploy:hover:not(:disabled) {
+  background: rgba(217, 70, 239, 0.25);
+}
+
+.tm-editor-btn--schedule {
+  background: transparent;
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+}
+
+.tm-editor-btn--schedule:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.tm-editor-btn--create {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: rgba(63, 185, 80, 0.3);
+  color: var(--tm-skill-color);
+}
+
+.tm-editor-btn--create:hover:not(:disabled) {
+  background: rgba(63, 185, 80, 0.25);
+}
+
+.tm-editor-btn--step-action {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.tm-editor-btn-icon {
+  background: none;
+  border: none;
+  color: rgba(139, 148, 158, 0.7);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.tm-editor-btn-icon:hover {
+  color: var(--tm-danger-color);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.tm-editor-color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.tm-editor-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tm-editor-color-row .tm-editor-input {
+  flex: 1;
+}
+
+.tm-editor-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 16px;
+}
+
+.tm-editor-deploy-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tm-editor-note {
+  font-size: 11px;
+  color: rgba(139, 148, 158, 0.7);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.tm-editor-empty {
+  font-size: 12px;
+  color: rgba(139, 148, 158, 0.5);
+  font-style: italic;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.tm-editor-kind-badge-row {
+  margin-bottom: 12px;
+}
+
+.tm-editor-kind-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #ffffff;
+}
+
+.tm-editor-collapsible-body {
+  overflow: hidden;
+  transition: max-height 200ms ease;
+}
+
+/* ── 3a. Pipeline Step Editor (in-editor) ── */
+
+.tm-editor-steps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tm-editor-step-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 150ms ease;
+}
+
+.tm-editor-step-card:hover {
+  border-color: rgba(217, 70, 239, 0.3);
+}
+
+.tm-editor-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tm-editor-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(217, 70, 239, 0.2);
+  color: var(--tm-pipeline-color);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tm-editor-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tm-editor-step-count {
+  font-size: 11px;
+  color: rgba(139, 148, 158, 0.6);
+  margin-top: 8px;
+}
+
+/* ── 3b. Generate Agents Row ── */
+
+.tm-editor-generate-agents-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── 3c. Agent List (inside group editor) ── */
+
+.tm-editor-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 100ms ease;
+  margin-bottom: 2px;
+}
+
+.tm-editor-agent-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tm-editor-agent-name {
+  font-size: 13px;
+  color: #e6edf3;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 3d. Skill Rows (inside group editor) ── */
+
+.tm-editor-skill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: rgba(63, 185, 80, 0.03);
+}
+
+.tm-editor-skill-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tm-editor-skill-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tm-skill-color);
+}
+
+.tm-editor-skill-desc {
+  font-size: 11px;
+  color: rgba(139, 148, 158, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-editor-add-skill-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.tm-editor-add-skill-row .tm-editor-select {
+  flex: 1;
+}
+
+/* ── 3e. Create Skill Form ── */
+
+.tm-editor-create-skill-form {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(63, 185, 80, 0.2);
+  border-radius: 8px;
+  background: rgba(63, 185, 80, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tm-editor-create-skill-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tm-skill-color);
+}
+
+.tm-editor-create-skill-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ── 3f. Variables (inside pipeline editor) ── */
+
+.tm-editor-variables-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tm-editor-variable-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tm-editor-variable-row .tm-editor-input {
+  flex: 1;
+}
+
+/* ── 4. TagInput Styles ── */
+
+.tm-editor-tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  min-height: 32px;
+  align-items: center;
+  cursor: text;
+  transition: border-color 150ms ease;
+}
+
+.tm-editor-tag-input:focus-within {
+  border-color: var(--tm-accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.15);
+}
+
+.tm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.15);
+  color: #a5d6ff;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.tm-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: rgba(165, 214, 255, 0.6);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 50%;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.tm-tag-remove:hover {
+  color: var(--tm-danger-color);
+  background: rgba(248, 81, 73, 0.15);
+}
+
+.tm-tag-input-field {
+  flex: 1;
+  min-width: 60px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e6edf3;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 2px 0;
+}
+
+.tm-tag-input-field::placeholder {
+  color: rgba(139, 148, 158, 0.5);
+}
+
+/* ── 5. Collapsible Sections ── */
+
+.tm-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
+  transition: background 100ms ease;
+  border-radius: 4px;
+}
+
+.tm-collapsible-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tm-collapsible-content {
+  overflow: hidden;
+  transition: max-height 250ms ease;
+}
+
+.tm-collapsible-arrow {
+  display: inline-block;
+  font-size: 11px;
+  transition: transform 200ms ease;
+  color: rgba(139, 148, 158, 0.7);
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tm-collapsible-arrow--expanded {
+  transform: rotate(90deg);
+}
+
+.tm-collapsible-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(230, 237, 243, 0.8);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.4;
+  margin-left: auto;
+}
+
+/* ── 6. Context Menu Styles ── */
+
+.tm-ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+}
+
+.tm-ctx-menu {
+  position: absolute;
+  z-index: 9999;
+  background: #1e1e3a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+  padding: 4px 0;
+  min-width: 200px;
+  user-select: none;
+  font-size: 13px;
+  animation: tm-ctx-fadein 100ms ease-out;
+}
+
+@keyframes tm-ctx-fadein {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tm-ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 20px;
+  transition: background 100ms ease;
+}
+
+.tm-ctx-menu-item:hover {
+  background: rgba(74, 158, 255, 0.12);
+}
+
+.tm-ctx-menu-danger {
+  color: var(--tm-danger-color);
+}
+
+.tm-ctx-menu-danger:hover {
+  background: rgba(248, 81, 73, 0.12);
+}
+
+.tm-ctx-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 8px;
+}
+
+.tm-ctx-menu-submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 2px;
+}
+
+.tm-ctx-menu-icon {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.tm-ctx-menu-label {
+  flex: 1;
+}
+
+.tm-ctx-menu-arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-left: 8px;
+}
+
+/* ── 7. Context Hub Styles ── */
+
+.tm-context-hub {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 480px;
+  height: 100%;
+  background: #0d0d1a;
+  z-index: 100;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tm-context-hub--open {
+  transform: translateX(0);
+}
+
+.tm-hub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.tm-hub-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.tm-hub-search {
+  position: relative;
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+
+.tm-hub-search input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease;
+  box-sizing: border-box;
+}
+
+.tm-hub-search input:focus {
+  border-color: var(--tm-accent-color);
+}
+
+.tm-hub-search input::placeholder {
+  color: rgba(139, 148, 158, 0.5);
+}
+
+.tm-hub-search-icon {
+  position: absolute;
+  left: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(139, 148, 158, 0.5);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.tm-hub-search-clear {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(139, 148, 158, 0.6);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+.tm-hub-search-clear:hover {
+  color: #e6edf3;
+}
+
+.tm-hub-filters {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.tm-hub-section-header {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(139, 148, 158, 0.6);
+  padding: 8px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tm-hub-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 20px;
+}
+
+.tm-bento-card {
+  margin: 8px 16px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.tm-bento-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tm-bento-card-expanded {
+  padding: 16px;
+  border-color: rgba(74, 158, 255, 0.3);
+  background: rgba(74, 158, 255, 0.04);
+}
+
+.tm-bento-card-expanded .tm-bento-card-actions {
+  display: flex;
+}
+
+.tm-bento-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tm-bento-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-bento-card-desc {
+  font-size: 11px;
+  color: rgba(139, 148, 158, 0.7);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tm-bento-card-actions {
+  display: none;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tm-bento-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 8px;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.tm-bento-badge--group    { background: var(--tm-group-color); }
+.tm-bento-badge--agent    { background: var(--tm-agent-color); }
+.tm-bento-badge--skill    { background: var(--tm-skill-color); }
+.tm-bento-badge--pipeline { background: var(--tm-pipeline-color); }
+.tm-bento-badge--human    { background: var(--tm-human-color); }
+.tm-bento-badge--context  { background: var(--tm-context-color); }
+.tm-bento-badge--settings { background: var(--tm-settings-color); }
+.tm-bento-badge--note     { background: var(--tm-note-color); color: #1a1a2e; }
+
+.tm-hub-btn-add-tree {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(63, 185, 80, 0.2);
+  color: var(--tm-skill-color);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-hub-btn-add-tree:hover {
+  background: rgba(63, 185, 80, 0.35);
+}
+
+.tm-hub-btn-view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(74, 158, 255, 0.2);
+  color: var(--tm-accent-color);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-hub-btn-view:hover {
+  background: rgba(74, 158, 255, 0.35);
+}
+
+/* ── 8. Settings Panel Styles ── */
+
+.tm-settings-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 400px;
+  height: 100%;
+  background: #0d0d1a;
+  z-index: 150;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.tm-settings-panel--open {
+  transform: translateX(0);
+}
+
+.tm-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.tm-settings-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.tm-settings-body {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.tm-settings-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tm-settings-section:last-child {
+  border-bottom: none;
+}
+
+.tm-settings-section-title {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(139, 148, 158, 0.6);
+  margin-bottom: 12px;
+}
+
+.tm-settings-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.tm-settings-color-row input[type="color"] {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.tm-settings-color-row input[type="text"] {
+  flex: 1;
+}
+
+.tm-settings-color-label {
+  font-size: 12px;
+  color: rgba(139, 148, 158, 0.8);
+  min-width: 80px;
+}
+
+.tm-settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.tm-settings-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--tm-accent-color);
+  cursor: pointer;
+}
+
+.tm-settings-checkbox label {
+  font-size: 13px;
+  color: #e6edf3;
+  cursor: pointer;
+}
+
+.tm-settings-btn-save {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: var(--tm-skill-color);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease;
+  margin-top: 12px;
+}
+
+.tm-settings-btn-save:hover {
+  opacity: 0.9;
+}
+
+.tm-settings-btn-export,
+.tm-settings-btn-import {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-settings-btn-export:hover,
+.tm-settings-btn-import:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tm-settings-export-import-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ── 9. Setup Wizard Styles ── */
+
+.tm-wizard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tm-wizard-fadein 200ms ease-out;
+}
+
+@keyframes tm-wizard-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tm-wizard-card {
+  background: #1a1a2e;
+  width: 480px;
+  max-width: 90vw;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: tm-wizard-card-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tm-wizard-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tm-wizard-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e6edf3;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.tm-wizard-desc {
+  font-size: 14px;
+  color: rgba(139, 148, 158, 0.8);
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.tm-wizard-input {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0d0d1a;
+  color: #e6edf3;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 150ms ease;
+  box-sizing: border-box;
+}
+
+.tm-wizard-input:focus {
+  border-color: var(--tm-accent-color);
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.15);
+}
+
+.tm-wizard-input::placeholder {
+  color: rgba(139, 148, 158, 0.5);
+}
+
+.tm-wizard-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tm-wizard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+.tm-wizard-dot-active {
+  background: var(--tm-accent-color);
+  transform: scale(1.3);
+}
+
+.tm-wizard-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.tm-wizard-btn-primary {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background: var(--tm-accent-color);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+.tm-wizard-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.tm-wizard-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.tm-wizard-btn-secondary {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(230, 237, 243, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-wizard-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── 10. Create/Delete Dialog Styles ── */
+
+.tm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: tm-dialog-fadein 150ms ease-out;
+}
+
+@keyframes tm-dialog-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tm-dialog-card {
+  background: #1a1a2e;
+  width: 400px;
+  max-width: 90vw;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: tm-dialog-card-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tm-dialog-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tm-dialog-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e6edf3;
+  margin-bottom: 12px;
+}
+
+.tm-dialog-desc {
+  font-size: 13px;
+  color: rgba(139, 148, 158, 0.8);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.tm-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tm-dialog-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(230, 237, 243, 0.8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-dialog-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tm-dialog-btn-delete {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--tm-danger-color);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease;
+}
+
+.tm-dialog-btn-delete:hover {
+  opacity: 0.9;
+}
+
+.tm-dialog-btn-create {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--tm-accent-color);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease;
+}
+
+.tm-dialog-btn-create:hover {
+  opacity: 0.9;
+}
+
+/* ── 11. Toast Notification Styles ── */
+
+.tm-toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.tm-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #1e1e3a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  max-width: 360px;
+  pointer-events: auto;
+  animation: tm-toast-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 3px solid transparent;
+}
+
+@keyframes tm-toast-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.tm-toast--exiting {
+  animation: tm-toast-out 200ms ease-in forwards;
+}
+
+@keyframes tm-toast-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.tm-toast-success {
+  border-left-color: var(--tm-skill-color);
+}
+
+.tm-toast-error {
+  border-left-color: var(--tm-danger-color);
+}
+
+.tm-toast-info {
+  border-left-color: var(--tm-accent-color);
+}
+
+.tm-toast-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.tm-toast-message {
+  flex: 1;
+  font-size: 13px;
+  color: #e6edf3;
+  line-height: 1.4;
+}
+
+.tm-toast-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgba(139, 148, 158, 0.6);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.tm-toast-dismiss:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── 12. Multi-Select Toolbar ── */
+
+.tm-multiselect-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: tm-multibar-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tm-multibar-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.tm-multiselect-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+  white-space: nowrap;
+}
+
+.tm-multiselect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6edf3;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+  white-space: nowrap;
+}
+
+.tm-multiselect-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tm-multiselect-btn--danger {
+  border-color: rgba(248, 81, 73, 0.3);
+  color: var(--tm-danger-color);
+}
+
+.tm-multiselect-btn--danger:hover {
+  background: rgba(248, 81, 73, 0.15);
+}
+
+.tm-multiselect-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+/* ── 13. Welcome Screen ── */
+
+.tm-welcome-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  background: rgba(13, 13, 26, 0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.tm-welcome-card {
+  background: #1a1a2e;
+  width: 400px;
+  max-width: 85%;
+  border-radius: 16px;
+  padding: 48px 32px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: tm-welcome-in 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tm-welcome-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tm-welcome-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.tm-welcome-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e6edf3;
+  margin-bottom: 8px;
+}
+
+.tm-welcome-desc {
+  font-size: 14px;
+  color: rgba(139, 148, 158, 0.8);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.tm-welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: none;
+  background: var(--tm-accent-color);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease, transform 100ms ease;
+}
+
+.tm-welcome-btn:hover {
+  opacity: 0.9;
+}
+
+.tm-welcome-btn:active {
+  transform: scale(0.98);
+}
+
+/* ── 14. Canvas Enhancements ── */
+
+.tm-canvas-dot-grid {
+  background-image: radial-gradient(circle, #2a2a4e 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.tm-minimap {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 200px;
+  height: 150px;
+  background: rgba(13, 13, 26, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  z-index: 60;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.tm-minimap-viewport {
+  position: absolute;
+  border: 1px solid var(--tm-accent-color);
+  background: rgba(74, 158, 255, 0.08);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.tm-minimap-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.tm-minimap-dot--group    { background: var(--tm-group-color); }
+.tm-minimap-dot--agent    { background: var(--tm-agent-color); }
+.tm-minimap-dot--skill    { background: var(--tm-skill-color); }
+.tm-minimap-dot--pipeline { background: var(--tm-pipeline-color); }
+.tm-minimap-dot--human    { background: var(--tm-human-color); }
+.tm-minimap-dot--context  { background: var(--tm-context-color); }
+.tm-minimap-dot--note     { background: var(--tm-note-color); }
+
+/* ── 15. Sticky Note Styles ── */
+
+.tm-sticky-note {
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.tm-sticky-note:hover {
+  filter: brightness(1.1);
+}
+
+.tm-sticky-note--selected rect:first-of-type {
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+}
+
+.tm-sticky-note--hovered rect:first-of-type {
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.25));
+}
+
+/* Sticky note color variants (applied via inline or data attributes) */
+.tm-sticky-note--yellow { --sticky-color: #fbbf24; }
+.tm-sticky-note--blue   { --sticky-color: #60a5fa; }
+.tm-sticky-note--green  { --sticky-color: #34d399; }
+.tm-sticky-note--pink   { --sticky-color: #f472b6; }
+
+/* ── 16. Deploy Section Styles ── */
+
+.tm-deploy-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.tm-deploy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease;
+}
+
+.tm-deploy-btn:hover {
+  opacity: 0.9;
+}
+
+.tm-deploy-btn--team {
+  background: var(--tm-agent-color);
+  color: #ffffff;
+}
+
+.tm-deploy-btn--pipeline {
+  background: var(--tm-pipeline-color);
+  color: #ffffff;
+}
+
+.tm-deploy-prompt {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1a1a2e;
+  color: #e6edf3;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 40px;
+  outline: none;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.tm-deploy-prompt:focus {
+  border-color: var(--tm-accent-color);
+}
+
+.tm-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: transparent;
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.tm-schedule-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* ── 17. Agent List in Group Editor ── */
+
+.tm-agent-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 100ms ease;
+  margin-bottom: 2px;
+}
+
+.tm-agent-list-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tm-agent-list-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tm-agent-list-badge--group    { background: var(--tm-group-color); }
+.tm-agent-list-badge--agent    { background: var(--tm-agent-color); }
+.tm-agent-list-badge--skill    { background: var(--tm-skill-color); }
+.tm-agent-list-badge--pipeline { background: var(--tm-pipeline-color); }
+.tm-agent-list-badge--human    { background: var(--tm-human-color); }
+.tm-agent-list-badge--context  { background: var(--tm-context-color); }
+
+.tm-agent-list-name {
+  font-size: 13px;
+  color: #e6edf3;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-agent-list-meta {
+  font-size: 11px;
+  color: rgba(139, 148, 158, 0.5);
+}
+
+.tm-agent-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(139, 148, 158, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+  margin-top: 8px;
+}
+
+.tm-agent-add-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6edf3;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── 18. Rich Node SVG Enhancements ── */
+
+.tm-node-rich {
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.tm-node-rich:hover {
+  filter: brightness(1.08);
+}
+
+.tm-node-rich--selected {
+  /* glow is applied via SVG filter in JS */
+}
+
+.tm-node-rich--multi {
+  /* purple outline is applied via SVG stroke in JS */
+}
+
+.tm-node-handle {
+  opacity: 0;
+  transition: opacity 150ms ease, r 150ms ease;
+  cursor: crosshair;
+}
+
+.tm-node-rich:hover .tm-node-handle,
+.tm-node-rich--hovered .tm-node-handle {
+  opacity: 1;
+}
+
+.tm-node-action {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.tm-node-rich:hover .tm-node-action,
+.tm-node-rich--hovered .tm-node-action {
+  opacity: 1;
+}
+
+.tm-node-badge-text {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  pointer-events: none;
+}
+
+.tm-node-collapse-toggle {
+  cursor: pointer;
+}
+
+.tm-node-collapse-toggle:hover .tm-node-collapse-text {
+  filter: brightness(1.2);
+}
+
+/* ── Responsive additions for new panels ── */
+
+@media (max-width: 768px) {
+  .tm-context-hub {
+    width: 100%;
+  }
+
+  .tm-settings-panel {
+    width: 100%;
+  }
+
+  .tm-wizard-card {
+    padding: 24px 20px;
+    border-radius: 12px;
+  }
+
+  .tm-dialog-card {
+    padding: 20px 16px;
+  }
+
+  .tm-minimap {
+    width: 140px;
+    height: 100px;
+  }
+
+  .tm-multiselect-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .tm-toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .tm-toast {
+    max-width: 100%;
+  }
+}

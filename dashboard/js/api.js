@@ -193,6 +193,13 @@ export class SigilAPI {
     return this._get('/api/team-manager/layouts', { graph_id: graphId });
   }
 
+  // AI Generation
+  async tmGenerate(prompt, systemPrompt = null, maxTokens = 1024) {
+    const body = { prompt, max_tokens: maxTokens };
+    if (systemPrompt) body.system_prompt = systemPrompt;
+    return this._post('/api/team-manager/generate', body);
+  }
+
   // Health check
   async health() {
     try {

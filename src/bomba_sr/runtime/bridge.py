@@ -1659,6 +1659,33 @@ class RuntimeBridge:
             return []
         return runtime.team_manager.list_layouts(tenant_id=tenant_id, graph_id=graph_id)
 
+    # ── AI Generation ──
+
+    def tm_generate_text(
+        self, tenant_id: str, prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 1024,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        """Generate text using the configured LLM provider for Team Manager AI features."""
+        provider = self.provider
+        model = self.config.model_id or "anthropic/claude-haiku-4-5-20251001"
+        # Use a fast model for generation tasks
+        fast_model = model.replace("opus", "haiku").replace("sonnet", "haiku")
+        if "haiku" not in fast_model:
+            fast_model = "anthropic/claude-haiku-4-5-20251001"
+
+        messages: list[ChatMessage] = []
+        if system_prompt:
+            messages.append(ChatMessage(role="system", content=system_prompt))
+        messages.append(ChatMessage(role="user", content=prompt))
+
+        try:
+            resp = provider.generate(fast_model, messages)
+            return {"text": resp.text, "model": resp.model, "usage": resp.usage}
+        except Exception as exc:
+            return {"error": str(exc)}
+
     def get_user_profile(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         return runtime.identity.get_profile(tenant_id, user_id)

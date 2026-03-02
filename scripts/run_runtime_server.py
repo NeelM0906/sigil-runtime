@@ -539,6 +539,19 @@ def make_handler(bridge: RuntimeBridge):
                         workspace_root=workspace_root,
                     )
                     self._write_cors(200, result)
+                elif path == "/api/team-manager/generate":
+                    prompt = body.get("prompt", "")
+                    if not prompt:
+                        self._write_cors(400, {"error": "prompt is required"})
+                        return
+                    result = bridge.tm_generate_text(
+                        tenant_id=tenant_id,
+                        prompt=prompt,
+                        system_prompt=body.get("system_prompt"),
+                        max_tokens=int(body.get("max_tokens", 1024)),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
                 else:
                     # PUT/DELETE via POST with _method or path-based routing
                     self._team_manager_mutation(path, body, tenant_id, workspace_root)
