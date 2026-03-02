@@ -3,6 +3,9 @@
 import { TeamManagerStore } from '../team-manager/store.js';
 import { TeamManagerCanvas } from '../team-manager/canvas.js';
 import { renderInspector } from '../team-manager/inspector.js';
+import { renderDeploymentTracker, destroyDeploymentTracker } from '../team-manager/deployments.js';
+import { renderVariablesPanel } from '../team-manager/variables.js';
+import { renderScheduleManager } from '../team-manager/schedules.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -47,6 +50,9 @@ let _store = null;
 let _canvas = null;
 let _mode = 'list';  // 'list' | 'canvas'
 let _initialized = false;
+let _deploymentsOpen = false;
+let _variablesOpen = false;
+let _schedulesOpen = false;
 
 function getStore(api) {
   if (!_store) {
@@ -200,6 +206,73 @@ function graphStatusBadge(status) {
   return `<span class="badge ${cls}">${escapeHtml(status || 'draft')}</span>`;
 }
 
+// ── Graph Name Inline Edit ──
+
+function initGraphNameEdit(el, store, statusEl) {
+  const nameSpan = el.querySelector('[data-tm-action="edit-name"]');
+  const nameIcon = el.querySelector('[data-tm-action="edit-name-icon"]');
+  if (!nameSpan) return;
+
+  function startEdit() {
+    const currentName = store.activeGraph?.name || 'Untitled';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'tm-graph-name-input';
+    input.value = currentName;
+    nameSpan.replaceWith(input);
+    input.focus();
+    input.select();
+
+    let committed = false;
+
+    async function commit() {
+      if (committed) return;
+      committed = true;
+      const newName = input.value.trim();
+      if (!newName || newName === currentName) {
+        restore(currentName);
+        return;
+      }
+      if (statusEl) statusEl.textContent = 'Renaming...';
+      const result = await store.updateGraphMeta({ name: newName });
+      if (result) {
+        if (statusEl) statusEl.textContent = `Renamed to "${newName}"`;
+      } else {
+        if (statusEl) statusEl.textContent = store.error || 'Rename failed';
+      }
+      restore(store.activeGraph?.name || newName);
+    }
+
+    function restore(name) {
+      const span = document.createElement('span');
+      span.className = 'text-sm font-semibold tm-graph-name-editable';
+      span.setAttribute('data-tm-action', 'edit-name');
+      span.title = 'Click to rename';
+      span.textContent = name;
+      input.replaceWith(span);
+      initGraphNameEdit(el, store, statusEl);
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        committed = true;
+        restore(currentName);
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      commit();
+    });
+  }
+
+  nameSpan.addEventListener('click', startEdit);
+  if (nameIcon) nameIcon.addEventListener('click', startEdit);
+}
+
 // ── Canvas View ──
 
 function renderCanvasView(el, store, api) {
@@ -213,7 +286,8 @@ function renderCanvasView(el, store, api) {
           <button class="btn btn-sm btn-ghost" data-tm-action="back" aria-label="Back to list">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <span class="text-sm font-semibold">${escapeHtml(graphName)}</span>
+          <span class="text-sm font-semibold tm-graph-name-editable" data-tm-action="edit-name" title="Click to rename">${escapeHtml(graphName)}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35;flex-shrink:0;cursor:pointer" data-tm-action="edit-name-icon"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           ${graph ? `<span class="badge badge-outline text-xs">${store.nodes.length} nodes</span>` : ''}
         </div>
         <div class="flex items-center gap-1">
@@ -227,6 +301,15 @@ function renderCanvasView(el, store, api) {
           <div class="separator" style="width:1px;height:20px;margin:0 var(--space-2)"></div>
           <button class="btn btn-sm btn-outline" data-tm-action="validate" title="Validate graph">Validate</button>
           <button class="btn btn-sm" data-tm-action="deploy-canvas" title="Deploy graph">Deploy</button>
+          <button class="btn btn-sm btn-ghost ${_variablesOpen ? 'tm-deploy-toggle--active' : ''}" data-tm-action="toggle-variables" title="Graph variables">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="btn btn-sm btn-ghost tm-deploy-toggle-btn ${_deploymentsOpen ? 'tm-deploy-toggle--active' : ''}" data-tm-action="toggle-deployments" title="Deployment history">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </button>
+          <button class="btn btn-sm btn-ghost ${_schedulesOpen ? 'tm-deploy-toggle--active' : ''}" data-tm-action="toggle-schedules" title="Schedule manager">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
           <button class="btn btn-sm btn-ghost" data-tm-action="reset-zoom" title="Reset zoom">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
@@ -236,6 +319,9 @@ function renderCanvasView(el, store, api) {
         <div class="tm-canvas-area" data-tm-canvas></div>
         <div class="tm-inspector-sidebar" data-tm-inspector></div>
       </div>
+      <div class="tm-variables-panel" data-tm-variables style="${_variablesOpen ? '' : 'display:none'}"></div>
+      <div class="tm-deployments-panel" data-tm-deployments style="${_deploymentsOpen ? '' : 'display:none'}"></div>
+      <div class="tm-schedules-panel" data-tm-schedules style="${_schedulesOpen ? '' : 'display:none'}"></div>
       <div class="tm-canvas-statusbar">
         <span class="text-xs text-mono" style="opacity:.6" data-tm-status>Ready</span>
         <span class="text-xs text-mono" style="opacity:.6" data-tm-zoom>100%</span>
@@ -272,9 +358,16 @@ function renderCanvasView(el, store, api) {
   // Back to list
   el.querySelector('[data-tm-action="back"]').addEventListener('click', () => {
     if (_canvas) { _canvas.destroy(); _canvas = null; }
+    destroyDeploymentTracker();
+    _deploymentsOpen = false;
+    _variablesOpen = false;
+    _schedulesOpen = false;
     _mode = 'list';
     renderTeams(el, null, api);
   });
+
+  // Graph name inline edit
+  initGraphNameEdit(el, store, statusEl);
 
   // Add node from palette
   el.querySelectorAll('[data-tm-add-kind]').forEach(btn => {
@@ -310,13 +403,106 @@ function renderCanvasView(el, store, api) {
   });
 
   // Deploy
+  const deploymentsEl = el.querySelector('[data-tm-deployments]');
   el.querySelector('[data-tm-action="deploy-canvas"]')?.addEventListener('click', async () => {
     if (!graph) return;
     if (!confirm(`Deploy graph "${graph.name}"?`)) return;
     if (statusEl) statusEl.textContent = 'Deploying...';
     const result = await store.deployGraph(graph.id);
     if (statusEl) statusEl.textContent = result ? 'Deployed successfully' : (store.error || 'Deploy failed');
+    // Auto-refresh deployments panel if open
+    if (_deploymentsOpen && deploymentsEl) {
+      await store.loadDeployments();
+      renderDeploymentTracker(deploymentsEl, store, api);
+    }
   });
+
+  // Toggle variables panel
+  const variablesEl = el.querySelector('[data-tm-variables]');
+  el.querySelector('[data-tm-action="toggle-variables"]')?.addEventListener('click', async () => {
+    _variablesOpen = !_variablesOpen;
+    const toggleBtn = el.querySelector('[data-tm-action="toggle-variables"]');
+    if (variablesEl) {
+      if (_variablesOpen) {
+        variablesEl.style.display = '';
+        if (toggleBtn) toggleBtn.classList.add('tm-deploy-toggle--active');
+        if (statusEl) statusEl.textContent = 'Loading variables...';
+        await store.loadVariables();
+        renderVariablesPanel(variablesEl, store, api);
+        if (statusEl) statusEl.textContent = `${store.variables.length} variable(s)`;
+      } else {
+        variablesEl.style.display = 'none';
+        variablesEl.innerHTML = '';
+        if (toggleBtn) toggleBtn.classList.remove('tm-deploy-toggle--active');
+        if (statusEl) statusEl.textContent = 'Ready';
+      }
+    }
+  });
+
+  // If variables panel was previously open, re-render it
+  if (_variablesOpen && variablesEl) {
+    store.loadVariables().then(() => {
+      renderVariablesPanel(variablesEl, store, api);
+    });
+  }
+
+  // Toggle deployments panel
+  el.querySelector('[data-tm-action="toggle-deployments"]')?.addEventListener('click', async () => {
+    _deploymentsOpen = !_deploymentsOpen;
+    const toggleBtn = el.querySelector('[data-tm-action="toggle-deployments"]');
+    if (deploymentsEl) {
+      if (_deploymentsOpen) {
+        deploymentsEl.style.display = '';
+        if (toggleBtn) toggleBtn.classList.add('tm-deploy-toggle--active');
+        if (statusEl) statusEl.textContent = 'Loading deployments...';
+        await store.loadDeployments();
+        renderDeploymentTracker(deploymentsEl, store, api);
+        if (statusEl) statusEl.textContent = `${store.deployments.length} deployment(s)`;
+      } else {
+        deploymentsEl.style.display = 'none';
+        deploymentsEl.innerHTML = '';
+        if (toggleBtn) toggleBtn.classList.remove('tm-deploy-toggle--active');
+        destroyDeploymentTracker();
+        if (statusEl) statusEl.textContent = 'Ready';
+      }
+    }
+  });
+
+  // If deployments panel was previously open, re-render it
+  if (_deploymentsOpen && deploymentsEl) {
+    store.loadDeployments().then(() => {
+      renderDeploymentTracker(deploymentsEl, store, api);
+    });
+  }
+
+  // Toggle schedules panel
+  const schedulesEl = el.querySelector('[data-tm-schedules]');
+  el.querySelector('[data-tm-action="toggle-schedules"]')?.addEventListener('click', async () => {
+    _schedulesOpen = !_schedulesOpen;
+    const toggleBtn = el.querySelector('[data-tm-action="toggle-schedules"]');
+    if (schedulesEl) {
+      if (_schedulesOpen) {
+        schedulesEl.style.display = '';
+        if (toggleBtn) toggleBtn.classList.add('tm-deploy-toggle--active');
+        if (statusEl) statusEl.textContent = 'Loading schedules...';
+        await store.loadSchedules();
+        renderScheduleManager(schedulesEl, store, api);
+        if (statusEl) statusEl.textContent = `${store.schedules.length} schedule(s)`;
+      } else {
+        schedulesEl.style.display = 'none';
+        schedulesEl.innerHTML = '';
+        if (toggleBtn) toggleBtn.classList.remove('tm-deploy-toggle--active');
+        if (statusEl) statusEl.textContent = 'Ready';
+      }
+    }
+  });
+
+  // If schedules panel was previously open, re-render it
+  if (_schedulesOpen && schedulesEl) {
+    store.loadSchedules().then(() => {
+      renderScheduleManager(schedulesEl, store, api);
+    });
+  }
 
   // Reset zoom
   el.querySelector('[data-tm-action="reset-zoom"]')?.addEventListener('click', () => {

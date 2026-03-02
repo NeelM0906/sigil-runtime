@@ -146,6 +146,28 @@ const NODE_RENDERERS = {
 
 // ── Edge rendering ──
 
+const EDGE_COLORS = {
+  reports_to:   '#10b981',  // green  — hierarchy
+  delegates_to: '#8b5cf6',  // purple — delegation
+  feeds:        '#3b82f6',  // blue   — data flow
+  uses:         '#f59e0b',  // amber  — dependency
+  triggers:     '#ef4444',  // red    — triggers
+  annotates:    '#6b7280',  // gray   — annotations
+};
+
+const EDGE_LABELS = {
+  reports_to:   'reports to',
+  delegates_to: 'delegates to',
+  feeds:        'feeds',
+  uses:         'uses',
+  triggers:     'triggers',
+  annotates:    'annotates',
+};
+
+function edgeColorFor(edgeType) {
+  return EDGE_COLORS[edgeType] || 'hsl(var(--muted-foreground))';
+}
+
 function computeEdgePath(source, target) {
   if (!source || !target) return '';
   const sx = source.position_x;
@@ -162,15 +184,81 @@ function computeEdgePath(source, target) {
   return `M ${sx} ${sy} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${tx} ${ty}`;
 }
 
-function svgEdge(edge, nodesById) {
+function svgEdge(edge, nodesById, selected) {
   const source = nodesById[edge.source_node_id];
   const target = nodesById[edge.target_node_id];
   if (!source || !target) return '';
   const d = computeEdgePath(source, target);
+  const edgeType = edge.edge_type || edge.type || 'default';
+  const color = edgeColorFor(edgeType);
+  const isDashed = edgeType === 'annotates';
+  const strokeWidth = selected ? 3 : 1.5;
+  const strokeOpacity = selected ? 1 : 0.6;
+  const dashAttr = isDashed ? ' stroke-dasharray="6 3"' : '';
+  const selectedClass = selected ? ' tm-edge--selected' : '';
+  const label = EDGE_LABELS[edgeType] || edgeType;
+
+  // Compute midpoint for label placement
+  const mx = (source.position_x + target.position_x) / 2;
+  const my = (source.position_y + target.position_y) / 2;
+
   return `
-    <g class="tm-edge" data-edge-id="${escapeHtml(edge.id)}">
-      <path d="${d}" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1.5" stroke-opacity="0.5" marker-end="url(#tm-arrowhead)"/>
+    <g class="tm-edge${selectedClass}" data-edge-id="${escapeHtml(edge.id)}">
+      <path d="${d}" fill="none" stroke="transparent" stroke-width="12" class="tm-edge-hitarea"/>
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-opacity="${strokeOpacity}"${dashAttr} marker-end="url(#tm-arrowhead-${escapeHtml(edgeType)})"/>
+      <text x="${mx}" y="${my - 6}" text-anchor="middle" class="tm-edge-label" fill="${color}" fill-opacity="0.85">${escapeHtml(label)}</text>
     </g>`;
+}
+
+/** Build an arrowhead marker def for a given edge type color */
+function svgArrowheadMarker(edgeType) {
+  const color = edgeColorFor(edgeType);
+  return `<marker id="tm-arrowhead-${escapeHtml(edgeType)}" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="${color}" fill-opacity="0.7"/>
+    </marker>`;
+}
+
+/** Show the edge type picker popup at the given screen coordinates.
+ *  Calls callback(edgeType) on selection, or nothing on cancel. */
+function showEdgeTypePicker(x, y, callback) {
+  // Remove any existing picker
+  const existing = document.querySelector('.tm-edge-type-picker');
+  if (existing) existing.remove();
+
+  const picker = document.createElement('div');
+  picker.className = 'tm-edge-type-picker';
+  picker.style.left = `${x}px`;
+  picker.style.top = `${y}px`;
+
+  const types = Object.keys(EDGE_COLORS);
+  for (const t of types) {
+    const btn = document.createElement('button');
+    btn.className = 'tm-edge-type-btn';
+    btn.type = 'button';
+    btn.setAttribute('data-edge-type', t);
+    btn.innerHTML = `<span class="tm-edge-type-dot" style="background:${EDGE_COLORS[t]}"></span>${escapeHtml(EDGE_LABELS[t] || t)}`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      picker.remove();
+      outsideHandler && document.removeEventListener('pointerdown', outsideHandler, true);
+      callback(t);
+    });
+    picker.appendChild(btn);
+  }
+
+  document.body.appendChild(picker);
+
+  // Close on outside click (next tick to avoid catching the triggering event)
+  let outsideHandler = null;
+  requestAnimationFrame(() => {
+    outsideHandler = (e) => {
+      if (!picker.contains(e.target)) {
+        picker.remove();
+        document.removeEventListener('pointerdown', outsideHandler, true);
+      }
+    };
+    document.addEventListener('pointerdown', outsideHandler, true);
+  });
 }
 
 // ── Canvas class ──
@@ -192,6 +280,8 @@ export class TeamManagerCanvas {
     this._viewGroup = null;
     this._dragState = null;   // { nodeId, startX, startY, origX, origY }
     this._panState = null;    // { startMX, startMY, startVX, startVY }
+    this._edgeDrawState = null; // { sourceNodeId, tempLine (SVG element) }
+    this._selectedEdge = null;  // edge id
     this._unsub = null;
 
     this._init();
@@ -207,12 +297,14 @@ export class TeamManagerCanvas {
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
 
-    // Defs: arrowhead marker
+    // Defs: arrowhead markers (one per edge type) + generic fallback + grid
+    const edgeMarkers = Object.keys(EDGE_COLORS).map(t => svgArrowheadMarker(t)).join('\n        ');
     svg.innerHTML = `
       <defs>
         <marker id="tm-arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
           <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--muted-foreground))" fill-opacity="0.5"/>
         </marker>
+        ${edgeMarkers}
         <pattern id="tm-dot-grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <circle cx="1" cy="1" r="0.8" fill="hsl(var(--muted-foreground))" fill-opacity="0.15"/>
         </pattern>
@@ -252,7 +344,7 @@ export class TeamManagerCanvas {
     // Render edges then nodes (nodes on top)
     let html = '';
     for (const edge of edges) {
-      html += svgEdge(edge, nodesById);
+      html += svgEdge(edge, nodesById, edge.id === this._selectedEdge);
     }
     for (const node of nodes) {
       // Coerce positions to numbers for SVG safety.
@@ -262,6 +354,11 @@ export class TeamManagerCanvas {
       html += renderer(node, selectedNodes.has(node.id));
     }
     this._viewGroup.innerHTML = html;
+
+    // Re-attach temporary edge line if actively drawing
+    if (this._edgeDrawState && this._edgeDrawState.tempLine) {
+      this._viewGroup.appendChild(this._edgeDrawState.tempLine);
+    }
   }
 
   // ── Events ──
@@ -273,6 +370,7 @@ export class TeamManagerCanvas {
     this._onWheel = this._handleWheel.bind(this);
     this._onDblClick = this._handleDblClick.bind(this);
     this._onClick = this._handleClick.bind(this);
+    this._onKeyDown = this._handleKeyDown.bind(this);
 
     this._svg.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mousemove', this._onMouseMove);
@@ -280,6 +378,7 @@ export class TeamManagerCanvas {
     this._svg.addEventListener('wheel', this._onWheel, { passive: false });
     this._svg.addEventListener('dblclick', this._onDblClick);
     this._svg.addEventListener('click', this._onClick);
+    window.addEventListener('keydown', this._onKeyDown);
   }
 
   _unbindEvents() {
@@ -290,11 +389,17 @@ export class TeamManagerCanvas {
     this._svg.removeEventListener('wheel', this._onWheel);
     this._svg.removeEventListener('dblclick', this._onDblClick);
     this._svg.removeEventListener('click', this._onClick);
+    window.removeEventListener('keydown', this._onKeyDown);
   }
 
   _findNodeId(target) {
     const nodeGroup = target.closest('.tm-node');
     return nodeGroup ? nodeGroup.getAttribute('data-node-id') : null;
+  }
+
+  _findEdgeId(target) {
+    const edgeGroup = target.closest('.tm-edge');
+    return edgeGroup ? edgeGroup.getAttribute('data-edge-id') : null;
   }
 
   _svgPoint(clientX, clientY) {
@@ -308,10 +413,21 @@ export class TeamManagerCanvas {
 
   _handleClick(e) {
     const nodeId = this._findNodeId(e.target);
+    const edgeId = this._findEdgeId(e.target);
+
     if (nodeId) {
+      this._selectedEdge = null;
       this.store.selectNode(nodeId, e.shiftKey);
-    } else if (!e.shiftKey) {
+      this.render();
+    } else if (edgeId) {
+      // Toggle edge selection
+      this._selectedEdge = (this._selectedEdge === edgeId) ? null : edgeId;
       this.store.clearSelection();
+      this.render();
+    } else if (!e.shiftKey) {
+      this._selectedEdge = null;
+      this.store.clearSelection();
+      this.render();
     }
   }
 
@@ -326,7 +442,27 @@ export class TeamManagerCanvas {
     if (e.button !== 0) return;
     const nodeId = this._findNodeId(e.target);
 
-    if (nodeId) {
+    if (nodeId && e.shiftKey) {
+      // Shift+drag on a node = start edge draw
+      const node = this.store.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const tempLine = document.createElementNS(svgNS, 'line');
+      tempLine.setAttribute('class', 'tm-edge-temp');
+      tempLine.setAttribute('x1', node.position_x);
+      tempLine.setAttribute('y1', node.position_y);
+      tempLine.setAttribute('x2', node.position_x);
+      tempLine.setAttribute('y2', node.position_y);
+      tempLine.setAttribute('stroke', 'hsl(var(--foreground))');
+      tempLine.setAttribute('stroke-width', '2');
+      tempLine.setAttribute('stroke-opacity', '0.4');
+      tempLine.setAttribute('stroke-dasharray', '6 4');
+      tempLine.setAttribute('pointer-events', 'none');
+      this._viewGroup.appendChild(tempLine);
+      this._edgeDrawState = { sourceNodeId: nodeId, tempLine };
+      this._svg.style.cursor = 'crosshair';
+      e.preventDefault();
+    } else if (nodeId) {
       // Start node drag
       const node = this.store.nodes.find(n => n.id === nodeId);
       if (!node) return;
@@ -353,7 +489,12 @@ export class TeamManagerCanvas {
   }
 
   _handleMouseMove(e) {
-    if (this._dragState) {
+    if (this._edgeDrawState) {
+      // Update temp line endpoint to follow cursor in canvas coords
+      const pt = this._svgPoint(e.clientX, e.clientY);
+      this._edgeDrawState.tempLine.setAttribute('x2', pt.x);
+      this._edgeDrawState.tempLine.setAttribute('y2', pt.y);
+    } else if (this._dragState) {
       const { nodeId, startX, startY, origX, origY } = this._dragState;
       const zoom = this.store.viewport.zoom;
       const dx = (e.clientX - startX) / zoom;
@@ -370,6 +511,27 @@ export class TeamManagerCanvas {
   }
 
   _handleMouseUp(e) {
+    if (this._edgeDrawState) {
+      const { sourceNodeId, tempLine } = this._edgeDrawState;
+      // Remove temp line
+      if (tempLine.parentNode) tempLine.remove();
+      this._svg.style.cursor = '';
+
+      const targetNodeId = this._findNodeId(e.target);
+      this._edgeDrawState = null;
+
+      if (targetNodeId && targetNodeId !== sourceNodeId) {
+        // Show edge type picker at the mouse position
+        showEdgeTypePicker(e.clientX, e.clientY, (edgeType) => {
+          this.store.addEdge(sourceNodeId, targetNodeId, edgeType);
+          if (this.onEdgeCreate) {
+            this.onEdgeCreate(sourceNodeId, targetNodeId, edgeType);
+          }
+        });
+      }
+      return;
+    }
+
     if (this._dragState) {
       // Commit position to server
       const { nodeId } = this._dragState;
@@ -403,6 +565,35 @@ export class TeamManagerCanvas {
 
     this.store.setViewport(newX, newY, newZoom);
     this.render();
+  }
+
+  _handleKeyDown(e) {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      // Avoid deleting edge when user is typing in an input/textarea
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (this._selectedEdge) {
+        const edgeId = this._selectedEdge;
+        this._selectedEdge = null;
+        this.store.deleteEdge(edgeId);
+        e.preventDefault();
+      }
+    }
+    // Escape to cancel edge draw or deselect edge
+    if (e.key === 'Escape') {
+      if (this._edgeDrawState) {
+        const { tempLine } = this._edgeDrawState;
+        if (tempLine.parentNode) tempLine.remove();
+        this._edgeDrawState = null;
+        this._svg.style.cursor = '';
+        e.preventDefault();
+      } else if (this._selectedEdge) {
+        this._selectedEdge = null;
+        this.render();
+        e.preventDefault();
+      }
+    }
   }
 
   /** Get SVG coordinates for a canvas position (for adding nodes at click) */

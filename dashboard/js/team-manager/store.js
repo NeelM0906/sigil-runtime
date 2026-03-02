@@ -8,6 +8,9 @@ export class TeamManagerStore {
     this.nodes = [];
     this.edges = [];
     this.selectedNodes = new Set();
+    this.deployments = [];
+    this.variables = [];
+    this.schedules = [];
     this.viewport = { x: 0, y: 0, zoom: 1 };
     this._listeners = new Set();
     this._loading = false;
@@ -194,6 +197,167 @@ export class TeamManagerStore {
     this._error = null;
     try {
       return await this.api.tmValidateGraph(graphId);
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  // ── Deployments ──
+
+  async loadDeployments() {
+    if (!this.activeGraph) return;
+    try {
+      const data = await this.api.tmListDeployments(this.activeGraph.id);
+      this.deployments = Array.isArray(data.deployments) ? data.deployments : [];
+      this._notify();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  async cancelDeployment(deploymentId) {
+    try {
+      await this.api.tmCancelDeployment(deploymentId);
+      await this.loadDeployments();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  async getDeployment(deploymentId) {
+    try {
+      return await this.api.tmGetDeployment(deploymentId);
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  // ── Pipelines ──
+
+  async loadPipeline(nodeId) {
+    try {
+      const data = await this.api.tmGetPipeline(nodeId);
+      return data;
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  async savePipeline(graphId, nodeId, steps) {
+    try {
+      return await this.api.tmSavePipeline(graphId, nodeId, steps);
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  // ── Variables ──
+
+  async loadVariables() {
+    if (!this.activeGraph) return;
+    try {
+      const data = await this.api.tmListVariables(this.activeGraph.id);
+      this.variables = Array.isArray(data.variables) ? data.variables : [];
+      this._notify();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  async setVariable(key, value, varType = 'string') {
+    if (!this.activeGraph) return null;
+    try {
+      const result = await this.api.tmSetVariable(this.activeGraph.id, key, value, varType);
+      await this.loadVariables();
+      return result;
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  async deleteVariable(key) {
+    if (!this.activeGraph) return;
+    try {
+      await this.api.tmDeleteVariable(this.activeGraph.id, key);
+      await this.loadVariables();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  // ── Schedules ──
+
+  async loadSchedules() {
+    if (!this.activeGraph) return;
+    try {
+      const data = await this.api.tmListSchedules(this.activeGraph.id);
+      this.schedules = Array.isArray(data.schedules) ? data.schedules : [];
+      this._notify();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  async createSchedule(name, cronExpr, action = 'deploy', requiresApproval = false) {
+    if (!this.activeGraph) return null;
+    try {
+      const result = await this.api.tmCreateSchedule(
+        this.activeGraph.id, name, cronExpr, action, {}, requiresApproval
+      );
+      await this.loadSchedules();
+      return result;
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+      return null;
+    }
+  }
+
+  async toggleSchedule(scheduleId, enabled) {
+    try {
+      await this.api.tmToggleSchedule(scheduleId, enabled);
+      await this.loadSchedules();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  async deleteSchedule(scheduleId) {
+    try {
+      await this.api.tmDeleteSchedule(scheduleId);
+      await this.loadSchedules();
+    } catch (err) {
+      this._error = err.message;
+      this._notify();
+    }
+  }
+
+  // ── Graph Meta ──
+
+  async updateGraphMeta(changes) {
+    if (!this.activeGraph) return null;
+    try {
+      const data = await this.api.tmUpdateGraph(this.activeGraph.id, changes);
+      const updated = data.graph || data;
+      this.activeGraph = { ...this.activeGraph, ...updated };
+      this._notify();
+      return updated;
     } catch (err) {
       this._error = err.message;
       this._notify();

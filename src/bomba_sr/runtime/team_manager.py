@@ -105,7 +105,7 @@ class TeamManagerService:
                 tenant_id TEXT NOT NULL,
                 source_node_id TEXT NOT NULL,
                 target_node_id TEXT NOT NULL,
-                edge_type TEXT NOT NULL DEFAULT 'dependency',
+                edge_type TEXT NOT NULL DEFAULT 'feeds',
                 label TEXT DEFAULT '',
                 metadata_json TEXT DEFAULT '{}',
                 created_at TEXT NOT NULL,
@@ -262,17 +262,46 @@ class TeamManagerService:
         return self._graph_row(row)
 
     def list_graphs(self, tenant_id: str, workspace_id: str | None = None) -> list[dict]:
+        base_sql = """
+            SELECT g.*,
+                   COALESCE(nc.cnt, 0) AS node_count,
+                   d.status AS latest_deploy_status
+            FROM team_graphs g
+            LEFT JOIN (
+                SELECT graph_id, COUNT(*) AS cnt FROM team_nodes GROUP BY graph_id
+            ) nc ON nc.graph_id = g.id
+            LEFT JOIN (
+                SELECT graph_id, status,
+                       ROW_NUMBER() OVER (PARTITION BY graph_id ORDER BY created_at DESC) AS rn
+                FROM team_deployments
+            ) d ON d.graph_id = g.id AND d.rn = 1
+            WHERE g.tenant_id = ?
+        """
         if workspace_id is not None:
             rows = self.db.execute(
-                "SELECT * FROM team_graphs WHERE tenant_id = ? AND workspace_id = ? ORDER BY updated_at DESC",
+                base_sql + " AND g.workspace_id = ? ORDER BY g.updated_at DESC",
                 (tenant_id, workspace_id),
             ).fetchall()
         else:
             rows = self.db.execute(
-                "SELECT * FROM team_graphs WHERE tenant_id = ? ORDER BY updated_at DESC",
+                base_sql + " ORDER BY g.updated_at DESC",
                 (tenant_id,),
             ).fetchall()
-        return [self._graph_row(r) for r in rows]
+        results = []
+        for r in rows:
+            g = self._graph_row(r)
+            g["node_count"] = int(r["node_count"])
+            deploy_status = r["latest_deploy_status"]
+            if deploy_status == "completed":
+                g["status"] = "deployed"
+            elif deploy_status in ("pending", "running"):
+                g["status"] = "active"
+            elif deploy_status == "failed":
+                g["status"] = "error"
+            else:
+                g["status"] = "draft"
+            results.append(g)
+        return results
 
     def update_graph(
         self,

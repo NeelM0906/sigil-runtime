@@ -511,6 +511,34 @@ def make_handler(bridge: RuntimeBridge):
                         requires_approval=bool(body.get("requires_approval", False)),
                     )
                     self._write_cors(200, result)
+                elif path == "/api/team-manager/variables":
+                    result = bridge.tm_set_variable(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        key=str(body["key"]),
+                        value=str(body.get("value", "")),
+                        var_type=str(body.get("var_type", "string")),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/pipelines":
+                    result = bridge.tm_save_pipeline(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        node_id=str(body["node_id"]),
+                        steps=body.get("steps", []),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/layouts":
+                    result = bridge.tm_save_layout(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        layout=body.get("layout", {}),
+                        is_default=bool(body.get("is_default", False)),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
                 else:
                     # PUT/DELETE via POST with _method or path-based routing
                     self._team_manager_mutation(path, body, tenant_id, workspace_root)
@@ -618,6 +646,19 @@ def make_handler(bridge: RuntimeBridge):
                 )
                 self._write_cors(200, result)
                 return
+            # DELETE /api/team-manager/variables/{graph_id}/delete
+            m = _re.match(r"/api/team-manager/variables/([^/]+)/delete$", path)
+            if m:
+                key = str(body.get("key", "")).strip()
+                if not key:
+                    self._write_cors(400, {"error": "key is required"})
+                    return
+                result = bridge.tm_delete_variable(
+                    tenant_id=tenant_id, graph_id=m.group(1), key=key,
+                    workspace_root=workspace_root,
+                )
+                self._write_cors(200, result)
+                return
             self._write_cors(404, {"error": "not_found"})
 
         def _team_manager_get(self, parsed) -> None:
@@ -692,6 +733,39 @@ def make_handler(bridge: RuntimeBridge):
                         tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root,
                     )
                     self._write_cors(200, {"schedules": items})
+                    return
+                if path == "/api/team-manager/variables":
+                    graph_id = query.get("graph_id", [None])[0]
+                    if not graph_id:
+                        self._write_cors(400, {"error": "graph_id is required"})
+                        return
+                    items = bridge.tm_list_variables(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, {"variables": items})
+                    return
+                if path == "/api/team-manager/pipelines":
+                    node_id = query.get("node_id", [None])[0]
+                    if not node_id:
+                        self._write_cors(400, {"error": "node_id is required"})
+                        return
+                    result = bridge.tm_get_pipeline(
+                        tenant_id=tenant_id, node_id=node_id, workspace_root=workspace_root,
+                    )
+                    if result is None:
+                        self._write_cors(404, {"error": "pipeline_not_found"})
+                    else:
+                        self._write_cors(200, result)
+                    return
+                if path == "/api/team-manager/layouts":
+                    graph_id = query.get("graph_id", [None])[0]
+                    if not graph_id:
+                        self._write_cors(400, {"error": "graph_id is required"})
+                        return
+                    items = bridge.tm_list_layouts(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, {"layouts": items})
                     return
                 self._write_cors(404, {"error": "not_found"})
             except Exception as exc:

@@ -54,6 +54,9 @@ const KIND_FIELDS = {
   ],
 };
 
+/** Action types available for pipeline steps */
+const STEP_ACTION_TYPES = ['process', 'validate', 'transform', 'filter', 'aggregate', 'notify', 'custom'];
+
 function renderField(field, value) {
   const id = `tm-field-${field.key}`;
   const escapedVal = escapeHtml(value);
@@ -90,6 +93,87 @@ function renderField(field, value) {
 }
 
 /**
+ * Renders pipeline steps into a container and wires up reorder/delete/add controls.
+ * @param {HTMLElement} containerEl - The DOM element to render into
+ * @param {Array} steps - Current steps array [{name, action, config}, ...]
+ * @param {function} onUpdate - Callback receiving the updated steps array after any change
+ */
+function renderPipelineSteps(containerEl, steps, onUpdate) {
+  let html = '<div class="tm-pipeline-steps-header">' +
+    '<span class="tm-inspector-label" style="margin-bottom:0">Pipeline Steps</span>' +
+    '<span class="tm-pipeline-step-count text-xs" style="color:hsl(var(--muted-foreground))">' +
+    steps.length + (steps.length === 1 ? ' step' : ' steps') +
+    '</span></div>';
+
+  if (steps.length === 0) {
+    html += '<div class="tm-pipeline-empty text-xs" style="color:hsl(var(--muted-foreground));padding:var(--space-2) 0">No steps defined. Add a step to get started.</div>';
+  } else {
+    html += '<div class="tm-pipeline-step-list">';
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      html += `<div class="tm-pipeline-step" data-step-index="${i}">` +
+        `<span class="tm-pipeline-step-num">${i + 1}.</span>` +
+        `<span class="tm-pipeline-step-name" title="${escapeHtml(step.action || 'process')}">${escapeHtml(step.name || 'Untitled')}</span>` +
+        '<span class="tm-pipeline-step-actions">' +
+          `<button data-step-up="${i}" title="Move up"${i === 0 ? ' disabled' : ''}>&#9650;</button>` +
+          `<button data-step-down="${i}" title="Move down"${i === steps.length - 1 ? ' disabled' : ''}>&#9660;</button>` +
+          `<button data-step-delete="${i}" title="Delete step">&#10005;</button>` +
+        '</span>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '<button class="btn btn-sm btn-outline w-full mt-2" data-step-add>+ Add Step</button>';
+  containerEl.innerHTML = html;
+
+  // Bind move-up buttons
+  containerEl.querySelectorAll('[data-step-up]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-step-up'), 10);
+      if (idx <= 0) return;
+      const updated = [...steps];
+      [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+      onUpdate(updated);
+    });
+  });
+
+  // Bind move-down buttons
+  containerEl.querySelectorAll('[data-step-down]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-step-down'), 10);
+      if (idx >= steps.length - 1) return;
+      const updated = [...steps];
+      [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+      onUpdate(updated);
+    });
+  });
+
+  // Bind delete buttons
+  containerEl.querySelectorAll('[data-step-delete]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-step-delete'), 10);
+      const updated = steps.filter((_, i) => i !== idx);
+      onUpdate(updated);
+    });
+  });
+
+  // Bind add button
+  const addBtn = containerEl.querySelector('[data-step-add]');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const name = prompt('Step name:');
+      if (!name || !name.trim()) return;
+      const actionOptions = STEP_ACTION_TYPES.join(', ');
+      const action = prompt(`Action type (${actionOptions}):`, 'process');
+      if (!action || !action.trim()) return;
+      const updated = [...steps, { name: name.trim(), action: action.trim(), config: {} }];
+      onUpdate(updated);
+    });
+  }
+}
+
+/**
  * Renders the node inspector into the given container.
  * @param {HTMLElement} el
  * @param {object} node
@@ -109,6 +193,10 @@ export function renderInspector(el, node, store, opts = {}) {
   const color = NODE_COLORS[kind] || '#6b7280';
   const fields = KIND_FIELDS[kind] || [];
   const config = node.config || {};
+  const isPipeline = kind === 'pipeline';
+
+  // Pipeline steps state -- held in closure, survives re-renders of the step list
+  let pipelineSteps = [];
 
   el.innerHTML = `
     <div class="tm-inspector-panel">
@@ -129,6 +217,8 @@ export function renderInspector(el, node, store, opts = {}) {
       </div>
 
       ${fields.map(f => renderField(f, config[f.key] ?? '')).join('')}
+
+      ${isPipeline ? '<div class="separator"></div><div class="tm-pipeline-steps" data-pipeline-steps></div>' : ''}
 
       <div class="separator"></div>
       <div class="tm-inspector-meta">
@@ -154,6 +244,34 @@ export function renderInspector(el, node, store, opts = {}) {
     if (!feedbackEl) return;
     feedbackEl.textContent = msg;
     feedbackEl.style.color = isError ? 'hsl(var(--destructive))' : 'hsl(var(--success))';
+  }
+
+  // ── Pipeline steps: async load + render ──
+  if (isPipeline) {
+    const stepsContainer = el.querySelector('[data-pipeline-steps]');
+    if (stepsContainer) {
+      // Show loading state
+      stepsContainer.innerHTML = '<span class="text-xs" style="color:hsl(var(--muted-foreground))">Loading steps...</span>';
+
+      // Updater re-renders the step list and keeps local state in sync
+      function updateSteps(newSteps) {
+        pipelineSteps = newSteps;
+        renderPipelineSteps(stepsContainer, pipelineSteps, updateSteps);
+      }
+
+      // Load existing pipeline data from the API
+      store.loadPipeline(node.id).then(data => {
+        if (data && Array.isArray(data.steps)) {
+          pipelineSteps = data.steps;
+        } else {
+          pipelineSteps = [];
+        }
+        renderPipelineSteps(stepsContainer, pipelineSteps, updateSteps);
+      }).catch(() => {
+        pipelineSteps = [];
+        renderPipelineSteps(stepsContainer, pipelineSteps, updateSteps);
+      });
+    }
   }
 
   // Close
@@ -182,11 +300,26 @@ export function renderInspector(el, node, store, opts = {}) {
     changes.config = { ...(node.config || {}), ...configChanges };
 
     showFeedback('Saving...');
+
+    // Save node properties
     const result = await store.updateNode(node.id, changes);
-    if (result) {
-      showFeedback('Saved');
+
+    // If pipeline node, also persist the steps
+    if (isPipeline && store.activeGraph) {
+      const pipelineResult = await store.savePipeline(store.activeGraph.id, node.id, pipelineSteps);
+      if (result && pipelineResult) {
+        showFeedback('Saved');
+      } else if (result && !pipelineResult) {
+        showFeedback('Node saved, but pipeline steps failed', true);
+      } else {
+        showFeedback(store.error || 'Save failed', true);
+      }
     } else {
-      showFeedback(store.error || 'Save failed', true);
+      if (result) {
+        showFeedback('Saved');
+      } else {
+        showFeedback(store.error || 'Save failed', true);
+      }
     }
   });
 

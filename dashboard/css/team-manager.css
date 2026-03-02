@@ -106,13 +106,97 @@
 
 /* ── SVG Edges ── */
 .tm-edge {
+  pointer-events: visiblePainted;
+  cursor: pointer;
+}
+
+.tm-edge .tm-edge-hitarea {
   pointer-events: stroke;
   cursor: pointer;
 }
 
-.tm-edge:hover path {
-  stroke-opacity: 0.8;
+.tm-edge:hover path:not(.tm-edge-hitarea) {
+  stroke-opacity: 0.9;
   stroke-width: 2.5;
+}
+
+.tm-edge-label {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 500;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Edge selection */
+.tm-edge--selected path:not(.tm-edge-hitarea) {
+  stroke-opacity: 1;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+}
+
+.tm-edge--selected .tm-edge-label {
+  fill-opacity: 1;
+  font-weight: 600;
+}
+
+/* Edge drawing temp line */
+.tm-edge-temp {
+  pointer-events: none;
+}
+
+/* ── Edge Type Picker Popup ── */
+.tm-edge-type-picker {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--surface-2));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
+  animation: tm-picker-fadein 100ms ease-out;
+}
+
+@keyframes tm-picker-fadein {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tm-edge-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 80ms ease;
+}
+
+.tm-edge-type-btn:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.tm-edge-type-btn:active {
+  background: hsl(var(--muted) / 0.8);
+}
+
+.tm-edge-type-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ── Inspector Sidebar ── */
@@ -180,6 +264,429 @@
 
 .tm-inspector-feedback {
   min-height: 1rem;
+}
+
+/* ── Deployment Tracker Panel ── */
+.tm-deployments-panel {
+  border-top: 1px solid hsl(var(--border) / 0.4);
+  max-height: 200px;
+  overflow-y: auto;
+  background: hsl(var(--surface-2));
+  padding: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+.tm-deploy-tracker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tm-deploy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+.tm-deploy-empty {
+  padding: var(--space-2) 0;
+  text-align: center;
+}
+
+.tm-deploy-table {
+  font-size: var(--font-size-xs);
+}
+
+.tm-deploy-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  padding: var(--space-1) var(--space-2);
+}
+
+.tm-deploy-table td {
+  padding: var(--space-1) var(--space-2);
+  vertical-align: middle;
+}
+
+.tm-deploy-row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.tm-deploy-row:hover {
+  background: hsl(var(--surface-3) / 0.5);
+}
+
+.tm-deploy-row--expanded {
+  background: hsl(var(--surface-3) / 0.3);
+}
+
+.tm-deploy-detail-row td {
+  padding: 0 var(--space-2) var(--space-2) !important;
+  background: hsl(var(--surface-3) / 0.2);
+}
+
+.tm-deploy-detail {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: hsl(var(--surface-1));
+  border: 1px solid hsl(var(--border) / 0.3);
+}
+
+.tm-deploy-detail-section {
+  margin-bottom: var(--space-2);
+}
+
+.tm-deploy-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.tm-deploy-detail-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: var(--space-1);
+}
+
+.tm-deploy-detail-pre {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: var(--space-1) var(--space-2);
+  background: hsl(var(--surface-0));
+  border-radius: var(--radius-sm);
+  max-height: 80px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.tm-deploy-detail-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tm-deploy-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--info));
+  animation: tm-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.tm-deploy-toggle-btn.tm-deploy-toggle--active {
+  background: hsl(var(--surface-3));
+}
+
+/* ── Schedule Manager Panel ── */
+.tm-schedules-panel {
+  border-top: 1px solid hsl(var(--border) / 0.4);
+  max-height: 260px;
+  overflow-y: auto;
+  background: hsl(var(--surface-2));
+  padding: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+.tm-schedules-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.tm-schedule-empty {
+  padding: var(--space-3) 0;
+  text-align: center;
+}
+
+.tm-schedule-table {
+  font-size: var(--font-size-xs);
+}
+
+.tm-schedule-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  padding: var(--space-1) var(--space-2);
+}
+
+.tm-schedule-table td {
+  padding: var(--space-1) var(--space-2);
+  vertical-align: middle;
+}
+
+.tm-schedule-row {
+  transition: background 120ms ease;
+}
+
+.tm-schedule-row:hover {
+  background: hsl(var(--surface-3) / 0.5);
+}
+
+.tm-schedule-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: var(--radius);
+  background: hsl(var(--surface-1));
+}
+
+.tm-schedule-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-schedule-form-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+}
+
+.tm-schedule-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tm-schedule-form-actions {
+  display: flex;
+  align-items: end;
+  gap: var(--space-1);
+  grid-column: 1 / -1;
+}
+
+.tm-schedule-cron-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: var(--space-2);
+}
+
+.tm-cron-hint {
+  font-size: 10px !important;
+  height: 1.25rem !important;
+  padding: 0 5px !important;
+  opacity: 0.7;
+}
+
+.tm-cron-hint:hover {
+  opacity: 1;
+}
+
+/* Toggle switch */
+.tm-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.tm-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.tm-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.5);
+  transition: background 150ms ease;
+}
+
+.tm-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 2px;
+  bottom: 2px;
+  border-radius: 50%;
+  background: hsl(var(--foreground));
+  transition: transform 150ms ease;
+}
+
+.tm-toggle-input:checked + .tm-toggle-slider {
+  background: hsl(var(--success, 142 71% 45%));
+}
+
+.tm-toggle-input:checked + .tm-toggle-slider::before {
+  transform: translateX(12px);
+}
+
+/* ── Pipeline Step Editor ── */
+.tm-pipeline-steps {
+  margin-top: var(--space-3);
+}
+
+.tm-pipeline-steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.tm-pipeline-step-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-pipeline-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tm-pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: var(--radius-sm);
+  background: hsl(var(--surface-1));
+  font-size: var(--font-size-xs);
+  transition: border-color 120ms ease;
+}
+
+.tm-pipeline-step:hover {
+  border-color: hsl(var(--border) / 0.6);
+}
+
+.tm-pipeline-step-num {
+  color: hsl(var(--muted-foreground));
+  font-size: var(--font-size-xs);
+  min-width: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-pipeline-step-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-pipeline-step-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tm-pipeline-step-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  padding: 2px;
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 2px;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.tm-pipeline-step-actions button:hover:not(:disabled) {
+  color: hsl(var(--foreground));
+  background: hsl(var(--border) / 0.2);
+}
+
+.tm-pipeline-step-actions button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.tm-pipeline-step-actions button[data-step-delete]:hover {
+  color: hsl(var(--destructive));
+}
+
+.tm-pipeline-empty {
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Variables Panel ── */
+.tm-variables-panel {
+  border-top: 1px solid hsl(var(--border) / 0.4);
+  max-height: 200px;
+  overflow-y: auto;
+  background: hsl(var(--surface-2));
+  padding: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+}
+
+.tm-var-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.tm-var-form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: var(--radius);
+  background: hsl(var(--surface-1));
+}
+
+/* ── Graph Name Inline Edit ── */
+.tm-graph-name-editable {
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  transition: background 150ms ease;
+}
+
+.tm-graph-name-editable:hover {
+  background: hsl(var(--surface-2));
+}
+
+.tm-graph-name-input {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  background: hsl(var(--surface-1));
+  border: 1px solid hsl(var(--primary));
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  color: inherit;
+  outline: none;
 }
 
 /* ── Graph List (within panel) ── */

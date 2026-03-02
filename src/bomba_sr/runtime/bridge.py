@@ -1585,6 +1585,80 @@ class RuntimeBridge:
             return {"error": "team_manager_disabled"}
         return runtime.team_manager.toggle_schedule(tenant_id=tenant_id, schedule_id=schedule_id, enabled=enabled)
 
+    # ── Variables ──
+
+    def tm_set_variable(
+        self, tenant_id: str, graph_id: str, key: str,
+        value: str = "", var_type: str = "string",
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.set_variable(
+            tenant_id=tenant_id, graph_id=graph_id, key=key, value=value, var_type=var_type,
+        )
+
+    def tm_list_variables(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_variables(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_delete_variable(
+        self, tenant_id: str, graph_id: str, key: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.delete_variable(tenant_id=tenant_id, graph_id=graph_id, key=key)
+
+    # ── Pipelines ──
+
+    def tm_save_pipeline(
+        self, tenant_id: str, graph_id: str, node_id: str,
+        steps: list[dict[str, Any]] | None = None,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.save_pipeline(
+            tenant_id=tenant_id, graph_id=graph_id, node_id=node_id, steps=steps or [],
+        )
+
+    def tm_get_pipeline(
+        self, tenant_id: str, node_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any] | None:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.get_pipeline(tenant_id=tenant_id, node_id=node_id)
+
+    # ── Layouts ──
+
+    def tm_save_layout(
+        self, tenant_id: str, graph_id: str,
+        layout: dict[str, Any] | None = None, is_default: bool = False,
+        workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.save_layout(
+            tenant_id=tenant_id, graph_id=graph_id, layout=layout or {}, is_default=is_default,
+        )
+
+    def tm_list_layouts(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_layouts(tenant_id=tenant_id, graph_id=graph_id)
+
     def get_user_profile(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         return runtime.identity.get_profile(tenant_id, user_id)

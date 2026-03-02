@@ -117,6 +117,82 @@ export class SigilAPI {
     return this._post('/api/team-manager/validate', { graph_id: graphId });
   }
 
+  // Graph updates
+  async tmUpdateGraph(graphId, changes) {
+    return this._post(`/api/team-manager/graphs/${encodeURIComponent(graphId)}/update`, changes);
+  }
+
+  // Deployments
+  async tmListDeployments(graphId) {
+    return this._get('/api/team-manager/deployments', graphId ? { graph_id: graphId } : {});
+  }
+
+  async tmGetDeployment(deploymentId) {
+    return this._get(`/api/team-manager/deployments/${encodeURIComponent(deploymentId)}`);
+  }
+
+  async tmCancelDeployment(deploymentId) {
+    return this._post(`/api/team-manager/deployments/${encodeURIComponent(deploymentId)}/cancel`, {});
+  }
+
+  async tmGetPrimer(deploymentId, nodeId) {
+    return this._post(`/api/team-manager/deployments/${encodeURIComponent(deploymentId)}/primer`, { node_id: nodeId });
+  }
+
+  // Schedules
+  async tmListSchedules(graphId) {
+    return this._get('/api/team-manager/schedules', graphId ? { graph_id: graphId } : {});
+  }
+
+  async tmCreateSchedule(graphId, name, cronExpression, action = 'deploy', actionParams = {}, requiresApproval = false) {
+    return this._post('/api/team-manager/schedules', {
+      graph_id: graphId, name, cron_expression: cronExpression, action, action_params: actionParams, requires_approval: requiresApproval,
+    });
+  }
+
+  async tmUpdateSchedule(scheduleId, changes) {
+    return this._post(`/api/team-manager/schedules/${encodeURIComponent(scheduleId)}/update`, changes);
+  }
+
+  async tmDeleteSchedule(scheduleId) {
+    return this._post(`/api/team-manager/schedules/${encodeURIComponent(scheduleId)}/delete`, {});
+  }
+
+  async tmToggleSchedule(scheduleId, enabled) {
+    return this._post(`/api/team-manager/schedules/${encodeURIComponent(scheduleId)}/toggle`, { enabled });
+  }
+
+  // Variables
+  async tmSetVariable(graphId, key, value = '', varType = 'string') {
+    return this._post('/api/team-manager/variables', { graph_id: graphId, key, value, var_type: varType });
+  }
+
+  async tmListVariables(graphId) {
+    return this._get('/api/team-manager/variables', { graph_id: graphId });
+  }
+
+  async tmDeleteVariable(graphId, key) {
+    return this._post(`/api/team-manager/variables/${encodeURIComponent(graphId)}/delete`, { key });
+  }
+
+  // Pipelines
+  async tmSavePipeline(graphId, nodeId, steps = []) {
+    return this._post('/api/team-manager/pipelines', { graph_id: graphId, node_id: nodeId, steps });
+  }
+
+  async tmGetPipeline(nodeId) {
+    return this._get('/api/team-manager/pipelines', { node_id: nodeId });
+  }
+
+  // Layouts
+  async tmSaveLayout(graphId, layout = {}, isDefault = false) {
+    return this._post('/api/team-manager/layouts', { graph_id: graphId, layout, is_default: isDefault });
+  }
+
+  async tmListLayouts(graphId) {
+    return this._get('/api/team-manager/layouts', { graph_id: graphId });
+  }
+
   // Health check
   async health() {
     try {
