@@ -118,6 +118,7 @@ class _TenantRuntime:
     soul: SoulConfig | None
     sisters: SisterRegistry | None
     info: GenericInfoRetriever
+    team_manager: Any | None
 
 
 class RuntimeBridge:
@@ -1394,6 +1395,120 @@ class RuntimeBridge:
             owner_agent_id=owner_agent_id,
         )
 
+    # ── Team Manager delegation ──
+
+    def tm_create_graph(
+        self, tenant_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.create_graph(tenant_id=tenant_id, **kwargs)
+
+    def tm_get_graph(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any] | None:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.get_graph(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_list_graphs(
+        self, tenant_id: str, workspace_root: str | None = None, workspace_id: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_graphs(tenant_id=tenant_id, workspace_id=workspace_id)
+
+    def tm_update_graph(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.update_graph(tenant_id=tenant_id, graph_id=graph_id, **kwargs)
+
+    def tm_delete_graph(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.delete_graph(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_add_node(
+        self, tenant_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.add_node(tenant_id=tenant_id, **kwargs)
+
+    def tm_list_nodes(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None, kind: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_nodes(tenant_id=tenant_id, graph_id=graph_id, kind=kind)
+
+    def tm_update_node(
+        self, tenant_id: str, node_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.update_node(tenant_id=tenant_id, node_id=node_id, **kwargs)
+
+    def tm_delete_node(
+        self, tenant_id: str, node_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.delete_node(tenant_id=tenant_id, node_id=node_id)
+
+    def tm_add_edge(
+        self, tenant_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.add_edge(tenant_id=tenant_id, **kwargs)
+
+    def tm_list_edges(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None, edge_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_edges(tenant_id=tenant_id, graph_id=graph_id, edge_type=edge_type)
+
+    def tm_delete_edge(
+        self, tenant_id: str, edge_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.delete_edge(tenant_id=tenant_id, edge_id=edge_id)
+
+    def tm_validate_graph(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.validate_graph(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_deploy_graph(
+        self, tenant_id: str, graph_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.build_deploy_plan(tenant_id=tenant_id, graph_id=graph_id)
+
     def get_user_profile(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         return runtime.identity.get_profile(tenant_id, user_id)
@@ -2072,6 +2187,10 @@ class RuntimeBridge:
             embedding_provider=self.embedding_provider,
         )
         projects = ProjectService(db)
+        team_manager = None
+        if self.config.team_manager_enabled:
+            from bomba_sr.runtime.team_manager import TeamManagerService
+            team_manager = TeamManagerService(db)
         policy_pipeline = PolicyPipeline(
             governance=governance,
             global_allow=self.config.tool_allow,
@@ -2132,6 +2251,14 @@ class RuntimeBridge:
                     provider=self.provider,
                     default_model_id=self.config.default_model_id,
                     workspace_root=context.workspace_root,
+                )
+            )
+        if self.config.team_manager_enabled and team_manager is not None:
+            from bomba_sr.tools.builtin_team import builtin_team_tools
+            tool_executor.register_many(
+                builtin_team_tools(
+                    team_manager=team_manager,
+                    tenant_id=tenant_id,
                 )
             )
         tool_executor.register_many(builtin_memory_tools(memory))
@@ -2216,6 +2343,7 @@ class RuntimeBridge:
             soul=soul_config,
             sisters=sisters_registry,
             info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
+            team_manager=team_manager,
         )
         if sisters_registry is not None:
             for sister in sisters_registry.list_sisters():

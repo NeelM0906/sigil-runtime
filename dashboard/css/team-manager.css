@@ -1,0 +1,228 @@
+/* Sigil Dashboard — Team Manager Styles */
+
+/* ── Canvas Wrapper ── */
+.tm-canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--surface-1));
+  overflow: hidden;
+}
+
+/* ── Toolbar ── */
+.tm-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  background: hsl(var(--surface-2));
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.tm-node-palette {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.tm-palette-btn {
+  font-size: var(--font-size-xs) !important;
+  height: 1.375rem !important;
+  padding: 0 6px !important;
+}
+
+/* ── Canvas Body ── */
+.tm-canvas-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.tm-canvas-area {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.tm-canvas-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background: hsl(var(--surface-0));
+}
+
+.tm-canvas-container:active {
+  cursor: grabbing;
+}
+
+.tm-canvas-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+/* ── Statusbar ── */
+.tm-canvas-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-3);
+  border-top: 1px solid hsl(var(--border) / 0.3);
+  background: hsl(var(--surface-2));
+  flex-shrink: 0;
+}
+
+/* ── SVG Nodes ── */
+.tm-node {
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.tm-node:hover {
+  filter: brightness(1.15);
+}
+
+.tm-node--selected .tm-node-shape,
+.tm-node--selected .tm-node-shape-fill {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
+}
+
+.tm-node-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  fill: hsl(var(--foreground));
+  pointer-events: none;
+}
+
+/* ── SVG Edges ── */
+.tm-edge {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.tm-edge:hover path {
+  stroke-opacity: 0.8;
+  stroke-width: 2.5;
+}
+
+/* ── Inspector Sidebar ── */
+.tm-inspector-sidebar {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition: width 0.25s var(--ease-out-expo), min-width 0.25s var(--ease-out-expo);
+  border-left: none;
+  flex-shrink: 0;
+}
+
+.tm-inspector-sidebar.tm-inspector--open {
+  width: 280px;
+  min-width: 280px;
+  border-left: 1px solid hsl(var(--border) / 0.4);
+  overflow-y: auto;
+}
+
+.tm-inspector-panel {
+  padding: var(--space-3);
+}
+
+.tm-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tm-inspector-kind-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tm-inspector-kind-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+}
+
+.tm-inspector-field {
+  margin-bottom: var(--space-3);
+}
+
+.tm-inspector-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: var(--space-1);
+}
+
+.tm-inspector-textarea {
+  min-height: 6rem;
+}
+
+.tm-inspector-meta {
+  opacity: 0.7;
+}
+
+.tm-inspector-feedback {
+  min-height: 1rem;
+}
+
+/* ── Graph List (within panel) ── */
+.tm-graph-row {
+  cursor: default;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1199px) {
+  .tm-inspector-sidebar.tm-inspector--open {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .tm-palette-btn {
+    font-size: 9px !important;
+    padding: 0 4px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .tm-canvas-wrapper {
+    min-height: 400px;
+  }
+
+  .tm-canvas-body {
+    flex-direction: column;
+  }
+
+  .tm-inspector-sidebar.tm-inspector--open {
+    width: 100%;
+    min-width: 100%;
+    max-height: 250px;
+    border-left: none;
+    border-top: 1px solid hsl(var(--border) / 0.4);
+  }
+
+  .tm-canvas-toolbar {
+    padding: var(--space-1) var(--space-2);
+    gap: var(--space-1);
+  }
+
+  .tm-node-palette {
+    display: none;
+  }
+}

@@ -91,6 +91,7 @@ body {
 .panel:nth-child(7) { animation-delay: 300ms; }
 .panel:nth-child(8) { animation-delay: 350ms; }
 .panel:nth-child(9) { animation-delay: 400ms; }
+.panel:nth-child(10) { animation-delay: 450ms; }
 
 @keyframes panel-enter {
   from {

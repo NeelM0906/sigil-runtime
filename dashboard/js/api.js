@@ -70,6 +70,71 @@ export class SigilAPI {
     return this._get('/commands');
   }
 
+  // Team Manager
+  async tmListGraphs() { return this._get('/api/team-manager/graphs'); }
+
+  async tmCreateGraph(name, description) {
+    return this._post('/api/team-manager/graphs', { name, description });
+  }
+
+  async tmGetGraph(graphId) {
+    return this._get(`/api/team-manager/graphs/${encodeURIComponent(graphId)}`);
+  }
+
+  async tmDeleteGraph(graphId) {
+    const url = `${this.baseUrl}/api/team-manager/graphs/${encodeURIComponent(graphId)}?${this._qs()}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE /api/team-manager/graphs/${graphId}: ${res.status}`);
+    return res.json();
+  }
+
+  async tmAddNode(graphId, kind, label, posX, posY, config = {}) {
+    return this._post('/api/team-manager/nodes', {
+      graph_id: graphId, kind, label, position_x: posX, position_y: posY, config,
+    });
+  }
+
+  async tmUpdateNode(nodeId, changes) {
+    const url = `${this.baseUrl}/api/team-manager/nodes/${encodeURIComponent(nodeId)}?${this._qs()}`;
+    const payload = { tenant_id: this.tenantId, user_id: this.userId, ...changes };
+    if (this.workspace) payload.workspace_root = this.workspace;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`PUT /api/team-manager/nodes/${nodeId}: ${res.status}`);
+    return res.json();
+  }
+
+  async tmDeleteNode(nodeId) {
+    const url = `${this.baseUrl}/api/team-manager/nodes/${encodeURIComponent(nodeId)}?${this._qs()}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE /api/team-manager/nodes/${nodeId}: ${res.status}`);
+    return res.json();
+  }
+
+  async tmAddEdge(graphId, sourceId, targetId, edgeType) {
+    return this._post('/api/team-manager/edges', {
+      graph_id: graphId, source_node_id: sourceId, target_node_id: targetId, edge_type: edgeType,
+    });
+  }
+
+  async tmDeleteEdge(edgeId) {
+    const url = `${this.baseUrl}/api/team-manager/edges/${encodeURIComponent(edgeId)}?${this._qs()}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`DELETE /api/team-manager/edges/${edgeId}: ${res.status}`);
+    return res.json();
+  }
+
+  async tmDeployGraph(graphId) {
+    return this._post('/api/team-manager/deploy', { graph_id: graphId });
+  }
+
+  async tmValidateGraph(graphId) {
+    return this._post('/api/team-manager/validate', { graph_id: graphId });
+  }
+
   // Health check
   async health() {
     try {

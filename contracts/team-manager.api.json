@@ -1,0 +1,1322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bomba.sr/contracts/team-manager.api.json",
+  "title": "TeamManagerAPI",
+  "description": "Complete API contract for the Team Manager subsystem. Manages team graphs -- visual org charts of agents, humans, skills, and pipelines -- with deployment and scheduling capabilities.",
+
+  "$defs": {
+
+    "common_headers": {
+      "type": "object",
+      "description": "Required headers for all requests.",
+      "properties": {
+        "Content-Type": {
+          "type": "string",
+          "const": "application/json"
+        },
+        "X-Tenant-Id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Tenant identifier. Required on every request."
+        },
+        "X-Workspace-Root": {
+          "type": "string",
+          "description": "Absolute path to workspace root. Optional; defaults to server-configured workspace."
+        }
+      },
+      "required": ["Content-Type", "X-Tenant-Id"]
+    },
+
+    "error_envelope": {
+      "type": "object",
+      "description": "Standard error response envelope. Follows RFC 9457 spirit adapted to project conventions.",
+      "required": ["error", "error_type"],
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Human-readable error message."
+        },
+        "error_type": {
+          "type": "string",
+          "enum": [
+            "validation_failed",
+            "not_found",
+            "policy_denied",
+            "approval_required",
+            "conflict",
+            "internal_error"
+          ]
+        },
+        "field": {
+          "type": ["string", "null"],
+          "description": "The specific field that caused a validation error, if applicable."
+        },
+        "detail": {
+          "type": ["object", "null"],
+          "description": "Additional structured detail (e.g., cycle path for conflict errors)."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "node_kind": {
+      "type": "string",
+      "enum": ["human", "group", "agent", "skill", "pipeline", "context", "note"],
+      "description": "The functional type of a node in the team graph."
+    },
+
+    "position": {
+      "type": "object",
+      "description": "2D canvas position for visual rendering.",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+
+    "graph_summary": {
+      "type": "object",
+      "description": "Compact graph representation returned in list operations.",
+      "required": ["graph_id", "tenant_id", "name", "status", "node_count", "edge_count", "created_at", "updated_at"],
+      "properties": {
+        "graph_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "archived"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "node_count": { "type": "integer", "minimum": 0 },
+        "edge_count": { "type": "integer", "minimum": 0 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "graph_full": {
+      "type": "object",
+      "description": "Full graph representation including all nodes and edges.",
+      "required": ["graph_id", "tenant_id", "name", "status", "nodes", "edges", "created_at", "updated_at"],
+      "properties": {
+        "graph_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": ["string", "null"] },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "active", "archived"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/edge" }
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "node": {
+      "type": "object",
+      "description": "A node in the team graph representing a human, agent, skill, pipeline, group, context source, or annotation.",
+      "required": ["node_id", "graph_id", "kind", "label", "position", "created_at", "updated_at"],
+      "properties": {
+        "node_id": { "type": "string", "format": "uuid" },
+        "graph_id": { "type": "string", "format": "uuid" },
+        "kind": { "$ref": "#/$defs/node_kind" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "description": { "type": ["string", "null"] },
+        "position": { "$ref": "#/$defs/position" },
+        "config": {
+          "type": ["object", "null"],
+          "description": "Kind-specific configuration. Schema varies by node kind.",
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "description": "For kind=agent: references a sister/subagent config ID."
+            },
+            "skill_id": {
+              "type": "string",
+              "description": "For kind=skill: references a registered skill ID."
+            },
+            "model_id": {
+              "type": "string",
+              "description": "For kind=agent: LLM model override."
+            },
+            "goal": {
+              "type": "string",
+              "description": "For kind=agent or kind=pipeline: the goal or purpose."
+            },
+            "cron_expression": {
+              "type": "string",
+              "description": "For kind=pipeline: optional cron trigger."
+            },
+            "pipeline_steps": {
+              "type": "array",
+              "description": "For kind=pipeline: ordered list of node_ids forming the execution chain.",
+              "items": { "type": "string", "format": "uuid" }
+            },
+            "context_ref": {
+              "type": "string",
+              "description": "For kind=context: reference to a memory key, document, or URL."
+            },
+            "note_text": {
+              "type": "string",
+              "description": "For kind=note: freeform annotation text."
+            },
+            "members": {
+              "type": "array",
+              "description": "For kind=group: node_ids of group members.",
+              "items": { "type": "string", "format": "uuid" }
+            },
+            "role": {
+              "type": "string",
+              "description": "For kind=human: role title (e.g., 'Team Lead', 'Reviewer')."
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "For kind=human: contact email."
+            }
+          },
+          "additionalProperties": true
+        },
+        "style": {
+          "type": ["object", "null"],
+          "description": "Visual styling overrides for the node.",
+          "properties": {
+            "color": { "type": "string" },
+            "icon": { "type": "string" },
+            "width": { "type": "number", "minimum": 0 },
+            "height": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": true
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "edge": {
+      "type": "object",
+      "description": "A directed connection between two nodes in the team graph.",
+      "required": ["edge_id", "graph_id", "source_node_id", "target_node_id", "edge_type", "created_at"],
+      "properties": {
+        "edge_id": { "type": "string", "format": "uuid" },
+        "graph_id": { "type": "string", "format": "uuid" },
+        "source_node_id": { "type": "string", "format": "uuid" },
+        "target_node_id": { "type": "string", "format": "uuid" },
+        "edge_type": {
+          "type": "string",
+          "enum": ["reports_to", "delegates_to", "provides_context", "triggers", "monitors", "custom"],
+          "description": "Semantic type of the relationship."
+        },
+        "label": {
+          "type": ["string", "null"],
+          "description": "Optional display label on the edge."
+        },
+        "config": {
+          "type": ["object", "null"],
+          "description": "Edge-specific configuration (e.g., conditions, filters).",
+          "additionalProperties": true
+        },
+        "style": {
+          "type": ["object", "null"],
+          "description": "Visual styling overrides for the edge.",
+          "properties": {
+            "color": { "type": "string" },
+            "stroke_width": { "type": "number", "minimum": 0 },
+            "dashed": { "type": "boolean" },
+            "animated": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "deploy_run": {
+      "type": "object",
+      "description": "A deployment run -- the result of deploying a team graph for execution.",
+      "required": ["run_id", "graph_id", "tenant_id", "status", "created_at"],
+      "properties": {
+        "run_id": { "type": "string", "format": "uuid" },
+        "graph_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "running", "completed", "failed", "cancelled"]
+        },
+        "trigger": {
+          "type": "string",
+          "enum": ["manual", "schedule", "api"],
+          "description": "What initiated this deployment."
+        },
+        "node_statuses": {
+          "type": "array",
+          "description": "Per-node execution status within the run.",
+          "items": {
+            "type": "object",
+            "required": ["node_id", "status"],
+            "properties": {
+              "node_id": { "type": "string", "format": "uuid" },
+              "label": { "type": "string" },
+              "kind": { "$ref": "#/$defs/node_kind" },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "running", "completed", "failed", "skipped"]
+              },
+              "subagent_run_id": {
+                "type": ["string", "null"],
+                "format": "uuid",
+                "description": "If this node spawned a subagent, the run_id for polling."
+              },
+              "started_at": { "type": ["string", "null"], "format": "date-time" },
+              "completed_at": { "type": ["string", "null"], "format": "date-time" },
+              "error": { "type": ["string", "null"] },
+              "result_summary": { "type": ["string", "null"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "error": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "schedule": {
+      "type": "object",
+      "description": "A recurring schedule for automatic graph deployment.",
+      "required": ["schedule_id", "graph_id", "tenant_id", "cron_expression", "enabled", "created_at", "updated_at"],
+      "properties": {
+        "schedule_id": { "type": "string", "format": "uuid" },
+        "graph_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "cron_expression": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Standard cron expression (5-field) or shorthand (@hourly, @daily, */N * * * *)."
+        },
+        "enabled": { "type": "boolean" },
+        "last_run_at": { "type": ["string", "null"], "format": "date-time" },
+        "next_run_at": { "type": ["string", "null"], "format": "date-time" },
+        "last_run_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "The run_id of the most recent deployment triggered by this schedule."
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+
+    "generate_result": {
+      "type": "object",
+      "description": "Result of an AI generation request.",
+      "required": ["mode", "result"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["description", "team_autofill", "agent_autofill"]
+        },
+        "result": {
+          "type": "object",
+          "description": "Mode-dependent result payload.",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "For mode=description: generated text description of the graph or node."
+            },
+            "nodes": {
+              "type": "array",
+              "description": "For mode=team_autofill: suggested nodes to add.",
+              "items": {
+                "type": "object",
+                "required": ["kind", "label"],
+                "properties": {
+                  "kind": { "$ref": "#/$defs/node_kind" },
+                  "label": { "type": "string" },
+                  "description": { "type": ["string", "null"] },
+                  "config": { "type": ["object", "null"] },
+                  "suggested_position": { "$ref": "#/$defs/position" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "edges": {
+              "type": "array",
+              "description": "For mode=team_autofill: suggested edges between nodes.",
+              "items": {
+                "type": "object",
+                "required": ["source_label", "target_label", "edge_type"],
+                "properties": {
+                  "source_label": { "type": "string" },
+                  "target_label": { "type": "string" },
+                  "edge_type": { "type": "string" },
+                  "label": { "type": ["string", "null"] }
+                },
+                "additionalProperties": false
+              }
+            },
+            "config": {
+              "type": "object",
+              "description": "For mode=agent_autofill: suggested config fields for an agent node."
+            }
+          },
+          "additionalProperties": true
+        },
+        "model_id": {
+          "type": ["string", "null"],
+          "description": "The LLM model used for generation."
+        },
+        "token_usage": {
+          "type": ["object", "null"],
+          "properties": {
+            "input": { "type": "integer", "minimum": 0 },
+            "output": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "endpoints": {
+
+    "list_graphs": {
+      "method": "GET",
+      "path": "/api/team-manager/graphs",
+      "summary": "List all team graphs for the tenant/workspace.",
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "description": "Tenant identifier."
+          },
+          "workspace_root": {
+            "type": "string",
+            "description": "Absolute workspace path. Optional."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"],
+            "description": "Filter by graph status."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50,
+            "description": "Max graphs to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["graphs", "total"],
+        "properties": {
+          "graphs": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/graph_summary" }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of matching graphs (before limit/offset)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "create_graph": {
+      "method": "POST",
+      "path": "/api/team-manager/graphs",
+      "summary": "Create a new team graph.",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "name"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display name for the graph. Must be unique per tenant."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active"],
+            "default": "draft"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 64 },
+            "maxItems": 20,
+            "description": "Freeform tags for organization and filtering."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["graph"],
+        "properties": {
+          "graph": { "$ref": "#/$defs/graph_full" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope", "description": "Validation error (missing name, bad status, etc.)." },
+      "response_409": { "$ref": "#/$defs/error_envelope", "description": "Graph name already exists for this tenant." }
+    },
+
+    "get_graph": {
+      "method": "GET",
+      "path": "/api/team-manager/graphs/{graph_id}",
+      "summary": "Get a graph with all its nodes and edges.",
+      "path_parameters": {
+        "graph_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The graph identifier."
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["graph"],
+        "properties": {
+          "graph": { "$ref": "#/$defs/graph_full" }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "update_graph": {
+      "method": "PUT",
+      "path": "/api/team-manager/graphs/{graph_id}",
+      "summary": "Update graph metadata (name, description, status, tags). Does not modify nodes or edges.",
+      "path_parameters": {
+        "graph_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "New display name. Omit to keep current."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 2000,
+            "description": "New description. Pass null to clear."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "active", "archived"],
+            "description": "New status. Omit to keep current."
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 64 },
+            "maxItems": 20,
+            "description": "Replace tags. Omit to keep current."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["graph"],
+        "properties": {
+          "graph": { "$ref": "#/$defs/graph_full" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope" },
+      "response_409": { "$ref": "#/$defs/error_envelope", "description": "Name conflict with an existing graph." }
+    },
+
+    "delete_graph": {
+      "method": "DELETE",
+      "path": "/api/team-manager/graphs/{graph_id}",
+      "summary": "Delete a graph and all its nodes, edges, and schedules. Active deployments are cancelled.",
+      "path_parameters": {
+        "graph_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["deleted"],
+        "properties": {
+          "deleted": { "type": "boolean", "const": true },
+          "graph_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" },
+      "response_403": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Policy denied: graph has active deployments and force=false."
+      }
+    },
+
+    "list_nodes": {
+      "method": "GET",
+      "path": "/api/team-manager/nodes",
+      "summary": "List all nodes in a graph.",
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "graph_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The graph to list nodes from."
+          },
+          "workspace_root": { "type": "string" },
+          "kind": {
+            "$ref": "#/$defs/node_kind",
+            "description": "Filter by node kind."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["nodes"],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/node" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+    },
+
+    "create_node": {
+      "method": "POST",
+      "path": "/api/team-manager/nodes",
+      "summary": "Create a new node in a graph.",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id", "kind", "label", "position"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "graph_id": { "type": "string", "format": "uuid" },
+          "kind": { "$ref": "#/$defs/node_kind" },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": { "type": ["string", "null"] },
+          "position": { "$ref": "#/$defs/position" },
+          "config": {
+            "type": ["object", "null"],
+            "description": "Kind-specific configuration. See node.$defs for per-kind fields.",
+            "additionalProperties": true
+          },
+          "style": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["node"],
+        "properties": {
+          "node": { "$ref": "#/$defs/node" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+    },
+
+    "update_node": {
+      "method": "PUT",
+      "path": "/api/team-manager/nodes/{node_id}",
+      "summary": "Update an existing node. Only provided fields are changed.",
+      "path_parameters": {
+        "node_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "New label. Omit to keep current."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "New description. Pass null to clear."
+          },
+          "kind": {
+            "$ref": "#/$defs/node_kind",
+            "description": "Change node kind. Warning: may invalidate kind-specific config."
+          },
+          "position": {
+            "$ref": "#/$defs/position",
+            "description": "New canvas position. Omit to keep current."
+          },
+          "config": {
+            "type": ["object", "null"],
+            "description": "Replace kind-specific config. Pass null to clear.",
+            "additionalProperties": true
+          },
+          "style": {
+            "type": ["object", "null"],
+            "description": "Replace visual style. Pass null to clear.",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["node"],
+        "properties": {
+          "node": { "$ref": "#/$defs/node" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "delete_node": {
+      "method": "DELETE",
+      "path": "/api/team-manager/nodes/{node_id}",
+      "summary": "Delete a node. All connected edges are cascade-deleted.",
+      "path_parameters": {
+        "node_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["deleted"],
+        "properties": {
+          "deleted": { "type": "boolean", "const": true },
+          "node_id": { "type": "string", "format": "uuid" },
+          "edges_removed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of connected edges that were cascade-deleted."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "list_edges": {
+      "method": "GET",
+      "path": "/api/team-manager/edges",
+      "summary": "List all edges in a graph.",
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "graph_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspace_root": { "type": "string" },
+          "edge_type": {
+            "type": "string",
+            "enum": ["reports_to", "delegates_to", "provides_context", "triggers", "monitors", "custom"],
+            "description": "Filter by edge type."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["edges"],
+        "properties": {
+          "edges": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/edge" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+    },
+
+    "create_edge": {
+      "method": "POST",
+      "path": "/api/team-manager/edges",
+      "summary": "Create a directed edge between two nodes.",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id", "source_node_id", "target_node_id", "edge_type"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "graph_id": { "type": "string", "format": "uuid" },
+          "source_node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The originating node."
+          },
+          "target_node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The destination node. Must differ from source_node_id (no self-loops)."
+          },
+          "edge_type": {
+            "type": "string",
+            "enum": ["reports_to", "delegates_to", "provides_context", "triggers", "monitors", "custom"]
+          },
+          "label": {
+            "type": ["string", "null"],
+            "maxLength": 255
+          },
+          "config": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "style": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["edge"],
+        "properties": {
+          "edge": { "$ref": "#/$defs/edge" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Validation error: self-loop, missing node references, etc."
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph or referenced node not found." },
+      "response_409": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Duplicate edge (same source, target, type) or cycle detected in pipeline edges."
+      }
+    },
+
+    "delete_edge": {
+      "method": "DELETE",
+      "path": "/api/team-manager/edges/{edge_id}",
+      "summary": "Delete an edge.",
+      "path_parameters": {
+        "edge_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["deleted"],
+        "properties": {
+          "deleted": { "type": "boolean", "const": true },
+          "edge_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "deploy_graph": {
+      "method": "POST",
+      "path": "/api/team-manager/deploy",
+      "summary": "Deploy a team graph for execution. Creates subagent runs for agent/pipeline nodes according to the graph topology.",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "graph_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The graph to deploy."
+          },
+          "session_id": {
+            "type": ["string", "null"],
+            "description": "Optional session context. A new session is created if omitted."
+          },
+          "user_id": {
+            "type": "string",
+            "default": "user-local",
+            "description": "The user initiating deployment."
+          },
+          "run_timeout_seconds": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 86400,
+            "default": 600,
+            "description": "Max execution time for the entire deployment run."
+          },
+          "node_overrides": {
+            "type": ["object", "null"],
+            "description": "Per-node config overrides keyed by node_id. Merged on top of the node's stored config.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, validate the deployment plan without executing it. Returns the planned execution order."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["run"],
+        "properties": {
+          "run": { "$ref": "#/$defs/deploy_run" }
+        },
+        "additionalProperties": false,
+        "description": "Deployment initiated (or plan returned if dry_run=true)."
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope", "description": "Validation error: graph has no deployable nodes, invalid overrides, etc." },
+      "response_403": { "$ref": "#/$defs/error_envelope", "description": "Policy denied: deployment blocked by governance rules." },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." },
+      "response_409": { "$ref": "#/$defs/error_envelope", "description": "Graph already has an active deployment." }
+    },
+
+    "get_deploy_status": {
+      "method": "GET",
+      "path": "/api/team-manager/deploy/{run_id}",
+      "summary": "Get the current status of a deployment run, including per-node progress.",
+      "path_parameters": {
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["run"],
+        "properties": {
+          "run": { "$ref": "#/$defs/deploy_run" }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "list_schedules": {
+      "method": "GET",
+      "path": "/api/team-manager/schedules",
+      "summary": "List schedules for a graph.",
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "graph_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workspace_root": { "type": "string" },
+          "enabled": {
+            "type": "boolean",
+            "description": "Filter by enabled state."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["schedules"],
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/schedule" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+    },
+
+    "create_schedule": {
+      "method": "POST",
+      "path": "/api/team-manager/schedules",
+      "summary": "Create a recurring deployment schedule for a graph.",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "graph_id", "cron_expression"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "graph_id": { "type": "string", "format": "uuid" },
+          "name": {
+            "type": ["string", "null"],
+            "maxLength": 255,
+            "description": "Optional human-readable name for the schedule."
+          },
+          "cron_expression": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Standard 5-field cron expression or shorthand (@hourly, @daily, */N * * * *)."
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether the schedule is immediately active."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["schedule"],
+        "properties": {
+          "schedule": { "$ref": "#/$defs/schedule" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Invalid cron expression or missing required fields."
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+    },
+
+    "update_schedule": {
+      "method": "PUT",
+      "path": "/api/team-manager/schedules/{schedule_id}",
+      "summary": "Update a schedule. Commonly used to toggle enabled/disabled or change the cron expression.",
+      "path_parameters": {
+        "schedule_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "name": {
+            "type": ["string", "null"],
+            "maxLength": 255,
+            "description": "New name. Omit to keep current."
+          },
+          "cron_expression": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New cron expression. Omit to keep current."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable. Omit to keep current."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["schedule"],
+        "properties": {
+          "schedule": { "$ref": "#/$defs/schedule" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "delete_schedule": {
+      "method": "DELETE",
+      "path": "/api/team-manager/schedules/{schedule_id}",
+      "summary": "Delete a schedule. Does not affect in-progress deployment runs.",
+      "path_parameters": {
+        "schedule_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "workspace_root": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["deleted"],
+        "properties": {
+          "deleted": { "type": "boolean", "const": true },
+          "schedule_id": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": false
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope" }
+    },
+
+    "generate": {
+      "method": "POST",
+      "path": "/api/team-manager/generate",
+      "summary": "AI-powered generation for team graphs. Supports three modes: description (generate a text summary), team_autofill (suggest nodes and edges from a goal), and agent_autofill (suggest config for an agent node).",
+      "request_body": {
+        "type": "object",
+        "required": ["tenant_id", "mode"],
+        "properties": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "mode": {
+            "type": "string",
+            "enum": ["description", "team_autofill", "agent_autofill"],
+            "description": "Generation mode."
+          },
+          "graph_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Required for mode=description. The graph to describe."
+          },
+          "prompt": {
+            "type": ["string", "null"],
+            "maxLength": 4000,
+            "description": "For mode=team_autofill: describe the team goal or purpose. For mode=agent_autofill: describe the agent's role. For mode=description: optional guidance for the description style."
+          },
+          "node_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "For mode=agent_autofill: the agent node to autofill config for."
+          },
+          "model_id": {
+            "type": ["string", "null"],
+            "description": "Override the LLM model used for generation."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_200": {
+        "type": "object",
+        "required": ["generation"],
+        "properties": {
+          "generation": { "$ref": "#/$defs/generate_result" }
+        },
+        "additionalProperties": false
+      },
+      "response_400": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Invalid mode, missing required fields for the chosen mode, etc."
+      },
+      "response_404": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Referenced graph or node not found."
+      },
+      "response_500": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "LLM generation failed."
+      }
+    }
+  },
+
+  "error_taxonomy": {
+    "description": "Standard error types and their HTTP status codes.",
+    "types": {
+      "validation_failed": {
+        "status": 400,
+        "description": "Request body or query parameters fail schema validation. The 'field' property indicates the offending field when applicable.",
+        "example": {
+          "error": "Field 'name' is required",
+          "error_type": "validation_failed",
+          "field": "name",
+          "detail": null
+        }
+      },
+      "not_found": {
+        "status": 404,
+        "description": "The referenced resource (graph, node, edge, schedule, run) does not exist or does not belong to the requesting tenant.",
+        "example": {
+          "error": "Graph not found",
+          "error_type": "not_found",
+          "field": null,
+          "detail": null
+        }
+      },
+      "policy_denied": {
+        "status": 403,
+        "description": "The operation was blocked by tool governance policy. Typically returned when deploying graphs that contain high-risk agent configurations.",
+        "example": {
+          "error": "Deployment denied: graph contains voice_make_call agent which requires approval",
+          "error_type": "policy_denied",
+          "field": null,
+          "detail": { "blocked_nodes": ["node-uuid-1"] }
+        }
+      },
+      "approval_required": {
+        "status": 202,
+        "description": "The operation requires human approval before proceeding. An approval item is created and its ID returned in the detail. The client should poll /approvals or present the approval to the user.",
+        "example": {
+          "error": "Deployment requires approval",
+          "error_type": "approval_required",
+          "field": null,
+          "detail": { "approval_id": "appr-uuid" }
+        }
+      },
+      "conflict": {
+        "status": 409,
+        "description": "The operation conflicts with existing state. Common causes: duplicate graph name, duplicate edge, cycle detected in pipeline topology, active deployment already in progress.",
+        "example": {
+          "error": "Cycle detected in pipeline edges",
+          "error_type": "conflict",
+          "field": null,
+          "detail": { "cycle_path": ["node-a", "node-b", "node-c", "node-a"] }
+        }
+      },
+      "internal_error": {
+        "status": 500,
+        "description": "An unexpected server error occurred. The 'error' field contains a sanitized message. Full details are logged server-side.",
+        "example": {
+          "error": "Internal error during graph deployment",
+          "error_type": "internal_error",
+          "field": null,
+          "detail": null
+        }
+      }
+    }
+  },
+
+  "conventions": {
+    "description": "API-wide conventions for the Team Manager subsystem.",
+    "tenant_isolation": "Every request must include tenant_id. Graphs, nodes, edges, schedules, and runs are scoped to a tenant. Cross-tenant access is never permitted.",
+    "workspace_context": "workspace_root is optional. When provided, it scopes the operation to a specific workspace directory. When omitted, the server uses its default workspace.",
+    "identifiers": "All resource IDs (graph_id, node_id, edge_id, schedule_id, run_id) are UUIDs generated server-side. Clients must not generate them.",
+    "timestamps": "All timestamps are ISO 8601 in UTC (e.g., 2026-03-02T14:30:00Z). The server generates created_at and updated_at; clients cannot set them.",
+    "partial_updates": "PUT endpoints accept partial payloads. Only provided fields are updated; omitted fields retain their current values. Pass null explicitly to clear a nullable field.",
+    "cascade_deletes": "Deleting a graph removes all its nodes, edges, and schedules. Deleting a node removes all connected edges. Deleting an edge or schedule is atomic.",
+    "deployment_lifecycle": "Deploy creates a run (pending) -> transitions to running as subagents spawn -> completes or fails based on aggregate node outcomes. Poll GET /deploy/{run_id} for progress.",
+    "content_type": "All requests must send Content-Type: application/json. All responses return Content-Type: application/json.",
+    "idempotency": "POST /api/team-manager/deploy accepts session_id for idempotent retries. Other POST endpoints are not idempotent; repeated calls create duplicate resources."
+  }
+}

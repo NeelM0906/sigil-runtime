@@ -248,6 +248,10 @@ def make_handler(bridge: RuntimeBridge):
             if parsed.path == "/commands/execute":
                 self._execute_command()
                 return
+            # ── Team Manager POST routes ──
+            if parsed.path.startswith("/api/team-manager/"):
+                self._team_manager_post(parsed)
+                return
             # ── Dashboard control POST routes ──
             if parsed.path.startswith("/api/dashboard/"):
                 self._dashboard_post(parsed)
@@ -263,6 +267,10 @@ def make_handler(bridge: RuntimeBridge):
             if parsed.path.startswith("/dashboard/"):
                 rel = parsed.path[len("/dashboard/"):]
                 self._serve_static(rel)
+                return
+            # ── Team Manager GET routes ──
+            if parsed.path.startswith("/api/team-manager/"):
+                self._team_manager_get(parsed)
                 return
             # ── Dashboard API ──
             if parsed.path == "/api/dashboard":
@@ -420,6 +428,168 @@ def make_handler(bridge: RuntimeBridge):
                     self._write_cors(404, {"error": "not_found"})
                     return
                 self._write_cors(200, result)
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        # ── Team Manager handlers ──
+
+        def _team_manager_post(self, parsed) -> None:
+            path = parsed.path
+            if not self._is_origin_allowed():
+                self._write_cors(403, {"error": "origin_not_allowed"})
+                return
+            try:
+                body = self._read_json()
+            except Exception:
+                return
+            tenant_id = str(body.get("tenant_id", "tenant-local"))
+            workspace_root = str(body["workspace_root"]) if body.get("workspace_root") else None
+            try:
+                if path == "/api/team-manager/graphs":
+                    result = bridge.tm_create_graph(
+                        tenant_id=tenant_id,
+                        workspace_root=workspace_root,
+                        workspace_id=str(body.get("workspace_id", "")),
+                        name=str(body["name"]),
+                        description=str(body.get("description", "")),
+                        metadata=body.get("metadata"),
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/nodes":
+                    result = bridge.tm_add_node(
+                        tenant_id=tenant_id,
+                        workspace_root=workspace_root,
+                        graph_id=str(body["graph_id"]),
+                        kind=str(body["kind"]),
+                        label=str(body.get("label", "")),
+                        config=body.get("config"),
+                        position_x=float(body.get("position_x", 0.0)),
+                        position_y=float(body.get("position_y", 0.0)),
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/edges":
+                    result = bridge.tm_add_edge(
+                        tenant_id=tenant_id,
+                        workspace_root=workspace_root,
+                        graph_id=str(body["graph_id"]),
+                        source_node_id=str(body["source_node_id"]),
+                        target_node_id=str(body["target_node_id"]),
+                        edge_type=str(body.get("edge_type", "dependency")),
+                        metadata=body.get("metadata"),
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/validate":
+                    result = bridge.tm_validate_graph(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/deploy":
+                    result = bridge.tm_deploy_graph(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                else:
+                    # PUT/DELETE via POST with _method or path-based routing
+                    self._team_manager_mutation(path, body, tenant_id, workspace_root)
+            except KeyError as exc:
+                self._write_cors(400, {"error": f"missing field: {exc}"})
+            except ValueError as exc:
+                self._write_cors(400, {"error": str(exc), "error_type": "validation_failed"})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _team_manager_mutation(self, path: str, body: dict, tenant_id: str, workspace_root: str | None) -> None:
+            """Handle PUT/DELETE-style mutations routed as POST with action prefix."""
+            import re as _re
+            # PUT /api/team-manager/graphs/{id}
+            m = _re.match(r"/api/team-manager/graphs/([^/]+)/update$", path)
+            if m:
+                result = bridge.tm_update_graph(
+                    tenant_id=tenant_id, graph_id=m.group(1), workspace_root=workspace_root,
+                    name=body.get("name"), description=body.get("description"), metadata=body.get("metadata"),
+                )
+                self._write_cors(200, result)
+                return
+            # DELETE /api/team-manager/graphs/{id}
+            m = _re.match(r"/api/team-manager/graphs/([^/]+)/delete$", path)
+            if m:
+                result = bridge.tm_delete_graph(tenant_id=tenant_id, graph_id=m.group(1), workspace_root=workspace_root)
+                self._write_cors(200, result)
+                return
+            # PUT /api/team-manager/nodes/{id}
+            m = _re.match(r"/api/team-manager/nodes/([^/]+)/update$", path)
+            if m:
+                result = bridge.tm_update_node(
+                    tenant_id=tenant_id, node_id=m.group(1), workspace_root=workspace_root,
+                    label=body.get("label"), config=body.get("config"),
+                    position_x=body.get("position_x"), position_y=body.get("position_y"),
+                )
+                self._write_cors(200, result)
+                return
+            # DELETE /api/team-manager/nodes/{id}
+            m = _re.match(r"/api/team-manager/nodes/([^/]+)/delete$", path)
+            if m:
+                result = bridge.tm_delete_node(tenant_id=tenant_id, node_id=m.group(1), workspace_root=workspace_root)
+                self._write_cors(200, result)
+                return
+            # DELETE /api/team-manager/edges/{id}
+            m = _re.match(r"/api/team-manager/edges/([^/]+)/delete$", path)
+            if m:
+                result = bridge.tm_delete_edge(tenant_id=tenant_id, edge_id=m.group(1), workspace_root=workspace_root)
+                self._write_cors(200, result)
+                return
+            self._write_cors(404, {"error": "not_found"})
+
+        def _team_manager_get(self, parsed) -> None:
+            path = parsed.path
+            query = parse_qs(parsed.query)
+            tenant_id = query.get("tenant_id", ["tenant-local"])[0]
+            workspace_root = query.get("workspace_root", [None])[0]
+            try:
+                if path == "/api/team-manager/graphs":
+                    workspace_id = query.get("workspace_id", [None])[0]
+                    items = bridge.tm_list_graphs(
+                        tenant_id=tenant_id, workspace_root=workspace_root, workspace_id=workspace_id,
+                    )
+                    self._write_cors(200, {"graphs": items})
+                    return
+                import re as _re
+                # GET /api/team-manager/graphs/{id}
+                m = _re.match(r"/api/team-manager/graphs/([^/]+)$", path)
+                if m:
+                    result = bridge.tm_get_graph(tenant_id=tenant_id, graph_id=m.group(1), workspace_root=workspace_root)
+                    if result is None:
+                        self._write_cors(404, {"error": "not_found"})
+                    else:
+                        self._write_cors(200, result)
+                    return
+                if path == "/api/team-manager/nodes":
+                    graph_id = query.get("graph_id", [None])[0]
+                    if not graph_id:
+                        self._write_cors(400, {"error": "graph_id is required"})
+                        return
+                    kind = query.get("kind", [None])[0]
+                    items = bridge.tm_list_nodes(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root, kind=kind,
+                    )
+                    self._write_cors(200, {"nodes": items})
+                    return
+                if path == "/api/team-manager/edges":
+                    graph_id = query.get("graph_id", [None])[0]
+                    if not graph_id:
+                        self._write_cors(400, {"error": "graph_id is required"})
+                        return
+                    edge_type = query.get("edge_type", [None])[0]
+                    items = bridge.tm_list_edges(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root, edge_type=edge_type,
+                    )
+                    self._write_cors(200, {"edges": items})
+                    return
+                self._write_cors(404, {"error": "not_found"})
             except Exception as exc:
                 self._write_cors(500, {"error": str(exc)})
 

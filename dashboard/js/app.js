@@ -12,6 +12,7 @@ import { renderAutonomy } from './panels/autonomy.js';
 import { renderSkills } from './panels/skills.js';
 import { renderTelemetry } from './panels/telemetry.js';
 import { renderActivity } from './panels/activity.js';
+import { renderTeams } from './panels/teams.js';
 import { initChat, updateSistersForAutocomplete } from './panels/chat.js';
 
 // ── Config from URL params ──
@@ -64,6 +65,7 @@ const panels = [
   { id: 'panel-autonomy', key: 'autonomy', render: renderAutonomy },
   { id: 'panel-skills', key: 'skills', render: renderSkills },
   { id: 'panel-telemetry', key: 'loop_telemetry', render: renderTelemetry },
+  { id: 'panel-teams', key: 'teams', render: renderTeams },
   { id: 'panel-activity', key: null, render: null },
 ];
 

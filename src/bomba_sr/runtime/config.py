@@ -97,6 +97,8 @@ class RuntimeConfig:
     colosseum_enabled: bool = os.getenv("BOMBA_COLOSSEUM_ENABLED", "false").lower() != "false"
     colosseum_model_id: str = os.getenv("BOMBA_COLOSSEUM_MODEL_ID", "gpt-4o-mini")
     prove_ahead_enabled: bool = os.getenv("BOMBA_PROVE_AHEAD_ENABLED", "false").lower() != "false"
+    team_manager_enabled: bool = os.getenv("BOMBA_TEAM_MANAGER_ENABLED", "false").lower() != "false"
+    team_manager_model_id: str = os.getenv("BOMBA_TEAM_MANAGER_MODEL_ID", "")
     skill_parsing_permissive: bool = os.getenv("BOMBA_SKILL_PARSING_PERMISSIVE", "true").lower() != "false"
     skills_telemetry_enabled: bool = os.getenv("BOMBA_SKILLS_TELEMETRY_ENABLED", "true").lower() != "false"
     skill_nl_router_enabled: bool = os.getenv("BOMBA_SKILL_NL_ROUTER_ENABLED", "true").lower() != "false"
