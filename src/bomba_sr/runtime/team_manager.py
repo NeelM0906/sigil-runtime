@@ -1,8 +1,8 @@
 """Team Manager Service -- graph-based team topology management.
 
-Implements CRUD for graphs, nodes, edges, layouts, variables, and pipelines.
-Provides validation (cycle detection, edge-kind constraints) and deploy plan
-generation for agent orchestration.
+Implements CRUD for graphs, nodes, edges, layouts, variables, pipelines,
+and schedules.  Provides validation (cycle detection, edge-kind constraints)
+and deploy plan generation for agent orchestration.
 """
 
 from __future__ import annotations
@@ -13,7 +13,12 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any
 
-from bomba_sr.storage.db import RuntimeDB, dict_from_row
+from bomba_sr.storage.db import RuntimeDB
+
+try:  # pragma: no cover - optional dependency in some dev environments
+    from croniter import croniter as _croniter
+except Exception:  # pragma: no cover
+    _croniter = None
 
 
 # ---------------------------------------------------------------------------
@@ -168,9 +173,51 @@ class TeamManagerService:
                 ON team_pipelines(graph_id, tenant_id);
             CREATE INDEX IF NOT EXISTS idx_team_pipelines_node
                 ON team_pipelines(node_id);
+
+            CREATE TABLE IF NOT EXISTS team_deployments (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                graph_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                deploy_plan TEXT NOT NULL,
+                started_at TEXT,
+                completed_at TEXT,
+                error TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_team_deployments_tenant
+                ON team_deployments(tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_team_deployments_graph
+                ON team_deployments(tenant_id, graph_id);
+
+            CREATE TABLE IF NOT EXISTS team_schedules (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                graph_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                cron_expression TEXT NOT NULL,
+                action TEXT NOT NULL DEFAULT 'deploy',
+                action_params TEXT,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                requires_approval INTEGER NOT NULL DEFAULT 0,
+                last_run_at TEXT,
+                next_run_at TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                FOREIGN KEY (graph_id) REFERENCES team_graphs(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_team_schedules_tenant
+                ON team_schedules(tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_team_schedules_graph
+                ON team_schedules(tenant_id, graph_id);
+            CREATE INDEX IF NOT EXISTS idx_team_schedules_next
+                ON team_schedules(tenant_id, enabled, next_run_at);
             """
         )
         self.db.commit()
+        # executescript() implicitly resets PRAGMA foreign_keys to OFF.
+        # Restore it so ON DELETE CASCADE works correctly.
+        self.db.execute("PRAGMA foreign_keys = ON")
 
     # ==================================================================
     # Graph CRUD
@@ -420,6 +467,39 @@ class TeamManagerService:
         if target["graph_id"] != graph_id:
             raise ValueError(f"target node {target_node_id} does not belong to graph {graph_id}")
 
+        # Duplicate edge prevention.
+        dup = self.db.execute(
+            "SELECT id FROM team_edges WHERE tenant_id = ? AND graph_id = ? AND source_node_id = ? AND target_node_id = ? AND edge_type = ?",
+            (tenant_id, graph_id, source_node_id, target_node_id, edge_type),
+        ).fetchone()
+        if dup:
+            raise ValueError("duplicate edge already exists")
+
+        # Inline cycle detection for hierarchical edge types.
+        if edge_type in CYCLE_EDGE_TYPES:
+            rows = self.db.execute(
+                "SELECT source_node_id, target_node_id FROM team_edges WHERE tenant_id = ? AND graph_id = ? AND edge_type = ?",
+                (tenant_id, graph_id, edge_type),
+            ).fetchall()
+            adj: dict[str, list[str]] = {}
+            for r in rows:
+                adj.setdefault(r[0], []).append(r[1])
+            adj.setdefault(source_node_id, []).append(target_node_id)
+            visited: set[str] = set()
+            queue = deque([target_node_id])
+            while queue:
+                current = queue.popleft()
+                if current == source_node_id:
+                    raise ValueError(
+                        f"adding {edge_type} edge {source_node_id} -> {target_node_id} would create a cycle"
+                    )
+                if current in visited:
+                    continue
+                visited.add(current)
+                for neighbor in adj.get(current, []):
+                    if neighbor not in visited:
+                        queue.append(neighbor)
+
         now = self._now()
         edge_id = self._uuid()
         self.db.execute(
@@ -541,6 +621,8 @@ class TeamManagerService:
     # Variable CRUD
     # ==================================================================
 
+    VALID_VAR_TYPES = {"string", "number", "boolean", "json", "secret"}
+
     def set_variable(
         self,
         tenant_id: str,
@@ -549,6 +631,8 @@ class TeamManagerService:
         value: str,
         var_type: str = "string",
     ) -> dict:
+        if var_type not in self.VALID_VAR_TYPES:
+            raise ValueError(f"invalid var_type: {var_type!r} (valid: {sorted(self.VALID_VAR_TYPES)})")
         if self.get_graph(tenant_id, graph_id) is None:
             raise ValueError(f"graph not found: {graph_id}")
 
@@ -623,6 +707,8 @@ class TeamManagerService:
         node = self.get_node(tenant_id, node_id)
         if node is None:
             raise ValueError(f"node not found: {node_id}")
+        if node["kind"] != "pipeline":
+            raise ValueError(f"node {node_id} is kind {node['kind']!r}, expected 'pipeline'")
 
         now = self._now()
         # Upsert: update existing pipeline for this node, or insert new.
@@ -875,11 +961,18 @@ class TeamManagerService:
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
 
-        # If cycle prevented full ordering, append remaining agents.
+        # If cycle prevented full ordering, append remaining agents with warning.
         ordered_set = set(deploy_order)
+        warnings: list[str] = []
+        cycle_nodes: list[str] = []
         for n in agent_nodes:
             if n["id"] not in ordered_set:
                 deploy_order.append(n["id"])
+                cycle_nodes.append(n["id"])
+        if cycle_nodes:
+            warnings.append(
+                f"cycle detected among agent nodes {cycle_nodes}; deploy order for these is non-deterministic"
+            )
 
         # Variable bindings.
         variable_bindings = {v["key"]: v["value"] for v in variables}
@@ -948,13 +1041,479 @@ class TeamManagerService:
                 "primer": primer,
             })
 
-        return {
+        result: dict[str, Any] = {
             "graph_id": graph_id,
             "deploy_order": deploy_order,
             "agent_tasks": agent_tasks,
             "variable_bindings": variable_bindings,
             "primers": primers,
         }
+        if warnings:
+            result["warnings"] = warnings
+        return result
+
+    # ==================================================================
+    # Deployments
+    # ==================================================================
+
+    def deploy_graph(self, tenant_id: str, graph_id: str) -> dict:
+        """Create a deployment record for a graph.
+
+        Validates the graph first, then builds a deploy plan and stores
+        a pending deployment record.  Returns the deployment dict.
+        """
+        validation = self.validate_graph(tenant_id, graph_id)
+        if not validation["valid"]:
+            return {
+                "error": "validation_failed",
+                "errors": validation["errors"],
+                "warnings": validation.get("warnings", []),
+            }
+
+        plan = self.build_deploy_plan(tenant_id, graph_id)
+        deployment_id = self._uuid()
+        now = self._now()
+
+        self.db.execute(
+            """
+            INSERT INTO team_deployments
+                (id, tenant_id, graph_id, status, deploy_plan, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                deployment_id,
+                tenant_id,
+                graph_id,
+                "pending",
+                json.dumps(plan),
+                now,
+            ),
+        )
+        self.db.commit()
+        return self.get_deployment(tenant_id, deployment_id)  # type: ignore[return-value]
+
+    def get_deployment(self, tenant_id: str, deployment_id: str) -> dict | None:
+        row = self.db.execute(
+            "SELECT * FROM team_deployments WHERE tenant_id = ? AND id = ?",
+            (tenant_id, deployment_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._deployment_row(row)
+
+    def list_deployments(
+        self, tenant_id: str, graph_id: str | None = None,
+    ) -> list[dict]:
+        if graph_id is not None:
+            rows = self.db.execute(
+                "SELECT * FROM team_deployments WHERE tenant_id = ? AND graph_id = ? ORDER BY created_at DESC",
+                (tenant_id, graph_id),
+            ).fetchall()
+        else:
+            rows = self.db.execute(
+                "SELECT * FROM team_deployments WHERE tenant_id = ? ORDER BY created_at DESC",
+                (tenant_id,),
+            ).fetchall()
+        return [self._deployment_row(r) for r in rows]
+
+    def cancel_deployment(self, tenant_id: str, deployment_id: str) -> dict:
+        existing = self.get_deployment(tenant_id, deployment_id)
+        if existing is None:
+            return {"error": "deployment_not_found"}
+
+        if existing["status"] not in ("pending", "running"):
+            return {
+                "error": "invalid_transition",
+                "message": f"cannot cancel deployment with status '{existing['status']}'",
+            }
+
+        self.db.execute(
+            """
+            UPDATE team_deployments
+            SET status = 'cancelled', completed_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (self._now(), tenant_id, deployment_id),
+        )
+        self.db.commit()
+        return self.get_deployment(tenant_id, deployment_id)  # type: ignore[return-value]
+
+    def start_deployment(self, tenant_id: str, deployment_id: str) -> dict:
+        """Transition a deployment from 'pending' to 'running'."""
+        existing = self.get_deployment(tenant_id, deployment_id)
+        if existing is None:
+            return {"error": "deployment_not_found"}
+
+        if existing["status"] != "pending":
+            return {
+                "error": "invalid_transition",
+                "message": f"cannot start deployment with status '{existing['status']}'",
+            }
+
+        self.db.execute(
+            """
+            UPDATE team_deployments
+            SET status = 'running', started_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (self._now(), tenant_id, deployment_id),
+        )
+        self.db.commit()
+        return self.get_deployment(tenant_id, deployment_id)  # type: ignore[return-value]
+
+    def complete_deployment(
+        self, tenant_id: str, deployment_id: str, error: str | None = None,
+    ) -> dict:
+        """Transition a deployment to 'completed' or 'failed'."""
+        existing = self.get_deployment(tenant_id, deployment_id)
+        if existing is None:
+            return {"error": "deployment_not_found"}
+
+        if existing["status"] not in ("pending", "running"):
+            return {
+                "error": "invalid_transition",
+                "message": f"cannot complete deployment with status '{existing['status']}'",
+            }
+
+        new_status = "failed" if error else "completed"
+        self.db.execute(
+            """
+            UPDATE team_deployments
+            SET status = ?, completed_at = ?, error = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (new_status, self._now(), error, tenant_id, deployment_id),
+        )
+        self.db.commit()
+        return self.get_deployment(tenant_id, deployment_id)  # type: ignore[return-value]
+
+    # ==================================================================
+    # Deploy primer generation
+    # ==================================================================
+
+    def generate_deploy_primer(
+        self, tenant_id: str, graph_id: str, node_id: str,
+    ) -> dict:
+        """Generate a deploy primer for a specific node.
+
+        For agent nodes, the primer includes the node's label and config,
+        connected nodes, graph-scoped variables, and pipeline steps.
+        Returns ``{"node_id": ..., "primer": "...", "variables": {...}}``.
+        """
+        graph = self.get_graph(tenant_id, graph_id)
+        if graph is None:
+            raise ValueError(f"graph not found: {graph_id}")
+
+        node = self.get_node(tenant_id, node_id)
+        if node is None:
+            raise ValueError(f"node not found: {node_id}")
+        if node["graph_id"] != graph_id:
+            raise ValueError(f"node {node_id} does not belong to graph {graph_id}")
+
+        nodes = self.list_nodes(tenant_id, graph_id)
+        edges = self.list_edges(tenant_id, graph_id)
+        variables = self.list_variables(tenant_id, graph_id)
+        nodes_by_id = {n["id"]: n for n in nodes}
+
+        config = node.get("config", {})
+        variable_bindings = {v["key"]: v["value"] for v in variables}
+
+        primer_lines = [
+            f"# Deploy Primer for {node['label']}",
+            "",
+            f"Node ID: {node_id}",
+            f"Kind: {node['kind']}",
+            f"Graph: {graph['name']}",
+        ]
+
+        # Config description.
+        if config.get("goal"):
+            primer_lines.append(f"Goal: {config['goal']}")
+        if config.get("model_id"):
+            primer_lines.append(f"Model: {config['model_id']}")
+
+        # Connections.
+        reports_to: list[str] = []
+        delegates_to: list[str] = []
+        triggers_list: list[str] = []
+        feeds_from: list[str] = []
+        uses_list: list[str] = []
+        reports_from: list[str] = []
+
+        for edge in edges:
+            src_node = nodes_by_id.get(edge["source_node_id"])
+            tgt_node = nodes_by_id.get(edge["target_node_id"])
+
+            if edge["source_node_id"] == node_id:
+                if edge["edge_type"] == "reports_to" and tgt_node:
+                    reports_to.append(tgt_node["label"])
+                elif edge["edge_type"] == "delegates_to" and tgt_node:
+                    delegates_to.append(tgt_node["label"])
+                elif edge["edge_type"] == "triggers" and tgt_node:
+                    triggers_list.append(tgt_node["label"])
+                elif edge["edge_type"] == "uses" and tgt_node:
+                    uses_list.append(tgt_node["label"])
+
+            if edge["target_node_id"] == node_id:
+                if edge["edge_type"] == "feeds" and src_node:
+                    feeds_from.append(src_node["label"])
+                elif edge["edge_type"] == "reports_to" and src_node:
+                    reports_from.append(src_node["label"])
+
+        primer_lines.append("")
+        primer_lines.append("## Connections")
+        if reports_to:
+            primer_lines.append(f"Reports to: {', '.join(reports_to)}")
+        if reports_from:
+            primer_lines.append(f"Receives reports from: {', '.join(reports_from)}")
+        if delegates_to:
+            primer_lines.append(f"Delegates to: {', '.join(delegates_to)}")
+        if triggers_list:
+            primer_lines.append(f"Triggers: {', '.join(triggers_list)}")
+        if feeds_from:
+            primer_lines.append(f"Receives data from: {', '.join(feeds_from)}")
+        if uses_list:
+            primer_lines.append(f"Uses: {', '.join(uses_list)}")
+
+        if not any([reports_to, reports_from, delegates_to, triggers_list, feeds_from, uses_list]):
+            primer_lines.append("(no connections)")
+
+        # Variables.
+        if variable_bindings:
+            primer_lines.append("")
+            primer_lines.append("## Variables")
+            for k, v in variable_bindings.items():
+                primer_lines.append(f"- {k} = {v}")
+
+        # Pipeline steps.
+        pipeline = self.get_pipeline(tenant_id, node_id)
+        if pipeline and pipeline.get("steps"):
+            primer_lines.append("")
+            primer_lines.append("## Pipeline Steps")
+            for i, step in enumerate(pipeline["steps"], 1):
+                step_name = step.get("name", step.get("tool", f"step-{i}"))
+                primer_lines.append(f"{i}. {step_name}")
+
+        primer = "\n".join(primer_lines)
+        return {
+            "node_id": node_id,
+            "primer": primer,
+            "variables": variable_bindings,
+        }
+
+    # ==================================================================
+    # Model configuration per node
+    # ==================================================================
+
+    def set_node_model(
+        self, tenant_id: str, graph_id: str, node_id: str, model_id: str,
+    ) -> dict:
+        """Store a model_id in the node's config."""
+        if not model_id or not model_id.strip():
+            raise ValueError("model_id must be a non-empty string")
+
+        node = self.get_node(tenant_id, node_id)
+        if node is None:
+            raise ValueError(f"node not found: {node_id}")
+        if node["graph_id"] != graph_id:
+            raise ValueError(f"node {node_id} does not belong to graph {graph_id}")
+
+        config = dict(node.get("config", {}))
+        config["model_id"] = model_id.strip()
+        return self.update_node(tenant_id, node_id, config=config)
+
+    def get_node_model(
+        self, tenant_id: str, graph_id: str, node_id: str,
+        default_model_id: str = "",
+    ) -> dict:
+        """Return the model_id for a node, falling back to default."""
+        node = self.get_node(tenant_id, node_id)
+        if node is None:
+            raise ValueError(f"node not found: {node_id}")
+        if node["graph_id"] != graph_id:
+            raise ValueError(f"node {node_id} does not belong to graph {graph_id}")
+
+        config = node.get("config", {})
+        model_id = config.get("model_id", "") or default_model_id
+        return {"node_id": node_id, "model_id": model_id}
+
+    # ==================================================================
+    # Schedule CRUD
+    # ==================================================================
+
+    def create_schedule(
+        self,
+        tenant_id: str,
+        graph_id: str,
+        name: str,
+        cron_expression: str,
+        action: str = "deploy",
+        action_params: dict[str, Any] | None = None,
+        requires_approval: bool = False,
+    ) -> dict:
+        if self.get_graph(tenant_id, graph_id) is None:
+            raise ValueError(f"graph not found: {graph_id}")
+        name = name.strip()
+        if not name:
+            raise ValueError("name is required")
+        cron_expression = cron_expression.strip()
+        if not cron_expression:
+            raise ValueError("cron_expression is required")
+        # Validate cron expression.
+        self._compute_next_run(cron_expression)
+
+        now = self._now()
+        schedule_id = self._uuid()
+        next_run_at = self._compute_next_run(cron_expression)
+        self.db.execute(
+            """
+            INSERT INTO team_schedules
+                (id, tenant_id, graph_id, name, cron_expression, action,
+                 action_params, enabled, requires_approval, next_run_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+            """,
+            (
+                schedule_id,
+                tenant_id,
+                graph_id,
+                name,
+                cron_expression,
+                action,
+                json.dumps(action_params) if action_params else None,
+                1 if requires_approval else 0,
+                next_run_at,
+                now,
+                now,
+            ),
+        )
+        self.db.commit()
+        return self.get_schedule(tenant_id, schedule_id)  # type: ignore[return-value]
+
+    def get_schedule(self, tenant_id: str, schedule_id: str) -> dict | None:
+        row = self.db.execute(
+            "SELECT * FROM team_schedules WHERE tenant_id = ? AND id = ?",
+            (tenant_id, schedule_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._schedule_row(row)
+
+    def list_schedules(self, tenant_id: str, graph_id: str | None = None) -> list[dict]:
+        if graph_id is not None:
+            rows = self.db.execute(
+                "SELECT * FROM team_schedules WHERE tenant_id = ? AND graph_id = ? ORDER BY created_at DESC",
+                (tenant_id, graph_id),
+            ).fetchall()
+        else:
+            rows = self.db.execute(
+                "SELECT * FROM team_schedules WHERE tenant_id = ? ORDER BY created_at DESC",
+                (tenant_id,),
+            ).fetchall()
+        return [self._schedule_row(r) for r in rows]
+
+    def update_schedule(
+        self,
+        tenant_id: str,
+        schedule_id: str,
+        **kwargs: Any,
+    ) -> dict:
+        existing = self.get_schedule(tenant_id, schedule_id)
+        if existing is None:
+            raise ValueError(f"schedule not found: {schedule_id}")
+
+        allowed_fields = {"name", "cron_expression", "action", "action_params", "enabled", "requires_approval"}
+        for key in kwargs:
+            if key not in allowed_fields:
+                raise ValueError(f"cannot update field: {key}")
+
+        new_name = kwargs.get("name", existing["name"])
+        new_cron = kwargs.get("cron_expression", existing["cron_expression"])
+        new_action = kwargs.get("action", existing["action"])
+        new_action_params = kwargs.get("action_params", existing["action_params"])
+        new_enabled = kwargs.get("enabled", existing["enabled"])
+        new_requires_approval = kwargs.get("requires_approval", existing["requires_approval"])
+
+        # If cron_expression changed, recompute next_run_at.
+        if new_cron != existing["cron_expression"]:
+            new_cron = new_cron.strip()
+            self._compute_next_run(new_cron)  # validate
+            next_run_at = self._compute_next_run(new_cron)
+        else:
+            next_run_at = existing["next_run_at"]
+
+        self.db.execute(
+            """
+            UPDATE team_schedules
+            SET name = ?, cron_expression = ?, action = ?, action_params = ?,
+                enabled = ?, requires_approval = ?, next_run_at = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (
+                new_name,
+                new_cron,
+                new_action,
+                json.dumps(new_action_params) if isinstance(new_action_params, dict) else new_action_params,
+                1 if new_enabled else 0,
+                1 if new_requires_approval else 0,
+                next_run_at,
+                self._now(),
+                tenant_id,
+                schedule_id,
+            ),
+        )
+        self.db.commit()
+        return self.get_schedule(tenant_id, schedule_id)  # type: ignore[return-value]
+
+    def delete_schedule(self, tenant_id: str, schedule_id: str) -> dict:
+        existing = self.get_schedule(tenant_id, schedule_id)
+        if existing is None:
+            return {"deleted": False, "id": schedule_id}
+        self.db.execute(
+            "DELETE FROM team_schedules WHERE tenant_id = ? AND id = ?",
+            (tenant_id, schedule_id),
+        )
+        self.db.commit()
+        return {"deleted": True, "id": schedule_id}
+
+    def toggle_schedule(self, tenant_id: str, schedule_id: str, enabled: bool) -> dict:
+        existing = self.get_schedule(tenant_id, schedule_id)
+        if existing is None:
+            raise ValueError(f"schedule not found: {schedule_id}")
+        self.db.execute(
+            "UPDATE team_schedules SET enabled = ?, updated_at = ? WHERE tenant_id = ? AND id = ?",
+            (1 if enabled else 0, self._now(), tenant_id, schedule_id),
+        )
+        self.db.commit()
+        return self.get_schedule(tenant_id, schedule_id)  # type: ignore[return-value]
+
+    def get_due_schedules(self, tenant_id: str) -> list[dict]:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        rows = self.db.execute(
+            """
+            SELECT * FROM team_schedules
+            WHERE tenant_id = ? AND enabled = 1 AND next_run_at <= ?
+            ORDER BY next_run_at ASC
+            """,
+            (tenant_id, now),
+        ).fetchall()
+        return [self._schedule_row(r) for r in rows]
+
+    def mark_schedule_run(self, tenant_id: str, schedule_id: str) -> dict:
+        existing = self.get_schedule(tenant_id, schedule_id)
+        if existing is None:
+            raise ValueError(f"schedule not found: {schedule_id}")
+        now = self._now()
+        next_run_at = self._compute_next_run(existing["cron_expression"])
+        self.db.execute(
+            """
+            UPDATE team_schedules
+            SET last_run_at = ?, next_run_at = ?, updated_at = ?
+            WHERE tenant_id = ? AND id = ?
+            """,
+            (now, next_run_at, now, tenant_id, schedule_id),
+        )
+        self.db.commit()
+        return self.get_schedule(tenant_id, schedule_id)  # type: ignore[return-value]
 
     # ==================================================================
     # Row converters (private)
@@ -1044,6 +1603,46 @@ class TeamManagerService:
             "updated_at": str(row["updated_at"]),
         }
 
+    @staticmethod
+    def _deployment_row(row) -> dict:
+        return {
+            "id": str(row["id"]),
+            "tenant_id": str(row["tenant_id"]),
+            "graph_id": str(row["graph_id"]),
+            "status": str(row["status"]),
+            "deploy_plan": json.loads(row["deploy_plan"] or "{}"),
+            "started_at": str(row["started_at"]) if row["started_at"] else None,
+            "completed_at": str(row["completed_at"]) if row["completed_at"] else None,
+            "error": str(row["error"]) if row["error"] else None,
+            "created_at": str(row["created_at"]),
+        }
+
+    @staticmethod
+    def _schedule_row(row) -> dict:
+        action_params_raw = row["action_params"]
+        if action_params_raw:
+            try:
+                action_params = json.loads(action_params_raw)
+            except (json.JSONDecodeError, TypeError):
+                action_params = action_params_raw
+        else:
+            action_params = None
+        return {
+            "id": str(row["id"]),
+            "tenant_id": str(row["tenant_id"]),
+            "graph_id": str(row["graph_id"]),
+            "name": str(row["name"]),
+            "cron_expression": str(row["cron_expression"]),
+            "action": str(row["action"]),
+            "action_params": action_params,
+            "enabled": bool(row["enabled"]),
+            "requires_approval": bool(row["requires_approval"]),
+            "last_run_at": str(row["last_run_at"]) if row["last_run_at"] else None,
+            "next_run_at": str(row["next_run_at"]) if row["next_run_at"] else None,
+            "created_at": str(row["created_at"]),
+            "updated_at": str(row["updated_at"]),
+        }
+
     # ==================================================================
     # Utilities (private)
     # ==================================================================
@@ -1055,3 +1654,37 @@ class TeamManagerService:
     @staticmethod
     def _now() -> str:
         return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _compute_next_run(cron_expression: str) -> str:
+        """Compute the next run time from a cron expression.
+
+        Returns an ISO-format UTC timestamp string.
+        """
+        base_time = datetime.now(timezone.utc)
+        if _croniter is not None:
+            cron = _croniter(cron_expression, base_time)
+            return cron.get_next(datetime).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        # Fallback for basic expressions when croniter is unavailable.
+        from datetime import timedelta
+        expr = cron_expression.strip()
+        if expr == "@hourly":
+            nxt = base_time + timedelta(hours=1)
+        elif expr == "@daily":
+            nxt = base_time + timedelta(days=1)
+        elif expr.startswith("*/"):
+            parts = expr.split()
+            if len(parts) == 5 and parts[0].startswith("*/"):
+                try:
+                    minutes = max(1, int(parts[0][2:]))
+                except ValueError as exc:
+                    raise ValueError(f"unsupported cron expression: {cron_expression}") from exc
+                nxt = base_time + timedelta(minutes=minutes)
+            else:
+                raise ValueError(f"unsupported cron expression: {cron_expression}")
+        else:
+            raise ValueError(
+                "croniter is unavailable and cron expression is unsupported. "
+                "Install croniter or use @hourly, @daily, */N * * * *."
+            )
+        return nxt.strftime("%Y-%m-%dT%H:%M:%S.000Z")

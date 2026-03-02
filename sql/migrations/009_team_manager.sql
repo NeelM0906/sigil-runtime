@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS team_edges (
     tenant_id TEXT NOT NULL,
     source_node_id TEXT NOT NULL,
     target_node_id TEXT NOT NULL,
-    edge_type TEXT NOT NULL DEFAULT 'dependency',
+    edge_type TEXT NOT NULL DEFAULT 'feeds',
     label TEXT DEFAULT '',
     metadata_json TEXT DEFAULT '{}',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -1507,7 +1507,83 @@ class RuntimeBridge:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         if runtime.team_manager is None:
             return {"error": "team_manager_disabled"}
-        return runtime.team_manager.build_deploy_plan(tenant_id=tenant_id, graph_id=graph_id)
+        return runtime.team_manager.deploy_graph(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_get_deployment(
+        self, tenant_id: str, deployment_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any] | None:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.get_deployment(tenant_id=tenant_id, deployment_id=deployment_id)
+
+    def tm_list_deployments(
+        self, tenant_id: str, graph_id: str | None = None, workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_deployments(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_cancel_deployment(
+        self, tenant_id: str, deployment_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.cancel_deployment(tenant_id=tenant_id, deployment_id=deployment_id)
+
+    def tm_generate_primer(
+        self, tenant_id: str, graph_id: str, node_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.generate_deploy_primer(
+            tenant_id=tenant_id, graph_id=graph_id, node_id=node_id,
+        )
+
+    # ── Team Manager schedule delegation ──
+
+    def tm_create_schedule(
+        self, tenant_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.create_schedule(tenant_id=tenant_id, **kwargs)
+
+    def tm_list_schedules(
+        self, tenant_id: str, graph_id: str | None = None, workspace_root: str | None = None,
+    ) -> list[dict[str, Any]]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return []
+        return runtime.team_manager.list_schedules(tenant_id=tenant_id, graph_id=graph_id)
+
+    def tm_update_schedule(
+        self, tenant_id: str, schedule_id: str, workspace_root: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.update_schedule(tenant_id=tenant_id, schedule_id=schedule_id, **kwargs)
+
+    def tm_delete_schedule(
+        self, tenant_id: str, schedule_id: str, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.delete_schedule(tenant_id=tenant_id, schedule_id=schedule_id)
+
+    def tm_toggle_schedule(
+        self, tenant_id: str, schedule_id: str, enabled: bool, workspace_root: str | None = None,
+    ) -> dict[str, Any]:
+        runtime = self._tenant_runtime(tenant_id, workspace_root)
+        if runtime.team_manager is None:
+            return {"error": "team_manager_disabled"}
+        return runtime.team_manager.toggle_schedule(tenant_id=tenant_id, schedule_id=schedule_id, enabled=enabled)
 
     def get_user_profile(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
         runtime = self._tenant_runtime(tenant_id, workspace_root)

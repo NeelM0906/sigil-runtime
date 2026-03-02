@@ -255,6 +255,9 @@ export class TeamManagerCanvas {
       html += svgEdge(edge, nodesById);
     }
     for (const node of nodes) {
+      // Coerce positions to numbers for SVG safety.
+      node.position_x = Number(node.position_x) || 0;
+      node.position_y = Number(node.position_y) || 0;
       const renderer = NODE_RENDERERS[node.kind] || svgAgentNode;
       html += renderer(node, selectedNodes.has(node.id));
     }

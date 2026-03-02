@@ -82,10 +82,7 @@ export class SigilAPI {
   }
 
   async tmDeleteGraph(graphId) {
-    const url = `${this.baseUrl}/api/team-manager/graphs/${encodeURIComponent(graphId)}?${this._qs()}`;
-    const res = await fetch(url, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`DELETE /api/team-manager/graphs/${graphId}: ${res.status}`);
-    return res.json();
+    return this._post(`/api/team-manager/graphs/${encodeURIComponent(graphId)}/delete`, {});
   }
 
   async tmAddNode(graphId, kind, label, posX, posY, config = {}) {
@@ -95,23 +92,11 @@ export class SigilAPI {
   }
 
   async tmUpdateNode(nodeId, changes) {
-    const url = `${this.baseUrl}/api/team-manager/nodes/${encodeURIComponent(nodeId)}?${this._qs()}`;
-    const payload = { tenant_id: this.tenantId, user_id: this.userId, ...changes };
-    if (this.workspace) payload.workspace_root = this.workspace;
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`PUT /api/team-manager/nodes/${nodeId}: ${res.status}`);
-    return res.json();
+    return this._post(`/api/team-manager/nodes/${encodeURIComponent(nodeId)}/update`, changes);
   }
 
   async tmDeleteNode(nodeId) {
-    const url = `${this.baseUrl}/api/team-manager/nodes/${encodeURIComponent(nodeId)}?${this._qs()}`;
-    const res = await fetch(url, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`DELETE /api/team-manager/nodes/${nodeId}: ${res.status}`);
-    return res.json();
+    return this._post(`/api/team-manager/nodes/${encodeURIComponent(nodeId)}/delete`, {});
   }
 
   async tmAddEdge(graphId, sourceId, targetId, edgeType) {
@@ -121,10 +106,7 @@ export class SigilAPI {
   }
 
   async tmDeleteEdge(edgeId) {
-    const url = `${this.baseUrl}/api/team-manager/edges/${encodeURIComponent(edgeId)}?${this._qs()}`;
-    const res = await fetch(url, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`DELETE /api/team-manager/edges/${edgeId}: ${res.status}`);
-    return res.json();
+    return this._post(`/api/team-manager/edges/${encodeURIComponent(edgeId)}/delete`, {});
   }
 
   async tmDeployGraph(graphId) {

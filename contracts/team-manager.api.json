@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bomba.sr/contracts/team-manager.api.json",
   "title": "TeamManagerAPI",
-  "description": "Complete API contract for the Team Manager subsystem. Manages team graphs -- visual org charts of agents, humans, skills, and pipelines -- with deployment and scheduling capabilities.",
+  "description": "Complete API contract for the Team Manager subsystem. Manages team graphs -- visual org charts of agents, humans, skills, and pipelines -- with deployment, scheduling, and AI generation capabilities. Phase 2 adds real subagent deployment orchestration, schedule governance, and generation cost telemetry.",
+  "version": "2.0.0",
 
   "$defs": {
 
@@ -225,7 +226,7 @@
         "target_node_id": { "type": "string", "format": "uuid" },
         "edge_type": {
           "type": "string",
-          "enum": ["reports_to", "delegates_to", "provides_context", "triggers", "monitors", "custom"],
+          "enum": ["reports_to", "delegates_to", "feeds", "uses", "triggers", "annotates"],
           "description": "Semantic type of the relationship."
         },
         "label": {
@@ -253,9 +254,79 @@
       "additionalProperties": false
     },
 
+    "token_usage": {
+      "type": "object",
+      "description": "Token consumption metrics for an LLM operation.",
+      "required": ["input", "output", "total"],
+      "properties": {
+        "input": { "type": "integer", "minimum": 0, "description": "Input/prompt tokens consumed." },
+        "output": { "type": "integer", "minimum": 0, "description": "Output/completion tokens generated." },
+        "total": { "type": "integer", "minimum": 0, "description": "Total tokens (input + output)." }
+      },
+      "additionalProperties": false
+    },
+
+    "deploy_node_status": {
+      "type": "object",
+      "description": "Execution status for a single node within a deployment run. Tracks subagent lifecycle, progress, timing, and token usage.",
+      "required": ["node_id", "status"],
+      "properties": {
+        "node_id": { "type": "string", "format": "uuid" },
+        "label": { "type": "string" },
+        "kind": { "$ref": "#/$defs/node_kind" },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "queued", "running", "completed", "failed", "cancelled", "skipped", "blocked"],
+          "description": "Node execution state. 'queued' means the node is waiting for upstream dependencies. 'blocked' means an approval or resource wait."
+        },
+        "subagent_run_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "The SubAgentProtocol run_id for this node. Null for non-agent nodes or if not yet spawned."
+        },
+        "progress_pct": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Execution progress percentage reported by the subagent. Null until the subagent reports progress."
+        },
+        "model_id": {
+          "type": ["string", "null"],
+          "description": "The LLM model ID used for this node's execution. Reflects any per-node override applied."
+        },
+        "started_at": { "type": ["string", "null"], "format": "date-time" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" },
+        "runtime_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Wall-clock execution time in milliseconds. Populated on completion or failure."
+        },
+        "token_usage": {
+          "oneOf": [
+            { "$ref": "#/$defs/token_usage" },
+            { "type": "null" }
+          ],
+          "description": "Token consumption for this node's subagent execution. Null until completed."
+        },
+        "error": { "type": ["string", "null"], "description": "Error message if status is 'failed'." },
+        "result_summary": { "type": ["string", "null"], "description": "Brief summary of the node's output on success." },
+        "artifacts": {
+          "type": ["object", "null"],
+          "description": "Structured output artifacts produced by this node's execution.",
+          "additionalProperties": true
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Node IDs that must complete before this node can start (derived from graph topology).",
+          "items": { "type": "string", "format": "uuid" }
+        }
+      },
+      "additionalProperties": false
+    },
+
     "deploy_run": {
       "type": "object",
-      "description": "A deployment run -- the result of deploying a team graph for execution.",
+      "description": "A deployment run -- the result of deploying a team graph for execution. Tracks overall run state plus per-node subagent lifecycle, timing, and token usage.",
       "required": ["run_id", "graph_id", "tenant_id", "status", "created_at"],
       "properties": {
         "run_id": { "type": "string", "format": "uuid" },
@@ -263,70 +334,184 @@
         "tenant_id": { "type": "string" },
         "status": {
           "type": "string",
-          "enum": ["pending", "running", "completed", "failed", "cancelled"]
+          "enum": ["pending", "running", "completed", "failed", "cancelled", "partially_completed"],
+          "description": "'partially_completed' indicates some nodes succeeded while others failed or were cancelled."
         },
         "trigger": {
           "type": "string",
           "enum": ["manual", "schedule", "api"],
           "description": "What initiated this deployment."
         },
+        "objective": {
+          "type": ["string", "null"],
+          "description": "The high-level objective for this deployment run. Used as the goal primer for root-level agents."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "normal", "high"],
+          "default": "normal",
+          "description": "Execution priority passed to SubAgentTask."
+        },
+        "deploy_order": {
+          "type": "array",
+          "description": "Topologically sorted node IDs representing the planned execution order.",
+          "items": { "type": "string", "format": "uuid" }
+        },
         "node_statuses": {
           "type": "array",
           "description": "Per-node execution status within the run.",
-          "items": {
-            "type": "object",
-            "required": ["node_id", "status"],
-            "properties": {
-              "node_id": { "type": "string", "format": "uuid" },
-              "label": { "type": "string" },
-              "kind": { "$ref": "#/$defs/node_kind" },
-              "status": {
-                "type": "string",
-                "enum": ["pending", "running", "completed", "failed", "skipped"]
-              },
-              "subagent_run_id": {
-                "type": ["string", "null"],
-                "format": "uuid",
-                "description": "If this node spawned a subagent, the run_id for polling."
-              },
-              "started_at": { "type": ["string", "null"], "format": "date-time" },
-              "completed_at": { "type": ["string", "null"], "format": "date-time" },
-              "error": { "type": ["string", "null"] },
-              "result_summary": { "type": ["string", "null"] }
-            },
-            "additionalProperties": false
-          }
+          "items": { "$ref": "#/$defs/deploy_node_status" }
+        },
+        "progress_pct": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Aggregate progress across all nodes. Computed as average of non-skipped node progress values."
         },
         "started_at": { "type": ["string", "null"], "format": "date-time" },
         "completed_at": { "type": ["string", "null"], "format": "date-time" },
         "created_at": { "type": "string", "format": "date-time" },
+        "runtime_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Total wall-clock time for the entire deployment run in milliseconds."
+        },
+        "token_usage": {
+          "oneOf": [
+            { "$ref": "#/$defs/token_usage" },
+            { "type": "null" }
+          ],
+          "description": "Aggregate token usage across all nodes in the run."
+        },
+        "estimated_cost_usd": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Estimated total cost in USD based on model pricing and token usage. Null if not computable."
+        },
+        "run_timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 86400,
+          "description": "The timeout configured for this run."
+        },
+        "schedule_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "If triggered by a schedule, the schedule_id that initiated this run."
+        },
+        "cancelled_by": {
+          "type": ["string", "null"],
+          "description": "User ID that cancelled this run. Null if not cancelled or if cancelled by timeout."
+        },
+        "cancelled_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp when cancellation was requested."
+        },
         "error": { "type": ["string", "null"] },
-        "summary": { "type": ["string", "null"] }
+        "summary": { "type": ["string", "null"] },
+        "events": {
+          "type": ["array", "null"],
+          "description": "Chronological event log for the run. Only populated when include_events=true on GET. Mirrors SubAgentProtocol event stream.",
+          "items": {
+            "type": "object",
+            "required": ["event_id", "event_type", "status", "created_at"],
+            "properties": {
+              "event_id": { "type": "string", "format": "uuid" },
+              "event_type": {
+                "type": "string",
+                "enum": ["accepted", "started", "progress", "blocked", "completed", "failed", "timed_out", "cancelled", "announced"]
+              },
+              "node_id": { "type": ["string", "null"], "format": "uuid", "description": "The node this event relates to, if applicable." },
+              "status": { "type": "string" },
+              "progress_pct": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+              "summary": { "type": ["string", "null"] },
+              "runtime_ms": { "type": ["integer", "null"], "minimum": 0 },
+              "created_at": { "type": "string", "format": "date-time" }
+            },
+            "additionalProperties": false
+          }
+        }
       },
       "additionalProperties": false
     },
 
     "schedule": {
       "type": "object",
-      "description": "A recurring schedule for automatic graph deployment.",
+      "description": "A recurring schedule for automatic graph deployment. Integrates with CronScheduler and governance pipeline.",
       "required": ["schedule_id", "graph_id", "tenant_id", "cron_expression", "enabled", "created_at", "updated_at"],
       "properties": {
         "schedule_id": { "type": "string", "format": "uuid" },
         "graph_id": { "type": "string", "format": "uuid" },
         "tenant_id": { "type": "string" },
+        "user_id": {
+          "type": "string",
+          "description": "The user who created/owns this schedule."
+        },
         "name": { "type": ["string", "null"] },
+        "objective": {
+          "type": ["string", "null"],
+          "maxLength": 4000,
+          "description": "The high-level objective for each deployment triggered by this schedule. Passed as the goal primer to root-level agents."
+        },
         "cron_expression": {
           "type": "string",
           "minLength": 1,
-          "description": "Standard cron expression (5-field) or shorthand (@hourly, @daily, */N * * * *)."
+          "description": "Standard cron expression (5-field) or shorthand (@hourly, @daily, */N * * * *). Parsed by croniter with fallback for common patterns."
+        },
+        "timezone": {
+          "type": "string",
+          "default": "UTC",
+          "description": "IANA timezone for cron evaluation. Defaults to UTC."
         },
         "enabled": { "type": "boolean" },
+        "requires_approval": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, each scheduled deployment creates an approval_required item instead of executing immediately. Integrates with governance pipeline."
+        },
+        "node_overrides": {
+          "type": ["object", "null"],
+          "description": "Per-node config overrides applied to every deployment triggered by this schedule. Keyed by node_id.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "run_timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 86400,
+          "default": 600,
+          "description": "Max execution time for each deployment triggered by this schedule."
+        },
+        "max_consecutive_failures": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Auto-disable the schedule after this many consecutive run failures."
+        },
+        "consecutive_failures": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Current count of consecutive failed runs. Resets to 0 on success."
+        },
         "last_run_at": { "type": ["string", "null"], "format": "date-time" },
         "next_run_at": { "type": ["string", "null"], "format": "date-time" },
         "last_run_id": {
           "type": ["string", "null"],
           "format": "uuid",
           "description": "The run_id of the most recent deployment triggered by this schedule."
+        },
+        "last_run_status": {
+          "type": ["string", "null"],
+          "enum": [null, "pending", "running", "completed", "failed", "cancelled", "partially_completed"],
+          "description": "Status of the most recent run for quick reference without fetching the full run."
+        },
+        "total_runs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of deployments triggered by this schedule."
         },
         "created_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" }
@@ -336,8 +521,8 @@
 
     "generate_result": {
       "type": "object",
-      "description": "Result of an AI generation request.",
-      "required": ["mode", "result"],
+      "description": "Result of an AI generation request. Includes the mode-dependent payload plus telemetry for cost tracking.",
+      "required": ["mode", "result", "telemetry"],
       "properties": {
         "mode": {
           "type": "string",
@@ -345,7 +530,7 @@
         },
         "result": {
           "type": "object",
-          "description": "Mode-dependent result payload.",
+          "description": "Mode-dependent result payload. Exactly one of the mode-specific fields will be populated.",
           "properties": {
             "description": {
               "type": "string",
@@ -369,7 +554,7 @@
             },
             "edges": {
               "type": "array",
-              "description": "For mode=team_autofill: suggested edges between nodes.",
+              "description": "For mode=team_autofill: suggested edges between the suggested nodes. Uses labels for cross-referencing since node IDs do not exist yet.",
               "items": {
                 "type": "object",
                 "required": ["source_label", "target_label", "edge_type"],
@@ -384,7 +569,26 @@
             },
             "config": {
               "type": "object",
-              "description": "For mode=agent_autofill: suggested config fields for an agent node."
+              "description": "For mode=agent_autofill: suggested config fields for an agent node. Includes goal, model_id, done_when, and other agent-relevant settings.",
+              "properties": {
+                "goal": { "type": "string" },
+                "model_id": { "type": ["string", "null"] },
+                "done_when": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "workspace_root": { "type": ["string", "null"] },
+                "tools": {
+                  "type": "array",
+                  "description": "Suggested tool names for this agent.",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": true
+            },
+            "reasoning": {
+              "type": ["string", "null"],
+              "description": "Brief explanation of the AI's reasoning behind the generated output. Aids human review of suggestions."
             }
           },
           "additionalProperties": true
@@ -393,12 +597,26 @@
           "type": ["string", "null"],
           "description": "The LLM model used for generation."
         },
-        "token_usage": {
-          "type": ["object", "null"],
+        "telemetry": {
+          "type": "object",
+          "description": "Cost and performance telemetry for the generation call.",
+          "required": ["token_usage", "latency_ms"],
           "properties": {
-            "input": { "type": "integer", "minimum": 0 },
-            "output": { "type": "integer", "minimum": 0 },
-            "total": { "type": "integer", "minimum": 0 }
+            "token_usage": { "$ref": "#/$defs/token_usage" },
+            "latency_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Wall-clock time for the LLM generation call in milliseconds."
+            },
+            "estimated_cost_usd": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "description": "Estimated cost in USD based on model pricing. Null if pricing data is unavailable."
+            },
+            "provider": {
+              "type": ["string", "null"],
+              "description": "The LLM provider that served the request (e.g., 'openrouter', 'anthropic', 'openai')."
+            }
           },
           "additionalProperties": false
         }
@@ -822,7 +1040,7 @@
           "workspace_root": { "type": "string" },
           "edge_type": {
             "type": "string",
-            "enum": ["reports_to", "delegates_to", "provides_context", "triggers", "monitors", "custom"],
+            "enum": ["reports_to", "delegates_to", "feeds", "uses", "triggers", "annotates"],
             "description": "Filter by edge type."
           }
         },
@@ -936,7 +1154,7 @@
     "deploy_graph": {
       "method": "POST",
       "path": "/api/team-manager/deploy",
-      "summary": "Deploy a team graph for execution. Creates subagent runs for agent/pipeline nodes according to the graph topology.",
+      "summary": "Deploy a team graph for execution. Builds a topological deploy plan from the graph, then spawns SubAgentTask instances for each agent/pipeline node via SubAgentOrchestrator. Nodes execute in dependency order with real subagent workers.",
       "request_body": {
         "type": "object",
         "required": ["tenant_id", "graph_id"],
@@ -948,6 +1166,11 @@
             "format": "uuid",
             "description": "The graph to deploy."
           },
+          "objective": {
+            "type": ["string", "null"],
+            "maxLength": 4000,
+            "description": "High-level objective for this deployment. Injected as goal primer into root-level agent system prompts. When omitted, each agent uses its node-level goal config."
+          },
           "session_id": {
             "type": ["string", "null"],
             "description": "Optional session context. A new session is created if omitted."
@@ -957,25 +1180,56 @@
             "default": "user-local",
             "description": "The user initiating deployment."
           },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "normal", "high"],
+            "default": "normal",
+            "description": "Execution priority for all SubAgentTask instances in this run."
+          },
           "run_timeout_seconds": {
             "type": "integer",
             "minimum": 5,
             "maximum": 86400,
             "default": 600,
-            "description": "Max execution time for the entire deployment run."
+            "description": "Max execution time for the entire deployment run. Individual nodes inherit this unless overridden."
           },
           "node_overrides": {
             "type": ["object", "null"],
-            "description": "Per-node config overrides keyed by node_id. Merged on top of the node's stored config.",
+            "description": "Per-node config overrides keyed by node_id. Merged on top of the node's stored config. Supports model_id, goal, done_when, workspace_root, and run_timeout_seconds per node.",
             "additionalProperties": {
               "type": "object",
+              "properties": {
+                "model_id": {
+                  "type": "string",
+                  "description": "Override the LLM model for this specific node. Must be a valid OpenRouter or direct provider model ID."
+                },
+                "goal": {
+                  "type": "string",
+                  "description": "Override the goal for this specific node."
+                },
+                "done_when": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Override completion criteria for this node."
+                },
+                "workspace_root": {
+                  "type": "string",
+                  "description": "Override workspace root for this node's subagent."
+                },
+                "run_timeout_seconds": {
+                  "type": "integer",
+                  "minimum": 5,
+                  "maximum": 86400,
+                  "description": "Override timeout for this specific node."
+                }
+              },
               "additionalProperties": true
             }
           },
           "dry_run": {
             "type": "boolean",
             "default": false,
-            "description": "If true, validate the deployment plan without executing it. Returns the planned execution order."
+            "description": "If true, validate the deployment plan and return the planned execution order, dependency graph, and resolved per-node configs without spawning any subagents."
           }
         },
         "additionalProperties": false
@@ -987,18 +1241,40 @@
           "run": { "$ref": "#/$defs/deploy_run" }
         },
         "additionalProperties": false,
-        "description": "Deployment initiated (or plan returned if dry_run=true)."
+        "description": "Deployment initiated. Status will be 'pending' initially, transitioning to 'running' as subagents spawn. For dry_run=true, status will be 'pending' with populated deploy_order and node_statuses showing resolved configs."
       },
-      "response_400": { "$ref": "#/$defs/error_envelope", "description": "Validation error: graph has no deployable nodes, invalid overrides, etc." },
+      "response_202": {
+        "type": "object",
+        "required": ["error", "error_type"],
+        "properties": {
+          "error": { "type": "string" },
+          "error_type": { "type": "string", "const": "approval_required" },
+          "detail": {
+            "type": "object",
+            "properties": {
+              "approval_id": { "type": "string", "format": "uuid" },
+              "blocked_nodes": {
+                "type": "array",
+                "items": { "type": "string", "format": "uuid" },
+                "description": "Node IDs whose operations require governance approval."
+              },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "Deployment requires governance approval. An approval item has been created."
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope", "description": "Validation error: graph has no deployable nodes, invalid overrides, invalid model_id, etc." },
       "response_403": { "$ref": "#/$defs/error_envelope", "description": "Policy denied: deployment blocked by governance rules." },
       "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." },
-      "response_409": { "$ref": "#/$defs/error_envelope", "description": "Graph already has an active deployment." }
+      "response_409": { "$ref": "#/$defs/error_envelope", "description": "Graph already has an active deployment. Cancel the existing run first." }
     },
 
     "get_deploy_status": {
       "method": "GET",
       "path": "/api/team-manager/deploy/{run_id}",
-      "summary": "Get the current status of a deployment run, including per-node progress.",
+      "summary": "Get the current status of a deployment run, including per-node progress, timing, and token usage. Optionally includes the full event log.",
       "path_parameters": {
         "run_id": {
           "type": "string",
@@ -1010,7 +1286,17 @@
         "required": ["tenant_id"],
         "properties": {
           "tenant_id": { "type": "string" },
-          "workspace_root": { "type": "string" }
+          "workspace_root": { "type": "string" },
+          "include_events": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, the response includes the full chronological event log in the run.events field. Useful for detailed debugging but increases response size."
+          },
+          "after_event_seq": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "When include_events=true, only return events with seq > this value. Enables incremental polling without re-fetching the full event log."
+          }
         },
         "additionalProperties": false
       },
@@ -1020,51 +1306,124 @@
         "properties": {
           "run": { "$ref": "#/$defs/deploy_run" }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Current deployment run state. Poll this endpoint to track progress. The run.progress_pct field provides a quick aggregate. The run.node_statuses array provides per-node detail."
       },
       "response_404": { "$ref": "#/$defs/error_envelope" }
     },
 
-    "list_schedules": {
-      "method": "GET",
-      "path": "/api/team-manager/schedules",
-      "summary": "List schedules for a graph.",
-      "query_parameters": {
+    "cancel_deploy": {
+      "method": "POST",
+      "path": "/api/team-manager/deploy/{run_id}/cancel",
+      "summary": "Cancel a running deployment. Triggers cascade stop on all active subagent runs. Nodes that have already completed retain their results. In-progress nodes are terminated and marked as cancelled.",
+      "path_parameters": {
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "request_body": {
         "type": "object",
-        "required": ["tenant_id", "graph_id"],
+        "required": ["tenant_id"],
         "properties": {
-          "tenant_id": { "type": "string" },
-          "graph_id": {
+          "tenant_id": { "type": "string", "minLength": 1 },
+          "workspace_root": { "type": ["string", "null"] },
+          "user_id": {
             "type": "string",
-            "format": "uuid"
+            "description": "The user requesting cancellation. Recorded in cancelled_by."
           },
-          "workspace_root": { "type": "string" },
-          "enabled": {
-            "type": "boolean",
-            "description": "Filter by enabled state."
+          "reason": {
+            "type": ["string", "null"],
+            "maxLength": 1000,
+            "description": "Optional reason for cancellation. Recorded in the event log."
           }
         },
         "additionalProperties": false
       },
       "response_200": {
         "type": "object",
-        "required": ["schedules"],
+        "required": ["run"],
         "properties": {
-          "schedules": {
-            "type": "array",
-            "items": { "$ref": "#/$defs/schedule" }
+          "run": { "$ref": "#/$defs/deploy_run" },
+          "nodes_cancelled": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of in-progress or pending nodes that were cancelled."
+          },
+          "nodes_completed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of nodes that had already completed before cancellation."
+          }
+        },
+        "additionalProperties": false,
+        "description": "The run has been cancelled. Overall status will be 'cancelled' (or 'partially_completed' if some nodes finished successfully)."
+      },
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Run not found." },
+      "response_409": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "Run is already in a terminal state (completed, failed, or already cancelled). No action taken."
+      }
+    },
+
+    "list_schedules": {
+      "method": "GET",
+      "path": "/api/team-manager/schedules",
+      "summary": "List schedules, optionally filtered by graph_id. Returns schedule metadata including last run status and next run time.",
+      "query_parameters": {
+        "type": "object",
+        "required": ["tenant_id"],
+        "properties": {
+          "tenant_id": { "type": "string" },
+          "graph_id": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "Filter schedules for a specific graph. When omitted, returns all schedules for the tenant."
+          },
+          "workspace_root": { "type": "string" },
+          "enabled": {
+            "type": "boolean",
+            "description": "Filter by enabled state."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50,
+            "description": "Max schedules to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Pagination offset."
           }
         },
         "additionalProperties": false
       },
-      "response_400": { "$ref": "#/$defs/error_envelope" },
-      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+      "response_200": {
+        "type": "object",
+        "required": ["schedules", "total"],
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/schedule" }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of matching schedules (before limit/offset)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "response_400": { "$ref": "#/$defs/error_envelope" }
     },
 
     "create_schedule": {
       "method": "POST",
       "path": "/api/team-manager/schedules",
-      "summary": "Create a recurring deployment schedule for a graph.",
+      "summary": "Create a recurring deployment schedule for a graph. Registers with CronScheduler and optionally gates each run through governance approval.",
       "request_body": {
         "type": "object",
         "required": ["tenant_id", "graph_id", "cron_expression"],
@@ -1072,20 +1431,61 @@
           "tenant_id": { "type": "string", "minLength": 1 },
           "workspace_root": { "type": ["string", "null"] },
           "graph_id": { "type": "string", "format": "uuid" },
+          "user_id": {
+            "type": "string",
+            "default": "user-local",
+            "description": "The user creating this schedule. Used for CronScheduler tenant+user scoping."
+          },
           "name": {
             "type": ["string", "null"],
             "maxLength": 255,
             "description": "Optional human-readable name for the schedule."
           },
+          "objective": {
+            "type": ["string", "null"],
+            "maxLength": 4000,
+            "description": "High-level objective passed to each deployment. Injected as the goal primer for root-level agents in the graph."
+          },
           "cron_expression": {
             "type": "string",
             "minLength": 1,
-            "description": "Standard 5-field cron expression or shorthand (@hourly, @daily, */N * * * *)."
+            "description": "Standard 5-field cron expression or shorthand (@hourly, @daily, */N * * * *). Validated against croniter with fallback parsing."
+          },
+          "timezone": {
+            "type": "string",
+            "default": "UTC",
+            "description": "IANA timezone for cron evaluation."
           },
           "enabled": {
             "type": "boolean",
             "default": true,
             "description": "Whether the schedule is immediately active."
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, each triggered deployment creates an approval_required item instead of executing immediately. The deployment only proceeds after approval."
+          },
+          "node_overrides": {
+            "type": ["object", "null"],
+            "description": "Per-node config overrides applied to every deployment triggered by this schedule. Keyed by node_id.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "run_timeout_seconds": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 86400,
+            "default": 600,
+            "description": "Max execution time for each triggered deployment."
+          },
+          "max_consecutive_failures": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 3,
+            "description": "Auto-disable the schedule after this many consecutive failures."
           }
         },
         "additionalProperties": false
@@ -1100,15 +1500,19 @@
       },
       "response_400": {
         "$ref": "#/$defs/error_envelope",
-        "description": "Invalid cron expression or missing required fields."
+        "description": "Invalid cron expression, missing required fields, or invalid timezone."
       },
-      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." }
+      "response_404": { "$ref": "#/$defs/error_envelope", "description": "Graph not found." },
+      "response_409": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "A schedule with the same graph_id and cron_expression already exists for this tenant."
+      }
     },
 
     "update_schedule": {
       "method": "PUT",
       "path": "/api/team-manager/schedules/{schedule_id}",
-      "summary": "Update a schedule. Commonly used to toggle enabled/disabled or change the cron expression.",
+      "summary": "Update a schedule. Commonly used to toggle enabled/disabled, change the cron expression, update objective, or modify governance settings. Only provided fields are changed.",
       "path_parameters": {
         "schedule_id": {
           "type": "string",
@@ -1126,14 +1530,46 @@
             "maxLength": 255,
             "description": "New name. Omit to keep current."
           },
+          "objective": {
+            "type": ["string", "null"],
+            "maxLength": 4000,
+            "description": "New objective. Omit to keep current. Pass null to clear."
+          },
           "cron_expression": {
             "type": "string",
             "minLength": 1,
-            "description": "New cron expression. Omit to keep current."
+            "description": "New cron expression. Omit to keep current. Recomputes next_run_at."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "New timezone. Omit to keep current."
           },
           "enabled": {
             "type": "boolean",
-            "description": "Enable or disable. Omit to keep current."
+            "description": "Enable or disable. Omit to keep current. Re-enabling resets consecutive_failures to 0."
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "description": "Toggle governance approval gating. Omit to keep current."
+          },
+          "node_overrides": {
+            "type": ["object", "null"],
+            "description": "Replace per-node config overrides. Pass null to clear all overrides.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "run_timeout_seconds": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 86400,
+            "description": "New timeout. Omit to keep current."
+          },
+          "max_consecutive_failures": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "New failure threshold. Omit to keep current."
           }
         },
         "additionalProperties": false
@@ -1146,7 +1582,7 @@
         },
         "additionalProperties": false
       },
-      "response_400": { "$ref": "#/$defs/error_envelope" },
+      "response_400": { "$ref": "#/$defs/error_envelope", "description": "Invalid cron expression, timezone, or field values." },
       "response_404": { "$ref": "#/$defs/error_envelope" }
     },
 
@@ -1184,7 +1620,7 @@
     "generate": {
       "method": "POST",
       "path": "/api/team-manager/generate",
-      "summary": "AI-powered generation for team graphs. Supports three modes: description (generate a text summary), team_autofill (suggest nodes and edges from a goal), and agent_autofill (suggest config for an agent node).",
+      "summary": "AI-powered generation for team graphs. Supports three modes: description (generate a text summary of a graph or node), team_autofill (given an objective, generate a complete team structure with nodes and edges), and agent_autofill (given a role description, generate agent config including goal, model, and tools). All modes return token/cost telemetry.",
       "request_body": {
         "type": "object",
         "required": ["tenant_id", "mode"],
@@ -1194,26 +1630,43 @@
           "mode": {
             "type": "string",
             "enum": ["description", "team_autofill", "agent_autofill"],
-            "description": "Generation mode."
+            "description": "Generation mode. Each mode has different required fields and produces different result shapes."
           },
           "graph_id": {
             "type": ["string", "null"],
             "format": "uuid",
-            "description": "Required for mode=description. The graph to describe."
+            "description": "Required for mode=description (the graph to describe) and mode=agent_autofill (the graph containing the node). Optional for mode=team_autofill (used as context for generating team suggestions that complement existing nodes)."
           },
           "prompt": {
             "type": ["string", "null"],
             "maxLength": 4000,
-            "description": "For mode=team_autofill: describe the team goal or purpose. For mode=agent_autofill: describe the agent's role. For mode=description: optional guidance for the description style."
+            "description": "For mode=team_autofill: describe the team goal, purpose, or project requirements (REQUIRED). For mode=agent_autofill: describe the agent's intended role and responsibilities (REQUIRED). For mode=description: optional guidance for the description style/focus."
           },
           "node_id": {
             "type": ["string", "null"],
             "format": "uuid",
-            "description": "For mode=agent_autofill: the agent node to autofill config for."
+            "description": "For mode=agent_autofill: the agent node to autofill config for (REQUIRED). For mode=description: optionally scope the description to a single node instead of the full graph."
           },
           "model_id": {
             "type": ["string", "null"],
-            "description": "Override the LLM model used for generation."
+            "description": "Override the LLM model used for generation. Defaults to the runtime's configured model."
+          },
+          "temperature": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 2.0,
+            "description": "LLM temperature override. Lower values (0.0-0.3) produce more deterministic output; higher values (0.7-1.5) produce more creative suggestions. Defaults to 0.7 for team_autofill, 0.3 for others."
+          },
+          "max_tokens": {
+            "type": ["integer", "null"],
+            "minimum": 100,
+            "maximum": 16384,
+            "description": "Max output tokens for the generation. Defaults to 2048."
+          },
+          "apply_result": {
+            "type": "boolean",
+            "default": false,
+            "description": "For mode=team_autofill: if true, automatically apply the suggested nodes and edges to the graph (requires graph_id). For mode=agent_autofill: if true, merge the suggested config into the node. For mode=description: if true, store the description in the graph/node metadata. When false (default), results are returned for human review only."
           }
         },
         "additionalProperties": false
@@ -1222,21 +1675,43 @@
         "type": "object",
         "required": ["generation"],
         "properties": {
-          "generation": { "$ref": "#/$defs/generate_result" }
+          "generation": { "$ref": "#/$defs/generate_result" },
+          "applied": {
+            "type": "boolean",
+            "description": "True if apply_result was true and the results were successfully written to the graph. False if apply_result was false or if the write failed."
+          },
+          "applied_node_ids": {
+            "type": ["array", "null"],
+            "items": { "type": "string", "format": "uuid" },
+            "description": "For mode=team_autofill with apply_result=true: the node IDs of newly created nodes, in the same order as generation.result.nodes."
+          },
+          "applied_edge_ids": {
+            "type": ["array", "null"],
+            "items": { "type": "string", "format": "uuid" },
+            "description": "For mode=team_autofill with apply_result=true: the edge IDs of newly created edges."
+          }
         },
         "additionalProperties": false
       },
       "response_400": {
         "$ref": "#/$defs/error_envelope",
-        "description": "Invalid mode, missing required fields for the chosen mode, etc."
+        "description": "Invalid mode, missing required fields for the chosen mode (e.g., graph_id for description, prompt for team_autofill), or invalid parameter values."
       },
       "response_404": {
         "$ref": "#/$defs/error_envelope",
         "description": "Referenced graph or node not found."
       },
+      "response_422": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "LLM returned unparseable output. The raw LLM response is included in detail.raw_response for debugging."
+      },
       "response_500": {
         "$ref": "#/$defs/error_envelope",
-        "description": "LLM generation failed."
+        "description": "LLM generation failed due to provider error, timeout, or budget exhaustion."
+      },
+      "response_503": {
+        "$ref": "#/$defs/error_envelope",
+        "description": "LLM provider temporarily unavailable. Client should retry with exponential backoff."
       }
     }
   },
@@ -1303,6 +1778,26 @@
           "field": null,
           "detail": null
         }
+      },
+      "generation_parse_error": {
+        "status": 422,
+        "description": "The LLM returned output that could not be parsed into the expected structure. The raw response is provided for debugging.",
+        "example": {
+          "error": "Failed to parse LLM response as team structure",
+          "error_type": "validation_failed",
+          "field": null,
+          "detail": { "raw_response": "..." }
+        }
+      },
+      "provider_unavailable": {
+        "status": 503,
+        "description": "The LLM provider is temporarily unavailable. Retry with exponential backoff.",
+        "example": {
+          "error": "OpenRouter API temporarily unavailable",
+          "error_type": "internal_error",
+          "field": null,
+          "detail": { "provider": "openrouter", "retry_after_seconds": 30 }
+        }
       }
     }
   },
@@ -1315,8 +1810,12 @@
     "timestamps": "All timestamps are ISO 8601 in UTC (e.g., 2026-03-02T14:30:00Z). The server generates created_at and updated_at; clients cannot set them.",
     "partial_updates": "PUT endpoints accept partial payloads. Only provided fields are updated; omitted fields retain their current values. Pass null explicitly to clear a nullable field.",
     "cascade_deletes": "Deleting a graph removes all its nodes, edges, and schedules. Deleting a node removes all connected edges. Deleting an edge or schedule is atomic.",
-    "deployment_lifecycle": "Deploy creates a run (pending) -> transitions to running as subagents spawn -> completes or fails based on aggregate node outcomes. Poll GET /deploy/{run_id} for progress.",
+    "deployment_lifecycle": "Deploy creates a run (pending) -> transitions to running as SubAgentOrchestrator spawns workers for each node in topological order -> each node transitions through accepted/started/in_progress/completed|failed -> run completes or fails based on aggregate node outcomes. Cancel triggers cascade_stop on all active subagent runs. Poll GET /deploy/{run_id} for progress. Use include_events=true for the full event log.",
+    "scheduling_lifecycle": "Schedules register with CronScheduler and fire deployments at cron intervals. When requires_approval=true, a governance approval item is created instead of immediate execution. After max_consecutive_failures, the schedule auto-disables. Re-enabling resets the failure counter.",
+    "generation_telemetry": "All /generate responses include a telemetry block with token_usage, latency_ms, and estimated_cost_usd. This enables frontend cost tracking dashboards and budget enforcement.",
+    "provider_model_overrides": "Agent nodes support model_id in their config for LLM provider selection. Deploy requests support per-node overrides via node_overrides. The resolution order is: node_override > node.config.model_id > runtime default (BOMBA_MODEL_ID).",
     "content_type": "All requests must send Content-Type: application/json. All responses return Content-Type: application/json.",
-    "idempotency": "POST /api/team-manager/deploy accepts session_id for idempotent retries. Other POST endpoints are not idempotent; repeated calls create duplicate resources."
+    "idempotency": "POST /api/team-manager/deploy accepts session_id for idempotent retries. POST /api/team-manager/deploy/{run_id}/cancel is idempotent -- cancelling an already-cancelled run returns the current state without error. Other POST endpoints are not idempotent; repeated calls create duplicate resources.",
+    "polling_pattern": "For long-running deployments, poll GET /deploy/{run_id} at 1-5 second intervals. Use after_event_seq for incremental event retrieval to minimize payload size. The run.progress_pct field provides a quick aggregate progress indicator."
   }
 }

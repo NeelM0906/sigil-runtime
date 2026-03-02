@@ -474,7 +474,7 @@ def make_handler(bridge: RuntimeBridge):
                         graph_id=str(body["graph_id"]),
                         source_node_id=str(body["source_node_id"]),
                         target_node_id=str(body["target_node_id"]),
-                        edge_type=str(body.get("edge_type", "dependency")),
+                        edge_type=str(body.get("edge_type", "feeds")),
                         metadata=body.get("metadata"),
                     )
                     self._write_cors(200, result)
@@ -490,6 +490,25 @@ def make_handler(bridge: RuntimeBridge):
                         tenant_id=tenant_id,
                         graph_id=str(body["graph_id"]),
                         workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/deployments":
+                    result = bridge.tm_deploy_graph(
+                        tenant_id=tenant_id,
+                        graph_id=str(body["graph_id"]),
+                        workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, result)
+                elif path == "/api/team-manager/schedules":
+                    result = bridge.tm_create_schedule(
+                        tenant_id=tenant_id,
+                        workspace_root=workspace_root,
+                        graph_id=str(body["graph_id"]),
+                        name=str(body["name"]),
+                        cron_expression=str(body["cron_expression"]),
+                        action=str(body.get("action", "deploy")),
+                        action_params=body.get("action_params"),
+                        requires_approval=bool(body.get("requires_approval", False)),
                     )
                     self._write_cors(200, result)
                 else:
@@ -542,6 +561,63 @@ def make_handler(bridge: RuntimeBridge):
                 result = bridge.tm_delete_edge(tenant_id=tenant_id, edge_id=m.group(1), workspace_root=workspace_root)
                 self._write_cors(200, result)
                 return
+            # POST /api/team-manager/deployments/{id}/cancel
+            m = _re.match(r"/api/team-manager/deployments/([^/]+)/cancel$", path)
+            if m:
+                result = bridge.tm_cancel_deployment(
+                    tenant_id=tenant_id, deployment_id=m.group(1), workspace_root=workspace_root,
+                )
+                self._write_cors(200, result)
+                return
+            # POST /api/team-manager/deployments/{id}/primer
+            m = _re.match(r"/api/team-manager/deployments/([^/]+)/primer$", path)
+            if m:
+                node_id = str(body.get("node_id") or "").strip()
+                if not node_id:
+                    self._write_cors(400, {"error": "node_id is required"})
+                    return
+                # Fetch the deployment to get graph_id
+                deployment = bridge.tm_get_deployment(
+                    tenant_id=tenant_id, deployment_id=m.group(1), workspace_root=workspace_root,
+                )
+                if deployment is None or deployment.get("error"):
+                    self._write_cors(404, deployment or {"error": "deployment_not_found"})
+                    return
+                result = bridge.tm_generate_primer(
+                    tenant_id=tenant_id, graph_id=deployment["graph_id"],
+                    node_id=node_id, workspace_root=workspace_root,
+                )
+                self._write_cors(200, result)
+                return
+            # PUT /api/team-manager/schedules/{id}/update
+            m = _re.match(r"/api/team-manager/schedules/([^/]+)/update$", path)
+            if m:
+                kwargs: dict = {}
+                for field in ("name", "cron_expression", "action", "action_params", "enabled", "requires_approval"):
+                    if field in body:
+                        kwargs[field] = body[field]
+                result = bridge.tm_update_schedule(
+                    tenant_id=tenant_id, schedule_id=m.group(1), workspace_root=workspace_root,
+                    **kwargs,
+                )
+                self._write_cors(200, result)
+                return
+            # DELETE /api/team-manager/schedules/{id}/delete
+            m = _re.match(r"/api/team-manager/schedules/([^/]+)/delete$", path)
+            if m:
+                result = bridge.tm_delete_schedule(tenant_id=tenant_id, schedule_id=m.group(1), workspace_root=workspace_root)
+                self._write_cors(200, result)
+                return
+            # POST /api/team-manager/schedules/{id}/toggle
+            m = _re.match(r"/api/team-manager/schedules/([^/]+)/toggle$", path)
+            if m:
+                result = bridge.tm_toggle_schedule(
+                    tenant_id=tenant_id, schedule_id=m.group(1),
+                    enabled=bool(body.get("enabled", True)),
+                    workspace_root=workspace_root,
+                )
+                self._write_cors(200, result)
+                return
             self._write_cors(404, {"error": "not_found"})
 
         def _team_manager_get(self, parsed) -> None:
@@ -561,11 +637,14 @@ def make_handler(bridge: RuntimeBridge):
                 # GET /api/team-manager/graphs/{id}
                 m = _re.match(r"/api/team-manager/graphs/([^/]+)$", path)
                 if m:
-                    result = bridge.tm_get_graph(tenant_id=tenant_id, graph_id=m.group(1), workspace_root=workspace_root)
+                    graph_id = m.group(1)
+                    result = bridge.tm_get_graph(tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root)
                     if result is None:
                         self._write_cors(404, {"error": "not_found"})
                     else:
-                        self._write_cors(200, result)
+                        nodes = bridge.tm_list_nodes(tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root)
+                        edges = bridge.tm_list_edges(tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root)
+                        self._write_cors(200, {"graph": result, "nodes": nodes, "edges": edges})
                     return
                 if path == "/api/team-manager/nodes":
                     graph_id = query.get("graph_id", [None])[0]
@@ -588,6 +667,31 @@ def make_handler(bridge: RuntimeBridge):
                         tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root, edge_type=edge_type,
                     )
                     self._write_cors(200, {"edges": items})
+                    return
+                if path == "/api/team-manager/deployments":
+                    graph_id = query.get("graph_id", [None])[0]
+                    items = bridge.tm_list_deployments(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, {"deployments": items})
+                    return
+                # GET /api/team-manager/deployments/{id}
+                m = _re.match(r"/api/team-manager/deployments/([^/]+)$", path)
+                if m:
+                    result = bridge.tm_get_deployment(
+                        tenant_id=tenant_id, deployment_id=m.group(1), workspace_root=workspace_root,
+                    )
+                    if result is None:
+                        self._write_cors(404, {"error": "not_found"})
+                    else:
+                        self._write_cors(200, result)
+                    return
+                if path == "/api/team-manager/schedules":
+                    graph_id = query.get("graph_id", [None])[0]
+                    items = bridge.tm_list_schedules(
+                        tenant_id=tenant_id, graph_id=graph_id, workspace_root=workspace_root,
+                    )
+                    self._write_cors(200, {"schedules": items})
                     return
                 self._write_cors(404, {"error": "not_found"})
             except Exception as exc:
