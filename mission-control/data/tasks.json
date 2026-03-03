@@ -86,6 +86,16 @@
       ],
       "created": "2026-02-22T09:00:00Z",
       "updated": "2026-02-24T15:00:00Z"
+    },
+    {
+      "id": "task-7fbad81a",
+      "title": "Fix the voice pipeline latency issue",
+      "description": "Created from chat by user",
+      "status": "backlog",
+      "priority": "medium",
+      "assignees": [],
+      "created": "2026-03-03T03:59:18.025Z",
+      "updated": "2026-03-03T03:59:18.025Z"
     }
   ],
   "history": [
@@ -186,6 +196,17 @@
         }
       },
       "timestamp": "2026-03-03T00:29:01.224Z"
+    },
+    {
+      "id": "3dd15386",
+      "taskId": "task-7fbad81a",
+      "action": "created",
+      "details": {
+        "title": "Fix the voice pipeline latency issue",
+        "source": "chat",
+        "messageId": "msg-56d5b1cf"
+      },
+      "timestamp": "2026-03-03T03:59:18.025Z"
     }
   ]
 }

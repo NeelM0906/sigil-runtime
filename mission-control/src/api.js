@@ -66,3 +66,28 @@ export const beingsApi = {
     return request(`/api/beings/${id}`, { method: 'DELETE' })
   },
 }
+
+// ── Chat API ─────────────────────────────────────────────────
+
+export const chatApi = {
+  list(filters = {}) {
+    const params = new URLSearchParams()
+    for (const [k, v] of Object.entries(filters)) {
+      if (v) params.set(k, String(v))
+    }
+    const qs = params.toString()
+    return request(`/api/chat/messages${qs ? `?${qs}` : ''}`)
+  },
+  send(message) {
+    return request('/api/chat/messages', { method: 'POST', body: JSON.stringify(message) })
+  },
+  delete(id) {
+    return request(`/api/chat/messages/${id}`, { method: 'DELETE' })
+  },
+  postSystem(content, taskRef = null) {
+    return request('/api/chat/system', {
+      method: 'POST',
+      body: JSON.stringify({ content, taskRef }),
+    })
+  },
+}

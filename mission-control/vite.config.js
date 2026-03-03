@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { tasksApiMiddleware } from './server/tasks-api.js'
 import { beingsApiMiddleware } from './server/beings-api.js'
+import { chatApiMiddleware } from './server/chat-api.js'
 
 export default defineConfig({
   plugins: [
@@ -13,6 +14,7 @@ export default defineConfig({
       configureServer(server) {
         tasksApiMiddleware(server)
         beingsApiMiddleware(server)
+        chatApiMiddleware(server)
       }
     }
   ],

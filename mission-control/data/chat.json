@@ -1,0 +1,135 @@
+{
+  "messages": [
+    {
+      "id": "msg-001",
+      "type": "broadcast",
+      "sender": "user",
+      "targets": [],
+      "content": "Good morning team. Status update on all active tasks?",
+      "timestamp": "2026-03-02T09:00:00Z",
+      "mode": null,
+      "taskRef": null,
+      "channel": "general"
+    },
+    {
+      "id": "msg-002",
+      "type": "broadcast",
+      "sender": "prime",
+      "targets": [],
+      "content": "Morning. We have 2 tasks in progress, 1 in review, 2 in backlog, and 2 completed. The Mission Control dashboard build is our top priority today. Athena is running the Q1 competitive sweep with 3 sub-agents active.",
+      "timestamp": "2026-03-02T09:01:00Z",
+      "mode": null,
+      "taskRef": null,
+      "channel": "general"
+    },
+    {
+      "id": "msg-003",
+      "type": "direct",
+      "sender": "user",
+      "targets": [
+        "athena"
+      ],
+      "content": "@Athena How's the competitive report looking? Any early signals?",
+      "timestamp": "2026-03-02T09:05:00Z",
+      "mode": null,
+      "taskRef": "task-002",
+      "channel": "general"
+    },
+    {
+      "id": "msg-004",
+      "type": "direct",
+      "sender": "athena",
+      "targets": [],
+      "content": "Two sub-agents running: Market Scanner at 65% (pricing data), Feature Diff at 42% (feature comparison). Early signal: Competitor B dropped enterprise pricing 15% last week. Deep Pricing Crawler hit a rate limit and failed — I'll retry with staggered requests.",
+      "timestamp": "2026-03-02T09:06:00Z",
+      "mode": null,
+      "taskRef": "task-002",
+      "channel": "general"
+    },
+    {
+      "id": "msg-005",
+      "type": "group",
+      "sender": "user",
+      "targets": [
+        "callie",
+        "mylo"
+      ],
+      "content": "@Callie @Mylo Can you two work on the voice pipeline tests in parallel? Callie handles the integration harness, Mylo tests the actual call flows.",
+      "timestamp": "2026-03-02T09:10:00Z",
+      "mode": "parallel",
+      "taskRef": "task-003",
+      "channel": "general"
+    },
+    {
+      "id": "msg-006",
+      "type": "direct",
+      "sender": "callie",
+      "targets": [],
+      "content": "On it. I'll set up the test harness with mock Twilio endpoints. Should have the framework ready in 30 minutes.",
+      "timestamp": "2026-03-02T09:11:00Z",
+      "mode": null,
+      "taskRef": "task-003",
+      "channel": "general"
+    },
+    {
+      "id": "msg-007",
+      "type": "system",
+      "sender": "system",
+      "targets": [],
+      "content": "Task \"Governance Policy Audit\" moved to Done by Sentinel",
+      "timestamp": "2026-03-02T09:15:00Z",
+      "mode": null,
+      "taskRef": "task-006",
+      "channel": "general"
+    },
+    {
+      "id": "msg-61c994aa",
+      "type": "direct",
+      "sender": "user",
+      "targets": [
+        "athena"
+      ],
+      "content": "@Athena check the latest metrics",
+      "timestamp": "2026-03-03T03:59:12.782Z",
+      "mode": null,
+      "taskRef": null,
+      "channel": "general"
+    },
+    {
+      "id": "msg-e5d647b9",
+      "type": "direct",
+      "sender": "athena",
+      "targets": [],
+      "content": "Researching now. I'll cross-reference multiple sources and compile findings.",
+      "timestamp": "2026-03-03T03:59:13.383Z",
+      "mode": null,
+      "taskRef": null,
+      "channel": "general"
+    },
+    {
+      "id": "msg-56d5b1cf",
+      "type": "broadcast",
+      "sender": "user",
+      "targets": [],
+      "content": "/task create Fix the voice pipeline latency issue",
+      "timestamp": "2026-03-03T03:59:18.025Z",
+      "mode": null,
+      "taskRef": null,
+      "channel": "general"
+    },
+    {
+      "id": "msg-8132da89",
+      "type": "system",
+      "sender": "system",
+      "targets": [],
+      "content": "Task \"Fix the voice pipeline latency issue\" created and added to backlog",
+      "timestamp": "2026-03-03T03:59:18.128Z",
+      "mode": null,
+      "taskRef": "task-7fbad81a",
+      "channel": "general"
+    }
+  ],
+  "channels": [
+    "general"
+  ]
+}
