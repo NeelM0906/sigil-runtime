@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { beingsApi } from '../api'
+import { useSSE } from '../hooks/useSSE'
 
 const BeingsContext = createContext(null)
 
@@ -20,6 +21,17 @@ export function BeingsProvider({ children }) {
   }, [])
 
   useEffect(() => { fetchBeings() }, [fetchBeings])
+
+  // SSE: live being status updates
+  useSSE({
+    being_status(data) {
+      setBeings(prev =>
+        prev.map(b =>
+          b.id === data.being_id ? { ...b, status: data.status } : b
+        )
+      )
+    },
+  })
 
   const getBeingById = useCallback((id) => {
     return beings.find(b => b.id === id) || null

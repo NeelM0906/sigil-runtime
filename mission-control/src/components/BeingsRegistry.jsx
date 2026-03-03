@@ -15,17 +15,24 @@ const STATUS_LABELS = {
   offline: 'Offline',
 }
 
-const STATUS_CYCLE = ['online', 'busy', 'idle', 'offline']
-
 const TYPE_BADGES = {
   runtime: { label: 'RUNTIME', color: 'text-accent-blue bg-accent-blue/10 border-accent-blue/20' },
   sister: { label: 'SISTER', color: 'text-accent-purple bg-accent-purple/10 border-accent-purple/20' },
-  voice_agent: { label: 'VOICE', color: 'text-accent-pink bg-accent-pink/10 border-accent-pink/20' },
+  voice: { label: 'VOICE', color: 'text-accent-pink bg-accent-pink/10 border-accent-pink/20' },
+  subagent: { label: 'SUB-AGENT', color: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20' },
   custom: { label: 'CUSTOM', color: 'text-text-muted bg-bg-hover border-border' },
 }
 
-function BeingCard({ being, isExpanded, onToggle, onStatusToggle }) {
+// Section config: grouping + headers
+const SECTIONS = [
+  { key: 'sisters', label: 'Sisters', dot: 'bg-accent-purple', types: ['runtime', 'sister'] },
+  { key: 'voice', label: 'Voice Agents', dot: 'bg-accent-pink', types: ['voice'] },
+  { key: 'subagents', label: 'Sub-Agents', dot: 'bg-accent-amber', types: ['subagent'] },
+]
+
+function BeingCard({ being, isExpanded, onToggle }) {
   const typeBadge = TYPE_BADGES[being.type] || TYPE_BADGES.custom
+  const isVoice = being.type === 'voice'
 
   return (
     <div
@@ -47,14 +54,18 @@ function BeingCard({ being, isExpanded, onToggle, onStatusToggle }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{being.name}</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onStatusToggle(being) }}
-              className={`flex items-center gap-1 px-1 rounded hover:bg-bg-primary/50 transition-colors`}
-              title="Click to toggle status"
-            >
-              <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[being.status]}`} />
-              <span className="text-[10px] text-text-muted uppercase">{STATUS_LABELS[being.status]}</span>
-            </button>
+            {!isVoice && (
+              <span className="flex items-center gap-1 px-1">
+                <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[being.status]}`} />
+                <span className="text-[10px] text-text-muted uppercase">{STATUS_LABELS[being.status]}</span>
+              </span>
+            )}
+            {isVoice && (
+              <span className="flex items-center gap-1 px-1">
+                <div className="w-2 h-2 rounded-full bg-text-muted" />
+                <span className="text-[10px] text-text-muted uppercase">API</span>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-text-secondary truncate">{being.role}</span>
@@ -78,20 +89,33 @@ function BeingCard({ being, isExpanded, onToggle, onStatusToggle }) {
         <div className="px-3 pb-3 pt-0 border-t border-border">
           <p className="text-xs text-text-secondary mt-2 mb-2 leading-relaxed">{being.description}</p>
 
-          <div className="flex flex-wrap gap-1 mb-2">
-            {being.tools.slice(0, 4).map(t => (
-              <span key={typeof t === 'string' ? t : t.name} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-accent-blue/10 text-accent-blue border border-accent-blue/20">
-                {typeof t === 'string' ? t : t.name}
-              </span>
-            ))}
-            {being.tools.length > 4 && (
-              <span className="px-1.5 py-0.5 text-[10px] text-text-muted">+{being.tools.length - 4} more</span>
-            )}
-          </div>
+          {(being.tools || []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {being.tools.slice(0, 4).map(t => (
+                <span key={typeof t === 'string' ? t : t.name} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-accent-blue/10 text-accent-blue border border-accent-blue/20">
+                  {typeof t === 'string' ? t : t.name}
+                </span>
+              ))}
+              {being.tools.length > 4 && (
+                <span className="px-1.5 py-0.5 text-[10px] text-text-muted">+{being.tools.length - 4} more</span>
+              )}
+            </div>
+          )}
+
+          {(being.skills || []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {being.skills.map(s => (
+                <span key={s} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-accent-green/10 text-accent-green border border-accent-green/20">
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-2 text-[10px] text-text-muted">
             {being.model_id && <span className="font-mono">{being.model_id}</span>}
-            {being.phone && <><span>|</span><span>{being.phone}</span></>}
+            {being.agent_id && <><span>|</span><span className="font-mono">bland:{being.agent_id.slice(-8)}</span></>}
+            {being.workspace && <><span>|</span><span className="font-mono">{being.workspace}</span></>}
           </div>
         </div>
       )}
@@ -100,17 +124,20 @@ function BeingCard({ being, isExpanded, onToggle, onStatusToggle }) {
 }
 
 export function BeingsRegistry({ compact = false }) {
-  const { beings, loading, updateBeingStatus, openBeingDetail } = useBeings()
+  const { beings, loading, openBeingDetail } = useBeings()
   const [expandedId, setExpandedId] = useState(null)
   const [filterType, setFilterType] = useState('')
 
-  const filtered = filterType ? beings.filter(b => b.type === filterType) : beings
+  // Group beings into sections
+  const sections = SECTIONS.map(sec => ({
+    ...sec,
+    beings: beings.filter(b => sec.types.includes(b.type)),
+  })).filter(sec => sec.beings.length > 0)
 
-  const handleStatusToggle = async (being) => {
-    const currentIdx = STATUS_CYCLE.indexOf(being.status)
-    const nextStatus = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length]
-    await updateBeingStatus(being.id, nextStatus)
-  }
+  // Apply filter
+  const filteredSections = filterType
+    ? sections.filter(sec => sec.types.includes(filterType))
+    : sections
 
   return (
     <div className="bg-bg-secondary border border-border rounded-lg">
@@ -130,8 +157,8 @@ export function BeingsRegistry({ compact = false }) {
               <option value="">All Types</option>
               <option value="runtime">Runtime</option>
               <option value="sister">Sisters</option>
-              <option value="voice_agent">Voice Agents</option>
-              <option value="custom">Custom</option>
+              <option value="voice">Voice Agents</option>
+              <option value="subagent">Sub-Agents</option>
             </select>
           )}
           <span className="text-[10px] text-text-muted font-mono">
@@ -144,21 +171,32 @@ export function BeingsRegistry({ compact = false }) {
         <div className="p-4 text-center text-xs text-text-muted">Loading beings...</div>
       )}
 
-      {/* Being List */}
-      <div className={`p-2 flex flex-col gap-1.5 ${compact ? 'max-h-[300px] overflow-y-auto' : ''}`}>
-        {filtered.map(being => (
-          <BeingCard
-            key={being.id}
-            being={being}
-            isExpanded={expandedId === being.id}
-            onToggle={() => {
-              if (expandedId === being.id) {
-                openBeingDetail(being.id) // Double-click opens detail
-              }
-              setExpandedId(expandedId === being.id ? null : being.id)
-            }}
-            onStatusToggle={handleStatusToggle}
-          />
+      {/* Sectioned Being List */}
+      <div className={`p-2 flex flex-col gap-2 ${compact ? 'max-h-[400px] overflow-y-auto' : ''}`}>
+        {filteredSections.map(sec => (
+          <div key={sec.key}>
+            {/* Section header */}
+            <div className="flex items-center gap-1.5 px-1 py-1">
+              <div className={`w-1 h-1 rounded-full ${sec.dot}`} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{sec.label}</span>
+              <span className="text-[10px] text-text-muted font-mono ml-auto">{sec.beings.length}</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {sec.beings.map(being => (
+                <BeingCard
+                  key={being.id}
+                  being={being}
+                  isExpanded={expandedId === being.id}
+                  onToggle={() => {
+                    if (expandedId === being.id) {
+                      openBeingDetail(being.id)
+                    }
+                    setExpandedId(expandedId === being.id ? null : being.id)
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

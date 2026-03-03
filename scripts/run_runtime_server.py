@@ -52,9 +52,14 @@ MIME_TYPES = {
 }
 CORS_ALLOWED_ORIGINS = tuple(
     origin.strip()
-    for origin in os.getenv("BOMBA_CORS_ALLOWED_ORIGINS", "http://127.0.0.1:8787,http://localhost:8787").split(",")
+    for origin in os.getenv(
+        "BOMBA_CORS_ALLOWED_ORIGINS",
+        "http://127.0.0.1:8787,http://localhost:8787,http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
     if origin.strip()
 )
+
+MC_BEINGS_JSON = PROJECT_ROOT / "mission-control" / "data" / "beings.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -104,7 +109,7 @@ def _resolve_sisters_tenant(
     return tenant_id, workspace_root
 
 
-def make_handler(bridge: RuntimeBridge):
+def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
     class Handler(BaseHTTPRequestHandler):
         def _cors_origin(self) -> str | None:
             origin = str(self.headers.get("Origin") or "").strip()
@@ -150,7 +155,7 @@ def make_handler(bridge: RuntimeBridge):
             if allowed_origin:
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
-                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
             self.wfile.write(encoded)
@@ -196,7 +201,7 @@ def make_handler(bridge: RuntimeBridge):
             if allowed_origin:
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
-                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -252,9 +257,27 @@ def make_handler(bridge: RuntimeBridge):
             if parsed.path.startswith("/api/team-manager/"):
                 self._team_manager_post(parsed)
                 return
+            # ── Mission Control POST routes ──
+            if parsed.path.startswith("/api/mc/"):
+                self._mc_post(parsed)
+                return
             # ── Dashboard control POST routes ──
             if parsed.path.startswith("/api/dashboard/"):
                 self._dashboard_post(parsed)
+                return
+            self._write(404, {"error": "not_found"})
+
+        def do_PATCH(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            if parsed.path.startswith("/api/mc/"):
+                self._mc_patch(parsed)
+                return
+            self._write(404, {"error": "not_found"})
+
+        def do_DELETE(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            if parsed.path.startswith("/api/mc/"):
+                self._mc_delete(parsed)
                 return
             self._write(404, {"error": "not_found"})
 
@@ -267,6 +290,10 @@ def make_handler(bridge: RuntimeBridge):
             if parsed.path.startswith("/dashboard/"):
                 rel = parsed.path[len("/dashboard/"):]
                 self._serve_static(rel)
+                return
+            # ── Mission Control GET routes ──
+            if parsed.path.startswith("/api/mc/"):
+                self._mc_get(parsed)
                 return
             # ── Team Manager GET routes ──
             if parsed.path.startswith("/api/team-manager/"):
@@ -1195,6 +1222,268 @@ def make_handler(bridge: RuntimeBridge):
             commands = bridge.list_commands(tenant_id=tenant_id, workspace_root=workspace_root)
             self._write(200, {"commands": commands})
 
+        # ── Mission Control handlers ──
+
+        def _mc_get(self, parsed) -> None:
+            path = parsed.path
+            query = parse_qs(parsed.query)
+
+            if not dashboard_svc:
+                self._write_cors(503, {"error": "dashboard service not initialized"})
+                return
+
+            try:
+                # --- Beings ---
+                if path == "/api/mc/beings":
+                    type_f = query.get("type", [None])[0]
+                    status_f = query.get("status", [None])[0]
+                    beings = dashboard_svc.list_beings(type_filter=type_f, status_filter=status_f)
+                    self._write_cors(200, {"beings": beings})
+                    return
+                if path.startswith("/api/mc/beings/"):
+                    bid = path.split("/api/mc/beings/", 1)[1].split("/")[0]
+                    being = dashboard_svc.get_being(bid)
+                    if not being:
+                        self._write_cors(404, {"error": "being not found"})
+                        return
+                    self._write_cors(200, {"being": being})
+                    return
+
+                # --- Tasks ---
+                if path == "/api/mc/tasks/history":
+                    tid = query.get("taskId", [None])[0]
+                    history = dashboard_svc.task_history(task_id=tid)
+                    self._write_cors(200, {"history": history})
+                    return
+                if path == "/api/mc/tasks":
+                    tasks = dashboard_svc.list_tasks(
+                        project_svc,
+                        assignee=query.get("assignee", [None])[0],
+                        priority=query.get("priority", [None])[0],
+                        status=query.get("status", [None])[0],
+                        from_date=query.get("from", [None])[0],
+                        to_date=query.get("to", [None])[0],
+                    )
+                    self._write_cors(200, {"tasks": tasks})
+                    return
+                if path.startswith("/api/mc/tasks/"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    task = dashboard_svc.get_task(project_svc, tid)
+                    self._write_cors(200, {"task": task})
+                    return
+
+                # --- Chat ---
+                if path == "/api/mc/chat/messages":
+                    msgs = dashboard_svc.list_messages(
+                        sender=query.get("sender", [None])[0],
+                        target=query.get("target", [None])[0],
+                        search=query.get("search", [None])[0],
+                        limit=int(query.get("limit", ["100"])[0]),
+                        offset=int(query.get("offset", ["0"])[0]),
+                    )
+                    self._write_cors(200, {"messages": msgs})
+                    return
+
+                # --- Sub-agents ---
+                if path == "/api/mc/subagents":
+                    runs = dashboard_svc.list_subagent_runs()
+                    self._write_cors(200, {"runs": runs})
+                    return
+
+                # --- SSE ---
+                if path == "/api/mc/events":
+                    self._mc_sse_stream()
+                    return
+
+                self._write_cors(404, {"error": "not_found"})
+            except ValueError as exc:
+                self._write_cors(404, {"error": str(exc)})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _mc_post(self, parsed) -> None:
+            path = parsed.path
+            if not dashboard_svc:
+                self._write_cors(503, {"error": "dashboard service not initialized"})
+                return
+            if not self._is_origin_allowed():
+                self._write_cors(403, {"error": "origin_not_allowed"})
+                return
+            try:
+                body = self._read_json()
+            except Exception:
+                return
+
+            try:
+                # --- Tasks ---
+                if path == "/api/mc/tasks":
+                    task = dashboard_svc.create_task(
+                        project_svc,
+                        title=body["title"],
+                        description=body.get("description"),
+                        status=body.get("status", "todo"),
+                        priority=body.get("priority", "normal"),
+                        assignees=body.get("assignees"),
+                        owner_agent_id=body.get("owner_agent_id"),
+                    )
+                    self._write_cors(201, {"task": task})
+                    return
+
+                # --- Chat ---
+                if path == "/api/mc/chat/messages":
+                    content = body.get("content", "")
+                    sender = body.get("sender", "user")
+                    targets = body.get("targets", [])
+                    mode = body.get("mode", "auto")
+                    task_ref = body.get("taskRef")
+                    msg_type = "broadcast"
+                    if len(targets) == 1:
+                        msg_type = "direct"
+                    elif len(targets) > 1:
+                        msg_type = "group"
+
+                    msg = dashboard_svc.create_message(
+                        sender=sender, content=content,
+                        targets=targets, msg_type=msg_type,
+                        mode=mode, task_ref=task_ref,
+                    )
+
+                    # Route to each targeted being in background
+                    for tid in targets:
+                        dashboard_svc.route_to_being(tid, content, sender=sender)
+
+                    self._write_cors(201, {"message": msg})
+                    return
+
+                if path == "/api/mc/chat/system":
+                    msg = dashboard_svc.create_system_message(
+                        content=body.get("content", ""),
+                        task_ref=body.get("taskRef"),
+                    )
+                    self._write_cors(201, {"message": msg})
+                    return
+
+                self._write_cors(404, {"error": "not_found"})
+            except KeyError as exc:
+                self._write_cors(400, {"error": f"missing field: {exc}"})
+            except ValueError as exc:
+                self._write_cors(400, {"error": str(exc)})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _mc_patch(self, parsed) -> None:
+            path = parsed.path
+            if not dashboard_svc:
+                self._write_cors(503, {"error": "dashboard service not initialized"})
+                return
+            if not self._is_origin_allowed():
+                self._write_cors(403, {"error": "origin_not_allowed"})
+                return
+            try:
+                body = self._read_json()
+            except Exception:
+                return
+
+            try:
+                # PATCH /api/mc/beings/:id
+                if path.startswith("/api/mc/beings/"):
+                    bid = path.split("/api/mc/beings/", 1)[1].split("/")[0]
+                    being = dashboard_svc.update_being(bid, body)
+                    if not being:
+                        self._write_cors(404, {"error": "being not found"})
+                        return
+                    self._write_cors(200, {"being": being})
+                    return
+
+                # PATCH /api/mc/tasks/:id
+                if path.startswith("/api/mc/tasks/"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    task = dashboard_svc.update_task(
+                        project_svc, tid,
+                        status=body.get("status"),
+                        priority=body.get("priority"),
+                        owner_agent_id=body.get("owner_agent_id"),
+                        assignees=body.get("assignees"),
+                        title=body.get("title"),
+                        description=body.get("description"),
+                    )
+                    self._write_cors(200, {"task": task})
+                    return
+
+                self._write_cors(404, {"error": "not_found"})
+            except ValueError as exc:
+                self._write_cors(400, {"error": str(exc)})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _mc_delete(self, parsed) -> None:
+            path = parsed.path
+            if not dashboard_svc:
+                self._write_cors(503, {"error": "dashboard service not initialized"})
+                return
+            if not self._is_origin_allowed():
+                self._write_cors(403, {"error": "origin_not_allowed"})
+                return
+
+            try:
+                # DELETE /api/mc/tasks/:id
+                if path.startswith("/api/mc/tasks/"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    ok = dashboard_svc.delete_task(project_svc, tid)
+                    if not ok:
+                        self._write_cors(404, {"error": "task not found"})
+                        return
+                    self._write_cors(200, {"ok": True})
+                    return
+
+                # DELETE /api/mc/chat/messages/:id
+                if path.startswith("/api/mc/chat/messages/"):
+                    mid = path.split("/api/mc/chat/messages/", 1)[1].split("/")[0]
+                    ok = dashboard_svc.delete_message(mid)
+                    if not ok:
+                        self._write_cors(404, {"error": "message not found"})
+                        return
+                    self._write_cors(200, {"ok": True})
+                    return
+
+                self._write_cors(404, {"error": "not_found"})
+            except Exception as exc:
+                self._write_cors(500, {"error": str(exc)})
+
+        def _mc_sse_stream(self) -> None:
+            """SSE endpoint — holds connection open, pushes events."""
+            if not dashboard_svc:
+                self._write_cors(503, {"error": "dashboard service not initialized"})
+                return
+
+            client_id = dashboard_svc.subscribe_sse()
+            self.send_response(200)
+            allowed_origin = self._cors_origin()
+            if allowed_origin:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin)
+                self.send_header("Vary", "Origin")
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+
+            try:
+                while True:
+                    evt = dashboard_svc.poll_sse(client_id, timeout=20.0)
+                    if evt is None:
+                        # keepalive comment
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+                        continue
+                    line = json.dumps(evt["data"], default=str)
+                    self.wfile.write(f"event: {evt['event']}\n".encode())
+                    self.wfile.write(f"data: {line}\n\n".encode())
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                dashboard_svc.unsubscribe_sse(client_id)
+
         def log_message(self, format: str, *args) -> None:  # noqa: A003
             return
 
@@ -1205,7 +1494,31 @@ def main() -> int:
     args = parse_args()
     _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     bridge = RuntimeBridge()
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(bridge))
+
+    # Bootstrap Mission Control dashboard service
+    dashboard_svc = None
+    project_svc = None
+    try:
+        from bomba_sr.dashboard.service import DashboardService
+        from bomba_sr.projects.service import ProjectService
+        from bomba_sr.storage.db import RuntimeDB
+
+        runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
+        runtime_home.mkdir(parents=True, exist_ok=True)
+        mc_db = RuntimeDB(runtime_home / "bomba_runtime.db")
+        project_svc = ProjectService(mc_db)
+        dashboard_svc = DashboardService(db=mc_db, bridge=bridge)
+        dashboard_svc.ensure_mc_project(project_svc)
+        loaded = dashboard_svc.load_beings_from_configs()
+        print(f"mission control: loaded {loaded} beings from configs")
+        print("mission control: dashboard service ready")
+    except Exception as exc:
+        print(f"mission control: init failed ({exc}), MC endpoints disabled")
+
+    server = ThreadingHTTPServer(
+        (args.host, args.port),
+        make_handler(bridge, dashboard_svc=dashboard_svc, project_svc=project_svc),
+    )
     print(f"runtime server listening on http://{args.host}:{args.port}")
     print(f"dashboard available at http://{args.host}:{args.port}/dashboard")
     server.serve_forever()

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useBeings } from '../context/BeingsContext'
 import { chatApi, tasksApi } from '../api'
+import { useSSE } from '../hooks/useSSE'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -30,7 +31,7 @@ function InlineTaskCard({ taskId }) {
       <div className="flex items-center gap-1.5">
         <div className={`w-1.5 h-1.5 rounded-full ${statusDot[task.status]}`} />
         <span className="font-medium text-text-primary">{task.title}</span>
-        <span className="text-text-muted font-mono ml-auto">{task.id}</span>
+        <span className="text-text-muted font-mono ml-auto">{task.id || task.task_id}</span>
       </div>
     </div>
   )
@@ -86,7 +87,7 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
         <div className={`flex items-center gap-1.5 mb-0.5 flex-wrap ${isUser ? 'justify-end' : ''}`}>
           <span className="text-xs font-medium">{isUser ? 'You' : being?.name || msg.sender}</span>
 
-          {msg.targets.length > 0 && (
+          {msg.targets && msg.targets.length > 0 && (
             <span className="text-[10px] text-text-muted">
               &rarr;&nbsp;{msg.targets.map(t => {
                 const b = getBeingById(t)
@@ -164,12 +165,17 @@ function HighlightedContent({ content, getBeingById }) {
 
 // ── Mention Dropdown ─────────────────────────────────────────
 
+// Chat-routable types — voice agents use Bland API, not chat
+const CHAT_ROUTABLE_TYPES = new Set(['runtime', 'sister', 'subagent'])
+
 function MentionDropdown({ filter, onSelect, beings }) {
-  const filtered = beings.filter(b =>
-    b.name.toLowerCase().includes(filter.toLowerCase()) ||
-    b.id.toLowerCase().includes(filter.toLowerCase()) ||
-    b.role.toLowerCase().includes(filter.toLowerCase())
-  )
+  const filtered = beings
+    .filter(b => CHAT_ROUTABLE_TYPES.has(b.type))
+    .filter(b =>
+      b.name.toLowerCase().includes(filter.toLowerCase()) ||
+      b.id.toLowerCase().includes(filter.toLowerCase()) ||
+      (b.role || '').toLowerCase().includes(filter.toLowerCase())
+    )
 
   if (filtered.length === 0) return null
 
@@ -257,6 +263,7 @@ export function ChatWindow() {
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
+  const [typingBeings, setTypingBeings] = useState(new Map()) // Map<being_id, being_name>
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -277,6 +284,35 @@ export function ChatWindow() {
   }, [filters])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
+
+  // SSE: incoming LLM responses and system messages arrive here
+  useSSE({
+    chat_message(data) {
+      // Avoid duplicating the user message we already added optimistically
+      if (data.sender === 'user') return
+      setTypingBeings(prev => {
+        const next = new Map(prev)
+        next.delete(data.sender)
+        return next
+      })
+      setMessages(prev => {
+        // De-duplicate by id
+        if (prev.some(m => m.id === data.id)) return prev
+        return [...prev, data]
+      })
+    },
+    being_typing(data) {
+      setTypingBeings(prev => {
+        const next = new Map(prev)
+        if (data.active) {
+          next.set(data.being_id, data.being_name)
+        } else {
+          next.delete(data.being_id)
+        }
+        return next
+      })
+    },
+  })
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -320,50 +356,22 @@ export function ChatWindow() {
       timestamp: new Date().toISOString(),
       mode,
       taskRef: null,
-      channel: 'general',
     }
     setMessages(prev => [...prev, tempMsg])
     setInput('')
     setTargets([])
 
     try {
-      const { message: saved, responses, createdTask } = await chatApi.send({
+      // POST returns the saved user message; LLM responses arrive via SSE
+      const { message: saved } = await chatApi.send({
         sender: 'user',
         targets: tempMsg.targets,
         content,
         mode,
       })
 
-      // Replace temp message with saved one, add responses
-      setMessages(prev => {
-        const updated = prev.map(m => m.id === tempMsg.id ? saved : m)
-        // Add system message for task creation
-        if (createdTask) {
-          updated.push({
-            id: `sys-${Date.now()}`,
-            type: 'system',
-            sender: 'system',
-            targets: [],
-            content: `Task "${createdTask.title}" created and added to backlog`,
-            timestamp: new Date().toISOString(),
-            mode: null,
-            taskRef: createdTask.id,
-            channel: 'general',
-          })
-        }
-        return updated
-      })
-
-      // Add being responses with staggered timing
-      if (responses && responses.length > 0) {
-        for (let i = 0; i < responses.length; i++) {
-          const resp = responses[i]
-          const delay = tempMsg.mode === 'sequential' ? 800 + i * 1200 : 600 + i * 400
-          setTimeout(() => {
-            setMessages(prev => [...prev, resp])
-          }, delay)
-        }
-      }
+      // Replace temp message with the persisted one
+      setMessages(prev => prev.map(m => m.id === tempMsg.id ? saved : m))
     } catch (err) {
       console.error('Failed to send message:', err)
     }
@@ -400,7 +408,7 @@ export function ChatWindow() {
             </svg>
           </button>
           <div className="text-[10px] text-text-muted font-mono">
-            /task create [title]
+            SSE live
           </div>
         </div>
       </div>
@@ -433,6 +441,23 @@ export function ChatWindow() {
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Typing indicators */}
+      {typingBeings.size > 0 && (
+        <div className="px-3 py-1.5 border-t border-border/30 flex flex-col gap-1">
+          {[...typingBeings.entries()].map(([id, name]) => (
+            <div key={id} className="flex items-center gap-2 text-xs text-text-secondary">
+              <div className="flex gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="font-medium">{name}</span>
+              <span className="text-text-muted">is responding...</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Input area */}
       <div className="border-t border-border p-3 shrink-0">
@@ -495,7 +520,7 @@ export function ChatWindow() {
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message... (@ to mention, /task create [title] to add task)"
+            placeholder="Message... (@ to mention a being)"
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
           />
           <button
@@ -510,8 +535,6 @@ export function ChatWindow() {
         {/* Input hints */}
         <div className="flex items-center gap-3 mt-1.5 text-[9px] text-text-muted">
           <span>@ mention beings</span>
-          <span>|</span>
-          <span>/task create [title]</span>
           <span>|</span>
           <span>Enter to send</span>
           {targets.length === 0 && <span className="ml-auto">Broadcasting to all</span>}

@@ -1,5 +1,5 @@
 /**
- * Mission Control API client
+ * Mission Control API client — routes through BOMBA SR runtime via /api/mc/*
  */
 
 async function request(path, opts = {}) {
@@ -23,22 +23,22 @@ export const tasksApi = {
       if (v) params.set(k, v)
     }
     const qs = params.toString()
-    return request(`/api/tasks${qs ? `?${qs}` : ''}`)
+    return request(`/api/mc/tasks${qs ? `?${qs}` : ''}`)
   },
   get(id) {
-    return request(`/api/tasks/${id}`)
+    return request(`/api/mc/tasks/${id}`)
   },
   create(task) {
-    return request('/api/tasks', { method: 'POST', body: JSON.stringify(task) })
+    return request('/api/mc/tasks', { method: 'POST', body: JSON.stringify(task) })
   },
   update(id, changes) {
-    return request(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(changes) })
+    return request(`/api/mc/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(changes) })
   },
   delete(id) {
-    return request(`/api/tasks/${id}`, { method: 'DELETE' })
+    return request(`/api/mc/tasks/${id}`, { method: 'DELETE' })
   },
   history(taskId) {
-    return request(`/api/tasks/history${taskId ? `?taskId=${taskId}` : ''}`)
+    return request(`/api/mc/tasks/history${taskId ? `?taskId=${taskId}` : ''}`)
   },
 }
 
@@ -51,19 +51,13 @@ export const beingsApi = {
       if (v) params.set(k, v)
     }
     const qs = params.toString()
-    return request(`/api/beings${qs ? `?${qs}` : ''}`)
+    return request(`/api/mc/beings${qs ? `?${qs}` : ''}`)
   },
   get(id) {
-    return request(`/api/beings/${id}`)
-  },
-  register(being) {
-    return request('/api/beings', { method: 'POST', body: JSON.stringify(being) })
+    return request(`/api/mc/beings/${id}`)
   },
   update(id, changes) {
-    return request(`/api/beings/${id}`, { method: 'PATCH', body: JSON.stringify(changes) })
-  },
-  delete(id) {
-    return request(`/api/beings/${id}`, { method: 'DELETE' })
+    return request(`/api/mc/beings/${id}`, { method: 'PATCH', body: JSON.stringify(changes) })
   },
 }
 
@@ -76,18 +70,26 @@ export const chatApi = {
       if (v) params.set(k, String(v))
     }
     const qs = params.toString()
-    return request(`/api/chat/messages${qs ? `?${qs}` : ''}`)
+    return request(`/api/mc/chat/messages${qs ? `?${qs}` : ''}`)
   },
   send(message) {
-    return request('/api/chat/messages', { method: 'POST', body: JSON.stringify(message) })
+    return request('/api/mc/chat/messages', { method: 'POST', body: JSON.stringify(message) })
   },
   delete(id) {
-    return request(`/api/chat/messages/${id}`, { method: 'DELETE' })
+    return request(`/api/mc/chat/messages/${id}`, { method: 'DELETE' })
   },
   postSystem(content, taskRef = null) {
-    return request('/api/chat/system', {
+    return request('/api/mc/chat/system', {
       method: 'POST',
       body: JSON.stringify({ content, taskRef }),
     })
+  },
+}
+
+// ── Sub-Agents API ───────────────────────────────────────────
+
+export const subagentsApi = {
+  list() {
+    return request('/api/mc/subagents')
   },
 }

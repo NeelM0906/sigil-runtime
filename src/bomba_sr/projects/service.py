@@ -8,7 +8,7 @@ from bomba_sr.storage.db import RuntimeDB
 
 PROJECT_STATUSES = {"active", "paused", "archived"}
 TASK_STATUSES = {"todo", "in_progress", "blocked", "review", "done", "cancelled"}
-TASK_PRIORITIES = {"low", "normal", "high"}
+TASK_PRIORITIES = {"low", "normal", "medium", "high", "critical"}
 
 
 class ProjectService:
