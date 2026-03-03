@@ -567,10 +567,19 @@ class RuntimeBridge:
             if runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
                 system_prefix_parts.append("<priorities>\n" + runtime.soul.priorities_text.strip()[:8000] + "\n</priorities>")
 
-        system_prefix_parts.append(
-            "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
-            "and prefer local-first retrieval before broad assumptions."
-        )
+        if runtime.soul is None:
+            # Fallback identity only when no SoulConfig is present.
+            # When a being HAS a SoulConfig, their SOUL.md/IDENTITY.md IS their identity.
+            system_prefix_parts.append(
+                "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
+                "and prefer local-first retrieval before broad assumptions."
+            )
+        else:
+            # Operational guidelines without overriding the being's identity
+            system_prefix_parts.append(
+                "Use cited evidence, respect explicit constraints, "
+                "and prefer local-first retrieval before broad assumptions."
+            )
         skill_index = runtime.skill_disclosure.format_skill_index_xml(runtime.skill_loader.snapshot())
         system_prefix_parts.append(
             "Answer directly and cite local evidence when available. "

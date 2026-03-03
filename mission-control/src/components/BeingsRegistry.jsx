@@ -16,18 +16,19 @@ const STATUS_LABELS = {
 }
 
 const TYPE_BADGES = {
-  runtime: { label: 'RUNTIME', color: 'text-accent-blue bg-accent-blue/10 border-accent-blue/20' },
+  runtime: { label: 'PRIMARY', color: 'text-accent-orange bg-accent-orange/10 border-accent-orange/20' },
   sister: { label: 'SISTER', color: 'text-accent-purple bg-accent-purple/10 border-accent-purple/20' },
   voice: { label: 'VOICE', color: 'text-accent-pink bg-accent-pink/10 border-accent-pink/20' },
   subagent: { label: 'SUB-AGENT', color: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20' },
   custom: { label: 'CUSTOM', color: 'text-text-muted bg-bg-hover border-border' },
 }
 
-// Section config: grouping + headers
+// Section config: SAI at the top, sisters under her, then voice and sub-agents
 const SECTIONS = [
-  { key: 'sisters', label: 'Sisters', dot: 'bg-accent-purple', types: ['runtime', 'sister'] },
-  { key: 'voice', label: 'Voice Agents', dot: 'bg-accent-pink', types: ['voice'] },
+  { key: 'sai', label: 'SAI', dot: 'bg-accent-orange', types: ['runtime'] },
+  { key: 'sisters', label: 'Sisters', dot: 'bg-accent-purple', types: ['sister'] },
   { key: 'subagents', label: 'Sub-Agents', dot: 'bg-accent-amber', types: ['subagent'] },
+  { key: 'voice', label: 'Voice Agents', dot: 'bg-accent-pink', types: ['voice'] },
 ]
 
 function BeingCard({ being, isExpanded, onToggle }) {

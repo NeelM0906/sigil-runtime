@@ -159,11 +159,11 @@ class DashboardService:
         prime_soul = self._load_soul_safe(prime_ws)
         beings.append({
             "id": "prime",
-            "name": prime_soul.name if prime_soul else "Prime",
-            "role": "Lead orchestrator — holds the vision, coordinates all sisters",
+            "name": "SAI",
+            "role": "Primary being — holds the vision, coordinates all sisters",
             "avatar": prime_soul.emoji if prime_soul else "🔥",
             "status": "online",
-            "description": "The host runtime. Coordinates all sisters and sub-agents.",
+            "description": "SAI (Super Actualized Intelligence). The primary being. Sisters are her extensions.",
             "type": TYPE_RUNTIME,
             "tools": [],
             "skills": ["orchestration", "delegation", "memory", "web_search"],

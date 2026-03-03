@@ -54,7 +54,7 @@ def builtin_compaction_tools(
         original_messages = len(state.messages)
         system_message = state.messages[0] if state.messages and state.messages[0].role == "system" else ChatMessage(
             role="system",
-            content="You are BOMBA SR runtime assistant.",
+            content="Use cited evidence, respect explicit constraints, and prefer local-first retrieval before broad assumptions.",
         )
         tail = [m for m in state.messages[1:] if m.role != "system"][-4:]
         summary_message = ChatMessage(role="user", content=f"<compacted_history>\n{summary}\n</compacted_history>")
