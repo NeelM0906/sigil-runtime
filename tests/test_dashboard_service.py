@@ -404,6 +404,57 @@ class TestTasks:
         history = svc.task_history(task_id=task["task_id"])
         assert len(history) == 2  # created + updated
 
+    def test_route_auto_creates_task(self, db, project_svc):
+        """Messaging a being should auto-create a task that transitions through statuses."""
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.return_value = {"reply": "Done!"}
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        # Subscribe to SSE to capture events
+        cid = svc.subscribe_sse()
+
+        svc.route_to_being("sai-memory", "Summarize the weekly report", sender="user")
+        time.sleep(0.5)
+
+        # Task should have been auto-created and finished
+        tasks = svc.list_tasks(project_svc)
+        chat_tasks = [t for t in tasks if "Summarize the weekly report" in t.get("title", "")]
+        assert len(chat_tasks) >= 1, f"Expected auto-created task, got: {[t['title'] for t in tasks]}"
+
+        task = chat_tasks[0]
+        assert task["status"] == "done", f"Expected done, got {task['status']}"
+        assert "sai-memory" in task.get("assignees", [])
+
+        # SSE events should have been emitted for task creation and status changes
+        events = []
+        while True:
+            evt = svc.poll_sse(cid, timeout=0.1)
+            if evt is None:
+                break
+            events.append(evt)
+        svc.unsubscribe_sse(cid)
+
+        task_events = [e for e in events if e["event"] == "task_update"]
+        assert len(task_events) >= 2, f"Expected >=2 task events, got {len(task_events)}"
+
+    def test_route_error_reverts_task(self, db, project_svc):
+        """If bridge.handle_turn raises, task should revert to backlog."""
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.side_effect = RuntimeError("LLM failed")
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        svc.route_to_being("sai-memory", "Fail this task", sender="user")
+        time.sleep(0.5)
+
+        tasks = svc.list_tasks(project_svc)
+        chat_tasks = [t for t in tasks if "Fail this task" in t.get("title", "")]
+        assert len(chat_tasks) >= 1
+        assert chat_tasks[0]["status"] == "backlog"
+
 
 # ── SSE ───────────────────────────────────────────────────────
 

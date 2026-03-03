@@ -49,6 +49,7 @@ class DashboardService:
         self.db = db
         self.bridge = bridge
         self.sisters = sisters
+        self.project_service: Any | None = None
         self._sse_clients: dict[str, queue.Queue] = {}
         self._sse_lock = threading.Lock()
         self._ensure_schema()
@@ -556,6 +557,9 @@ class DashboardService:
         else:
             workspace = str(_PROJECT_ROOT)
 
+        # Auto-create task on the board for this work item
+        task_id = self._auto_create_task(being_id, being, content)
+
         # Signal busy + typing before calling bridge
         self.update_being(being_id, {"status": "busy"})
         self._emit_event("being_typing", {
@@ -564,6 +568,11 @@ class DashboardService:
             "active": True,
         })
 
+        # Transition task to in_progress
+        if task_id:
+            self._auto_update_task_status(task_id, "in_progress")
+
+        error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
             req = TurnRequest(
@@ -584,6 +593,7 @@ class DashboardService:
                     reply = result.get("reply", result.get("response", ""))
         except Exception as exc:
             reply = f"[Error from {being_id}: {exc}]"
+            error_occurred = True
         finally:
             # Restore online + stop typing regardless of success or failure
             self.update_being(being_id, {"status": "online"})
@@ -593,12 +603,55 @@ class DashboardService:
                 "active": False,
             })
 
+        # Transition task to done (or back to backlog on error)
+        if task_id:
+            self._auto_update_task_status(
+                task_id, "backlog" if error_occurred else "done"
+            )
+
         self.create_message(
             sender=being_id,
             content=reply or f"[{being_id} returned empty response]",
             targets=[sender],
             msg_type="direct",
+            task_ref=task_id,
         )
+
+    def _auto_create_task(self, being_id: str, being: dict, content: str) -> str | None:
+        """Auto-create a task on the board when a being receives a message."""
+        if not self.project_service:
+            return None
+        try:
+            # Truncate content for the title (first line, max 80 chars)
+            first_line = content.strip().split("\n")[0]
+            title = first_line[:80] + ("..." if len(first_line) > 80 else "")
+            being_name = being.get("name", being_id)
+
+            task = self.create_task(
+                project_service=self.project_service,
+                title=title,
+                description=f"Auto-created from chat message to {being_name}",
+                status="backlog",
+                priority="medium",
+                assignees=[being_id],
+                owner_agent_id=being_id,
+            )
+            return task.get("id")
+        except Exception:
+            return None
+
+    def _auto_update_task_status(self, task_id: str, new_status: str) -> None:
+        """Update task status and emit events for real-time board updates."""
+        if not self.project_service:
+            return
+        try:
+            self.update_task(
+                project_service=self.project_service,
+                task_id=task_id,
+                status=new_status,
+            )
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Tasks  (wraps ProjectService)
@@ -606,6 +659,7 @@ class DashboardService:
 
     def ensure_mc_project(self, project_service: Any) -> None:
         """Create the Mission Control project if it does not exist."""
+        self.project_service = project_service
         try:
             project_service.get_project(MC_TENANT, MC_PROJECT_ID)
         except ValueError:

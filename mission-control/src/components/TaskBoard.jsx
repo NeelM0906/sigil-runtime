@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { TASK_STATUSES, timeAgo } from '../store'
 import { useBeings } from '../context/BeingsContext'
 import { tasksApi } from '../api'
+import { useSSE } from '../hooks/useSSE'
 
 const STATUS_CONFIG = {
   backlog: { label: 'Backlog', color: 'text-text-muted', dot: 'bg-text-muted' },
@@ -404,18 +405,32 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
 
 function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
+  const isWorking = task.status === 'in_progress' && task.assignees.some(id => {
+    const b = getBeingById(id)
+    return b && b.status === 'busy'
+  })
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
       onClick={() => onClick(task)}
-      className="bg-bg-card border border-border rounded-lg p-2.5 cursor-grab active:cursor-grabbing hover:border-border-bright transition-colors group"
+      className={`bg-bg-card border rounded-lg p-2.5 cursor-grab active:cursor-grabbing hover:border-border-bright transition-colors group ${
+        isWorking ? 'border-accent-blue/40' : 'border-border'
+      }`}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded border ${prio.bg} ${prio.text} ${prio.border}`}>
-          {prio.label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded border ${prio.bg} ${prio.text} ${prio.border}`}>
+            {prio.label}
+          </span>
+          {isWorking && (
+            <span className="flex items-center gap-1 text-[10px] text-accent-blue">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" />
+              Working
+            </span>
+          )}
+        </div>
         <span className="text-[10px] text-text-muted font-mono">{timeAgo(task.updated)}</span>
       </div>
 
@@ -426,13 +441,14 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
         {task.assignees.map(id => {
           const being = getBeingById(id)
           if (!being) return null
+          const isBusy = being.status === 'busy'
           return (
             <button
               key={id}
               onClick={(e) => { e.stopPropagation(); onBeingClick(being.id) }}
-              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold hover:ring-1 hover:ring-white/30 transition-all"
+              className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold hover:ring-1 hover:ring-white/30 transition-all ${isBusy ? 'ring-1 ring-accent-blue/50' : ''}`}
               style={{ backgroundColor: being.color + '22', color: being.color }}
-              title={`View ${being.name}`}
+              title={`${being.name}${isBusy ? ' (working...)' : ''}`}
             >
               {being.avatar}
             </button>
@@ -508,6 +524,36 @@ export function TaskBoard({ fullWidth = false }) {
   }, [filters])
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  // Real-time task updates via SSE
+  const tasksRef = useRef(tasks)
+  tasksRef.current = tasks
+
+  useSSE({
+    task_update(evt) {
+      const { action, task, task_id } = evt
+      if (action === 'created' && task) {
+        setTasks(prev => {
+          if (prev.some(t => t.id === task.id)) return prev
+          return [...prev, task]
+        })
+      } else if (action === 'updated' && task) {
+        setTasks(prev => {
+          const idx = prev.findIndex(t => t.id === task.id)
+          if (idx >= 0) return prev.map(t => t.id === task.id ? task : t)
+          // Task not in list yet (may have been created while filters excluded it)
+          return [...prev, task]
+        })
+        // Update detail panel if open
+        if (detailTask?.id === task.id) {
+          setDetailTask(task)
+        }
+      } else if (action === 'deleted' && task_id) {
+        setTasks(prev => prev.filter(t => t.id !== task_id))
+        if (detailTask?.id === task_id) setDetailTask(null)
+      }
+    },
+  })
 
   // Drag & drop — persist status change
   const handleDragStart = (e, taskId) => {
