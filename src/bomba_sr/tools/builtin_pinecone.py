@@ -8,6 +8,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from bomba_sr.tools.base import ToolContext, ToolDefinition
@@ -20,7 +22,6 @@ INDEX_CACHE_TTL_SECONDS = 300.0
 STRATA_INDEXES = {
     "oracleinfluencemastery",
     "ultimatestratabrain",
-    "athenacontextualmemory",
 }
 MAX_DESCRIBE_INDEXES = 5
 
@@ -200,6 +201,42 @@ def _embed_query(query: str) -> list[float]:
     return [float(x) for x in vector]
 
 
+def _embed_batch(texts: list[str]) -> list[list[float]]:
+    import os
+
+    if not texts:
+        return []
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not openai_key:
+        raise ValueError("OPENAI_API_KEY is required for Pinecone embeddings")
+    embed_model = (
+        os.getenv("BOMBA_PINECONE_EMBED_MODEL")
+        or os.getenv("OPENAI_EMBEDDING_MODEL")
+        or DEFAULT_EMBED_MODEL
+    ).strip()
+    if not embed_model:
+        raise ValueError("embedding model is required")
+    payload = _http_json(
+        "POST",
+        OPENAI_EMBEDDINGS_API,
+        headers={"Authorization": f"Bearer {openai_key}"},
+        payload={"model": embed_model, "input": texts},
+    )
+    data = payload.get("data")
+    if not isinstance(data, list) or len(data) != len(texts):
+        raise ValueError("invalid OpenAI batch embeddings response")
+    sorted_data = sorted(data, key=lambda d: int(d.get("index", 0)) if isinstance(d, dict) else 0)
+    vectors: list[list[float]] = []
+    for item in sorted_data:
+        if not isinstance(item, dict):
+            raise ValueError("invalid embedding item in batch response")
+        emb = item.get("embedding")
+        if not isinstance(emb, list):
+            raise ValueError("missing embedding vector in batch response")
+        vectors.append([float(x) for x in emb])
+    return vectors
+
+
 def _pinecone_query_factory(default_index: str, default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         _ = context
@@ -314,6 +351,154 @@ def _pinecone_list_indexes_factory(default_index: str, default_namespace: str | 
     return run
 
 
+def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
+    def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        _ = context
+        texts = arguments.get("texts")
+        if not isinstance(texts, list) or not texts:
+            raise ValueError("texts is required and must be a non-empty array of strings")
+        texts = [str(t) for t in texts]
+        index_name = _require_safe_index_name(str(arguments.get("index_name") or default_index))
+        namespace = arguments.get("namespace")
+        namespace_value = (
+            str(namespace).strip()
+            if namespace is not None and str(namespace).strip()
+            else (default_namespace or None)
+        )
+        extra_metadata = arguments.get("metadata") or {}
+        if not isinstance(extra_metadata, dict):
+            extra_metadata = {}
+        id_prefix = str(arguments.get("id_prefix") or "bomba").strip()
+
+        api_key = _choose_pinecone_api_key(index_name)
+        host = _resolve_index_host(index_name, api_key)
+        vectors_data = _embed_batch(texts)
+
+        pinecone_vectors: list[dict[str, Any]] = []
+        for text, embedding in zip(texts, vectors_data):
+            vec_id = f"{id_prefix}-{uuid.uuid4().hex[:12]}"
+            meta = {"text": text}
+            meta.update(extra_metadata)
+            pinecone_vectors.append({
+                "id": vec_id,
+                "values": embedding,
+                "metadata": meta,
+            })
+
+        upsert_payload: dict[str, Any] = {"vectors": pinecone_vectors}
+        if namespace_value:
+            upsert_payload["namespace"] = namespace_value
+
+        url = f"https://{host}/vectors/upsert"
+        response = _http_json("POST", url, headers={"Api-Key": api_key}, payload=upsert_payload)
+        upserted = response.get("upsertedCount", len(pinecone_vectors))
+        return {
+            "upserted_count": int(upserted),
+            "index_name": index_name,
+            "namespace": namespace_value,
+        }
+
+    return run
+
+
+def _pinecone_multi_query_factory(default_namespace: str | None):
+    def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        _ = context
+        query = str(arguments.get("query") or "").strip()
+        if not query:
+            raise ValueError("query is required")
+        indexes = arguments.get("indexes")
+        if not isinstance(indexes, list) or not indexes:
+            raise ValueError("indexes is required and must be a non-empty array")
+        top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
+        score_threshold = float(arguments.get("score_threshold") or 0.4)
+
+        vector = _embed_query(query)
+
+        def _query_one(spec: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+            idx_name = _require_safe_index_name(str(spec.get("index_name") or ""))
+            ns = spec.get("namespace")
+            ns_value = (
+                str(ns).strip()
+                if ns is not None and str(ns).strip()
+                else (default_namespace or None)
+            )
+            api_key = _choose_pinecone_api_key(idx_name)
+            host = _resolve_index_host(idx_name, api_key)
+            payload: dict[str, Any] = {
+                "vector": vector,
+                "topK": top_k,
+                "includeMetadata": True,
+            }
+            if ns_value:
+                payload["namespace"] = ns_value
+            url = f"https://{host}/query"
+            resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
+            matches = resp.get("matches")
+            if not isinstance(matches, list):
+                matches = []
+            results: list[dict[str, Any]] = []
+            for item in matches:
+                if not isinstance(item, dict):
+                    continue
+                score = float(item.get("score") or 0.0)
+                if score < score_threshold:
+                    continue
+                metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+                text = (
+                    str(metadata.get("text") or "")
+                    or str(metadata.get("chunk") or "")
+                    or str(metadata.get("content") or "")
+                )
+                results.append({
+                    "id": str(item.get("id") or ""),
+                    "score": score,
+                    "metadata": metadata,
+                    "text": text,
+                    "source_index": idx_name,
+                    "source_namespace": ns_value,
+                })
+            return idx_name, results
+
+        all_results: list[dict[str, Any]] = []
+        indexes_queried: list[str] = []
+        errors: list[dict[str, str]] = []
+        with ThreadPoolExecutor(max_workers=min(len(indexes), 8)) as pool:
+            futures = {pool.submit(_query_one, spec): spec for spec in indexes}
+            for future in as_completed(futures):
+                spec = futures[future]
+                idx_name = str(spec.get("index_name") or "unknown")
+                try:
+                    queried_name, results = future.result()
+                    indexes_queried.append(queried_name)
+                    all_results.extend(results)
+                except Exception as exc:
+                    errors.append({"index": idx_name, "error": str(exc)})
+
+        all_results.sort(key=lambda r: r.get("score", 0.0), reverse=True)
+
+        seen_texts: set[str] = set()
+        deduped: list[dict[str, Any]] = []
+        for r in all_results:
+            text_key = r.get("text", "")
+            if text_key and text_key in seen_texts:
+                continue
+            if text_key:
+                seen_texts.add(text_key)
+            deduped.append(r)
+
+        out: dict[str, Any] = {
+            "query": query,
+            "indexes_queried": indexes_queried,
+            "results": deduped,
+        }
+        if errors:
+            out["errors"] = errors
+        return out
+
+    return run
+
+
 def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str | None = "longterm") -> list[ToolDefinition]:
     return [
         ToolDefinition(
@@ -347,5 +532,57 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
             risk_level="low",
             action_type="read",
             execute=_pinecone_list_indexes_factory(default_index=default_index, default_namespace=default_namespace),
+        ),
+        ToolDefinition(
+            name="pinecone_upsert",
+            description="Embed and upsert text chunks into a Pinecone vector index.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "texts": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Text chunks to embed and upsert.",
+                    },
+                    "index_name": {"type": "string", "description": "Target Pinecone index (defaults to configured default)."},
+                    "namespace": {"type": ["string", "null"], "description": "Target namespace (defaults to configured default)."},
+                    "metadata": {"type": "object", "description": "Additional metadata to attach to each vector."},
+                    "id_prefix": {"type": "string", "description": "Prefix for generated vector IDs (default: 'bomba')."},
+                },
+                "required": ["texts"],
+                "additionalProperties": False,
+            },
+            risk_level="medium",
+            action_type="write",
+            execute=_pinecone_upsert_factory(default_index=default_index, default_namespace=default_namespace),
+        ),
+        ToolDefinition(
+            name="pinecone_multi_query",
+            description="Query multiple Pinecone indexes in parallel and merge results by score.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Natural-language search query."},
+                    "indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "index_name": {"type": "string", "description": "Pinecone index name."},
+                                "namespace": {"type": ["string", "null"], "description": "Optional namespace."},
+                            },
+                            "required": ["index_name"],
+                        },
+                        "description": "List of indexes (with optional namespaces) to query.",
+                    },
+                    "top_k": {"type": "integer", "description": "Maximum matches per index (1-20)."},
+                    "score_threshold": {"type": "number", "description": "Minimum similarity score."},
+                },
+                "required": ["query", "indexes"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_pinecone_multi_query_factory(default_namespace=default_namespace),
         ),
     ]

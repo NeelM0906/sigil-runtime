@@ -17,7 +17,7 @@ class EmbeddingProvider(Protocol):
 @dataclass
 class OpenAIEmbeddingProvider:
     api_key: str
-    model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
+    model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     api_base: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 
     def embed(self, texts: list[str]) -> list[list[float]]:

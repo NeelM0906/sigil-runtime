@@ -106,6 +106,40 @@ class PineconeToolTests(unittest.TestCase):
             query_tool.execute({"query": "x", "index_name": "oracleinfluencemastery"}, _context())
             self.assertIn("strata-key", seen_keys)
 
+    def test_athena_uses_primary_key(self) -> None:
+        """athenacontextualmemory belongs to primary account, not STRATA."""
+        seen_keys: list[str] = []
+
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            if headers and "Api-Key" in headers:
+                seen_keys.append(str(headers["Api-Key"]))
+            if "api.pinecone.io/indexes" in url:
+                return {"indexes": [{"name": "athenacontextualmemory", "host": "athena-host"}]}
+            if "openai.com/v1/embeddings" in url:
+                return {"data": [{"embedding": [0.1, 0.2]}]}
+            if "athena-host/query" in url:
+                return {"matches": []}
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "PINECONE_API_KEY": "primary-key",
+                    "PINECONE_API_KEY_STRATA": "strata-key",
+                    "OPENAI_API_KEY": "oa-key",
+                },
+                clear=False,
+            ),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            query_tool = next(t for t in tools if t.name == "pinecone_query")
+            query_tool.execute({"query": "x", "index_name": "athenacontextualmemory"}, _context())
+            # Must use primary key, NOT strata key
+            self.assertIn("primary-key", seen_keys)
+            self.assertNotIn("strata-key", seen_keys)
+
     def test_missing_key_raises(self) -> None:
         with patch.dict(
             "os.environ",
@@ -194,6 +228,164 @@ class PineconeToolTests(unittest.TestCase):
             result = list_tool.execute({}, _context())
             self.assertEqual(len(result["indexes"]), 8)
             self.assertEqual(describe_calls, 5)
+
+    def test_upsert_sends_vectors(self) -> None:
+        upsert_payloads: list[dict] = []
+
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            if "api.pinecone.io/indexes" in url:
+                return {"indexes": [{"name": "ublib2", "host": "idx-host"}]}
+            if "openai.com/v1/embeddings" in url:
+                texts = payload.get("input", []) if isinstance(payload, dict) else []
+                return {
+                    "data": [
+                        {"index": i, "embedding": [0.1 * (i + 1), 0.2 * (i + 1)]}
+                        for i in range(len(texts))
+                    ]
+                }
+            if "idx-host/vectors/upsert" in url:
+                upsert_payloads.append(payload)
+                return {"upsertedCount": len(payload.get("vectors", []))}
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict(
+                "os.environ",
+                {"PINECONE_API_KEY": "pc-key", "OPENAI_API_KEY": "oa-key"},
+                clear=False,
+            ),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            upsert_tool = next(t for t in tools if t.name == "pinecone_upsert")
+            result = upsert_tool.execute(
+                {"texts": ["chunk one", "chunk two"], "metadata": {"source": "test"}},
+                _context(),
+            )
+            self.assertEqual(result["upserted_count"], 2)
+            self.assertEqual(result["index_name"], "ublib2")
+            self.assertEqual(result["namespace"], "longterm")
+            # Verify payload structure
+            self.assertEqual(len(upsert_payloads), 1)
+            vectors = upsert_payloads[0]["vectors"]
+            self.assertEqual(len(vectors), 2)
+            self.assertIn("text", vectors[0]["metadata"])
+            self.assertEqual(vectors[0]["metadata"]["source"], "test")
+            self.assertEqual(upsert_payloads[0]["namespace"], "longterm")
+
+    def test_upsert_validates_index_name(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"PINECONE_API_KEY": "pc-key", "OPENAI_API_KEY": "oa-key"},
+            clear=False,
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            upsert_tool = next(t for t in tools if t.name == "pinecone_upsert")
+            with self.assertRaises(ValueError):
+                upsert_tool.execute(
+                    {"texts": ["hello"], "index_name": "../evil/path"},
+                    _context(),
+                )
+
+    def test_multi_query_merges_results(self) -> None:
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            if "api.pinecone.io/indexes" in url:
+                return {
+                    "indexes": [
+                        {"name": "idx-a", "host": "host-a"},
+                        {"name": "idx-b", "host": "host-b"},
+                    ]
+                }
+            if "openai.com/v1/embeddings" in url:
+                return {"data": [{"embedding": [0.1, 0.2]}]}
+            if "host-a/query" in url:
+                return {
+                    "matches": [
+                        {"id": "a1", "score": 0.95, "metadata": {"text": "top hit"}},
+                        {"id": "a2", "score": 0.70, "metadata": {"text": "mid hit"}},
+                    ]
+                }
+            if "host-b/query" in url:
+                return {
+                    "matches": [
+                        {"id": "b1", "score": 0.85, "metadata": {"text": "second hit"}},
+                        {"id": "b2", "score": 0.60, "metadata": {"text": "top hit"}},  # duplicate text
+                    ]
+                }
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict(
+                "os.environ",
+                {"PINECONE_API_KEY": "pc-key", "OPENAI_API_KEY": "oa-key"},
+                clear=False,
+            ),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            mq_tool = next(t for t in tools if t.name == "pinecone_multi_query")
+            result = mq_tool.execute(
+                {
+                    "query": "test",
+                    "indexes": [
+                        {"index_name": "idx-a"},
+                        {"index_name": "idx-b"},
+                    ],
+                },
+                _context(),
+            )
+            self.assertEqual(len(result["indexes_queried"]), 2)
+            # Sorted by score desc, deduplicated by text
+            results = result["results"]
+            # "top hit" at 0.95 from idx-a, "second hit" at 0.85 from idx-b, "mid hit" at 0.70 from idx-a
+            # "top hit" at 0.60 from idx-b is a duplicate and should be removed
+            self.assertEqual(len(results), 3)
+            self.assertEqual(results[0]["score"], 0.95)
+            self.assertEqual(results[0]["source_index"], "idx-a")
+            # All results have source_index annotation
+            for r in results:
+                self.assertIn("source_index", r)
+
+    def test_multi_query_embeds_once(self) -> None:
+        embed_calls = 0
+
+        def fake_http(method, url, headers=None, payload=None, timeout=30):  # noqa: ANN001
+            nonlocal embed_calls
+            if "api.pinecone.io/indexes" in url:
+                return {
+                    "indexes": [
+                        {"name": "idx-a", "host": "host-a"},
+                        {"name": "idx-b", "host": "host-b"},
+                    ]
+                }
+            if "openai.com/v1/embeddings" in url:
+                embed_calls += 1
+                return {"data": [{"embedding": [0.1, 0.2]}]}
+            if "/query" in url:
+                return {"matches": []}
+            raise AssertionError(f"unexpected URL: {url}")
+
+        with (
+            patch.dict(
+                "os.environ",
+                {"PINECONE_API_KEY": "pc-key", "OPENAI_API_KEY": "oa-key"},
+                clear=False,
+            ),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            tools = builtin_pinecone_tools(default_index="ublib2", default_namespace="longterm")
+            mq_tool = next(t for t in tools if t.name == "pinecone_multi_query")
+            mq_tool.execute(
+                {
+                    "query": "test",
+                    "indexes": [
+                        {"index_name": "idx-a"},
+                        {"index_name": "idx-b"},
+                    ],
+                },
+                _context(),
+            )
+            self.assertEqual(embed_calls, 1, "Should embed query exactly once for multi-index")
 
 
 if __name__ == "__main__":
