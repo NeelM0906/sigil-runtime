@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { TASKS, TASK_STATUSES, getBeingById, timeAgo } from '../store'
+import { useState, useEffect, useCallback } from 'react'
+import { BEINGS, TASK_STATUSES, getBeingById, timeAgo } from '../store'
+import { tasksApi } from '../api'
 
 const STATUS_CONFIG = {
   backlog: { label: 'Backlog', color: 'text-text-muted', dot: 'bg-text-muted' },
@@ -15,16 +16,369 @@ const PRIORITY_CONFIG = {
   low: { label: 'LOW', bg: 'bg-bg-hover', text: 'text-text-muted', border: 'border-border' },
 }
 
-function TaskCard({ task, onDragStart }) {
+const PRIORITIES = ['critical', 'high', 'medium', 'low']
+
+// ── Filters Bar ──────────────────────────────────────────────
+
+function FiltersBar({ filters, setFilters, onCreateClick }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Assignee filter */}
+      <select
+        value={filters.assignee}
+        onChange={e => setFilters(f => ({ ...f, assignee: e.target.value }))}
+        className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+      >
+        <option value="">All Beings</option>
+        {BEINGS.map(b => (
+          <option key={b.id} value={b.id}>{b.name}</option>
+        ))}
+      </select>
+
+      {/* Priority filter */}
+      <select
+        value={filters.priority}
+        onChange={e => setFilters(f => ({ ...f, priority: e.target.value }))}
+        className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+      >
+        <option value="">All Priorities</option>
+        {PRIORITIES.map(p => (
+          <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+        ))}
+      </select>
+
+      {/* Date from */}
+      <input
+        type="date"
+        value={filters.from}
+        onChange={e => setFilters(f => ({ ...f, from: e.target.value }))}
+        className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+        placeholder="From"
+      />
+
+      {/* Date to */}
+      <input
+        type="date"
+        value={filters.to}
+        onChange={e => setFilters(f => ({ ...f, to: e.target.value }))}
+        className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+        placeholder="To"
+      />
+
+      {/* Clear filters */}
+      {(filters.assignee || filters.priority || filters.from || filters.to) && (
+        <button
+          onClick={() => setFilters({ assignee: '', priority: '', from: '', to: '' })}
+          className="text-[10px] text-text-muted hover:text-accent-red transition-colors"
+        >
+          Clear
+        </button>
+      )}
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Create task button */}
+      <button
+        onClick={onCreateClick}
+        className="flex items-center gap-1 px-3 py-1 bg-accent-blue/20 text-accent-blue text-xs font-medium rounded hover:bg-accent-blue/30 transition-colors"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        New Task
+      </button>
+    </div>
+  )
+}
+
+// ── Create/Edit Modal ────────────────────────────────────────
+
+function TaskModal({ task, onSave, onClose }) {
+  const isEdit = !!task?.id
+  const [form, setForm] = useState({
+    title: task?.title || '',
+    description: task?.description || '',
+    priority: task?.priority || 'medium',
+    status: task?.status || 'backlog',
+    assignees: task?.assignees || [],
+  })
+
+  const toggleAssignee = (id) => {
+    setForm(f => ({
+      ...f,
+      assignees: f.assignees.includes(id)
+        ? f.assignees.filter(a => a !== id)
+        : [...f.assignees, id]
+    }))
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!form.title.trim()) return
+    onSave(form)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-bg-secondary border border-border-bright rounded-lg w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h3 className="text-sm font-semibold">{isEdit ? 'Edit Task' : 'Create Task'}</h3>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
+          <input
+            autoFocus
+            value={form.title}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Task title..."
+            className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50"
+          />
+
+          <textarea
+            value={form.description}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+            placeholder="Description..."
+            rows={3}
+            className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 resize-none"
+          />
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] uppercase tracking-wider text-text-muted mb-1 block">Priority</label>
+              <select
+                value={form.priority}
+                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+                className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+              >
+                {PRIORITIES.map(p => (
+                  <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] uppercase tracking-wider text-text-muted mb-1 block">Status</label>
+              <select
+                value={form.status}
+                onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                className="w-full bg-bg-card border border-border rounded px-2 py-1.5 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
+              >
+                {TASK_STATUSES.map(s => (
+                  <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Assignees */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5 block">Assign Beings</label>
+            <div className="flex flex-wrap gap-1.5">
+              {BEINGS.map(being => {
+                const selected = form.assignees.includes(being.id)
+                return (
+                  <button
+                    key={being.id}
+                    type="button"
+                    onClick={() => toggleAssignee(being.id)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors border ${
+                      selected
+                        ? 'border-accent-blue/40 bg-accent-blue/10 text-accent-blue'
+                        : 'border-border bg-bg-card text-text-secondary hover:bg-bg-hover'
+                    }`}
+                  >
+                    <div
+                      className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold"
+                      style={{ backgroundColor: being.color + '22', color: being.color }}
+                    >
+                      {being.avatar}
+                    </div>
+                    {being.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!form.title.trim()}
+              className="px-4 py-1.5 bg-accent-blue text-white text-xs font-medium rounded hover:bg-accent-blue/80 disabled:opacity-30 transition-colors"
+            >
+              {isEdit ? 'Save Changes' : 'Create Task'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Task Detail Slide-out ────────────────────────────────────
+
+function TaskDetail({ task, history, onClose, onEdit, onDelete }) {
+  const config = STATUS_CONFIG[task.status]
+  const prio = PRIORITY_CONFIG[task.priority]
+
+  const actionLabels = {
+    created: 'Task created',
+    status_change: 'Status changed',
+    updated: 'Task updated',
+    deleted: 'Task deleted',
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+      <div
+        className="w-full max-w-md bg-bg-secondary border-l border-border-bright h-full overflow-y-auto shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-bg-secondary border-b border-border px-4 py-3 flex items-center justify-between z-10">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${config.dot}`} />
+            <span className={`text-xs font-mono ${config.color}`}>{config.label}</span>
+            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded border ${prio.bg} ${prio.text} ${prio.border}`}>
+              {prio.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(task)}
+              className="px-2 py-1 text-[10px] text-text-secondary hover:text-accent-blue transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => { if (confirm('Delete this task?')) onDelete(task.id) }}
+              className="px-2 py-1 text-[10px] text-text-secondary hover:text-accent-red transition-colors"
+            >
+              Delete
+            </button>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg ml-2">&times;</button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          <h2 className="text-base font-semibold mb-2">{task.title}</h2>
+          <p className="text-sm text-text-secondary leading-relaxed mb-4">{task.description}</p>
+
+          {/* Meta */}
+          <div className="flex flex-col gap-2 text-xs mb-4">
+            <div className="flex items-center justify-between">
+              <span className="text-text-muted">ID</span>
+              <span className="font-mono text-text-secondary">{task.id}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-text-muted">Created</span>
+              <span className="text-text-secondary">{new Date(task.created).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-text-muted">Updated</span>
+              <span className="text-text-secondary">{new Date(task.updated).toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Assignees */}
+          <div className="mb-4">
+            <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Assigned To</div>
+            <div className="flex flex-wrap gap-1.5">
+              {task.assignees.map(id => {
+                const being = getBeingById(id)
+                if (!being) return null
+                return (
+                  <div key={id} className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-bg-card text-xs">
+                    <div
+                      className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold"
+                      style={{ backgroundColor: being.color + '22', color: being.color }}
+                    >
+                      {being.avatar}
+                    </div>
+                    <span>{being.name}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      being.status === 'online' ? 'bg-accent-green' : being.status === 'busy' ? 'bg-accent-amber' : 'bg-text-muted'
+                    }`} />
+                  </div>
+                )
+              })}
+              {task.assignees.length === 0 && (
+                <span className="text-xs text-text-muted italic">Unassigned</span>
+              )}
+            </div>
+          </div>
+
+          {/* Activity History */}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Activity Log</div>
+            <div className="flex flex-col gap-0">
+              {history.length === 0 && (
+                <span className="text-xs text-text-muted italic">No history yet</span>
+              )}
+              {history.slice().reverse().map(entry => (
+                <div key={entry.id} className="flex gap-3 py-2 border-b border-border/50 last:border-0">
+                  {/* Timeline dot */}
+                  <div className="flex flex-col items-center mt-1">
+                    <div className={`w-2 h-2 rounded-full ${
+                      entry.action === 'status_change' ? 'bg-accent-blue'
+                      : entry.action === 'created' ? 'bg-accent-green'
+                      : entry.action === 'deleted' ? 'bg-accent-red'
+                      : 'bg-text-muted'
+                    }`} />
+                    <div className="w-px flex-1 bg-border/50 mt-1" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">{actionLabels[entry.action] || entry.action}</span>
+                      <span className="text-[10px] text-text-muted font-mono">{timeAgo(entry.timestamp)}</span>
+                    </div>
+
+                    {/* Change details */}
+                    {entry.details && Object.keys(entry.details).length > 0 && (
+                      <div className="mt-1 flex flex-col gap-0.5">
+                        {Object.entries(entry.details).map(([key, val]) => (
+                          <div key={key} className="text-[10px] text-text-secondary">
+                            {typeof val === 'object' && val.from !== undefined
+                              ? <><span className="text-text-muted">{key}:</span> <span className="line-through text-text-muted">{JSON.stringify(val.from)}</span> &rarr; <span>{JSON.stringify(val.to)}</span></>
+                              : <><span className="text-text-muted">{key}:</span> {JSON.stringify(val)}</>
+                            }
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Task Card ────────────────────────────────────────────────
+
+function TaskCard({ task, onDragStart, onClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
+      onClick={() => onClick(task)}
       className="bg-bg-card border border-border rounded-lg p-2.5 cursor-grab active:cursor-grabbing hover:border-border-bright transition-colors group"
     >
-      {/* Top row: priority + time */}
       <div className="flex items-center justify-between mb-1.5">
         <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded border ${prio.bg} ${prio.text} ${prio.border}`}>
           {prio.label}
@@ -32,13 +386,9 @@ function TaskCard({ task, onDragStart }) {
         <span className="text-[10px] text-text-muted font-mono">{timeAgo(task.updated)}</span>
       </div>
 
-      {/* Title */}
-      <h3 className="text-sm font-medium mb-1 leading-snug">{task.title}</h3>
-
-      {/* Description snippet */}
+      <h3 className="text-sm font-medium mb-1 leading-snug group-hover:text-accent-blue transition-colors">{task.title}</h3>
       <p className="text-xs text-text-secondary mb-2 line-clamp-2 leading-relaxed">{task.description}</p>
 
-      {/* Assignees */}
       <div className="flex items-center gap-1">
         {task.assignees.map(id => {
           const being = getBeingById(id)
@@ -60,16 +410,19 @@ function TaskCard({ task, onDragStart }) {
   )
 }
 
-function Column({ status, tasks, onDragOver, onDrop, onDragStart }) {
+// ── Column ───────────────────────────────────────────────────
+
+function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, dragOverStatus }) {
   const config = STATUS_CONFIG[status]
+  const isOver = dragOverStatus === status
 
   return (
     <div
       className="flex flex-col min-w-[220px] flex-1"
       onDragOver={(e) => { e.preventDefault(); onDragOver(e, status) }}
+      onDragLeave={() => onDragOver(null, null)}
       onDrop={(e) => onDrop(e, status)}
     >
-      {/* Column header */}
       <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
         <div className={`w-2 h-2 rounded-full ${config.dot}`} />
         <span className={`text-xs font-semibold uppercase tracking-wider ${config.color}`}>
@@ -78,35 +431,120 @@ function Column({ status, tasks, onDragOver, onDrop, onDragStart }) {
         <span className="text-[10px] text-text-muted font-mono ml-auto">{tasks.length}</span>
       </div>
 
-      {/* Cards */}
-      <div className="flex flex-col gap-1.5 flex-1 min-h-[100px] p-1 rounded-lg border border-transparent hover:border-border/50 transition-colors">
+      <div className={`flex flex-col gap-1.5 flex-1 min-h-[100px] p-1 rounded-lg border transition-colors ${
+        isOver ? 'border-accent-blue/40 bg-accent-blue/5' : 'border-transparent'
+      }`}>
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} onDragStart={onDragStart} />
+          <TaskCard key={task.id} task={task} onDragStart={onDragStart} onClick={onCardClick} />
         ))}
       </div>
     </div>
   )
 }
 
-export function TaskBoard({ fullWidth = false }) {
-  const [tasks, setTasks] = useState(TASKS)
-  const [dragOverColumn, setDragOverColumn] = useState(null)
+// ── Main TaskBoard ───────────────────────────────────────────
 
+export function TaskBoard({ fullWidth = false }) {
+  const [tasks, setTasks] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [filters, setFilters] = useState({ assignee: '', priority: '', from: '', to: '' })
+  const [dragOverStatus, setDragOverStatus] = useState(null)
+  const [showModal, setShowModal] = useState(false) // false | 'create' | task object for edit
+  const [detailTask, setDetailTask] = useState(null)
+  const [detailHistory, setDetailHistory] = useState([])
+
+  // Fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    try {
+      const apiFilters = {}
+      if (filters.assignee) apiFilters.assignee = filters.assignee
+      if (filters.priority) apiFilters.priority = filters.priority
+      if (filters.from) apiFilters.from = new Date(filters.from).toISOString()
+      if (filters.to) apiFilters.to = new Date(filters.to).toISOString()
+      const { tasks: fetched } = await tasksApi.list(apiFilters)
+      setTasks(fetched)
+      setError(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [filters])
+
+  useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  // Drag & drop — persist status change
   const handleDragStart = (e, taskId) => {
     e.dataTransfer.setData('text/plain', taskId)
   }
 
-  const handleDragOver = (e, status) => {
-    setDragOverColumn(status)
+  const handleDragOver = (_e, status) => {
+    setDragOverStatus(status)
   }
 
-  const handleDrop = (e, newStatus) => {
+  const handleDrop = async (e, newStatus) => {
     e.preventDefault()
     const taskId = e.dataTransfer.getData('text/plain')
+    setDragOverStatus(null)
+
+    // Optimistic update
     setTasks(prev => prev.map(t =>
       t.id === taskId ? { ...t, status: newStatus, updated: new Date().toISOString() } : t
     ))
-    setDragOverColumn(null)
+
+    try {
+      await tasksApi.update(taskId, { status: newStatus })
+    } catch {
+      fetchTasks() // Revert on error
+    }
+  }
+
+  // CRUD handlers
+  const handleCreate = async (formData) => {
+    try {
+      const { task } = await tasksApi.create(formData)
+      setTasks(prev => [...prev, task])
+      setShowModal(false)
+    } catch (err) {
+      alert('Failed to create task: ' + err.message)
+    }
+  }
+
+  const handleEdit = async (formData) => {
+    const taskId = showModal.id
+    try {
+      const { task } = await tasksApi.update(taskId, formData)
+      setTasks(prev => prev.map(t => t.id === taskId ? task : t))
+      setShowModal(false)
+      // Refresh detail if open
+      if (detailTask?.id === taskId) {
+        openDetail(task)
+      }
+    } catch (err) {
+      alert('Failed to update task: ' + err.message)
+    }
+  }
+
+  const handleDelete = async (taskId) => {
+    try {
+      await tasksApi.delete(taskId)
+      setTasks(prev => prev.filter(t => t.id !== taskId))
+      setDetailTask(null)
+    } catch (err) {
+      alert('Failed to delete task: ' + err.message)
+    }
+  }
+
+  // Detail view
+  const openDetail = async (task) => {
+    setDetailTask(task)
+    try {
+      const { history } = await tasksApi.history(task.id)
+      setDetailHistory(history)
+    } catch {
+      setDetailHistory([])
+    }
   }
 
   return (
@@ -120,22 +558,69 @@ export function TaskBoard({ fullWidth = false }) {
         <div className="flex items-center gap-3 text-[10px] text-text-muted font-mono">
           <span>{tasks.filter(t => t.status === 'in_progress').length} active</span>
           <span>{tasks.filter(t => t.status === 'done').length} done</span>
+          <span>{tasks.length} total</span>
         </div>
       </div>
 
-      {/* Kanban Columns */}
-      <div className="p-2 flex gap-2 overflow-x-auto">
-        {TASK_STATUSES.map(status => (
-          <Column
-            key={status}
-            status={status}
-            tasks={tasks.filter(t => t.status === status)}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          />
-        ))}
+      {/* Filters */}
+      <div className="px-3 py-2 border-b border-border/50">
+        <FiltersBar
+          filters={filters}
+          setFilters={setFilters}
+          onCreateClick={() => setShowModal('create')}
+        />
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-3 mt-2 px-3 py-1.5 bg-accent-red/10 border border-accent-red/20 rounded text-xs text-accent-red">
+          {error}
+          <button onClick={fetchTasks} className="ml-2 underline">Retry</button>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="p-8 text-center text-xs text-text-muted">Loading tasks...</div>
+      )}
+
+      {/* Kanban Columns */}
+      {!loading && (
+        <div className="p-2 flex gap-2 overflow-x-auto">
+          {TASK_STATUSES.map(status => (
+            <Column
+              key={status}
+              status={status}
+              tasks={tasks.filter(t => t.status === status)}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onCardClick={openDetail}
+              dragOverStatus={dragOverStatus}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit Modal */}
+      {showModal && (
+        <TaskModal
+          task={showModal === 'create' ? null : showModal}
+          onSave={showModal === 'create' ? handleCreate : handleEdit}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {/* Detail slide-out */}
+      {detailTask && (
+        <TaskDetail
+          task={detailTask}
+          history={detailHistory}
+          onClose={() => setDetailTask(null)}
+          onEdit={(task) => { setDetailTask(null); setShowModal(task) }}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   )
 }

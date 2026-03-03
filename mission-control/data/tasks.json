@@ -1,0 +1,143 @@
+{
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Implement Mission Control Dashboard",
+      "description": "Build a React + Tailwind mission control dashboard with beings registry, task board, chat, and sub-agent tracker.",
+      "status": "in_progress",
+      "priority": "critical",
+      "assignees": [
+        "prime",
+        "callie"
+      ],
+      "created": "2026-03-02T10:00:00Z",
+      "updated": "2026-03-02T14:30:00Z"
+    },
+    {
+      "id": "task-002",
+      "title": "Prove-Ahead Q1 Competitive Report",
+      "description": "Run full competitive intelligence sweep for Q1 2026. Analyze top 5 competitors, pricing shifts, and feature launches.",
+      "status": "in_progress",
+      "priority": "high",
+      "assignees": [
+        "athena"
+      ],
+      "created": "2026-02-28T09:00:00Z",
+      "updated": "2026-03-01T16:00:00Z"
+    },
+    {
+      "id": "task-003",
+      "title": "Voice Pipeline Integration Tests",
+      "description": "Write and run integration tests for the ElevenLabs + Twilio voice pipeline. Cover inbound/outbound call flows.",
+      "status": "in_review",
+      "priority": "medium",
+      "assignees": [
+        "callie",
+        "mylo"
+      ],
+      "created": "2026-02-27T11:00:00Z",
+      "updated": "2026-03-01T10:00:00Z"
+    },
+    {
+      "id": "task-004",
+      "title": "Memory Consolidation Optimization",
+      "description": "Optimize semantic memory consolidation to reduce contradiction detection latency from 200ms to under 50ms.",
+      "status": "backlog",
+      "priority": "medium",
+      "assignees": [
+        "prime"
+      ],
+      "created": "2026-03-01T08:00:00Z",
+      "updated": "2026-03-01T08:00:00Z"
+    },
+    {
+      "id": "task-005",
+      "title": "Brand Voice Guidelines v2",
+      "description": "Update brand voice guidelines based on Q4 feedback. Include new tone variants for technical vs casual contexts.",
+      "status": "backlog",
+      "priority": "low",
+      "assignees": [
+        "mylo"
+      ],
+      "created": "2026-02-25T14:00:00Z",
+      "updated": "2026-02-25T14:00:00Z"
+    },
+    {
+      "id": "task-006",
+      "title": "Governance Policy Audit",
+      "description": "Audit all tool governance policies. Verify risk thresholds, approval flows, and logging compliance.",
+      "status": "done",
+      "priority": "high",
+      "assignees": [
+        "sentinel",
+        "prime"
+      ],
+      "created": "2026-02-20T10:00:00Z",
+      "updated": "2026-02-26T17:00:00Z"
+    },
+    {
+      "id": "task-007",
+      "title": "Colosseum Tournament Results Analysis",
+      "description": "Analyze results from Colosseum v2 tournament run. Extract being performance rankings and judge calibration data.",
+      "status": "done",
+      "priority": "medium",
+      "assignees": [
+        "athena"
+      ],
+      "created": "2026-02-22T09:00:00Z",
+      "updated": "2026-02-24T15:00:00Z"
+    }
+  ],
+  "history": [
+    {
+      "id": "8cd22bf8",
+      "taskId": "task-8b9640b7",
+      "action": "created",
+      "details": {
+        "title": "Test task from Python",
+        "priority": "high"
+      },
+      "timestamp": "2026-03-03T00:25:22.223330+00:00"
+    },
+    {
+      "id": "fb25e70e",
+      "taskId": "task-8b9640b7",
+      "action": "status_change",
+      "details": {
+        "status": {
+          "from": "backlog",
+          "to": "in_progress"
+        }
+      },
+      "timestamp": "2026-03-03T00:25:22.223727+00:00"
+    },
+    {
+      "id": "1061212b",
+      "taskId": "task-7d09dc08",
+      "action": "created",
+      "details": {
+        "title": "API test task",
+        "priority": "low"
+      },
+      "timestamp": "2026-03-03T00:25:57.810Z"
+    },
+    {
+      "id": "cc4af9dc",
+      "taskId": "task-8b9640b7",
+      "action": "deleted",
+      "details": {
+        "title": "Test task from Python"
+      },
+      "timestamp": "2026-03-03T00:26:16.525662+00:00"
+    },
+    {
+      "id": "b3851b34",
+      "taskId": "task-7d09dc08",
+      "action": "deleted",
+      "details": {
+        "title": "API test task"
+      },
+      "timestamp": "2026-03-03T00:26:16.526297+00:00"
+    }
+  ]
+}
