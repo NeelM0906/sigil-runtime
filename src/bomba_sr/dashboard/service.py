@@ -139,10 +139,10 @@ class DashboardService:
 
         now = self._now()
         inserted = 0
-        for b in beings:
-            self._upsert_being(b, now)
-            inserted += 1
-        self.db.commit()
+        with self.db.transaction() as conn:
+            for b in beings:
+                self._upsert_being_conn(conn, b, now)
+                inserted += 1
         return inserted
 
     def load_beings_from_configs(self) -> int:
@@ -302,18 +302,23 @@ class DashboardService:
 
         # ── Upsert all beings ─────────────────────────────────────
         now = self._now()
-        for b in beings:
-            self._upsert_being(b, now)
-        self.db.commit()
+        with self.db.transaction() as conn:
+            for b in beings:
+                self._upsert_being_conn(conn, b, now)
         return len(beings)
 
     def _upsert_being(self, b: dict, now: str) -> None:
-        """Insert or update a being record."""
-        existing = self.db.execute(
+        """Insert or update a being record (standalone, auto-commits)."""
+        with self.db.transaction() as conn:
+            self._upsert_being_conn(conn, b, now)
+
+    def _upsert_being_conn(self, conn: Any, b: dict, now: str) -> None:
+        """Insert or update a being record using the given connection."""
+        existing = conn.execute(
             "SELECT id FROM mc_beings WHERE id = ?", (b["id"],)
         ).fetchone()
         if existing:
-            self.db.execute(
+            conn.execute(
                 """UPDATE mc_beings SET
                    name=?, role=?, avatar=?, description=?, type=?,
                    tools=?, skills=?, color=?, model_id=?, workspace=?,
@@ -332,7 +337,7 @@ class DashboardService:
                 ),
             )
         else:
-            self.db.execute(
+            conn.execute(
                 """INSERT INTO mc_beings
                    (id,name,role,avatar,status,description,type,tools,skills,
                     color,model_id,workspace,tenant_id,auto_start,phone,
@@ -394,10 +399,9 @@ class DashboardService:
         params.append(self._now())
         params.append(being_id)
 
-        self.db.execute(
+        self.db.execute_commit(
             f"UPDATE mc_beings SET {', '.join(sets)} WHERE id = ?", params
         )
-        self.db.commit()
 
         being = self.get_being(being_id)
         if being and "status" in changes:
@@ -414,14 +418,14 @@ class DashboardService:
             sisters = self.sisters.list_sisters()
         except Exception:
             return
-        for s in sisters:
-            sid = s.get("sister_id") or s.get("id")
-            status = "online" if s.get("running") else "offline"
-            self.db.execute(
-                "UPDATE mc_beings SET status = ?, updated_at = ? WHERE id = ?",
-                (status, self._now(), sid),
-            )
-        self.db.commit()
+        with self.db.transaction() as conn:
+            for s in sisters:
+                sid = s.get("sister_id") or s.get("id")
+                status = "online" if s.get("running") else "offline"
+                conn.execute(
+                    "UPDATE mc_beings SET status = ?, updated_at = ? WHERE id = ?",
+                    (status, self._now(), sid),
+                )
 
     # ------------------------------------------------------------------
     # Chat messages
@@ -462,17 +466,17 @@ class DashboardService:
     ) -> dict:
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
-        self.db.execute(
-            """INSERT INTO mc_messages
-               (id,type,sender,targets,content,timestamp,mode,task_ref)
-               VALUES (?,?,?,?,?,?,?,?)""",
-            (
-                msg_id, msg_type, sender,
-                json.dumps(targets or []),
-                content, now, mode, task_ref,
-            ),
-        )
-        self.db.commit()
+        with self.db.transaction() as conn:
+            conn.execute(
+                """INSERT INTO mc_messages
+                   (id,type,sender,targets,content,timestamp,mode,task_ref)
+                   VALUES (?,?,?,?,?,?,?,?)""",
+                (
+                    msg_id, msg_type, sender,
+                    json.dumps(targets or []),
+                    content, now, mode, task_ref,
+                ),
+            )
         msg = self._message_row(
             self.db.execute(
                 "SELECT * FROM mc_messages WHERE id = ?", (msg_id,)
@@ -490,10 +494,9 @@ class DashboardService:
         )
 
     def delete_message(self, msg_id: str) -> bool:
-        cur = self.db.execute(
+        cur = self.db.execute_commit(
             "DELETE FROM mc_messages WHERE id = ?", (msg_id,)
         )
-        self.db.commit()
         return cur.rowcount > 0
 
     def route_to_being(self, being_id: str, content: str, sender: str = "user") -> None:
@@ -673,12 +676,12 @@ class DashboardService:
         )
         tid = task["task_id"]
         if assignees:
-            for bid in assignees:
-                self.db.execute(
-                    "INSERT OR IGNORE INTO mc_task_assignments (task_id, being_id) VALUES (?,?)",
-                    (tid, bid),
-                )
-            self.db.commit()
+            with self.db.transaction() as conn:
+                for bid in assignees:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO mc_task_assignments (task_id, being_id) VALUES (?,?)",
+                        (tid, bid),
+                    )
             task["assignees"] = assignees
         else:
             task["assignees"] = []
@@ -729,21 +732,20 @@ class DashboardService:
             params.append(self._now())
             params.append(task_id)
             params.append(MC_TENANT)
-            self.db.execute(
+            self.db.execute_commit(
                 f"UPDATE project_tasks SET {', '.join(sets)} WHERE task_id = ? AND tenant_id = ?",
                 params,
             )
-            self.db.commit()
             task = project_service.get_task(MC_TENANT, task_id)
 
         if assignees is not None:
-            self.db.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
-            for bid in assignees:
-                self.db.execute(
-                    "INSERT OR IGNORE INTO mc_task_assignments (task_id, being_id) VALUES (?,?)",
-                    (task_id, bid),
-                )
-            self.db.commit()
+            with self.db.transaction() as conn:
+                conn.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
+                for bid in assignees:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO mc_task_assignments (task_id, being_id) VALUES (?,?)",
+                        (task_id, bid),
+                    )
             changes["assignees"] = assignees
 
         rows = self.db.execute(
@@ -762,12 +764,12 @@ class DashboardService:
             project_service.get_task(MC_TENANT, task_id)
         except ValueError:
             return False
-        self.db.execute(
-            "DELETE FROM project_tasks WHERE tenant_id = ? AND task_id = ?",
-            (MC_TENANT, task_id),
-        )
-        self.db.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
-        self.db.commit()
+        with self.db.transaction() as conn:
+            conn.execute(
+                "DELETE FROM project_tasks WHERE tenant_id = ? AND task_id = ?",
+                (MC_TENANT, task_id),
+            )
+            conn.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
         self._log_task_history(task_id, "deleted", {})
         self._emit_event("task_update", {"action": "deleted", "task_id": task_id})
         return True
@@ -796,11 +798,10 @@ class DashboardService:
         return result
 
     def _log_task_history(self, task_id: str, action: str, details: dict) -> None:
-        self.db.execute(
+        self.db.execute_commit(
             "INSERT INTO mc_task_history (id,task_id,action,details,timestamp) VALUES (?,?,?,?,?)",
             (str(uuid.uuid4()), task_id, action, json.dumps(details), self._now()),
         )
-        self.db.commit()
 
     # ------------------------------------------------------------------
     # Sub-agents
@@ -845,11 +846,10 @@ class DashboardService:
     def _emit_event(self, event_type: str, payload: dict) -> None:
         now = self._now()
         # Persist
-        self.db.execute(
+        self.db.execute_commit(
             "INSERT INTO mc_events (event_type, payload, created_at) VALUES (?,?,?)",
             (event_type, json.dumps(payload, default=str), now),
         )
-        self.db.commit()
 
         # Fan-out
         evt = {"event": event_type, "data": payload, "ts": now}

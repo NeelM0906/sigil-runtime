@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, Mapping, Any
+from typing import Iterable, Iterator, Mapping, Any
 
 
 class RuntimeDB:
@@ -21,6 +22,7 @@ class RuntimeDB:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
+        self._conn.execute("PRAGMA busy_timeout = 5000")
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -33,6 +35,31 @@ class RuntimeDB:
     def executemany(self, sql: str, seq_of_params: Iterable[Iterable[Any]]) -> sqlite3.Cursor:
         with self._lock:
             return self._conn.executemany(sql, seq_of_params)
+
+    def execute_commit(self, sql: str, params: Iterable[Any] | Mapping[str, Any] = ()) -> sqlite3.Cursor:
+        """Execute a statement and commit atomically under a single lock acquisition."""
+        with self._lock:
+            cur = self._conn.execute(sql, params)
+            self._conn.commit()
+            return cur
+
+    @contextmanager
+    def transaction(self) -> Iterator[sqlite3.Connection]:
+        """Context manager that holds the lock for a multi-statement transaction.
+
+        Usage:
+            with db.transaction() as conn:
+                conn.execute("INSERT ...", (...))
+                conn.execute("UPDATE ...", (...))
+            # commit happens automatically on clean exit; rollback on exception.
+        """
+        with self._lock:
+            try:
+                yield self._conn
+                self._conn.commit()
+            except BaseException:
+                self._conn.rollback()
+                raise
 
     def script(self, sql_script: str) -> None:
         with self._lock:

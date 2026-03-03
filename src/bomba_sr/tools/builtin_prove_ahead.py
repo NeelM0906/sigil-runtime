@@ -130,6 +130,7 @@ def _read_competitors(workspace_root: Path, include_act_i: bool = False) -> list
     if not db_file.exists():
         raise ValueError(f"Competitors database not found: {_COMPETITORS_DB}")
     conn = sqlite3.connect(str(db_file))
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute("SELECT * FROM competitors ORDER BY company_name").fetchall()
