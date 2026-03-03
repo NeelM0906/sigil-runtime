@@ -324,7 +324,7 @@ class TestTasks:
         task = svc.create_task(project_svc, title="Test task", priority="high")
         assert task["title"] == "Test task"
         assert task["priority"] == "high"
-        assert task["status"] == "todo"
+        assert task["status"] == "backlog"
         assert "assignees" in task
 
     def test_create_task_with_assignees(self, svc, project_svc):

@@ -8,6 +8,8 @@ export function BeingsProvider({ children }) {
   const [beings, setBeings] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedBeingId, setSelectedBeingId] = useState(null)
+  const [beingDetail, setBeingDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const fetchBeings = useCallback(async () => {
     try {
@@ -46,12 +48,33 @@ export function BeingsProvider({ children }) {
     }
   }, [])
 
-  const openBeingDetail = useCallback((id) => {
+  const openBeingDetail = useCallback(async (id) => {
     setSelectedBeingId(id)
+    setDetailLoading(true)
+    setBeingDetail(null)
+    try {
+      const detail = await beingsApi.getDetail(id)
+      setBeingDetail(detail)
+    } catch (err) {
+      console.error('Failed to fetch being detail:', err)
+    } finally {
+      setDetailLoading(false)
+    }
   }, [])
 
   const closeBeingDetail = useCallback(() => {
     setSelectedBeingId(null)
+    setBeingDetail(null)
+  }, [])
+
+  const fetchBeingFile = useCallback(async (beingId, filePath) => {
+    try {
+      const { content } = await beingsApi.getFile(beingId, filePath)
+      return content
+    } catch (err) {
+      console.error('Failed to fetch being file:', err)
+      return null
+    }
   }, [])
 
   return (
@@ -62,8 +85,11 @@ export function BeingsProvider({ children }) {
       updateBeingStatus,
       fetchBeings,
       selectedBeingId,
+      beingDetail,
+      detailLoading,
       openBeingDetail,
       closeBeingDetail,
+      fetchBeingFile,
     }}>
       {children}
     </BeingsContext.Provider>

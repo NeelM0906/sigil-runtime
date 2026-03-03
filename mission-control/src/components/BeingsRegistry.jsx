@@ -31,7 +31,7 @@ const SECTIONS = [
   { key: 'voice', label: 'Voice Agents', dot: 'bg-accent-pink', types: ['voice'] },
 ]
 
-function BeingCard({ being, isExpanded, onToggle }) {
+function BeingCard({ being, isExpanded, onToggle, onOpenDetail }) {
   const typeBadge = TYPE_BADGES[being.type] || TYPE_BADGES.custom
   const isVoice = being.type === 'voice'
 
@@ -113,10 +113,18 @@ function BeingCard({ being, isExpanded, onToggle }) {
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-[10px] text-text-muted">
-            {being.model_id && <span className="font-mono">{being.model_id}</span>}
-            {being.agent_id && <><span>|</span><span className="font-mono">bland:{being.agent_id.slice(-8)}</span></>}
-            {being.workspace && <><span>|</span><span className="font-mono">{being.workspace}</span></>}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2 text-[10px] text-text-muted">
+              {being.model_id && <span className="font-mono">{being.model_id}</span>}
+              {being.agent_id && <><span>|</span><span className="font-mono">bland:{being.agent_id.slice(-8)}</span></>}
+              {being.workspace && <><span>|</span><span className="font-mono">{being.workspace}</span></>}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenDetail?.(being.id) }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded border border-accent-blue/30 bg-accent-blue/10 text-accent-blue text-[10px] font-medium hover:bg-accent-blue/20 transition-colors"
+            >
+              View Detail
+            </button>
           </div>
         </div>
       )}
@@ -189,11 +197,9 @@ export function BeingsRegistry({ compact = false }) {
                   being={being}
                   isExpanded={expandedId === being.id}
                   onToggle={() => {
-                    if (expandedId === being.id) {
-                      openBeingDetail(being.id)
-                    }
                     setExpandedId(expandedId === being.id ? null : being.id)
                   }}
+                  onOpenDetail={() => openBeingDetail(being.id)}
                 />
               ))}
             </div>

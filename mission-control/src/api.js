@@ -56,6 +56,12 @@ export const beingsApi = {
   get(id) {
     return request(`/api/mc/beings/${id}`)
   },
+  getDetail(id) {
+    return request(`/api/mc/beings/${id}/detail`)
+  },
+  getFile(id, filePath) {
+    return request(`/api/mc/beings/${id}/file?path=${encodeURIComponent(filePath)}`)
+  },
   update(id, changes) {
     return request(`/api/mc/beings/${id}`, { method: 'PATCH', body: JSON.stringify(changes) })
   },

@@ -1241,7 +1241,34 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"beings": beings})
                     return
                 if path.startswith("/api/mc/beings/"):
-                    bid = path.split("/api/mc/beings/", 1)[1].split("/")[0]
+                    remainder = path.split("/api/mc/beings/", 1)[1]
+                    parts = remainder.split("/")
+                    bid = parts[0]
+                    sub = parts[1] if len(parts) > 1 else None
+
+                    # GET /api/mc/beings/:id/detail
+                    if sub == "detail":
+                        detail = dashboard_svc.get_being_detail(bid)
+                        if not detail:
+                            self._write_cors(404, {"error": "being not found"})
+                            return
+                        self._write_cors(200, detail)
+                        return
+
+                    # GET /api/mc/beings/:id/file?path=...
+                    if sub == "file":
+                        rel_path = query.get("path", [None])[0]
+                        if not rel_path:
+                            self._write_cors(400, {"error": "path query param required"})
+                            return
+                        content = dashboard_svc.get_being_file(bid, rel_path)
+                        if content is None:
+                            self._write_cors(404, {"error": "file not found"})
+                            return
+                        self._write_cors(200, {"content": content, "path": rel_path})
+                        return
+
+                    # GET /api/mc/beings/:id  (basic being record)
                     being = dashboard_svc.get_being(bid)
                     if not being:
                         self._write_cors(404, {"error": "being not found"})
@@ -1321,8 +1348,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         project_svc,
                         title=body["title"],
                         description=body.get("description"),
-                        status=body.get("status", "todo"),
-                        priority=body.get("priority", "normal"),
+                        status=body.get("status", "backlog"),
+                        priority=body.get("priority", "medium"),
                         assignees=body.get("assignees"),
                         owner_agent_id=body.get("owner_agent_id"),
                     )

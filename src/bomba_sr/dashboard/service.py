@@ -680,7 +680,7 @@ class DashboardService:
             tasks = [t for t in tasks if t.get("created_at", "") >= from_date]
         if to_date:
             tasks = [t for t in tasks if t.get("created_at", "") <= to_date]
-        return tasks
+        return [self._normalize_task(t) for t in tasks]
 
     def get_task(self, project_service: Any, task_id: str) -> dict:
         task = project_service.get_task(MC_TENANT, task_id)
@@ -690,15 +690,15 @@ class DashboardService:
         ).fetchall()
         task["assignees"] = [r["being_id"] for r in rows]
         task["history"] = self.task_history(task_id)
-        return task
+        return self._normalize_task(task)
 
     def create_task(
         self,
         project_service: Any,
         title: str,
         description: str | None = None,
-        status: str = "todo",
-        priority: str = "normal",
+        status: str = "backlog",
+        priority: str = "medium",
         assignees: list[str] | None = None,
         owner_agent_id: str | None = None,
     ) -> dict:
@@ -724,8 +724,8 @@ class DashboardService:
             task["assignees"] = []
 
         self._log_task_history(tid, "created", {"title": title, "status": status, "priority": priority})
-        self._emit_event("task_update", {"action": "created", "task": task})
-        return task
+        self._emit_event("task_update", {"action": "created", "task": self._normalize_task(task)})
+        return self._normalize_task(task)
 
     def update_task(
         self,
@@ -793,8 +793,9 @@ class DashboardService:
 
         if changes:
             self._log_task_history(task_id, "updated", changes)
-        self._emit_event("task_update", {"action": "updated", "task": task})
-        return task
+        normalized = self._normalize_task(task)
+        self._emit_event("task_update", {"action": "updated", "task": normalized})
+        return normalized
 
     def delete_task(self, project_service: Any, task_id: str) -> bool:
         try:
@@ -822,7 +823,17 @@ class DashboardService:
                 "SELECT * FROM mc_task_history ORDER BY timestamp DESC LIMIT ?",
                 (limit,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            # Parse JSON details so the frontend receives an object, not a string
+            if isinstance(d.get("details"), str):
+                try:
+                    d["details"] = json.loads(d["details"])
+                except (json.JSONDecodeError, TypeError):
+                    d["details"] = {}
+            result.append(d)
+        return result
 
     def _log_task_history(self, task_id: str, action: str, details: dict) -> None:
         self.db.execute(
@@ -893,6 +904,321 @@ class DashboardService:
                 self._sse_clients.pop(cid, None)
 
     # ------------------------------------------------------------------
+    # Being detail
+    # ------------------------------------------------------------------
+
+    # Identity files to look for in a being's workspace
+    _IDENTITY_FILES = (
+        "SOUL.md", "IDENTITY.md", "MISSION.md", "VISION.md",
+        "FORMULA.md", "PRIORITIES.md",
+    )
+
+    def get_being_detail(self, being_id: str) -> dict | None:
+        """Return enriched detail payload for a single being.
+
+        Scans the being's workspace directory for identity files, memory
+        directory, skills, and builds a file tree (2 levels deep).
+        """
+        being = self.get_being(being_id)
+        if not being:
+            return None
+
+        ws_rel = being.get("workspace") or ""
+        ws_abs = (_PROJECT_ROOT / ws_rel).resolve() if ws_rel else None
+        ws_exists = ws_abs is not None and ws_abs.is_dir()
+
+        # ── 1. Identity section ──────────────────────────────────
+        identity_files: list[dict] = []
+        first_contact: str | None = None
+        if ws_exists:
+            for fname in self._IDENTITY_FILES:
+                fpath = ws_abs / fname
+                if fpath.is_file():
+                    stat = fpath.stat()
+                    mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+                    identity_files.append({
+                        "name": fname,
+                        "rel_path": str(fpath.relative_to(_PROJECT_ROOT)),
+                        "size": stat.st_size,
+                        "modified": mtime,
+                    })
+                    if first_contact is None or mtime < first_contact:
+                        first_contact = mtime
+
+            # Also pick up extra workspace-level docs
+            for fname in ("AGENTS.md", "TOOLS.md", "SECURITY.md",
+                          "HEARTBEAT.md", "USER.md", "BOOTSTRAP.md",
+                          "MEMORY.md", "FORGE.md"):
+                fpath = ws_abs / fname
+                if fpath.is_file():
+                    stat = fpath.stat()
+                    identity_files.append({
+                        "name": fname,
+                        "rel_path": str(fpath.relative_to(_PROJECT_ROOT)),
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(
+                            stat.st_mtime, tz=timezone.utc
+                        ).isoformat(),
+                    })
+
+        soul = self._load_soul_safe(ws_abs) if ws_exists else None
+
+        identity = {
+            "name": being["name"],
+            "role": being.get("role", ""),
+            "status": being.get("status", "offline"),
+            "avatar": being.get("avatar", ""),
+            "workspace": ws_rel,
+            "workspace_abs": str(ws_abs) if ws_abs else None,
+            "first_contact": first_contact,
+            "model_id": being.get("model_id", ""),
+            "tenant_id": being.get("tenant_id", ""),
+            "type": being.get("type", ""),
+            "color": being.get("color", ""),
+            "agent_id": being.get("agent_id", ""),
+            "phone": being.get("phone", ""),
+            "auto_start": being.get("auto_start", False),
+            "description": being.get("description", ""),
+            "creature_type": soul.creature_type if soul else None,
+            "personality_traits": list(soul.personality_traits) if soul else [],
+            "core_functions": list(soul.core_functions) if soul else [],
+            "never_do": list(soul.never_do) if soul else [],
+            "files": identity_files,
+        }
+
+        # ── 2. Memory section ────────────────────────────────────
+        memory_info = self._scan_memory(ws_abs, ws_rel) if ws_exists else {
+            "path": None, "file_count": 0, "total_size": 0,
+            "last_updated": None, "files": [],
+        }
+
+        # ── 3. Tools section ─────────────────────────────────────
+        tools_list = self._resolve_tools(being, ws_abs if ws_exists else None)
+
+        # ── 4. Skills section ────────────────────────────────────
+        skills_list = self._resolve_skills(being, ws_abs if ws_exists else None)
+
+        # ── 5. Workspace file tree ───────────────────────────────
+        file_tree = self._build_file_tree(ws_abs, max_depth=2) if ws_exists else []
+
+        return {
+            "being": being,
+            "identity": identity,
+            "memory": memory_info,
+            "tools": tools_list,
+            "skills": skills_list,
+            "file_tree": file_tree,
+        }
+
+    def get_being_file(self, being_id: str, rel_path: str) -> str | None:
+        """Read a file relative to PROJECT_ROOT and return its text content.
+
+        Security: only files under PROJECT_ROOT are served.
+        """
+        being = self.get_being(being_id)
+        if not being:
+            return None
+
+        try:
+            target = (_PROJECT_ROOT / rel_path).resolve()
+            if not str(target).startswith(str(_PROJECT_ROOT.resolve())):
+                return None
+        except (ValueError, OSError):
+            return None
+
+        if not target.is_file():
+            return None
+
+        try:
+            return target.read_text(encoding="utf-8", errors="replace")
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    # ── Detail sub-scanners ──────────────────────────────────────
+
+    @staticmethod
+    def _scan_memory(ws_abs: Path, ws_rel: str) -> dict:
+        """Scan the memory/ directory under a workspace."""
+        memory_dir = ws_abs / "memory"
+        if not memory_dir.is_dir():
+            return {
+                "path": None, "file_count": 0, "total_size": 0,
+                "last_updated": None, "files": [],
+            }
+
+        files: list[dict] = []
+        total_size = 0
+        last_mtime = 0.0
+
+        for entry in sorted(memory_dir.iterdir()):
+            if entry.name.startswith("."):
+                continue
+            if entry.is_file():
+                stat = entry.stat()
+                total_size += stat.st_size
+                if stat.st_mtime > last_mtime:
+                    last_mtime = stat.st_mtime
+                files.append({
+                    "name": entry.name,
+                    "rel_path": str(entry.relative_to(_PROJECT_ROOT)),
+                    "size": stat.st_size,
+                    "modified": datetime.fromtimestamp(
+                        stat.st_mtime, tz=timezone.utc
+                    ).isoformat(),
+                })
+
+        return {
+            "path": f"{ws_rel}/memory",
+            "file_count": len(files),
+            "total_size": total_size,
+            "last_updated": (
+                datetime.fromtimestamp(last_mtime, tz=timezone.utc).isoformat()
+                if last_mtime > 0 else None
+            ),
+            "files": files,
+        }
+
+    @staticmethod
+    def _resolve_tools(being: dict, ws_abs: Path | None) -> list[dict]:
+        """Return tool definitions for a being."""
+        tools: list[dict] = []
+        seen_names: set[str] = set()
+
+        raw_tools = being.get("tools") or []
+        for t in raw_tools:
+            name = t if isinstance(t, str) else (t.get("name", "") if isinstance(t, dict) else str(t))
+            if name and name not in seen_names:
+                seen_names.add(name)
+                tools.append({
+                    "name": name,
+                    "description": t.get("description", "") if isinstance(t, dict) else "",
+                    "status": "active",
+                })
+
+        if not ws_abs:
+            return tools
+
+        # Parse TOOLS.md for additional entries
+        tools_md = ws_abs / "TOOLS.md"
+        if tools_md.is_file():
+            try:
+                text = tools_md.read_text(encoding="utf-8", errors="replace")
+                for line in text.splitlines():
+                    line_s = line.strip()
+                    if line_s.startswith("- **") or line_s.startswith("* **"):
+                        parts = line_s.split("**")
+                        if len(parts) >= 3:
+                            tname = parts[1].strip()
+                            desc_raw = parts[2].strip()
+                            for sep in ("\u2014", "-", ":", "\u2013"):
+                                if desc_raw.startswith(sep):
+                                    desc_raw = desc_raw[len(sep):].strip()
+                            if tname and tname not in seen_names:
+                                seen_names.add(tname)
+                                tools.append({
+                                    "name": tname,
+                                    "description": desc_raw[:200],
+                                    "status": "available",
+                                })
+            except OSError:
+                pass
+
+        # Workspace tools/ directory scripts
+        tools_dir = ws_abs / "tools"
+        if tools_dir.is_dir():
+            for entry in sorted(tools_dir.iterdir()):
+                if entry.is_file() and not entry.name.startswith("."):
+                    tname = entry.stem
+                    if tname not in seen_names:
+                        seen_names.add(tname)
+                        tools.append({
+                            "name": tname,
+                            "description": f"Tool script: {entry.name}",
+                            "status": "available",
+                        })
+
+        return tools
+
+    @staticmethod
+    def _resolve_skills(being: dict, ws_abs: Path | None) -> list[dict]:
+        """Return skill definitions for a being."""
+        skills: list[dict] = []
+        seen_names: set[str] = set()
+
+        raw_skills = being.get("skills") or []
+        for s in raw_skills:
+            name = s if isinstance(s, str) else str(s)
+            if name and name not in seen_names:
+                seen_names.add(name)
+                skills.append({"name": name, "description": "", "path": None})
+
+        # Global skills/ directory
+        global_skills_dir = _PROJECT_ROOT / "skills"
+        if global_skills_dir.is_dir():
+            for entry in sorted(global_skills_dir.iterdir()):
+                if entry.is_dir():
+                    skill_md = entry / "SKILL.md"
+                    sname = entry.name
+                    if sname not in seen_names:
+                        seen_names.add(sname)
+                        desc = ""
+                        if skill_md.is_file():
+                            try:
+                                text = skill_md.read_text(encoding="utf-8", errors="replace")
+                                in_fm = False
+                                for sline in text.splitlines():
+                                    stripped = sline.strip()
+                                    if stripped == "---":
+                                        in_fm = not in_fm
+                                        continue
+                                    if not in_fm and stripped and not stripped.startswith("#"):
+                                        desc = stripped[:200]
+                                        break
+                            except OSError:
+                                pass
+                        skills.append({
+                            "name": sname,
+                            "description": desc,
+                            "path": str(entry.relative_to(_PROJECT_ROOT)),
+                        })
+
+        return skills
+
+    @staticmethod
+    def _build_file_tree(ws_abs: Path, max_depth: int = 2) -> list[dict]:
+        """Build a file/directory tree for the workspace (limited depth)."""
+
+        def _scan(directory: Path, depth: int) -> list[dict]:
+            if depth > max_depth:
+                return []
+            entries: list[dict] = []
+            try:
+                items = sorted(directory.iterdir(), key=lambda p: (not p.is_dir(), p.name))
+            except OSError:
+                return []
+            for item in items:
+                if item.name.startswith("."):
+                    continue
+                if item.is_dir():
+                    children = _scan(item, depth + 1) if depth < max_depth else []
+                    entries.append({
+                        "name": item.name,
+                        "type": "dir",
+                        "rel_path": str(item.relative_to(_PROJECT_ROOT)),
+                        "children": children,
+                    })
+                elif item.is_file():
+                    entries.append({
+                        "name": item.name,
+                        "type": "file",
+                        "rel_path": str(item.relative_to(_PROJECT_ROOT)),
+                        "size": item.stat().st_size,
+                    })
+            return entries
+
+        return _scan(ws_abs, 0)
+
+    # ------------------------------------------------------------------
     # Config helpers
     # ------------------------------------------------------------------
 
@@ -940,6 +1266,28 @@ class DashboardService:
             except (json.JSONDecodeError, TypeError):
                 d["targets"] = []
         return d
+
+    @staticmethod
+    def _normalize_task(task: dict) -> dict:
+        """Map ProjectService field names to the shape the frontend expects.
+
+        Backend returns: task_id, created_at, updated_at
+        Frontend expects: id, created, updated
+        """
+        t = dict(task)
+        # Rename task_id -> id (keep task_id for backwards compat)
+        if "task_id" in t and "id" not in t:
+            t["id"] = t["task_id"]
+        # Rename created_at -> created
+        if "created_at" in t and "created" not in t:
+            t["created"] = t["created_at"]
+        # Rename updated_at -> updated
+        if "updated_at" in t and "updated" not in t:
+            t["updated"] = t["updated_at"]
+        # Ensure assignees always present as a list
+        if "assignees" not in t:
+            t["assignees"] = []
+        return t
 
     @staticmethod
     def _now() -> str:
