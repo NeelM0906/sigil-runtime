@@ -351,6 +351,9 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
             </div>
           </div>
 
+          {/* Sub-Steps Checklist */}
+          <StepChecklist steps={task.steps} />
+
           {/* Activity History */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Activity Log</div>
@@ -403,6 +406,72 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
 
 // ── Task Card ────────────────────────────────────────────────
 
+// ── Step Progress Bar (compact, for card) ────────────────────
+
+function StepProgress({ steps }) {
+  if (!steps || steps.length === 0) return null
+  const done = steps.filter(s => s.status === 'done').length
+  const total = steps.length
+  const pct = Math.round((done / total) * 100)
+  return (
+    <div className="mt-1.5 mb-1">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-[9px] text-text-muted font-mono">{done}/{total} steps</span>
+        <span className="text-[9px] text-text-muted font-mono">{pct}%</span>
+      </div>
+      <div className="h-1 bg-bg-hover rounded-full overflow-hidden">
+        <div
+          className="h-full bg-accent-blue rounded-full transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Step Checklist (detailed, for detail panel) ──────────────
+
+function StepChecklist({ steps }) {
+  if (!steps || steps.length === 0) return null
+  const done = steps.filter(s => s.status === 'done').length
+  const total = steps.length
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted">Sub-Steps</div>
+        <span className="text-[10px] text-text-muted font-mono">{done}/{total} complete</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {steps.map(step => (
+          <div
+            key={step.id}
+            className={`flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors ${
+              step.status === 'done'
+                ? 'text-text-muted'
+                : step.status === 'in_progress'
+                  ? 'text-accent-blue bg-accent-blue/5'
+                  : 'text-text-secondary'
+            }`}
+          >
+            {step.status === 'done' ? (
+              <svg className="w-3.5 h-3.5 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : step.status === 'in_progress' ? (
+              <span className="w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
+                <span className="w-2 h-2 rounded-full bg-accent-blue animate-pulse" />
+              </span>
+            ) : (
+              <span className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0" />
+            )}
+            <span className={step.status === 'done' ? 'line-through' : ''}>{step.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
   const isWorking = task.status === 'in_progress' && task.assignees.some(id => {
@@ -435,7 +504,9 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
       </div>
 
       <h3 className="text-sm font-medium mb-1 leading-snug group-hover:text-accent-blue transition-colors">{task.title}</h3>
-      <p className="text-xs text-text-secondary mb-2 line-clamp-2 leading-relaxed">{task.description}</p>
+      <p className="text-xs text-text-secondary mb-1 line-clamp-2 leading-relaxed">{task.description}</p>
+
+      <StepProgress steps={task.steps} />
 
       <div className="flex items-center gap-1">
         {task.assignees.map(id => {
@@ -551,6 +622,32 @@ export function TaskBoard({ fullWidth = false }) {
       } else if (action === 'deleted' && task_id) {
         setTasks(prev => prev.filter(t => t.id !== task_id))
         if (detailTask?.id === task_id) setDetailTask(null)
+      }
+    },
+    task_steps_update(evt) {
+      const { task_id, steps, step } = evt
+      if (!task_id) return
+      setTasks(prev => prev.map(t => {
+        if (t.id !== task_id) return t
+        // Full steps array (from create_task_steps)
+        if (steps) return { ...t, steps }
+        // Single step update
+        if (step && t.steps) {
+          const updated = t.steps.map(s => s.id === step.id ? step : s)
+          return { ...t, steps: updated }
+        }
+        return t
+      }))
+      // Update detail panel too
+      if (detailTask?.id === task_id) {
+        setDetailTask(prev => {
+          if (!prev || prev.id !== task_id) return prev
+          if (steps) return { ...prev, steps }
+          if (step && prev.steps) {
+            return { ...prev, steps: prev.steps.map(s => s.id === step.id ? step : s) }
+          }
+          return prev
+        })
       }
     },
   })

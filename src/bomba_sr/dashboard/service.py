@@ -7,7 +7,10 @@ and RuntimeBridge for real LLM routing.
 from __future__ import annotations
 
 import json
+import logging
+import os
 import queue
+import re
 import threading
 import time
 import uuid
@@ -27,6 +30,87 @@ TYPE_SISTER = "sister"
 TYPE_RUNTIME = "runtime"       # Prime — the host runtime itself
 TYPE_VOICE_AGENT = "voice"     # Bland.ai voice agents — not chat-routable
 TYPE_SUBAGENT = "subagent"     # BD-PIP, BD-WC etc.
+
+log = logging.getLogger(__name__)
+
+# ── Task classification ──────────────────────────────────────
+# Fast model for classification calls (cheap, low-latency).
+_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+
+_CLASSIFY_SYSTEM_PROMPT = """\
+You are a message classifier for a multi-agent command center.
+Given a user message sent to an AI being, classify it into exactly one category:
+
+- "not_task" — casual/conversational, greetings, questions about the being itself, \
+information requests with no concrete action required. Examples: "Hi", "How are you?", \
+"What's in your memory?", "Tell me about yourself."
+- "light_task" — needs a single action or lookup, no multi-step plan needed. \
+Examples: "Search Pinecone for X", "Summarize this document", "What's the status of Y."
+- "full_task" — needs multi-step execution that benefits from a tracked plan with sub-steps. \
+Examples: "Research X and write a report", "Audit all memory files and flag inconsistencies", \
+"Set up the integration for Recovery."
+
+Respond with ONLY a JSON object: {"classification": "not_task"|"light_task"|"full_task"}
+Nothing else."""
+
+_CLASSIFY_PROMPT_TEMPLATE = 'Message: "{message}"\nClassification:'
+
+# Pattern-based fast-path for obvious non-tasks (avoids LLM call).
+_NOT_TASK_PATTERNS = re.compile(
+    r"^("
+    r"h(i|ey|ello|owdy|ola)"
+    r"|yo\b"
+    r"|what'?s up"
+    r"|good (morning|afternoon|evening|night)"
+    r"|thanks?"
+    r"|thank you"
+    r"|ok(ay)?"
+    r"|sure"
+    r"|bye"
+    r"|see ya"
+    r"|how are you"
+    r"|how'?s it going"
+    r"|tell me about yourself"
+    r"|who are you"
+    r"|what are you"
+    r"|what can you do"
+    r"|gm"
+    r"|gn"
+    r"|sup"
+    r")[\s?!.]*$",
+    re.IGNORECASE,
+)
+
+_STEP_GENERATION_PROMPT = """\
+You are planning sub-steps for an AI agent task.
+Given the task message, break it into 2-6 concrete sub-steps the agent should follow.
+Each step should be a short imperative sentence (max 60 chars).
+
+Respond with ONLY a JSON object: {"steps": ["step 1", "step 2", ...]}
+Nothing else."""
+
+
+def _extract_json(text: str) -> dict | None:
+    """Extract a JSON object from an LLM response (tolerates markdown fences)."""
+    stripped = text.strip()
+    if not stripped:
+        return None
+    candidates: list[str] = [stripped]
+    fenced = re.findall(
+        r"```(?:json)?\s*(\{.*?\})\s*```", stripped, flags=re.DOTALL | re.IGNORECASE
+    )
+    candidates.extend(fenced)
+    brace = re.search(r"\{.*\}", stripped, flags=re.DOTALL)
+    if brace:
+        candidates.append(brace.group(0))
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 _BEING_COLS = (
     "id", "name", "role", "avatar", "status", "description", "type",
@@ -110,6 +194,18 @@ class DashboardService:
               being_id TEXT NOT NULL,
               PRIMARY KEY (task_id, being_id)
             );
+
+            CREATE TABLE IF NOT EXISTS mc_task_steps (
+              id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              step_number INTEGER NOT NULL,
+              label TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending',
+              updated_at TEXT NOT NULL,
+              UNIQUE(task_id, step_number)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_task_steps_task
+              ON mc_task_steps(task_id, step_number);
 
             CREATE TABLE IF NOT EXISTS mc_events (
               seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -514,6 +610,11 @@ class DashboardService:
 
         Identity is loaded automatically by the bridge via SoulConfig from
         the being's workspace_root -- no identity prefix hack needed.
+
+        Task board integration:
+          - not_task  → no task created (greetings, casual chat)
+          - light_task → task auto-created, transitions in_progress → done
+          - full_task  → task + sub-steps created, steps advance as being works
         """
         being = self.get_being(being_id) or {}
         being_type = being.get("type", "")
@@ -557,8 +658,22 @@ class DashboardService:
         else:
             workspace = str(_PROJECT_ROOT)
 
-        # Auto-create task on the board for this work item
-        task_id = self._auto_create_task(being_id, being, content)
+        # ── Classify the message before creating any task ──
+        classification = self._classify_message(content)
+        log.debug("Message classified as %s: %.80s", classification, content)
+
+        task_id: str | None = None
+        if classification in ("light_task", "full_task"):
+            task_id = self._auto_create_task(being_id, being, content)
+
+        # For full_task, generate and attach sub-steps
+        if classification == "full_task" and task_id:
+            step_labels = self._generate_task_steps(content)
+            if step_labels:
+                steps = self.create_task_steps(task_id, step_labels)
+                # Mark the first step as in_progress
+                if steps:
+                    self.update_task_step(steps[0]["id"], "in_progress")
 
         # Signal busy + typing before calling bridge
         self.update_being(being_id, {"status": "busy"})
@@ -605,9 +720,15 @@ class DashboardService:
 
         # Transition task to done (or back to backlog on error)
         if task_id:
-            self._auto_update_task_status(
-                task_id, "backlog" if error_occurred else "done"
-            )
+            if error_occurred:
+                self._auto_update_task_status(task_id, "backlog")
+            else:
+                # For full_task, complete all remaining steps
+                if classification == "full_task":
+                    for step in self.get_task_steps(task_id):
+                        if step["status"] != "done":
+                            self.update_task_step(step["id"], "done")
+                self._auto_update_task_status(task_id, "done")
 
         self.create_message(
             sender=being_id,
@@ -652,6 +773,138 @@ class DashboardService:
             )
         except Exception:
             pass
+
+    # ------------------------------------------------------------------
+    # Task classification
+    # ------------------------------------------------------------------
+
+    def _classify_message(self, content: str) -> str:
+        """Classify a message as not_task, light_task, or full_task.
+
+        Uses a regex fast-path for obvious non-tasks, then falls back to
+        a lightweight LLM call for ambiguous messages.
+        """
+        stripped = content.strip()
+
+        # Fast-path: very short or matches greeting/casual patterns
+        if len(stripped) < 4 or _NOT_TASK_PATTERNS.match(stripped):
+            return "not_task"
+
+        # LLM classification
+        try:
+            from bomba_sr.llm.providers import ChatMessage, provider_from_env
+            provider = provider_from_env()
+            resp = provider.generate(
+                model=_CLASSIFY_MODEL,
+                messages=[
+                    ChatMessage(role="system", content=_CLASSIFY_SYSTEM_PROMPT),
+                    ChatMessage(
+                        role="user",
+                        content=_CLASSIFY_PROMPT_TEMPLATE.format(message=stripped[:500]),
+                    ),
+                ],
+            )
+            payload = _extract_json(resp.text)
+            if payload:
+                classification = payload.get("classification", "light_task")
+                if classification in ("not_task", "light_task", "full_task"):
+                    return classification
+        except Exception as exc:
+            log.debug("Task classification failed, defaulting to light_task: %s", exc)
+
+        # Default: treat as light_task (creates a task but no sub-steps)
+        return "light_task"
+
+    def _generate_task_steps(self, content: str) -> list[str]:
+        """Use LLM to break a full_task message into sub-steps."""
+        try:
+            from bomba_sr.llm.providers import ChatMessage, provider_from_env
+            provider = provider_from_env()
+            resp = provider.generate(
+                model=_CLASSIFY_MODEL,
+                messages=[
+                    ChatMessage(role="system", content=_STEP_GENERATION_PROMPT),
+                    ChatMessage(role="user", content=f'Task: "{content[:500]}"'),
+                ],
+            )
+            payload = _extract_json(resp.text)
+            if payload and isinstance(payload.get("steps"), list):
+                steps = [str(s)[:60] for s in payload["steps"] if s]
+                if steps:
+                    return steps[:6]
+        except Exception as exc:
+            log.debug("Step generation failed: %s", exc)
+        return []
+
+    # ------------------------------------------------------------------
+    # Task steps CRUD
+    # ------------------------------------------------------------------
+
+    def create_task_steps(self, task_id: str, labels: list[str]) -> list[dict]:
+        """Create sub-steps for a task. Returns the created step dicts."""
+        now = self._now()
+        steps = []
+        with self.db.transaction() as conn:
+            for i, label in enumerate(labels):
+                step_id = str(uuid.uuid4())
+                conn.execute(
+                    "INSERT INTO mc_task_steps (id, task_id, step_number, label, status, updated_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (step_id, task_id, i, label, "pending", now),
+                )
+                steps.append({
+                    "id": step_id,
+                    "task_id": task_id,
+                    "step_number": i,
+                    "label": label,
+                    "status": "pending",
+                    "updated_at": now,
+                })
+        self._emit_event("task_steps_update", {"task_id": task_id, "steps": steps})
+        return steps
+
+    def update_task_step(self, step_id: str, status: str) -> dict | None:
+        """Update a single step's status. Returns updated step or None."""
+        now = self._now()
+        self.db.execute_commit(
+            "UPDATE mc_task_steps SET status = ?, updated_at = ? WHERE id = ?",
+            (status, now, step_id),
+        )
+        row = self.db.execute(
+            "SELECT * FROM mc_task_steps WHERE id = ?", (step_id,)
+        ).fetchone()
+        if not row:
+            return None
+        step = dict(row)
+        self._emit_event("task_steps_update", {
+            "task_id": step["task_id"],
+            "step": step,
+        })
+        return step
+
+    def get_task_steps(self, task_id: str) -> list[dict]:
+        """Return all steps for a task, ordered by step_number."""
+        rows = self.db.execute(
+            "SELECT * FROM mc_task_steps WHERE task_id = ? ORDER BY step_number",
+            (task_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def advance_task_step(self, task_id: str) -> dict | None:
+        """Mark the first pending step as done and the next as in_progress.
+
+        Returns the step that was just completed, or None.
+        """
+        steps = self.get_task_steps(task_id)
+        completed_step = None
+        for step in steps:
+            if step["status"] == "in_progress":
+                self.update_task_step(step["id"], "done")
+                completed_step = step
+            elif step["status"] == "pending" and completed_step:
+                self.update_task_step(step["id"], "in_progress")
+                break
+        return completed_step
 
     # ------------------------------------------------------------------
     # Tasks  (wraps ProjectService)
@@ -707,7 +960,28 @@ class DashboardService:
         ).fetchall()
         task["assignees"] = [r["being_id"] for r in rows]
         task["history"] = self.task_history(task_id)
+        task["steps"] = self.get_task_steps(task_id)
         return self._normalize_task(task)
+
+    def clean_casual_tasks(self, project_service: Any) -> int:
+        """Delete auto-created tasks that were casual messages (not real tasks).
+
+        Returns the number of tasks deleted.
+        """
+        tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID)
+        deleted = 0
+        for t in tasks:
+            desc = t.get("description", "")
+            title = t.get("title", "")
+            # Only target auto-created tasks
+            if "Auto-created from chat message" not in desc:
+                continue
+            # Check if the title looks like a casual message
+            if _NOT_TASK_PATTERNS.match(title.rstrip("...")):
+                tid = t["task_id"]
+                self.delete_task(project_service, tid)
+                deleted += 1
+        return deleted
 
     def create_task(
         self,
@@ -1286,12 +1560,12 @@ class DashboardService:
                 d["targets"] = []
         return d
 
-    @staticmethod
-    def _normalize_task(task: dict) -> dict:
+    def _normalize_task(self, task: dict) -> dict:
         """Map ProjectService field names to the shape the frontend expects.
 
         Backend returns: task_id, created_at, updated_at
         Frontend expects: id, created, updated
+        Also enriches with steps if they exist.
         """
         t = dict(task)
         # Rename task_id -> id (keep task_id for backwards compat)
@@ -1306,6 +1580,11 @@ class DashboardService:
         # Ensure assignees always present as a list
         if "assignees" not in t:
             t["assignees"] = []
+        # Enrich with steps if present
+        if "steps" not in t:
+            task_id = t.get("id") or t.get("task_id")
+            if task_id:
+                t["steps"] = self.get_task_steps(task_id)
         return t
 
     @staticmethod

@@ -1293,6 +1293,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     )
                     self._write_cors(200, {"tasks": tasks})
                     return
+                if path.startswith("/api/mc/tasks/") and path.endswith("/steps"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    steps = dashboard_svc.get_task_steps(tid)
+                    self._write_cors(200, {"steps": steps})
+                    return
+                if path == "/api/mc/tasks/cleanup":
+                    deleted = dashboard_svc.clean_casual_tasks(project_svc)
+                    self._write_cors(200, {"deleted": deleted})
+                    return
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
                     task = dashboard_svc.get_task(project_svc, tid)

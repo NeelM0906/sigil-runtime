@@ -12,6 +12,7 @@ import pytest
 from bomba_sr.dashboard.service import (
     DashboardService, MC_TENANT, MC_PROJECT_ID,
     TYPE_SISTER, TYPE_RUNTIME, TYPE_VOICE_AGENT, TYPE_SUBAGENT,
+    _extract_json, _NOT_TASK_PATTERNS,
 )
 from bomba_sr.projects.service import ProjectService
 from bomba_sr.storage.db import RuntimeDB
@@ -544,3 +545,325 @@ class TestSubAgents:
         svc = DashboardService(db=db)
         runs = svc.list_subagent_runs()
         assert runs == []
+
+
+# ── Task Classification ──────────────────────────────────────
+
+class TestTaskClassification:
+    """Test the message classification layer that gates task creation."""
+
+    def test_extract_json_plain(self):
+        assert _extract_json('{"classification": "not_task"}') == {"classification": "not_task"}
+
+    def test_extract_json_fenced(self):
+        text = '```json\n{"classification": "full_task"}\n```'
+        assert _extract_json(text) == {"classification": "full_task"}
+
+    def test_extract_json_empty(self):
+        assert _extract_json("") is None
+        assert _extract_json("no json here") is None
+
+    def test_not_task_patterns(self):
+        """Common greetings/casual messages should match the fast-path regex."""
+        not_tasks = [
+            "Hi", "hey", "Hello", "howdy", "yo", "gm", "gn", "sup",
+            "How are you?", "how's it going?", "thanks", "thank you",
+            "ok", "okay", "bye", "see ya",
+            "tell me about yourself", "who are you", "what can you do",
+            "Good morning!", "HELLO", "Hi!",
+        ]
+        for msg in not_tasks:
+            assert _NOT_TASK_PATTERNS.match(msg.strip()), f"Expected '{msg}' to match not_task pattern"
+
+    def test_not_task_pattern_rejects_tasks(self):
+        """Real task messages should NOT match the fast-path regex."""
+        tasks = [
+            "Search Pinecone for zone action content",
+            "Audit all contacts in Supabase",
+            "Research influence mastery and write a report",
+            "What's the status of the Pinecone integration",
+            "Summarize the weekly report",
+        ]
+        for msg in tasks:
+            assert not _NOT_TASK_PATTERNS.match(msg.strip()), f"'{msg}' should NOT match not_task"
+
+    def test_classify_message_fast_path_greeting(self, svc):
+        """Greetings should be classified via regex fast-path (no LLM call)."""
+        assert svc._classify_message("Hi") == "not_task"
+        assert svc._classify_message("hey!") == "not_task"
+        assert svc._classify_message("Hello") == "not_task"
+        assert svc._classify_message("How are you?") == "not_task"
+
+    def test_classify_message_short(self, svc):
+        """Very short messages (< 4 chars) are not_task."""
+        assert svc._classify_message("ok") == "not_task"
+        assert svc._classify_message("hi") == "not_task"
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_classify_message_llm_light_task(self, mock_pfe, svc):
+        """LLM returns light_task for single-action requests."""
+        mock_provider = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.text = '{"classification": "light_task"}'
+        mock_provider.generate.return_value = mock_resp
+        mock_pfe.return_value = mock_provider
+
+        result = svc._classify_message("Search Pinecone for zone action content")
+        assert result == "light_task"
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_classify_message_llm_full_task(self, mock_pfe, svc):
+        """LLM returns full_task for multi-step requests."""
+        mock_provider = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.text = '{"classification": "full_task"}'
+        mock_provider.generate.return_value = mock_resp
+        mock_pfe.return_value = mock_provider
+
+        result = svc._classify_message("Audit all memory files and flag inconsistencies")
+        assert result == "full_task"
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_classify_message_llm_failure_defaults_light(self, mock_pfe, svc):
+        """If LLM fails, default to light_task."""
+        mock_pfe.side_effect = RuntimeError("No API key")
+        result = svc._classify_message("Do something complex with the data")
+        assert result == "light_task"
+
+    def test_route_not_task_creates_no_task(self, db, project_svc):
+        """'not_task' messages should NOT create a task on the board."""
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.return_value = {"reply": "Hey there!"}
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        svc.route_to_being("sai-memory", "Hi", sender="user")
+        time.sleep(0.5)
+
+        tasks = svc.list_tasks(project_svc)
+        greeting_tasks = [t for t in tasks if "Hi" in t.get("title", "")]
+        assert len(greeting_tasks) == 0, f"Greeting should not create task, got: {[t['title'] for t in tasks]}"
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_route_light_task_creates_task(self, mock_pfe, db, project_svc):
+        """'light_task' messages should create a task that auto-completes."""
+        mock_provider = MagicMock()
+        mock_classify_resp = MagicMock()
+        mock_classify_resp.text = '{"classification": "light_task"}'
+        mock_provider.generate.return_value = mock_classify_resp
+        mock_pfe.return_value = mock_provider
+
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.return_value = {"reply": "Found 3 results"}
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        svc.route_to_being("sai-memory", "Search Pinecone for zone action content", sender="user")
+        time.sleep(0.5)
+
+        tasks = svc.list_tasks(project_svc)
+        search_tasks = [t for t in tasks if "Search Pinecone" in t.get("title", "")]
+        assert len(search_tasks) == 1
+        assert search_tasks[0]["status"] == "done"
+        # light_task should have no steps
+        assert len(search_tasks[0].get("steps", [])) == 0
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_route_full_task_creates_task_with_steps(self, mock_pfe, db, project_svc):
+        """'full_task' messages should create a task with sub-steps."""
+        mock_provider = MagicMock()
+        # First call: classification
+        # Second call: step generation
+        classify_resp = MagicMock()
+        classify_resp.text = '{"classification": "full_task"}'
+        steps_resp = MagicMock()
+        steps_resp.text = '{"steps": ["Scan all contacts", "Check phone fields", "Flag missing entries"]}'
+        mock_provider.generate.side_effect = [classify_resp, steps_resp]
+        mock_pfe.return_value = mock_provider
+
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.return_value = {"reply": "Audit complete. Found 5 missing."}
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        svc.route_to_being("sai-memory", "Audit all contacts and flag missing phone numbers", sender="user")
+        time.sleep(0.5)
+
+        tasks = svc.list_tasks(project_svc)
+        audit_tasks = [t for t in tasks if "Audit all contacts" in t.get("title", "")]
+        assert len(audit_tasks) == 1
+        task = audit_tasks[0]
+        assert task["status"] == "done"
+        # Should have steps, all completed
+        steps = task.get("steps", [])
+        assert len(steps) == 3
+        assert all(s["status"] == "done" for s in steps)
+
+    def test_route_auto_creates_task(self, db, project_svc):
+        """Messaging a being should auto-create a task that transitions through statuses."""
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.return_value = {"reply": "Done!"}
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        # Subscribe to SSE to capture events
+        cid = svc.subscribe_sse()
+
+        svc.route_to_being("sai-memory", "Summarize the weekly report", sender="user")
+        time.sleep(0.5)
+
+        # Task should have been auto-created and finished
+        tasks = svc.list_tasks(project_svc)
+        chat_tasks = [t for t in tasks if "Summarize the weekly report" in t.get("title", "")]
+        assert len(chat_tasks) >= 1, f"Expected auto-created task, got: {[t['title'] for t in tasks]}"
+
+        task = chat_tasks[0]
+        assert task["status"] == "done", f"Expected done, got {task['status']}"
+        assert "sai-memory" in task.get("assignees", [])
+
+        # SSE events should have been emitted for task creation and status changes
+        events = []
+        while True:
+            evt = svc.poll_sse(cid, timeout=0.1)
+            if evt is None:
+                break
+            events.append(evt)
+        svc.unsubscribe_sse(cid)
+
+        task_events = [e for e in events if e["event"] == "task_update"]
+        assert len(task_events) >= 2, f"Expected >=2 task events, got {len(task_events)}"
+
+    def test_route_error_reverts_task(self, db, project_svc):
+        """If bridge.handle_turn raises, task should revert to backlog."""
+        mock_bridge = MagicMock()
+        mock_bridge.handle_turn.side_effect = RuntimeError("LLM failed")
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        svc.route_to_being("sai-memory", "Fail this task", sender="user")
+        time.sleep(0.5)
+
+        tasks = svc.list_tasks(project_svc)
+        chat_tasks = [t for t in tasks if "Fail this task" in t.get("title", "")]
+        assert len(chat_tasks) >= 1
+        assert chat_tasks[0]["status"] == "backlog"
+
+
+# ── Task Steps ───────────────────────────────────────────────
+
+class TestTaskSteps:
+    """Test sub-step CRUD on the task board."""
+
+    def test_create_steps(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="Test task", status="backlog")
+        tid = task["id"]
+
+        steps = svc.create_task_steps(tid, ["Step 1", "Step 2", "Step 3"])
+        assert len(steps) == 3
+        assert steps[0]["label"] == "Step 1"
+        assert steps[0]["status"] == "pending"
+        assert steps[1]["step_number"] == 1
+
+    def test_get_steps(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="Test", status="backlog")
+        svc.create_task_steps(task["id"], ["A", "B"])
+
+        fetched = svc.get_task_steps(task["id"])
+        assert len(fetched) == 2
+        assert fetched[0]["label"] == "A"
+        assert fetched[1]["label"] == "B"
+
+    def test_update_step_status(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="Test", status="backlog")
+        steps = svc.create_task_steps(task["id"], ["Do thing"])
+
+        updated = svc.update_task_step(steps[0]["id"], "done")
+        assert updated["status"] == "done"
+
+    def test_advance_task_step(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="Multi", status="in_progress")
+        steps = svc.create_task_steps(task["id"], ["One", "Two", "Three"])
+
+        # Start first step
+        svc.update_task_step(steps[0]["id"], "in_progress")
+
+        # Advance: should complete step 0, start step 1
+        completed = svc.advance_task_step(task["id"])
+        assert completed is not None
+        assert completed["label"] == "One"
+
+        refreshed = svc.get_task_steps(task["id"])
+        assert refreshed[0]["status"] == "done"
+        assert refreshed[1]["status"] == "in_progress"
+        assert refreshed[2]["status"] == "pending"
+
+    def test_steps_in_normalized_task(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="With steps", status="backlog")
+        svc.create_task_steps(task["id"], ["X", "Y"])
+
+        full = svc.get_task(project_svc, task["id"])
+        assert "steps" in full
+        assert len(full["steps"]) == 2
+
+    def test_steps_sse_events(self, db, project_svc):
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        task = svc.create_task(project_svc, title="SSE steps", status="backlog")
+
+        cid = svc.subscribe_sse()
+        svc.create_task_steps(task["id"], ["Alpha", "Beta"])
+
+        events = []
+        while True:
+            evt = svc.poll_sse(cid, timeout=0.2)
+            if evt is None:
+                break
+            events.append(evt)
+        svc.unsubscribe_sse(cid)
+
+        step_events = [e for e in events if e["event"] == "task_steps_update"]
+        assert len(step_events) >= 1
+
+    def test_clean_casual_tasks(self, db, project_svc):
+        """clean_casual_tasks should remove auto-created greeting tasks."""
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.load_beings_from_configs()
+
+        # Create a casual task and a real task
+        svc.create_task(
+            project_svc, title="Hi", description="Auto-created from chat message to SAI Memory",
+            status="done", assignees=["sai-memory"],
+        )
+        svc.create_task(
+            project_svc, title="Audit contacts", description="Auto-created from chat message to SAI Recovery",
+            status="done", assignees=["sai-recovery"],
+        )
+        svc.create_task(
+            project_svc, title="Manual task", description="User-created",
+            status="backlog",
+        )
+
+        deleted = svc.clean_casual_tasks(project_svc)
+        assert deleted == 1  # Only "Hi" should be deleted
+
+        remaining = svc.list_tasks(project_svc)
+        titles = [t["title"] for t in remaining]
+        assert "Hi" not in titles
+        assert "Audit contacts" in titles
+        assert "Manual task" in titles
