@@ -1,0 +1,16 @@
+rank,being,conversation_id,platform,duration_min,status,agent_id
+1,Mira Sean,conv_9401khrnz076frs9sgg7kp48xwbn,ElevenLabs,108.38,done,agent_7601khp8shr0f0zsqpk897qazedm
+2,Mira Sean,conv_9701khs2xwjbfhjtcx1dwtbw84xp,ElevenLabs,77.83,done,agent_7601khp8shr0f0zsqpk897qazedm
+3,Mira Sean,conv_0001khrw7ejsfcnsdfdv6x8czk69,ElevenLabs,73.28,done,agent_7601khp8shr0f0zsqpk897qazedm
+4,Athena Leadership,conv_0101kj3ftrdyewpbmwh1mwgndn9d,ElevenLabs,71.78,done,agent_3101kh1w0ebrfh2szsxtthrcahys
+5,Athena Leadership,conv_4101kj3vndgtet580qt7pgyzs64k,ElevenLabs,61.45,done,agent_3101kh1w0ebrfh2szsxtthrcahys
+6,Athena HOI,conv_9001khyaeknzeezb4b78kf90k551,ElevenLabs,56.52,done,agent_1501kh6kjfbpfs0sz14ez1fp2m0e
+7,Athena HOI,conv_1601kj8wek8hf9mbdwr4dekgep2a,ElevenLabs,50.98,done,agent_1501kh6kjfbpfs0sz14ez1fp2m0e
+8,Athena HOI,conv_8401kj65jjwqfxt91mycm4g6q7d7,ElevenLabs,41.63,done,agent_1501kh6kjfbpfs0sz14ez1fp2m0e
+9,Mira UI,conv_1901kj8k34z1eb1s9tm5pc50jq7w,ElevenLabs,40.65,done,agent_5501khc1qsz1eb780p6egefqq7ap
+10,Athena Leadership,conv_3801kj68zs2hek5a4g9ssnpzz7nv,ElevenLabs,38.82,done,agent_3101kh1w0ebrfh2szsxtthrcahys
+11,Athena Leadership,conv_3901kj87rg4gfhv9p9g8761d769p,ElevenLabs,25.07,done,agent_3101kh1w0ebrfh2szsxtthrcahys
+12,Mira UI,conv_5301kj8kf35hffds951n8kk08krj,ElevenLabs,21.92,done,agent_5501khc1qsz1eb780p6egefqq7ap
+13,Athena Leadership,conv_2101kj432r4kfn4r3110d1z86105,ElevenLabs,15.12,done,agent_3101kh1w0ebrfh2szsxtthrcahys
+14,SAI Sisters,conv_8201kj7t0sx2ew2sfax840e4jtbb,ElevenLabs,10.03,done,agent_8001kj7288ywf7vtdxn84amesb77
+15,Athena UI,conv_5201kj93r2y7e6v8pq9en2mbthq0,ElevenLabs,7.13,done,agent_5801kh45838cec092dz6awyzh6fb

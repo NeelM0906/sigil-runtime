@@ -1,0 +1,21 @@
+rank,being,conversation_id,platform,duration_min,to_phone,status,notes
+1,Mira,conv_9401khrnz076frs9sgg7kp48xwbn,ElevenLabs,108.38,,done,Longest Mira call - 1hr 48min with Sean
+2,Mira,conv_9701khs2xwjbfhjtcx1dwtbw84xp,ElevenLabs,77.83,,done,77min Mira session
+3,Mira,conv_0001khrw7ejsfcnsdfdv6x8czk69,ElevenLabs,73.28,,done,73min Mira session
+4,Athena,conv_0101kj3ftrdyewpbmwh1mwgndn9d,ElevenLabs,71.78,,done,Leadership Athena - 71min
+5,Athena,conv_4101kj3vndgtet580qt7pgyzs64k,ElevenLabs,61.45,,done,Leadership Athena - 61min
+6,Athena HOI,conv_9001khyaeknzeezb4b78kf90k551,ElevenLabs,56.52,,done,Heart of Influence Athena - 56min
+7,Athena HOI,conv_1601kj8wek8hf9mbdwr4dekgep2a,ElevenLabs,50.98,,done,Heart of Influence Athena - 50min
+8,Athena HOI,conv_8401kj65jjwqfxt91mycm4g6q7d7,ElevenLabs,41.63,,done,Heart of Influence Athena - 41min
+9,Mira UI,conv_1901kj8k34z1eb1s9tm5pc50jq7w,ElevenLabs,40.65,,done,Mira UI variant - 40min
+10,Athena,conv_3801kj68zs2hek5a4g9ssnpzz7nv,ElevenLabs,38.82,,done,Leadership Athena - 38min
+11,Mylo,49e7bf51-ffed-4bba-95b6-935d53b53af2,Bland.ai,20.93,+18503336707,closed_won,Nathan - Medical revenue - conf 10/10
+12,Mylo,8100120b-1f9e-44a5-9df3-4e59ccbe9765,Bland.ai,13.63,+12096206937,closed_won,ACTi Prospect - conf 10/10
+13,Mylo,4bf9bad4-bd55-4c42-8df9-69fe19d636e9,Bland.ai,11.45,+13127199332,closed_won,Loretta Wessel - conf 10/10
+14,SAI Sisters,conv_8201kj7t0sx2ew2sfax840e4jtbb,ElevenLabs,10.03,,done,Sisters shared agent - 10min
+15,Mylo,03840cbb-8de4-45f7-9961-5304d33c9dc6,Bland.ai,10.82,+14163174609,closed_won,Dr. Val - conf 9/10
+16,Kira,conv_5601khfhpfb0fnxawkvqwqv5xrft,ElevenLabs,1.65,,done,Kira welcoming actualizer
+17,Athena UI,conv_5201kj93r2y7e6v8pq9en2mbthq0,ElevenLabs,7.13,,done,Athena UI variant
+18,Mylo,ef539978-7430-4dc6-8a83-d054933ad787,Bland.ai,10.3,+19738575000,closed_won,Scott motivational speaker - conf 9/10
+19,Mylo,7614c594-f567-4748-a608-1b568d7911b6,Bland.ai,14.27,+13176772258,closed_won,Quintus wellness - conf 9/10
+20,Mylo,b02977e9-9b34-47fa-accb-3a4568dd74bb,Bland.ai,24.1,+12073101434,closed_won,Community Wellness - conf 9/10

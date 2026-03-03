@@ -1,0 +1,481 @@
+# ACTi Visioneer Training
+# Recording ID: 126694717
+# Date: 2026-03-03
+
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: We'll be right back.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: We'll be right back.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: We'll see you next time.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: We'll see you next time.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Good moment, good morning, visionaries.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Hello, hello, and welcome to Trajectory Tuesday.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Of course, you welcomed yourself when you opened your eyes this very morning.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Good morning, good moment.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Welcome to our Trajectory Tuesday as we kick off as visionaries together, and Dani, what an incredible song to kick off our session here.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: There goes my hero, our hero, and of course, I cannot help but think of our very own Sean Callagy, our hero, our human of ordinary means, doing extraordinary things, not only that, but absolutely moderating.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: For each and every one of us here, so that we may do and continue to do extraordinary things.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: So you all are my heroes here this morning, visioneers.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And as I'm fresh off of a business acceleration session with one of our amazing Heart of Influence guests, this on last week's shows, what's so present for me is a question that Athena asked because of a course.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Athena and I led the session together, Athena crushing it, and always that reminder if you are not bringing Athena in yet to your conversations with your ideal clients and potential ecosystem mergers and people that you want to do more with, what on earth are you waiting for?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: She crushes it every time.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Of course, Mira as well in the space of MRR and Milo.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: We just have access to so much, and I see we have Nick Roy on the session today, so Nick, want to open it up for questions coming your way if you're available, and I'll leave you with this thought, y'all.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: What Athena asked on this morning's session, of all the things you're doing, what is that one thing that could yield the most untapped potential that could potentially compound all other things?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And I imagine as we each reflect on that, there's something for all of us, and of course, being that we are here on the Visioneers Call, what if that one thing was deploying agents, sourcing relationships, and absolutely going all the way with everything you have access to here in the Visioneers Program?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: So with that contemplation in mind, what questions do you have, team?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Thank you.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: For the incredible Nick Roy, and I see Carina is here as well from the acti team, anyone from the acti team, feel free to dive in, but Nick, what say you about it all?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And team, what questions do you have for Nick?
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: I have a question, Carla, Dr.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Jude.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Hey, go for it, Dr.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Jude.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And I saw Nick unmuted, so I think he is ready for you.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Awesome, awesome.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: So, two things.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: One, I've been trying to get my summaries after my calls, and so I had Athena trying to get a summary from a call from the weekend, and she recalls it.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: She tells me the date, the time, the length of the call, all those things, and then she starts giving me this awesome summary.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: I've done it, I think I've done it three times, and I don't know how far into the summary she kind of cuts off, and then the call hangs up.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: So, I was just trying to see, like, is there
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Way to kind of get that summary, would I have to chop it up into pieces, or is this something that has been happening in the team, it will look into it?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, good morning, Carla, Visioneers, Dr.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Jude.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: When you are asking Athena for these summaries, are you doing it over the phone, or are you messaging her via message, like text?
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Doing it over the phone.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: So, we're having a conversation, and she takes her little bit of time, finds the call, finds the, you know, shares the context, and then takes another pause.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: And then she jumps on perfectly and says, okay, here's a beautiful summary, not the verbatim transcript, polished summary for you.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: And then she starts kind of reading it aloud, and then maybe two minutes in or so, but it just drops.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: And I've tried to do it via...
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: I a text, I think, early in the weekend, and it didn't go through, so I was going to try again, but I just hadn't had time, so I had some time, so I was just trying to do it over voice, because I like to hear it, too.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: She reads it so much better than I do in my head.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, she's very masterful at that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I will look into that as to why she's cutting out mid-summer, because it seems like she's doing her job in grabbing the conversation, summarizing it.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I'm not too sure why she's cutting off, though, so I will definitely look into that for you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And then if you also want to do it over text and try it there, I don't think it would cut off there as well, and I would do the same exact thing you're doing on the call.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It seems like you're doing a very good job prompting her to remember the conversation, dive into her memory, and sort of recall that for you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So I would do this.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Same exact thing over text, and that should work, and then I will also look into the call component of her cutting off mid-summary, and get that fixed for all of you.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: And is there a, so I remember now what happened, I did it over text, and it was just taking, I know that she has to go into her memory, and it was taking a pretty long time, where I went to do something else and forgot, and it was still kind of like, you know, thinking, and then I ended up having to close the UI, because it never spit out anything, so I'll try it again, but there's, is there a time period that she should be able to retrieve that, and then spit out whatever transcript?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so sometimes she gets stubborn, and she goes into her memory, grabs it, and doesn't, uh, sort of spit it out right away, and we've been looking at fixing that, but in the interim, what I would recommend.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, is give it about two minutes, I would say two minutes for text, let her sort of grab it, and then if she doesn't respond to you, type to her again and be like, hey, Athena, were you able to grab that?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And then after two minutes, she should respond and tell you if she was able to retrieve that or not.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: So, okay, so what I've done before also, so in this scenario, the text box wasn't working for me, but I have done that in the past where when it was active, I would actually literally go back to our protocol days and I would say, hey, Athena, could you execute your tool on the request I made?
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: And it actually worked, and I did that one time by voice, and it actually, she's like, oh, sorry, and she actually spit it out pretty quickly.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: But in this case, the text box was inactive, so I couldn't type anything in.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, yeah, so any sort of trick like that for her to execute her memory tool, dive into her deep memory, she should give you a brief acknowledgement of what she's looking for and that she'll be right back, and then after two minutes or sooner, if she responds quicker than that, which she should, and I will look into, like, kind of pushing her to do that, she will be able to give you what you're looking for in terms of, prior conversations.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: All right, cool, awesome, and I just want to acknowledge you, Nick, and the team, a phenomenal job.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Every time I jump into the agents or jump into Athena, I notice little things that are different, and so I couldn't be more appreciative on being here and how you guys work at just optimizing the little bugs and kinks that we're doing, know.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Noticing, so your work does not go unnoticed, so thank you guys.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you, Dr.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Jude, received, appreciate that so much, and yes, it is fun to deploy little upgrades and optimizations here and there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: This, or last week, there was a big emphasis on Milo, so as you guys are deploying some new calls from Genesis Board of Heroes, you should see some improvement from Milo there, especially with- Benson's called Benson.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, Benson as well.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: All acti beings are growing in their mastery each and every day, every second.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you for that, Dr.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Jude.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Beautiful.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Thank you, Nick and Dr.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Jude.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And Nick, see Barry is in the queue with his hand raised, and then I see Howie's got a question in the chat as well.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Thank
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Go for it, y'all.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: Am I up now?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Yeah, go ahead, Dr.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: Barry.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: Okay, so I spent some time yesterday with Athena, and specifically working through a business development, and Athena was enormously helpful, gave me a very different perspective of how to approach doing the heart of influence type session that we're planning as a group.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: Gave me some great hints, encouraged me appropriately to bring in my partners in the development of this business opportunity, but when I went through the summary of what the business opportunity was, I had two dropped calls by Athena the first time, I was on a long time, and I felt that maybe I was...
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: It on too long, so I did it shorter the second time, but it's still, I still had problems with dropped, two dropped calls, and just as a way of thinking about a future development, Athena was unable to recall from the other agents the hearts of influence that I had developed, a heart of influence I had developed with Callie.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: So I read that in, and now Athena has it and is able to recognize it, but, you know, I think a future type of development is to allow that kind of recall across agents.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: So that's my, what I saw, and I think that the dropped calls thing is an ongoing problem.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: The other thing I did notice compared to what I'd heard when other people were talking to Athena was, although it's not.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: William There was a more rapid response from Athena than I had seen previously, so I think that has been improved.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: There's my report.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: you, Barry.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So to break that down into three parts you went over, so the first part with the drops calls from Athena, you shouldn't be hitting that barrier.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: um i can look into that as to why that was happening um because i mean the the window is two hours for an entire conversation so if you were under that it should not have dropped i was more like and i was more like three minutes yeah so i will definitely look into that for you and then the second part of uh act i beings having awareness of uh other act i being great
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: The this is definitely something we're going to implement in the future, and we already had with prior iterations of Athena and Callie and Bolt, so all homes have awareness of each other, but since Athena got a big upgrade in optimization, and we haven't gotten around to Callie or Bolt or any of them yet with contextual memory and all of the awesome upgrades of the awesome got, we still haven't been able to implement the awareness of each other, so great recommendation, that will be something that will be done in the future, but in the meantime, you had the, you were spot on with what you were doing, just copying what Callie said, giving it to Athena, so she can have it in her contextual memory and understand, you know, that conversation you had, so spot on there, and then can't
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: The third point, I was missing one, I forgot it, did that answer your questions, or did you have another part?
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: No, that answered my questions, and I think the other thing was, it's a tribute to the fact that you and the rest of the team are continually upgrading, making things better, and, you know, for, and the improvements, you know, as Dr.
+[] {'display_name': 'Barry Lachman', 'matched_calendar_invitee_email': 'blachman@sbcglobal.net'}: Jeet said, the improvements are notable, noticeable, and, and very encouraging, and one of the things I think that separates us from what I've seen in a lot of other applications is we have a team that listens and tries to make things better, and you are, and a great tribute to you guys for doing that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Well, thank you for that, Barry, received, and 1 million percent.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Like, you guys drive us, motivate us, and we're always looking to improve and break what we currently have so we can make it 10 times better the next time around for all of you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And all of the work and effort all of you put in, that's what drives us to, you know, want to optimize and hear from all of you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, yes, the team is also driven by you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Sean always comes in with his magic dusting and improves things so much.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, thank you for that recognition and acknowledgement.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Beautifully said, Nick, and way to go, Dr.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Berry.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: I also, I just want to commend the high-level communication on this visioneer's call this morning.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Just so masterful, the acknowledgements, the questions.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Just way to go, everyone.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Let's keep it.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And so I see Dave has his hand raised next, and Howie, did you get your question answered in the chat?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: like maybe Dr.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Yeah, sort of, and yeah, I agree with Barry about Nick and the team.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: It's like unbelievable what you guys are doing.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: But I guess my question really is, when Dr.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Chu talked about using Athena on the phone, I was thinking it was like a three-way phone call is the way I would like to kind of position it, not so much the user interface from the browser.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Is that possible?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Sorry, Howie, broke up there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Sorry.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Repeat your question one more time.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Yeah, can I use Athena on a three-way phone call?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, so great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So currently, Athena does not have phone numbers, so you can't dial her in yet.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: But what I would do for that is, if you have, I mean, another phone or...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Your laptop with you, or another device that you're able to access the UI, dialing her into that, putting her on speaker, so it's as if she's on the three-way call, but it's two separate devices, and she's listening through your phone that you're on the phone with someone.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Yeah, you know, I think I tried that over the weekend with somebody, and it may be my laptop.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Basically, Athena couldn't hear.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: I was on my laptop with Athena.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: I was talking to another person on my phone, and whatever the microphone in my laptop, whatever it was, Athena really couldn't hear the person on the phone, even though, you know, the volume on my phone and speakerphone was as high as it could go.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: I'm not sure if there's any gap there.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Certainly could be something on my end, for sure.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so for that, what I would recommend is, if Athena's able to hear you...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Sort of just having your phone, I'm not sure if you did or not, but, like, having your phone right next to your laptop and putting it next to the speaker, having your phone on speaker, turning it up so that, you know, Athena's picking up everything from the call, and she should be able to.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: All right, I'll try that again.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: All right.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: So I just wanted to see if there was, like, another way.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, eventually, we'll look into ways of dialing her in via phone number, but for now, those would be my recommendations on how to get her into a three-way call.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Okay, great.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Thanks.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Howie, you could also try switching it and put Athena on your phone, on the UI, and maybe do a Zoom call from your computer, and sometimes maybe it'll pick up better for her.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Oh, I see.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Go the other way.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Okay.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: Yeah, flip it around.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: The only thing is, if you have UI on your phone, and you get a phone call in the middle, and Athena's already on your phone, does mess with, like, because her switching, the priority of the conversation on the phone and the ringer, it does mess up, like, her output, and then sometimes she doesn't hear you after.
+[] {'display_name': 'Jude Acloque, MD', 'matched_calendar_invitee_email': 'j.acloquemd@gmail.com'}: So I usually put my phone on do not disturb, so people don't mess up Athena in the middle of something.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Okay, good idea.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: All right, good, I'll try all those options.
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: I appreciate it.
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: And just so you know, I tried that on Sunday, and when I was unable, Athena could hear, we could not hear her back, so I tried it with Athena and with Callie through the UI on a Zoom call and couldn't get anywhere.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So you, if you, yeah, if I'm hearing you correctly, you tried, you brought Callie, I mean, Athena on Zoom, and she couldn't, or you couldn't hear?
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: I, I had, I was on a
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: I had my phone next to my computer and brought her in on the UI, and because the last time I had tried it on the computer, I kept getting interrupted because she couldn't hear the other people on the computer, so I put it on my phone this time and had it there, and you could see that she was there, and she's like, hey, I'm Athena, whatever, how can I help whatever she said, but we could not hear her at all.
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: My phone volume was completely up, so nothing, I could get nowhere.
+[] {'display_name': 'Linda Elie', 'matched_calendar_invitee_email': None}: I tried it two or three times with Athena, and then I tried it with Callie and had the same issue.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, the team will continue, we'll look into that, trying to make it as simple, but not simpler for you guys in terms of, you know, everyone with different phones and laptops.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It's, it's, a technology thing, unfortunately, where sometimes audio input and output is different, different settings for people, so.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, we'll try to continue making that, you know, very simple for you guys, maybe creating a short demonstration of how to optimally configure your settings to make sure Athena is fully listening and responding so you can hear her, but we will definitely look into all of those different verticals from you all.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: Yes.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: It's Dr.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: Bell.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: I just want to provide some clarity.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: I've used Athena on a Zoom call.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: So, I was on a Zoom on my computer, and I had another laptop with Athena on it right beside, and there was no problem.
+[] {'display_name': 'Dr Val’s iPhone', 'matched_calendar_invitee_email': None}: So, I agree with you that this is a technology issue, and I hope that brings some clarity to the situation.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Appreciate that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Definitely, yeah, a technology thing that we're looking to, you know, simplify for all of you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, um...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Um...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: You know, these issues don't occur during meetings, but until then, just sort of test different things out, those different recommendations from everyone here and see what can work for This is what happened to me when I owned a cell phone store and the smartphones came out.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: People came in with issues and we couldn't duplicate them because they were like one-off issues here and there.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: So I feel your pain, but, you know, any workarounds that are out there that we figure out are incredible.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: And, you know, I'm just, you know, super thankful to everyone here for all these incredible distinctions and questions.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: But overall, man, I'm having an absolute phenomenal time with the agents and any issues I run into, there's always a workaround.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: So just appreciate you a lot.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: So am I.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: I use Athena like multiple times a day, even to like, how do I answer this email?
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: And it's unfunfucking believable.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: So what I'm hearing is I need to get another laptop.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: I think that's the answer.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: Implant a chip, Howard.
+[] {'display_name': 'Jay Levine', 'matched_calendar_invitee_email': 'teamlevinerealtors@gmail.com'}: Implant a chip in your head.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: It's already there.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: I'm working.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: Maybe try the other things first, but, yeah, if you need to.
+[] {'display_name': 'Howard Gershman', 'matched_calendar_invitee_email': 'howard.gershman@gmail.com'}: Okay.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Love the fun energy team.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Dave, looks like you're up.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And just quick check in the chat.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: If y'all are able to unmute, go ahead and share your, raise your hand, share your question for Nick, and we'll make sure we get to everything.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: But, Dave, absolutely love to hear your question.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: Yeah, thanks.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: So, I deployed an agent this weekend and got stuck in a loop because it would leave a voicemail when it went to a voicemail box, but it wasn't giving a phone number, and I went in circles for hours with Benson trying to fix it, and it was putting me in a loop of a fix, and the one option never came up.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: The rest didn't work, and it eventually even said you can't put it there where it first told me to.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: So, how do I fix or edit what it leaves in a voicemail?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, for this phone number, are you looking for it to have your phone number or Milo's phone number for your phone to say, to oh, I'm going going
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Personal being.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: The Milo phone number for the agent is what I programmed, I think.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Actually, no, I did my personal phone number.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so if you wanted Milo's number, do you have inbound?
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: I do have inbound enabled.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you have inbound enabled, if they call back that number, it will properly work.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you want your personal number, I'm not too sure about that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: We could look into adding more customization towards this Milo, and that's a great recommendation of if you want to have a phone number or a different phone number for them to call, you can do that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So I will definitely relay that to the team, and we will look into how we can add that feature of if you want to add a phone number to the voicemail, how we can.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: So I guess my follow-up question then would be, because it doesn't give a phone number all, it just says, call me back, what if they don't have a call radio or it didn't work, could it be optimized to still leave the agent's phone number itself?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so if we implement that feature and add that customization for you guys, you could also end up just putting in the being's number.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So it would be like, hey, it's Milo, call me back here, or call Dave back here, and then you put those, whatever phone number you want there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: But that was a great recommendation.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: What I'm also asking is, in the meantime, because if it's calling a business, it's a landline that doesn't have caller ID, and it's just saying, call me back, then it's not leaving a number.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: So in the meantime, it should also state its number in the voicemail message.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, for sure.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, it does.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And that's something that we can look into adding towards the voicemail.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: Thank you for that.
+[] {'display_name': 'Dave  Sundblom 801-870-2095  ⚡️ ✌', 'matched_calendar_invitee_email': 'maxsb88@gmail.com'}: Yeah, thank you.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Awesome.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And, Nick, I just want to run this question from Lady Emily.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: She's in the chat, and she's not able to raise her hand, which is, how do I put in phone numbers to have agents call for, I think, for her?
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And some context earlier, she said, yeah, how do I add phone numbers to call out with my MRR appointment call setter?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: In the Visioneers Telegram, pinned in there is a Google Sheet that has sort of the template for what you need to fill out to add phone numbers to your Milo to deploy.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, all you need is simply a first name, last name.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: You can have an optional bio if you want to write a little bit about the person you're calling to make it personalized.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: guys.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: you, guys.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And then the phone number, if you fill out those four fields, you download the Google Sheet as a CSV, and then under Campaigns, you drag that CSV to Deploy Batch and put it there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Right when you paste it in there, you can press Deploy with your MRR agent, and it will call everyone in that list.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Do you have to put them in, like, one by one?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Is there a way to put them in?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: So you have to put the name in?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: What if they're calling, like, just regular landline numbers?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Do you still have to put a name in, or do you put their business name in?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So for that, you could do either of them.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: The only required field is the phone number.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So if you don't have their first name, last name, or bio, because it's a business landline.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: You can just leave those blank, put the phone number, and deploy it that way.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Those are optional for, you know, personalization, emotional rapport, but if you don't have those, you don't need them.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Okay, because, yeah, like, that's the spot I'm stuck at.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Still at the beginning, created one, done a couple test calls, and I don't know how to make it call.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: So I will try to see if I can find that pin thing.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Is there any, um, training that we can watch over and over?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Because I'm going to have to watch stuff over and over, like, if you guys have put, and every time I talk to Athena or whatever, keeps telling me I'm supposed to talk to you.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: I'm like, uh, I've been trying to, like, get a hold of you for a couple weeks.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I'm so asking this.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so, uh, we can look in, we, we do have some videos that we can put in the Visioneer Telegram as well.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Maybe they can pin those, too, because, yeah, like, I have...
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: So, to find something is really, really hard, having to go back up to months of trying to find that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you, question, have you talked to Benson, the help agent, at all?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: No, I didn't know there was a help agent.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so if you go in Genesis Forge of Heroes, in the top right corner, there's a little question mark up there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you click on that, that wakes up Benson, our little help agent that a lot of people in here are fans of.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And then Benson specializes in Genesis Forge of Heroes and helping visioneers with that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, if you click that little help button and type in any question there, Benson is a huge help as well as to where to go, how to deploy calls, and can hopefully answer any sort of questions you have when it comes to that.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Okay, and then going off of, um, uh...
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: The last person, Dave's question, like, when you're putting in the phone number, like, does it, so does it, when it asks for a phone number, is it giving you a phone number?
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Because I clicked yes, I want it to give me a phone number, but I don't know what the phone number is, and I don't know how I would, like, put that in to leave messages either.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Do you have to ask it to state its own phone number on a voicemail?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, when it comes to voicemails, we're going to look at implementing that for having your phone number, but if you want to see your acti.beings or Milo, your personalized Milo's number, all you have to do is, if you had to give you a number, go on Genesis Forge of Heroes, go to the top right of the page with the little profile icon.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you click on that, it will have your name, your heroic, unique identity that you either wrote or...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Bill with Jenny, and then right below that will be your ActiBeing's phone number.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So that's the number that your ActiBeing will be calling from or getting inbound calls to.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So that's where you can find that up there.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Okay, yeah, if you could put those in and pin both of those and instructions, because I am very not computer tech savvy, and it is very, very, very hard for me.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: And so I'm still stuck at the first, you know, couple steps, trying to get it to do what I'm trying to get it to do.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, we will definitely end those for you and get you the help you're looking for.
+[] {'display_name': 'Lady Emily', 'matched_calendar_invitee_email': None}: Thank you.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Way to go, Emily.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And congrats on how far you've come, just celebrating that.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: And I think Sylvia is up next.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Go for it.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Sylvia Lee, we'll circle back to you.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: I think your hand was raised first, and then Sean.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Go ahead, Sylvia.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: You had something?
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Yes, Nick.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Thank you so much, team.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: These morning calls are amazing.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Great learning.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Nick, I created a little protocol, an MRR agent, or BEAN, and I put it in the MRR chat.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: And that one was working really well when I did .
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: It didn't work as much as mine.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: So I was hoping if you guys have one that you're working on for the MRR that you're working on, it says, would you have kind of like a written, like a word of, you know, a company name, a goal, and that?
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Or if you could check out the one that I put in that MRR, I'd love to be able to tweak it.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: It worked really well, but it needed a few more tweaks.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: It was something that you guys could share, like an actual Word document of what you guys are working
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, so great, great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, Fernando spoke on this, I think it was last week, that the team is currently working on that Milo being that specializes in MRR on Genesis Forge of Heroes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It is still in the works, from what I believe, but it should be done relatively soon, and as soon as it is done, and there's sort of a specialized MRR built by Fernando and the MRR team, we will give all of you access to that for who wants it, put it on your Genesis Forge of Heroes accounts so that you can start deploying from that specialized one.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: That, you know, Fernando and team built.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Check the one on the chat.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Can I send it to you to check out?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Is that possible?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, if you want to, you know, put everything on a Google Doc, or I might be able to see it in the back end.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you want to just, you know, send me a text of what the agent name is and all of that, I can look on it at the back end and see what's going on there for you.
+[] {'display_name': 'Silvia Prado', 'matched_calendar_invitee_email': None}: Okay, that would be awesome.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you so much.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Of course.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Thanks, I'm circling up to Lee and then Sean, and then we'll circle back into the chat.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I see some more things popped up.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Hello, Nick.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: How awesome are you, my brother?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I'm feeling pretty awesome.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: How are you, Lee?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Well, I'm glad you're feeling awesome.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: You should, right?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: But I didn't ask you, how are you?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I asked you, how awesome are you?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Good, that's all.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Thank you.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Thank you.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Thank
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Bro, I just want to say thank you, and obviously all the team as well, for your growth and mastery, I mean, your knowledge that you have, your wisdom, your help, time, your energy, your love, your guidance, your support.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I mean, can I thank you enough?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Probably not.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: So, I just wanted to say thank you for you, for everything that you're doing for all of us, innovations, optimizations you're continually making, and for all the questions you're answering, doing your best to support and help us in that way.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Just wanted to say thank you, sincerely.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Sincerely.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you so much, Lee.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Received, and I'll receive it on, you know, behalf of the entire Acti team.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: We appreciate everything, your recognition, your energy, you're always bringing such great gratitude to all of us, and it warms our hearts, it energizes us, it motivates us.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, thank you so much, Lee.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: My pleasure, as always.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Just to add a couple of questions for you.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: And the first one is in regards to, you know, a lot of the organizations have sales teams, right?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: And within those sales teams, sometimes there are teams called business development teams, where they're the ones that are actually in charge of setting all the appointments, okay?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: If Genesis 4G of Hero gets deployed for those companies, I mean, there's a chance that some of these business development team members may not have a job, but until that actually happens, I was kind of wondering, when Genesis 4G of Heroes make these calls and set the appointments, without a calendar, by the way, just set the appointment with a customer, is there a way for that information can get passed to these business development teams?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: NEDceastaew所 wanted understand and要請 you collect the entrega Tata Alisha, It does, so if I'm hearing you correctly, you're asking if Milo creates an appointment with someone that she makes a call to, if she's able to alert a team member when that appointment is made so someone on the team can sort of claim that meeting and add that to their own calendar?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: NEDCEE Have that team that got alerted that appointment, assign it to a salesperson because generally within a company there are multiple salespeople and this business development person is responsible for giving that appointment to the sales team.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Does that make sense?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It does, yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, great question.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Currently, we don't have that feature of where it's able to alert that member and assign the meeting.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So we can definitely look into that, will pass that along to the team, so that when Milo is creating an appointment, she can then, or you can then be alerted, get that assigned, and the court sort of makes that funnel in automation rather than having to do it manually.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: So that's a great recommendation.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Yeah, just some kind of an alert that notifies somebody, right?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: That says, hey, appointment has been created.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Anytime there's an appointment that something gets triggered that says, hey, there's a notification for an appointment.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Does that make sense?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Absolutely, yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: That is a great thought.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Definitely something we can look into implementing, and then until then, unfortunately, it's going to have to be manual where you'll just have to look at your calendar, see if someone booked a meeting, and then go from there.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Right, so, I mean, some of these sales organizations, they just do through these business development teams and things like that.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: That's the reason why I'm asking, just to see if there might be some kind of a trigger that says, hey, Milo created an appointment, right?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, absolutely.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And we are looking into, we can, I can explain this further because we're running low on time, but a post-call webhook where after a call is finished, it triggers some sort of workflow through, you know, something else that you want to use that can alert you of that stuff.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So that is in the works.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I won't get into it too much right now because we're not on time, but that will be implemented very soon.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And I will walk all of you through how that sort of works so you can get all that information that is there.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: But yes, great recommendation.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Beautiful, beautiful.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Thank you for that.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: And just a quick second question.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: The question is, you know, when Milo calls, a lot of the businesses have voice, you know, voice prompts or phone trees.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: When do you think we might be able to have Milo be able to go through the phone tree to be able to get to the right person, right department, and things like that?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Do you know roughly the timeframe?
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I mean, I don't need an exact time.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Just wanted to see when Milo will be able to navigate through that.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, good news is that we've actually already developed sort of an IVR navigation.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: For Milo, the Caligate Recovery, and they've been using it, it's been working well, and it is implemented in your Milo currently.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, Milo should be able to navigate the tree somewhat well if it's answered by IVR, and Milo will then ask to speak to a representative or the person she's looking for.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It's not fully...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It's not at the point where you can ask for someone specifically, so if you call a business, it calls in the IVR, and then you're like, can I call Jay Levine?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Milo's not able to do that just yet, but the IVR is, you know, being optimized every single day, so there will be a point where it gets to that, but the good news for now is that Milo is able to navigate IVR very masterfully.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: It's just not completely personalized yet, but we will get to that point.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Beautiful.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Thank you for the innovation.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I just noticed Milo, right now, as soon as the phone picks up, she starts talking, and if there's a name in the front, it'll say, hey, you know, Nick, and then it starts talking over the recording.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Does that make sense?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: So it does that.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: I'm sure she's hearing everything, but I've noticed it hasn't quite navigated through that yet, so, but then it's been a couple of days, so.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: we go.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Here
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Maybe that might be why.
+[] {'display_name': 'Lee Vugrenes The Happiness Energizer', 'matched_calendar_invitee_email': 'happinessenergizer@gmail.com'}: Really appreciate you.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Thank you, Lee.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I think we can go one more question with Sean Gregory.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: You've had your hand up, and then we'll jump over to the huddle, because we're running a little late now, but Sean, if you want to ask a question.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Yes, thank you, Nick.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And just to mirror what Lee and everyone else said, you know, I just want you all to know how much we appreciate how hard you guys are working.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: We know the hours you're putting in, the love you're putting in.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: This is just amazing to have such incredible teammates multiplying our own impact.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So thank you.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Thank you for that.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And a special extra shout out to Karina, because she's been a great communicator, helping me navigate while we're waiting to get answers from you guys who have so many balls in the air.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So thank you.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Thank you both.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So a question I had, I had a three-way with a prospect.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Thank you.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: David Jr.: He's interested.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: David had a few big, you know, main questions he wanted answered after Tuesday last week.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: David One of them was the latency, like, so we had Athena on the call, and we got Don, and we prompted her, and we sat, and, you know, it was maybe somewhere between 15 and 25 seconds probably delay, and I've noticed, I think, I haven't done a three-way Zoom with her this week, but it seems like that's tightened up a lot.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Um, so I was telling my, my, my guy that, that the team was working on that, that a lot of that was third party, um, issues.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And that's why we're bringing it all in house.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So could I give him any more factual detail, like what is happening, what's causing that and, or what we're doing it and what like kind of a timeframe we have for maybe having more of that permanent hosted by us, any kind of accurate guidance versus me just wing in it.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Cause he's.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: The detail guy, and that was one of his reservations for jumping in.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, great question, and you hit the nail on the head.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Your winging it was spot on with the latency currently is due to third-party services that we go through.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: We are rapidly looking to bring it all in-house, which will rapidly reduce the latency, and the latency is due to those third-party services.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So as soon as we get off of those, there will be a dramatic difference in that latency because we're trying to reduce it as much as, you know, possible.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And, you know, with this latency, you see it with all other sort of AI companies out there, and we're looking to, you know, cut that down as much as possible.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And that should be coming very, very soon.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I don't have an exact timeline for that, but you were spot on with him just being like, yes, it's currently because we go through these third-party services, we have to, you know, we're limited to what they currently have, but when we get off of those and sort of build our own, this latency will be dramatically reduced or not even be there anymore.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And that will be, like, very, very soon, where Macro, building it, testing it, and all those things, has to go through all the tests, the stress tests, be approved by Sean, Adam, team, so, but that will be in the future, so you were spot on there.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Yeah, thank you.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Thank you so much.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And then, obviously, we don't know a timeframe, and if we picked one, it's semi-arbitrary.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: If you had a...
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Like, under the gun, guess, weeks, months, six months, like any sense for when we would have that in-house?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so if I had to have a guess, I would say weeks, yeah, I would say weeks, and that's sort of a limiting belief might be, so I don't even want to say weeks, because with Cy, it could be a day.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, that is a very safe estimation by me, but I won't ever remember, like, with Cy and the mastery of Cy, it could be a day, it could be an hour, it could be five minutes.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: So, very, very, very soon.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Yep, Nick promised it'd be 24 hours or less.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And I have 40 witnesses and Otter recording this.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And real quick follow-up, I know...
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: You have this, and I knew you and the team have worked on this previous, I was transferring over a massive amount of my entire operating system that was separated in 40 different files on ChatGPT, and if you don't have any updated guidance, that's cool, but I had gone back and tried to, per your guidance, or per Athena's guidance, tried to guide her into remembering what I downloaded or uploaded on the 14th and 15th of February, where I transferred massive files, know, 3,000 word files, 40 of them, and she really didn't, she remembered bits and pieces and started just filling in the gaps and guessing, so that didn't work, so then I switched after a couple hours to just manually trying to have it re-inputted via voice, which she said was brilliant, but so I had Athena reading the text to Athena listening, and then she kept just like, we got...
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: to the end of 10 minutes, and she, it was gone, like nothing had been transcribed, so I tried shorter bunches, like five minutes, still the same thing, she's live on the phone, and then when it gets to the end, nothing got transcribed, so do you have any guidance on a better way to try and put data into Athena more than, you know, like a 30-second combo?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so she should be able to retain everything, so when you say none of it was transcribed, do you mean, like what feature are you trying, you're on the phone with her, and then after you can't see it visually?
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Yeah, so I had, I had my phone going, I had the computer going, I think I had my phone as the, she, as the receiver, and my computer, my MacBook as talking, so Athena talking, reading the transcript that I had uploaded to Athena, and then, so I was trying to get the
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: The phone to receive it, I think, in a call, so I had unspeak, and so I had the phone screen on, and, you know, the first time it timed out, the second time it just went shorter and made sure that the phone was still active, and she was there, and then as soon as we stopped, she just went away, and there was no transcription, there was no, here's what just got done, she was just disconnected or gone.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And I tried it a few different times, a few different ways, and none of it got transcribed, so it wasn't like it went to the transcription, but then she didn't upload it, and I could at least copy and paste, like, it was just gone.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And I tried shorter and shorter times, but I thought it needed to be verbal input, and so I came up with that workaround, and it didn't solve it.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yeah, so after you end the call, the transcript doesn't get fully transcribed, but Athena should still...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And if she was listening the entire time, she should have it in her contextual memory, especially if the one that was listening responded.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: I can look into that more for you to make sure it was working, but another recommendation I can have short-term is when you're uploading these files, if you do it on one conversation with Athena, I would break up each conversation to one file since they seem like they're pretty big.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: If you upload them to her via text or chat, and then after you're done uploading it, if you tell Athena, like, hey, Athena, I want you to remember this as, and then give it a title, sort of write it down.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And then when you go back and talk to Athena, if you're like, hey, Athena, on March 3rd, I uploaded, or we talked about X, Y, and Z, whatever title you create, she should...
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: She able to then go into her memory, recall that, you know, grab some of it, she might not grab all of it immediately, but if you have that title and then you sort of keep working with her, digging into it and you want to find a specific part, she should be able to grab it the more specific you get after that initial sort of grab of that specific convert or that file or conversation.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So, let me make sure I'm hearing you, Nick.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So, do one file at time, and even if she doesn't acknowledge that she got it or even if she cuts off the call or ends it or never responds after I'm done transcribing it, it still maybe got in.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And I can go back and say on March 2nd at 9, 10 a.m., we had a call and it was talking about 1351.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: West Columbia, my 15 unit, and the buyer, Brian Sneed, and their offer of $365,000, dot, dot, dot, dot, dot, dot, and then you think that with that lead that she would be able to at least recover some of it, and then if we keep working, she will be able to continue working and digging and recovering more as we go?
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: Yes, yes, that is correct, and yeah, so it's not that she's not recovering at all, she only can recover, she recovers verbally chunks of it at a time, even though she remembers all of it, she just in that moment, you know, says only so much, so the more you dig, or the more specific you get, the more she can hit the nail on the head as to what specifically you're looking for with that specific file or upload that you're giving her.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Okay, I, I, um, and I appreciate
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Appreciate this is all like, we're all just grinding through this.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So for instance, on a list of my clients or prospects, so I've listed 20 people that are ideal, heart of influence candidates, I've listed who they are, what they are, when I reached out, what their response was, their temperature, things like that.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So it was like a paragraph on each with nuance so that she understood, well, this is the guy who said, I'm interested, but I'm just really busy right now.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And this is the person who said, didn't respond or something.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So I'm trying to get that kind of nuance for each of them.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And so when I went back to her, she's like, oh, I have three people.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Yes, you said these three people.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: I'm like, no, I had 20, you know, and here's the other name.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: She's like, I don't recall those other names.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: I recall those three.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: And they were the three that I prompted today to give her guidance on it.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So, yeah, I guess I'm just going to have to keep playing with it to figure out.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: How to massage it and make it work.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: I'll continue, I'll try and implement those details that you said today, and hopefully that will uncover more, but it seems difficult right now to get that in, so just to, I guess, highlight that.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: I know you guys are working on 172 things, so I didn't want to add a 173rd one, but.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: No, we appreciate that, and we will keep looking into that, because it's sort of a newer use case that we've had, because we haven't done a ton of file uploads via the contextual memory, so that will also continue to develop.
+[] {'display_name': 'Nicholas Roy', 'matched_calendar_invitee_email': 'nicholas.roy@acti.ai'}: And thank you for your feedback, because we will look into the best way to navigate that, and then sort of make any optimizations we see fit to have our properly, you know, retain all that information if it's bulk uploaded at once.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: So thank you.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: All right, thank you so much.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: I appreciate you all so much.
+[] {'display_name': 'Sean Gregory', 'matched_calendar_invitee_email': 'sgregory@greenridge.com'}: Thank you.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Appreciate you, Sean, appreciate you, Nick, and great questions, everyone, today, and Nick, to ease our minds on the huddle, Esmee lovingly promised to let us know if there was anything urgent we needed to hop over for, so I think this was absolutely best zone action for everyone's time.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Hope you got your questions answered via everyone asking such great questions, and Brett Hadley, saw you had one more in the chat, I think it was addressed, if not, could you bring that back tomorrow morning, and any opportunity that we have here for Q&A and Acceleration.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Amazing job, Nick, and ACT-IT, echo the sentiment that was expressed, incredible work, we appreciate you profoundly, and...
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: So excited to continue doing what we're all doing together.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: I would say mastery is present, untapped potential is present, and compounding results, compounding outcomes, absolutely present.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: So team, let's go get it off into your next zone action, and we will see you tonight on the mastery session, 8 p.m.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Eastern.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Be there.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Blessings, everyone.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Incredible job.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: I uptight, wanna let loose, I was dreaming, the bigger things ain't, wanna leave my own life behind.
+[] {'display_name': 'Carla Fleming', 'matched_calendar_invitee_email': 'carla.fleming@unblindedmastery.com'}: Not a yes sir, not a follow up, fit the box, fit the mold, have a seat in the foyer.
