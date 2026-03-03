@@ -201,82 +201,42 @@ class DashboardService:
             except (json.JSONDecodeError, KeyError, OSError):
                 pass
 
-        # ── Tier 3: .sai-analysis sisters ─────────────────────────
-        sai_sisters_dir = _PROJECT_ROOT / ".sai-analysis" / "sisters"
-        if sai_sisters_dir.is_dir():
-            tier3_configs = {
-                "sai-memory": {
-                    "id": "memory",
-                    "tenant_id": "tenant-memory",
-                    "color": "#8B5CF6",
-                    "type": TYPE_SISTER,
+        # ── Tier 1b: Recovery sub-agents (BD-PIP, BD-WC) ─────────
+        bd_agents_dir = _PROJECT_ROOT / "workspaces" / "recovery" / "agents"
+        if bd_agents_dir.is_dir():
+            bd_configs = {
+                "sai-bd-pip": {
+                    "id": "bd-pip",
+                    "color": "#EF4444",
+                    "role": "PIP business development specialist",
                 },
-                "sai-recovery": {
-                    "id": "sai-recovery",
-                    "tenant_id": "tenant-recovery",
-                    "color": "#10B981",
-                    "type": TYPE_SISTER,
+                "sai-bd-wc": {
+                    "id": "bd-wc",
+                    "color": "#F59E0B",
+                    "role": "Workers comp business development specialist",
                 },
             }
-            for dirname, cfg in tier3_configs.items():
-                sister_dir = sai_sisters_dir / dirname
-                if not sister_dir.is_dir():
+            for dirname, cfg in bd_configs.items():
+                agent_dir = bd_agents_dir / dirname
+                if not (agent_dir / "IDENTITY.md").exists():
                     continue
-                soul = self._load_soul_safe(sister_dir)
+                soul = self._load_soul_safe(agent_dir)
                 beings.append({
                     "id": cfg["id"],
-                    "name": soul.name if soul else dirname.replace("sai-", "SAI ").title(),
-                    "role": (soul.raw_soul_text or "")[:200].split("\n")[0] if soul else "",
-                    "avatar": soul.emoji if soul else "",
-                    "status": "online",
-                    "description": f"Tier 3 sister from .sai-analysis/{dirname}",
-                    "type": cfg["type"],
+                    "name": soul.name if soul else dirname.upper(),
+                    "role": cfg["role"],
+                    "avatar": soul.emoji if soul else "🎯",
+                    "status": "offline",
+                    "description": cfg["role"],
+                    "type": TYPE_SUBAGENT,
                     "tools": [],
                     "skills": [],
                     "color": cfg["color"],
                     "model_id": "",
-                    "workspace": f".sai-analysis/sisters/{dirname}",
-                    "tenant_id": cfg["tenant_id"],
+                    "workspace": f"workspaces/recovery/agents/{dirname}",
+                    "tenant_id": "tenant-recovery",
                     "auto_start": False,
                 })
-
-            # Tier 3 sub-agents: BD-PIP and BD-WC under sai-recovery/agents/
-            bd_agents_dir = sai_sisters_dir / "sai-recovery" / "agents"
-            if bd_agents_dir.is_dir():
-                bd_configs = {
-                    "sai-bd-pip": {
-                        "id": "bd-pip",
-                        "color": "#EF4444",
-                        "role": "PIP business development specialist",
-                    },
-                    "sai-bd-wc": {
-                        "id": "bd-wc",
-                        "color": "#F59E0B",
-                        "role": "Workers comp business development specialist",
-                    },
-                }
-                for dirname, cfg in bd_configs.items():
-                    agent_dir = bd_agents_dir / dirname
-                    identity_path = agent_dir / "IDENTITY.md"
-                    if not identity_path.exists():
-                        continue
-                    soul = self._load_soul_safe(agent_dir)
-                    beings.append({
-                        "id": cfg["id"],
-                        "name": soul.name if soul else dirname.upper(),
-                        "role": cfg["role"],
-                        "avatar": soul.emoji if soul else "🎯",
-                        "status": "online",
-                        "description": cfg["role"],
-                        "type": TYPE_SUBAGENT,
-                        "tools": [],
-                        "skills": [],
-                        "color": cfg["color"],
-                        "model_id": "",
-                        "workspace": f".sai-analysis/sisters/sai-recovery/agents/{dirname}",
-                        "tenant_id": "tenant-recovery",
-                        "auto_start": False,
-                    })
 
         # ── Tier 2: Voice agents from Bland configs ───────────────
         configs_dir = _PROJECT_ROOT / "workspaces" / "prime" / "configs"
@@ -1038,20 +998,24 @@ class DashboardService:
 
     @staticmethod
     def _scan_memory(ws_abs: Path, ws_rel: str) -> dict:
-        """Scan the memory/ directory under a workspace."""
+        """Scan the memory/ directory under a workspace (recursive)."""
         memory_dir = ws_abs / "memory"
         if not memory_dir.is_dir():
             return {
                 "path": None, "file_count": 0, "total_size": 0,
-                "last_updated": None, "files": [],
+                "last_updated": None, "files": [], "directories": [],
             }
 
         files: list[dict] = []
+        directories: list[str] = []
         total_size = 0
         last_mtime = 0.0
 
-        for entry in sorted(memory_dir.iterdir()):
-            if entry.name.startswith("."):
+        for entry in sorted(memory_dir.rglob("*")):
+            if any(p.startswith(".") for p in entry.relative_to(memory_dir).parts):
+                continue
+            if entry.is_dir():
+                directories.append(str(entry.relative_to(memory_dir)))
                 continue
             if entry.is_file():
                 stat = entry.stat()
@@ -1076,6 +1040,7 @@ class DashboardService:
                 if last_mtime > 0 else None
             ),
             "files": files,
+            "directories": sorted(directories),
         }
 
     @staticmethod
