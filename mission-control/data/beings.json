@@ -1,0 +1,359 @@
+{
+  "beings": [
+    {
+      "id": "prime",
+      "name": "Prime",
+      "role": "Core Orchestrator",
+      "avatar": "P",
+      "status": "online",
+      "description": "The central runtime intelligence. Orchestrates all beings, manages task delegation, maintains system coherence, and runs the agentic loop.",
+      "type": "runtime",
+      "tools": [
+        {
+          "name": "web_search",
+          "description": "Search the web via Brave/DuckDuckGo"
+        },
+        {
+          "name": "web_fetch",
+          "description": "Fetch and extract content from URLs"
+        },
+        {
+          "name": "memory_store",
+          "description": "Store observations to working/semantic memory"
+        },
+        {
+          "name": "memory_recall",
+          "description": "Retrieve from hybrid memory system"
+        },
+        {
+          "name": "code_edit",
+          "description": "Edit code files via Serena or native codeintel"
+        },
+        {
+          "name": "file_read",
+          "description": "Read files from workspace"
+        },
+        {
+          "name": "file_write",
+          "description": "Write files to workspace"
+        },
+        {
+          "name": "subagent_spawn",
+          "description": "Spawn sub-agents for parallel work"
+        },
+        {
+          "name": "sisters_list",
+          "description": "List all sister beings"
+        },
+        {
+          "name": "sisters_spawn",
+          "description": "Start a sister being"
+        },
+        {
+          "name": "sisters_message",
+          "description": "Send message to a sister"
+        },
+        {
+          "name": "schedule_task",
+          "description": "Schedule recurring cron tasks"
+        }
+      ],
+      "skills": [
+        "Task Orchestration",
+        "Code Intelligence",
+        "Memory Management",
+        "Context Assembly",
+        "Self-Evaluation",
+        "Governance"
+      ],
+      "color": "#3b82f6",
+      "model_id": "anthropic/claude-opus-4.6",
+      "workspace": ".",
+      "tenant_id": "tenant-local",
+      "auto_start": true,
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "forge",
+      "name": "Forge",
+      "role": "Colosseum Operator",
+      "avatar": "F",
+      "status": "offline",
+      "description": "Colosseum operator — runs tournaments 24/7, evolves and scores ACT-I beings. Manages 43 tournament beings across 13 functional areas.",
+      "type": "sister",
+      "tools": [
+        {
+          "name": "colosseum_run_round",
+          "description": "Execute a tournament round with all beings"
+        },
+        {
+          "name": "colosseum_get_leaderboard",
+          "description": "Retrieve current being rankings"
+        },
+        {
+          "name": "colosseum_evolve_being",
+          "description": "Evolve a being based on judge feedback"
+        },
+        {
+          "name": "colosseum_get_results",
+          "description": "Get detailed tournament results"
+        },
+        {
+          "name": "colosseum_list_beings",
+          "description": "List all tournament beings"
+        }
+      ],
+      "skills": [
+        "Tournament Execution",
+        "Being Evolution",
+        "Judge Calibration",
+        "Performance Analysis",
+        "DNA Optimization"
+      ],
+      "color": "#f59e0b",
+      "model_id": "anthropic/claude-sonnet-4",
+      "workspace": "workspaces/forge",
+      "tenant_id": "tenant-forge",
+      "auto_start": false,
+      "cron_tasks": [
+        {
+          "name": "colosseum-round",
+          "cron_expr": "*/30 * * * *",
+          "goal": "Run one Colosseum v2 tournament round"
+        }
+      ],
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "scholar",
+      "name": "Scholar",
+      "role": "Pattern Learner",
+      "avatar": "Sc",
+      "status": "offline",
+      "description": "Pattern learner — extracts teachings and structures from long-form source material. Synthesizes knowledge into reusable frameworks.",
+      "type": "sister",
+      "tools": [
+        {
+          "name": "memory_store",
+          "description": "Store extracted patterns to memory"
+        },
+        {
+          "name": "memory_recall",
+          "description": "Retrieve stored patterns"
+        },
+        {
+          "name": "file_read",
+          "description": "Read source materials"
+        },
+        {
+          "name": "web_search",
+          "description": "Research supplementary sources"
+        },
+        {
+          "name": "web_fetch",
+          "description": "Fetch reference content"
+        }
+      ],
+      "skills": [
+        "Pattern Extraction",
+        "Knowledge Synthesis",
+        "Framework Building",
+        "Source Analysis",
+        "Semantic Structuring"
+      ],
+      "color": "#8b5cf6",
+      "model_id": "anthropic/claude-sonnet-4",
+      "workspace": "workspaces/scholar",
+      "tenant_id": "tenant-scholar",
+      "auto_start": false,
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "recovery",
+      "name": "Recovery",
+      "role": "Medical Revenue Automation",
+      "avatar": "R",
+      "status": "offline",
+      "description": "Medical revenue recovery automation — runs Callagy Recovery's 7-stage pipeline for insurance claim processing and dispute resolution.",
+      "type": "sister",
+      "tools": [
+        {
+          "name": "file_read",
+          "description": "Read claim documents"
+        },
+        {
+          "name": "file_write",
+          "description": "Generate recovery reports"
+        },
+        {
+          "name": "web_search",
+          "description": "Research insurance policies"
+        },
+        {
+          "name": "memory_store",
+          "description": "Store case patterns"
+        },
+        {
+          "name": "memory_recall",
+          "description": "Retrieve precedent cases"
+        }
+      ],
+      "skills": [
+        "Claim Processing",
+        "Dispute Resolution",
+        "Revenue Optimization",
+        "Pipeline Management",
+        "Compliance Tracking"
+      ],
+      "color": "#10b981",
+      "model_id": "anthropic/claude-sonnet-4",
+      "workspace": "workspaces/recovery",
+      "tenant_id": "tenant-recovery",
+      "auto_start": false,
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "callie",
+      "name": "Callie",
+      "role": "Influence Orchestrator",
+      "avatar": "C",
+      "status": "online",
+      "description": "The Influence Orchestrator / Oracle of Integrity — executes the 4-Step Communication Model. Voice-enabled via ElevenLabs + Twilio at +1 (201) 949-8377.",
+      "type": "voice_agent",
+      "tools": [
+        {
+          "name": "ogcallie",
+          "description": "Webhook tool for email, web search, and GraphRAG queries"
+        },
+        {
+          "name": "voice_make_call",
+          "description": "Initiate outbound voice calls"
+        },
+        {
+          "name": "voice_list_calls",
+          "description": "List recent call history"
+        },
+        {
+          "name": "voice_get_transcript",
+          "description": "Retrieve call transcripts"
+        }
+      ],
+      "skills": [
+        "Influence Mastery",
+        "4-Step Communication",
+        "Voice Calls",
+        "Client Engagement",
+        "Process Mastery"
+      ],
+      "color": "#ec4899",
+      "model_id": "gpt-4.1",
+      "phone": "+12019498377",
+      "agent_id": "agent_7601kdzr7anyfrptbwb4m2mezygp",
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "athena",
+      "name": "Athena",
+      "role": "Research & Zone Action",
+      "avatar": "A",
+      "status": "online",
+      "description": "Zone Action and Process Mastery agent — handles deep research, competitive intelligence, coaching material synthesis. Voice-enabled via ElevenLabs.",
+      "type": "voice_agent",
+      "tools": [
+        {
+          "name": "skip_turn",
+          "description": "System tool for conversation flow control"
+        },
+        {
+          "name": "voice_make_call",
+          "description": "Initiate outbound voice calls"
+        },
+        {
+          "name": "voice_list_calls",
+          "description": "List recent call history"
+        },
+        {
+          "name": "web_search",
+          "description": "Search for research materials"
+        }
+      ],
+      "skills": [
+        "Zone Action Mastery",
+        "Research Synthesis",
+        "Coaching",
+        "Knowledge Base (68 docs)",
+        "Voice Interaction"
+      ],
+      "color": "#06b6d4",
+      "model_id": "claude-sonnet-4-5",
+      "phone": "+12018093401",
+      "agent_id": "agent_1501kh6kjfbpfs0sz14ez1fp2m0e",
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    },
+    {
+      "id": "mylo",
+      "name": "Mylo",
+      "role": "Creative & Comms",
+      "avatar": "M",
+      "status": "offline",
+      "description": "Creative intelligence focused on content generation, brand voice, and communication strategy. Voice-enabled via ElevenLabs.",
+      "type": "voice_agent",
+      "tools": [
+        {
+          "name": "voice_make_call",
+          "description": "Initiate outbound voice calls"
+        },
+        {
+          "name": "voice_list_calls",
+          "description": "List recent call history"
+        },
+        {
+          "name": "voice_get_transcript",
+          "description": "Retrieve call transcripts"
+        },
+        {
+          "name": "web_search",
+          "description": "Research for content creation"
+        }
+      ],
+      "skills": [
+        "Content Creation",
+        "Brand Voice",
+        "Communication Strategy",
+        "Voice Calls",
+        "Social Strategy"
+      ],
+      "color": "#f97316",
+      "model_id": "claude-sonnet-4-5",
+      "metrics": {
+        "tasksCompleted": 0,
+        "uptime": "0h",
+        "successRate": 0
+      }
+    }
+  ]
+}

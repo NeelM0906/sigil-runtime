@@ -11,7 +11,7 @@
         "callie"
       ],
       "created": "2026-03-02T10:00:00Z",
-      "updated": "2026-03-02T14:30:00Z"
+      "updated": "2026-03-03T00:29:01.224Z"
     },
     {
       "id": "task-002",
@@ -138,6 +138,54 @@
         "title": "API test task"
       },
       "timestamp": "2026-03-03T00:26:16.526297+00:00"
+    },
+    {
+      "id": "f841f9c4",
+      "taskId": "task-001",
+      "action": "status_change",
+      "details": {
+        "status": {
+          "from": "in_progress",
+          "to": "backlog"
+        }
+      },
+      "timestamp": "2026-03-03T00:28:56.157Z"
+    },
+    {
+      "id": "15d9d3f4",
+      "taskId": "task-001",
+      "action": "status_change",
+      "details": {
+        "status": {
+          "from": "backlog",
+          "to": "in_progress"
+        }
+      },
+      "timestamp": "2026-03-03T00:28:57.819Z"
+    },
+    {
+      "id": "add44f76",
+      "taskId": "task-001",
+      "action": "status_change",
+      "details": {
+        "status": {
+          "from": "in_progress",
+          "to": "backlog"
+        }
+      },
+      "timestamp": "2026-03-03T00:28:59.462Z"
+    },
+    {
+      "id": "f0933772",
+      "taskId": "task-001",
+      "action": "status_change",
+      "details": {
+        "status": {
+          "from": "backlog",
+          "to": "in_progress"
+        }
+      },
+      "timestamp": "2026-03-03T00:29:01.224Z"
     }
   ]
 }

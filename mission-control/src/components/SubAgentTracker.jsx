@@ -1,4 +1,5 @@
-import { SUBAGENTS, getBeingById } from '../store'
+import { SUBAGENTS } from '../store'
+import { useBeings } from '../context/BeingsContext'
 
 const STATUS_CONFIG = {
   running: { label: 'Running', color: 'text-accent-blue', dot: 'bg-accent-blue', animate: true },
@@ -27,7 +28,7 @@ function ProgressBar({ value, status }) {
   )
 }
 
-function SubAgentRow({ agent }) {
+function SubAgentRow({ agent, getBeingById }) {
   const config = STATUS_CONFIG[agent.status]
   const spawner = getBeingById(agent.spawnedBy)
 
@@ -75,6 +76,7 @@ function SubAgentRow({ agent }) {
 }
 
 export function SubAgentTracker() {
+  const { getBeingById } = useBeings()
   const active = SUBAGENTS.filter(a => a.status === 'running' || a.status === 'spawning')
   const other = SUBAGENTS.filter(a => a.status !== 'running' && a.status !== 'spawning')
 
@@ -95,10 +97,10 @@ export function SubAgentTracker() {
       {/* Agent List */}
       <div className="p-2 flex flex-col gap-1.5 max-h-[400px] overflow-y-auto">
         {active.map(agent => (
-          <SubAgentRow key={agent.id} agent={agent} />
+          <SubAgentRow key={agent.id} agent={agent} getBeingById={getBeingById} />
         ))}
         {other.map(agent => (
-          <SubAgentRow key={agent.id} agent={agent} />
+          <SubAgentRow key={agent.id} agent={agent} getBeingById={getBeingById} />
         ))}
       </div>
     </div>

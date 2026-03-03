@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { BEINGS, TASK_STATUSES, getBeingById, timeAgo } from '../store'
+import { TASK_STATUSES, timeAgo } from '../store'
+import { useBeings } from '../context/BeingsContext'
 import { tasksApi } from '../api'
 
 const STATUS_CONFIG = {
@@ -20,7 +21,7 @@ const PRIORITIES = ['critical', 'high', 'medium', 'low']
 
 // ── Filters Bar ──────────────────────────────────────────────
 
-function FiltersBar({ filters, setFilters, onCreateClick }) {
+function FiltersBar({ filters, setFilters, onCreateClick, beings }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {/* Assignee filter */}
@@ -30,7 +31,7 @@ function FiltersBar({ filters, setFilters, onCreateClick }) {
         className="bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary focus:outline-none focus:border-accent-blue/50"
       >
         <option value="">All Beings</option>
-        {BEINGS.map(b => (
+        {beings.map(b => (
           <option key={b.id} value={b.id}>{b.name}</option>
         ))}
       </select>
@@ -94,8 +95,9 @@ function FiltersBar({ filters, setFilters, onCreateClick }) {
 
 // ── Create/Edit Modal ────────────────────────────────────────
 
-function TaskModal({ task, onSave, onClose }) {
+function TaskModal({ task, onSave, onClose, beings }) {
   const isEdit = !!task?.id
+  const [beingSearch, setBeingSearch] = useState('')
   const [form, setForm] = useState({
     title: task?.title || '',
     description: task?.description || '',
@@ -171,22 +173,49 @@ function TaskModal({ task, onSave, onClose }) {
             </div>
           </div>
 
-          {/* Assignees */}
+          {/* Assignees — searchable multi-select */}
           <div>
             <label className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5 block">Assign Beings</label>
-            <div className="flex flex-wrap gap-1.5">
-              {BEINGS.map(being => {
-                const selected = form.assignees.includes(being.id)
-                return (
+            {/* Selected beings */}
+            {form.assignees.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-1.5">
+                {form.assignees.map(id => {
+                  const b = beings.find(x => x.id === id)
+                  if (!b) return null
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleAssignee(id)}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border border-accent-blue/30 bg-accent-blue/10 text-accent-blue hover:bg-accent-red/10 hover:text-accent-red hover:border-accent-red/30 transition-colors"
+                    >
+                      <div className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: b.color + '22', color: b.color }}>{b.avatar}</div>
+                      {b.name}
+                      <span className="ml-0.5 opacity-60">&times;</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {/* Search input */}
+            <input
+              type="text"
+              value={beingSearch}
+              onChange={e => setBeingSearch(e.target.value)}
+              placeholder="Search beings..."
+              className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 mb-1.5"
+            />
+            {/* Filtered being list */}
+            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
+              {beings
+                .filter(b => !form.assignees.includes(b.id))
+                .filter(b => !beingSearch || b.name.toLowerCase().includes(beingSearch.toLowerCase()) || b.role.toLowerCase().includes(beingSearch.toLowerCase()))
+                .map(being => (
                   <button
                     key={being.id}
                     type="button"
-                    onClick={() => toggleAssignee(being.id)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors border ${
-                      selected
-                        ? 'border-accent-blue/40 bg-accent-blue/10 text-accent-blue'
-                        : 'border-border bg-bg-card text-text-secondary hover:bg-bg-hover'
-                    }`}
+                    onClick={() => { toggleAssignee(being.id); setBeingSearch('') }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors border border-border bg-bg-card text-text-secondary hover:bg-bg-hover"
                   >
                     <div
                       className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold"
@@ -195,9 +224,9 @@ function TaskModal({ task, onSave, onClose }) {
                       {being.avatar}
                     </div>
                     {being.name}
+                    <span className="text-[9px] text-text-muted">{being.role}</span>
                   </button>
-                )
-              })}
+                ))}
             </div>
           </div>
 
@@ -225,7 +254,7 @@ function TaskModal({ task, onSave, onClose }) {
 
 // ── Task Detail Slide-out ────────────────────────────────────
 
-function TaskDetail({ task, history, onClose, onEdit, onDelete }) {
+function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, onBeingClick }) {
   const config = STATUS_CONFIG[task.status]
   const prio = PRIORITY_CONFIG[task.priority]
 
@@ -289,26 +318,30 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete }) {
             </div>
           </div>
 
-          {/* Assignees */}
+          {/* Assignees — clickable to open being detail */}
           <div className="mb-4">
             <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Assigned To</div>
             <div className="flex flex-wrap gap-1.5">
               {task.assignees.map(id => {
                 const being = getBeingById(id)
-                if (!being) return null
+                if (!being) return <span key={id} className="text-xs text-text-muted">{id}</span>
                 return (
-                  <div key={id} className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-bg-card text-xs">
+                  <button
+                    key={id}
+                    onClick={() => { onClose(); onBeingClick(being.id) }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-bg-card text-xs hover:bg-bg-hover hover:border-border-bright transition-colors"
+                  >
                     <div
                       className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold"
                       style={{ backgroundColor: being.color + '22', color: being.color }}
                     >
                       {being.avatar}
                     </div>
-                    <span>{being.name}</span>
+                    <span className="hover:underline">{being.name}</span>
                     <div className={`w-1.5 h-1.5 rounded-full ${
                       being.status === 'online' ? 'bg-accent-green' : being.status === 'busy' ? 'bg-accent-amber' : 'bg-text-muted'
                     }`} />
-                  </div>
+                  </button>
                 )
               })}
               {task.assignees.length === 0 && (
@@ -369,7 +402,7 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete }) {
 
 // ── Task Card ────────────────────────────────────────────────
 
-function TaskCard({ task, onDragStart, onClick }) {
+function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
 
   return (
@@ -394,14 +427,15 @@ function TaskCard({ task, onDragStart, onClick }) {
           const being = getBeingById(id)
           if (!being) return null
           return (
-            <div
+            <button
               key={id}
-              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold"
+              onClick={(e) => { e.stopPropagation(); onBeingClick(being.id) }}
+              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold hover:ring-1 hover:ring-white/30 transition-all"
               style={{ backgroundColor: being.color + '22', color: being.color }}
-              title={being.name}
+              title={`View ${being.name}`}
             >
               {being.avatar}
-            </div>
+            </button>
           )
         })}
         <span className="text-[10px] text-text-muted ml-auto font-mono">{task.id}</span>
@@ -412,7 +446,7 @@ function TaskCard({ task, onDragStart, onClick }) {
 
 // ── Column ───────────────────────────────────────────────────
 
-function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, dragOverStatus }) {
+function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, dragOverStatus, getBeingById, onBeingClick }) {
   const config = STATUS_CONFIG[status]
   const isOver = dragOverStatus === status
 
@@ -435,7 +469,7 @@ function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, d
         isOver ? 'border-accent-blue/40 bg-accent-blue/5' : 'border-transparent'
       }`}>
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} onDragStart={onDragStart} onClick={onCardClick} />
+          <TaskCard key={task.id} task={task} onDragStart={onDragStart} onClick={onCardClick} getBeingById={getBeingById} onBeingClick={onBeingClick} />
         ))}
       </div>
     </div>
@@ -445,6 +479,7 @@ function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, d
 // ── Main TaskBoard ───────────────────────────────────────────
 
 export function TaskBoard({ fullWidth = false }) {
+  const { beings, getBeingById, openBeingDetail } = useBeings()
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -568,6 +603,7 @@ export function TaskBoard({ fullWidth = false }) {
           filters={filters}
           setFilters={setFilters}
           onCreateClick={() => setShowModal('create')}
+          beings={beings}
         />
       </div>
 
@@ -597,6 +633,8 @@ export function TaskBoard({ fullWidth = false }) {
               onDrop={handleDrop}
               onCardClick={openDetail}
               dragOverStatus={dragOverStatus}
+              getBeingById={getBeingById}
+              onBeingClick={openBeingDetail}
             />
           ))}
         </div>
@@ -608,6 +646,7 @@ export function TaskBoard({ fullWidth = false }) {
           task={showModal === 'create' ? null : showModal}
           onSave={showModal === 'create' ? handleCreate : handleEdit}
           onClose={() => setShowModal(false)}
+          beings={beings}
         />
       )}
 
@@ -619,6 +658,8 @@ export function TaskBoard({ fullWidth = false }) {
           onClose={() => setDetailTask(null)}
           onEdit={(task) => { setDetailTask(null); setShowModal(task) }}
           onDelete={handleDelete}
+          getBeingById={getBeingById}
+          onBeingClick={openBeingDetail}
         />
       )}
     </div>

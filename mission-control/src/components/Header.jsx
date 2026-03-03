@@ -1,8 +1,9 @@
-import { BEINGS } from '../store'
+import { useBeings } from '../context/BeingsContext'
 
 export function Header({ activeTab, setActiveTab, tabs }) {
-  const onlineCount = BEINGS.filter(b => b.status === 'online').length
-  const busyCount = BEINGS.filter(b => b.status === 'busy').length
+  const { beings } = useBeings()
+  const onlineCount = beings.filter(b => b.status === 'online').length
+  const busyCount = beings.filter(b => b.status === 'busy').length
 
   return (
     <header className="bg-bg-secondary border-b border-border sticky top-0 z-50">

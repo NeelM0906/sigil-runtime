@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { BEINGS, CHAT_MESSAGES, getBeingById } from '../store'
+import { CHAT_MESSAGES } from '../store'
+import { useBeings } from '../context/BeingsContext'
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, getBeingById }) {
   const isUser = msg.sender === 'user'
   const being = !isUser ? getBeingById(msg.sender) : null
 
@@ -24,7 +25,7 @@ function MessageBubble({ msg }) {
           <span className="text-xs font-medium">{isUser ? 'You' : being?.name || msg.sender}</span>
           {msg.targets.length > 0 && (
             <span className="text-[10px] text-text-muted">
-              &rarr; {msg.targets.map(t => {
+              &rarr;&nbsp;{msg.targets.map(t => {
                 const b = getBeingById(t)
                 return b ? `@${b.name}` : `@${t}`
               }).join(', ')}
@@ -58,8 +59,8 @@ function MessageBubble({ msg }) {
   )
 }
 
-function MentionDropdown({ filter, onSelect, position }) {
-  const filtered = BEINGS.filter(b =>
+function MentionDropdown({ filter, onSelect, beings }) {
+  const filtered = beings.filter(b =>
     b.name.toLowerCase().includes(filter.toLowerCase()) ||
     b.id.toLowerCase().includes(filter.toLowerCase())
   )
@@ -94,6 +95,7 @@ function MentionDropdown({ filter, onSelect, position }) {
 }
 
 export function ChatWindow() {
+  const { beings, getBeingById } = useBeings()
   const [messages, setMessages] = useState(CHAT_MESSAGES)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
@@ -213,7 +215,7 @@ export function ChatWindow() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {messages.map(msg => (
-          <MessageBubble key={msg.id} msg={msg} />
+          <MessageBubble key={msg.id} msg={msg} getBeingById={getBeingById} />
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -225,16 +227,16 @@ export function ChatWindow() {
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             <span className="text-[10px] text-text-muted mr-1">To:</span>
             {targets.map(id => {
-              const being = getBeingById(id)
-              if (!being) return null
+              const b = getBeingById(id)
+              if (!b) return null
               return (
                 <button
                   key={id}
                   onClick={() => removeTarget(id)}
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors hover:bg-bg-hover"
-                  style={{ borderColor: being.color + '40', color: being.color, backgroundColor: being.color + '10' }}
+                  style={{ borderColor: b.color + '40', color: b.color, backgroundColor: b.color + '10' }}
                 >
-                  {being.name}
+                  {b.name}
                   <span className="opacity-60">&times;</span>
                 </button>
               )
@@ -247,6 +249,7 @@ export function ChatWindow() {
             <MentionDropdown
               filter={mentionFilter}
               onSelect={handleMentionSelect}
+              beings={beings}
             />
           )}
           <input
