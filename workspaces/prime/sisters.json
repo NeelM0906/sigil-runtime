@@ -42,6 +42,18 @@
       "auto_start": false,
       "heartbeat_enabled": false,
       "cron_tasks": []
+    },
+    {
+      "sister_id": "sai-memory",
+      "display_name": "SAI Memory",
+      "emoji": "🧠",
+      "tenant_id": "tenant-memory",
+      "workspace_root": "workspaces/sai-memory",
+      "model_id": "google/gemini-2.5-pro-preview-06-05",
+      "role": "Central Memory Manager - cross-sister memory coordination, Pinecone synthesis, anti-forgetting protocols",
+      "auto_start": false,
+      "heartbeat_enabled": false,
+      "cron_tasks": []
     }
   ]
 }
