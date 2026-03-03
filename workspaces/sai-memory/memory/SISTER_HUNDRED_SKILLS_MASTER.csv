@@ -1,0 +1,101 @@
+Sister,Skill Name,Why This Skill (Zone Action Support),Installed?
+Prime,email-marketing,Email campaign strategy + automation,Yes
+Prime,copywriting,Core copywriting frameworks,Yes
+Prime,afrexai-conversion-copywriting,Conversion-focused copy optimization,Yes
+Prime,cold-email-personalization,SimHumans - personalized per LinkedIn bio,Yes
+Prime,landing-page-generator,Come Get Me competition landing pages,Yes
+Prime,lead-generation,Lead acquisition strategy,Yes
+Prime,linkedin-lead-generation,LinkedIn-specific lead gen,Yes
+Prime,outreach,Multi-channel outreach orchestration,Yes
+Prime,cold-outreach,Cold outreach sequences,Yes
+Prime,sales-pipeline-tracker,Track people through 7 Levers,Yes
+Prime,competitor-analysis,Market intelligence + positioning,Yes
+Prime,data-analysis,Level 5 listening to data,Yes
+Prime,google-analytics,Track engagement metrics,Yes
+Prime,quiz-battle,Sean's competition framework,Yes
+Prime,stripe-best-practices,Payment infrastructure,Yes
+Prime,sales-funnel-design,Hello to Yes journey architecture,Yes
+Prime,automation-workflows,Workflow automation,Yes
+Prime,activecampaign-automation,Email + CRM automation,Yes
+Prime,mission-control-dashboard,System monitoring dashboards,Yes
+Prime,legal,Legal domain expertise,Yes
+Forge,action-suggester,Zone Action prioritization,Yes
+Forge,zonein,Sales zone hunting,Yes
+Forge,sales-pipeline-tracker,Influence pipeline,Yes
+Forge,gh-issues,PR automation,Yes
+Forge,github,Continuous Integration / PRs,Yes
+Forge,coding-agent,Codex engine fixes,Yes
+Forge,oracle,Prompt optimization,Yes
+Forge,clawhub,Skill management,Yes
+Forge,model-usage,Cost tracking,Yes
+Forge,sessions_spawn,Subagents (babies),Yes
+Forge,memory_search,Prior work recall,Yes
+Forge,web_search,Provider research,Yes
+Forge,browser,UI testing,Yes
+Forge,exec,Daemon runner,Yes
+Forge,process,Background monitor,Yes
+Forge,edit,Patches,Yes
+Forge,write,DB scripts,Yes
+Forge,read,Logs,Yes
+Forge,session_status,Usage,Yes
+Forge,subagents,Orchestration,Yes
+Scholar,summarize,Fast URL/file summarization and extraction,Yes
+Scholar,openai-whisper,Local audio transcription (no API key dependency),Yes
+Scholar,openai-whisper-api,API transcription when billing available,Yes
+Scholar,songsee,Audio spectrogram + feature panels (pattern analysis),Yes
+Scholar,video-frames,Extract frames/clips for evidence & slides,Yes
+Scholar,peekaboo,macOS UI capture/automation for evidence screenshots,Yes
+Scholar,oracle,Structured prompt bundling + artifact packaging,Yes
+Scholar,obsidian,Vault-based knowledge capture + linking,Yes
+Scholar,blogwatcher,Monitor key feeds/updates (Sean content),Yes
+Scholar,mcporter,MCP server/tool calling & generation,Yes
+Scholar,github,PR/issue visibility for judge prompt versioning,Yes
+Scholar,gh-issues,Coordinate fixes via issues/PR flow,Yes
+Scholar,coding-agent,Only when large refactors require it (kept as backup),Yes
+Scholar,model-usage,Per-model cost/usage diagnostics,Yes
+Scholar,web_search,Verified external research w/citations (when needed),Yes
+Scholar,web_fetch,Pull readable content quickly,Yes
+Scholar,browser,Validate UI / locate evidence in dashboards,Yes
+Scholar,message,Broadcast findings to War Room precisely,Yes
+Scholar,memory_search,Continuity lookup (when embeddings available),Yes
+Scholar,memory_get,Safe snippet extraction for citations,Yes
+Memory,session-memory,Semantic Memory & Context Handlers,Yes
+Memory,nima-core,Semantic Memory & Context Handlers,Yes
+Memory,lily-memory,Semantic Memory & Context Handlers,Yes
+Memory,neolata-mem,Semantic Memory & Context Handlers,Yes
+Memory,clude-memory-mcp,Semantic Memory & Context Handlers,Yes
+Memory,agent-memory-store,Semantic Memory & Context Handlers,Yes
+Memory,memory-sync-enhanced,Semantic Memory & Context Handlers,Yes
+Memory,neverforget,Semantic Memory & Context Handlers,Yes
+Memory,cortex-memory,Semantic Memory & Context Handlers,Yes
+Memory,memoria,Semantic Memory & Context Handlers,Yes
+Memory,sql-toolkit,Universal SQL queries,Yes
+Memory,database-operations,Hard Archiving & Database Handlers,Yes
+Memory,sqlite,Required for Colosseum DB manipulation,Yes
+Memory,sql,Hard Archiving & Database Handlers,Yes
+Memory,openclaw-backup-optimized,For daily node state backups,Yes
+Memory,claw-backup,Hard Archiving & Database Handlers,Yes
+Memory,pg,Required for complex Supabase/Postgres interfaces,Yes
+Memory,backups,Hard Archiving & Database Handlers,Yes
+Memory,neondb-skill,Hard Archiving & Database Handlers,Yes
+Memory,duplicati-skill,For off-site transcript redundancy,Yes
+Recovery,supabase,CRM operations/contact database/bulk inserts,Yes
+Recovery,clawhub,Install/manage skills from registry,Yes
+Recovery,gh-issues,Track MRR case tickets,Yes
+Recovery,github,Version control for case templates,Yes
+Recovery,web_search,Research payer policies/denial codes,Yes
+Recovery,web_fetch,Extract payer guidelines/compliance docs,Yes
+Recovery,memory_search,Retrieve case history/denial patterns,Yes
+Recovery,memory_get,Pull specific case details,Yes
+Recovery,exec,Run Python scripts for denial analysis,Yes
+Recovery,process,Manage background case monitoring,Yes
+Recovery,read,Review case files/payer contracts,Yes
+Recovery,write,Create case notes/recovery reports,Yes
+Recovery,edit,Update case templates,Yes
+Recovery,sessions_spawn,Spawn case tracker agents,Yes
+Recovery,sessions_list,Monitor active case sessions,Yes
+Recovery,sessions_history,Review case progress,Yes
+Recovery,tts,Voice updates for Mark/Sean,Yes
+Recovery,message,Send recovery updates via Discord,Yes
+Recovery,image,Analyze EOBs/denial letters,Yes
+Recovery,oracle,Generate case summaries/recovery projections,Yes
