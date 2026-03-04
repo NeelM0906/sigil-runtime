@@ -489,7 +489,65 @@ class DashboardService:
             params.append(status_filter)
         sql += " ORDER BY name"
         rows = self.db.execute(sql, params).fetchall()
-        return [self._being_row(r) for r in rows]
+        beings = [self._being_row(r) for r in rows]
+        # Enrich with active task info for detailed status
+        for b in beings:
+            b["active_task"] = self._get_being_active_task(b["id"])
+            b["status_detail"] = self._compute_status_detail(b)
+        return beings
+
+    def _get_being_active_task(self, being_id: str) -> dict | None:
+        """Find the active in_progress task assigned to this being."""
+        try:
+            row = self.db.execute(
+                """SELECT pt.task_id, pt.title, pt.status
+                   FROM mc_task_assignments ma
+                   JOIN project_tasks pt ON pt.task_id = ma.task_id
+                   WHERE ma.being_id = ? AND pt.status = 'in_progress'
+                   ORDER BY pt.updated_at DESC LIMIT 1""",
+                (being_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            return {"task_id": str(row["task_id"]), "title": str(row["title"]), "status": str(row["status"])}
+        except Exception:
+            return None
+
+    def _compute_status_detail(self, being: dict) -> str:
+        """Compute detailed status string for display.
+
+        Returns one of:
+          - "online" — available, no active tasks
+          - "busy (chat)" — responding to user in chat
+          - "busy (task: {name})" — working a delegated sub-task
+          - "orchestrating ({name})" — Prime only, coordinating multi-being task
+          - "offline" — not available
+        """
+        base_status = being.get("status", "offline")
+        if base_status == "offline":
+            return "offline"
+
+        active_task = being.get("active_task")
+        being_id = being.get("id", "")
+
+        # Check if Prime is orchestrating
+        if being_id == "prime" and self.orchestration_engine is not None:
+            for state in (self.orchestration_engine._active or {}).values():
+                if state.get("status") not in ("completed", "failed"):
+                    task_name = state.get("goal", "")[:40]
+                    return f"orchestrating ({task_name})"
+
+        if base_status == "busy":
+            if active_task:
+                task_name = active_task.get("title", "")[:40]
+                return f"busy (task: {task_name})"
+            return "busy (chat)"
+
+        if active_task:
+            task_name = active_task.get("title", "")[:40]
+            return f"busy (task: {task_name})"
+
+        return "online"
 
     def get_being(self, being_id: str) -> dict | None:
         row = self.db.execute(
