@@ -19,6 +19,30 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Being resolution: derive being_id from session patterns
+# ---------------------------------------------------------------------------
+
+_BEING_PATTERNS = [
+    # mc-chat-{being_id}  — direct chat
+    (re.compile(r"^mc-chat-(.+)$"), 1),
+    # subtask:{task_id}:{being_id}  — orchestration subtask
+    (re.compile(r"^subtask:[^:]+:(.+)$"), 1),
+]
+
+
+def resolve_being_id(session_id: str | None, user_id: str | None = None) -> str | None:
+    """Derive being_id from session_id patterns, or from user_id 'prime->X' pattern."""
+    if session_id:
+        for pattern, group in _BEING_PATTERNS:
+            m = pattern.match(session_id)
+            if m:
+                return m.group(group)
+    if user_id:
+        if user_id.startswith("prime->"):
+            return user_id[len("prime->"):]
+    return None
+
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -137,6 +161,16 @@ class HybridMemoryStore:
             """
         )
         self.db.commit()
+        # Add being_id column to markdown_notes (migration)
+        self._ensure_column("markdown_notes", "being_id", "TEXT")
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if column in existing:
+            return
+        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        self.db.commit()
 
     def append_working_note(
         self,
@@ -146,6 +180,7 @@ class HybridMemoryStore:
         content: str,
         tags: list[str] | None = None,
         confidence: float = 1.0,
+        being_id: str | None = None,
     ) -> dict[str, Any]:
         if not content.strip():
             raise ValueError("content cannot be empty")
@@ -184,8 +219,8 @@ class HybridMemoryStore:
         self.db.execute(
             """
             INSERT INTO markdown_notes (
-              note_id, user_id, session_id, relative_path, title, tags, confidence, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              note_id, user_id, session_id, relative_path, title, tags, confidence, created_at, being_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 note_id,
@@ -196,6 +231,7 @@ class HybridMemoryStore:
                 json.dumps(tags or []),
                 confidence,
                 now.isoformat(),
+                being_id,
             ),
         )
 
@@ -236,6 +272,7 @@ class HybridMemoryStore:
         confidence: float,
         evidence_refs: list[str] | None = None,
         reason: str | None = None,
+        being_id: str | None = None,
     ) -> LearningDecision:
         if not content.strip():
             raise ValueError("content cannot be empty")
@@ -256,6 +293,7 @@ class HybridMemoryStore:
                     content=content,
                     evidence_refs=tuple(evidence_refs or ()),
                     recency_ts=now,
+                    being_id=being_id,
                 )
             )
 
@@ -362,12 +400,14 @@ class HybridMemoryStore:
         strategy_key: str,
         content: str,
         success: bool,
+        being_id: str | None = None,
     ) -> str:
         return self.consolidator.learn_procedural(
             user_id=user_id,
             strategy_key=strategy_key,
             content=content,
             success=success,
+            being_id=being_id,
         )
 
     def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
@@ -398,6 +438,36 @@ class HybridMemoryStore:
             "markdown": markdown,
         }
 
+    def recall_by_being(
+        self,
+        being_id: str,
+        query: str,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """Recall memories scoped by being_id (cross-context access)."""
+        semantic = self.consolidator.retrieve_by_being(being_id=being_id, query=query, limit=max(1, limit // 2))
+        markdown = self._recall_markdown_by_being(being_id=being_id, query=query, limit=max(1, limit - len(semantic)))
+
+        return {
+            "semantic": [
+                {
+                    "memory_id": m.memory_id,
+                    "key": m.key,
+                    "content": m.content,
+                    "score": m.score,
+                    "recency_boost": m.recency_boost,
+                    "recency_ts": m.recency_ts,
+                    "source": f"memory://semantic/{m.memory_id}",
+                }
+                for m in semantic
+            ],
+            "markdown": markdown,
+        }
+
+    def recall_procedural_by_being(self, being_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        """Recall procedural memories scoped by being_id."""
+        return self.consolidator.recall_procedural_by_being(being_id=being_id, query=query, limit=limit)
+
     def _recall_markdown(self, user_id: str, query: str, limit: int) -> list[dict[str, Any]]:
         rows = self.db.execute(
             """
@@ -422,6 +492,48 @@ class HybridMemoryStore:
             note_id = str(row["note_id"])
             if note_id in scores:
                 continue
+            text = self._read_note_body(str(row["relative_path"]))
+            scores[note_id] = self._lexical_score(query, text)
+
+        ranked = sorted(rows, key=lambda r: scores.get(str(r["note_id"]), 0.0), reverse=True)
+        out: list[dict[str, Any]] = []
+        for row in ranked[:limit]:
+            note_id = str(row["note_id"])
+            rel_path = str(row["relative_path"])
+            body = self._read_note_body(rel_path)
+            out.append(
+                {
+                    "note_id": note_id,
+                    "title": str(row["title"]),
+                    "path": str((self.memory_root / rel_path).resolve()),
+                    "score": float(scores.get(note_id, 0.0)),
+                    "confidence": float(row["confidence"]),
+                    "created_at": str(row["created_at"]),
+                    "snippet": body[:280],
+                    "source": f"memory://markdown/{note_id}",
+                }
+            )
+        return out
+
+    def _recall_markdown_by_being(self, being_id: str, query: str, limit: int) -> list[dict[str, Any]]:
+        """Recall markdown notes scoped by being_id."""
+        rows = self.db.execute(
+            """
+            SELECT note_id, relative_path, title, confidence, created_at
+            FROM markdown_notes
+            WHERE being_id = ?
+            ORDER BY created_at DESC
+            LIMIT 300
+            """,
+            (being_id,),
+        ).fetchall()
+
+        if not rows:
+            return []
+
+        scores: dict[str, float] = {}
+        for row in rows:
+            note_id = str(row["note_id"])
             text = self._read_note_body(str(row["relative_path"]))
             scores[note_id] = self._lexical_score(query, text)
 

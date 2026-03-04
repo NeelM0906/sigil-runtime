@@ -569,6 +569,7 @@ class OrchestrationEngine:
                         f"My findings: {output[:800]}"
                     ),
                     confidence=0.8,
+                    being_id=sub.being_id,
                 )
             except Exception as exc:
                 log.warning(
@@ -891,6 +892,7 @@ class OrchestrationEngine:
                     f"Outcome: {synthesis_text[:500]}"
                 ),
                 confidence=0.9,
+                being_id="prime",
             )
         except Exception as exc:
             log.warning("Failed to persist task result for %s: %s", task_id[:8], exc)

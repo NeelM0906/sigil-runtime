@@ -37,7 +37,7 @@ def _make_dream_cycle(with_memories: int = 0, being_ids: list[str] | None = None
     tmpdir = tempfile.mkdtemp()
     db = RuntimeDB(os.path.join(tmpdir, "runtime.db"))
 
-    # Create memory tables
+    # Create memory tables (including being_id columns)
     db.script("""
         CREATE TABLE IF NOT EXISTS memories (
             id TEXT PRIMARY KEY,
@@ -52,6 +52,7 @@ def _make_dream_cycle(with_memories: int = 0, being_ids: list[str] | None = None
             version INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            being_id TEXT,
             UNIQUE(user_id, memory_key, version)
         );
         CREATE TABLE IF NOT EXISTS memory_archive (
@@ -73,6 +74,7 @@ def _make_dream_cycle(with_memories: int = 0, being_ids: list[str] | None = None
             active INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            being_id TEXT,
             UNIQUE(user_id, strategy_key)
         );
         CREATE TABLE IF NOT EXISTS markdown_notes (
@@ -83,7 +85,8 @@ def _make_dream_cycle(with_memories: int = 0, being_ids: list[str] | None = None
             title TEXT NOT NULL,
             tags TEXT NOT NULL,
             confidence REAL NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            being_id TEXT
         );
         CREATE TABLE IF NOT EXISTS task_results (
             task_id TEXT PRIMARY KEY,

@@ -499,5 +499,43 @@ class TestOrchSubtaskReplay(unittest.TestCase):
             self.assertIn("plan the task", all_content)
 
 
+class TestBeingIdInBridge(unittest.TestCase):
+    """Verify being_id propagation through handle_turn's memory writes."""
+
+    def test_being_id_resolved_for_mc_chat_session(self):
+        """Memory writes in mc-chat-{being_id} sessions set being_id."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        bid = resolve_being_id("mc-chat-forge")
+        self.assertEqual(bid, "forge")
+
+    def test_being_id_resolved_for_subtask_session(self):
+        """Memory writes in subtask sessions set being_id."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        bid = resolve_being_id("subtask:task-123:scholar")
+        self.assertEqual(bid, "scholar")
+
+    def test_being_id_none_for_orchestration_session(self):
+        """Orchestration sessions (prime) don't map to a specific being."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        bid = resolve_being_id("orchestration:task-123")
+        self.assertIsNone(bid)
+
+    def test_being_id_from_user_id_fallback(self):
+        """When session doesn't match, falls back to user_id pattern."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        bid = resolve_being_id("some-session", "prime->recovery")
+        self.assertEqual(bid, "recovery")
+
+    def test_strip_tool_blocks_with_being_id(self):
+        """Ensure _strip_tool_blocks still works after being_id changes."""
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        msgs = [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hi"},
+        ]
+        result = _strip_tool_blocks(msgs)
+        self.assertEqual(len(result), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

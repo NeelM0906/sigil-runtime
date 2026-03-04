@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 import uuid
@@ -166,6 +167,139 @@ class HybridMemoryTests(unittest.TestCase):
                 )
             self.assertTrue(summary)
             self.assertTrue(any("session summary LLM call failed" in line for line in captured.output))
+
+
+class TestBeingIdSupport(unittest.TestCase):
+    """Tests for the being_id column in memory tables."""
+
+    def _store(self):
+        import tempfile
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "test.db"))
+        return HybridMemoryStore(db=db, memory_root=os.path.join(tmpdir, "notes")), db
+
+    def test_being_id_in_memory_candidate(self):
+        from bomba_sr.memory.consolidation import MemoryCandidate
+        mc = MemoryCandidate(user_id="u1", key="k1", content="c1", being_id="forge")
+        self.assertEqual(mc.being_id, "forge")
+
+    def test_being_id_default_none(self):
+        from bomba_sr.memory.consolidation import MemoryCandidate
+        mc = MemoryCandidate(user_id="u1", key="k1", content="c1")
+        self.assertIsNone(mc.being_id)
+
+    def test_learn_semantic_stores_being_id(self):
+        store, db = self._store()
+        store.learn_semantic(
+            tenant_id="t1", user_id="u1", memory_key="test",
+            content="test data", confidence=0.8, being_id="forge",
+        )
+        row = db.execute(
+            "SELECT being_id FROM memories WHERE memory_key = 'test' AND active = 1"
+        ).fetchone()
+        self.assertEqual(row["being_id"], "forge")
+
+    def test_learn_semantic_without_being_id(self):
+        store, db = self._store()
+        store.learn_semantic(
+            tenant_id="t1", user_id="u1", memory_key="test",
+            content="test data", confidence=0.8,
+        )
+        row = db.execute(
+            "SELECT being_id FROM memories WHERE memory_key = 'test' AND active = 1"
+        ).fetchone()
+        self.assertIsNone(row["being_id"])
+
+    def test_learn_procedural_stores_being_id(self):
+        store, db = self._store()
+        store.learn_procedural(
+            user_id="u1", strategy_key="strat1",
+            content="strategy data", success=True, being_id="scholar",
+        )
+        row = db.execute(
+            "SELECT being_id FROM procedural_memories WHERE strategy_key = 'strat1'"
+        ).fetchone()
+        self.assertEqual(row["being_id"], "scholar")
+
+    def test_append_working_note_stores_being_id(self):
+        store, db = self._store()
+        store.append_working_note(
+            user_id="u1", session_id="s1", title="note",
+            content="note content", being_id="forge",
+        )
+        row = db.execute("SELECT being_id FROM markdown_notes LIMIT 1").fetchone()
+        self.assertEqual(row["being_id"], "forge")
+
+    def test_recall_by_being_retrieves_tagged_memories(self):
+        store, _ = self._store()
+        store.learn_semantic(
+            tenant_id="t1", user_id="prime->forge", memory_key="forge_mem",
+            content="forge-specific knowledge about testing", confidence=0.9,
+            being_id="forge",
+        )
+        result = store.recall_by_being(being_id="forge", query="testing")
+        self.assertGreaterEqual(len(result["semantic"]), 1)
+
+    def test_recall_by_being_does_not_return_other_beings(self):
+        store, _ = self._store()
+        store.learn_semantic(
+            tenant_id="t1", user_id="u1", memory_key="scholar_mem",
+            content="scholar knowledge", confidence=0.9, being_id="scholar",
+        )
+        result = store.recall_by_being(being_id="forge", query="knowledge")
+        self.assertEqual(len(result["semantic"]), 0)
+
+    def test_recall_procedural_by_being(self):
+        store, _ = self._store()
+        store.learn_procedural(
+            user_id="u1", strategy_key="strat1",
+            content="chain: web_search,memory_store", success=True,
+            being_id="forge",
+        )
+        result = store.recall_procedural_by_being(being_id="forge", query="web_search")
+        self.assertGreaterEqual(len(result), 1)
+
+    def test_ensure_column_idempotent(self):
+        """Calling _ensure_column twice doesn't error."""
+        store, _ = self._store()
+        store._ensure_column("markdown_notes", "being_id", "TEXT")
+        store._ensure_column("markdown_notes", "being_id", "TEXT")
+
+    def test_backfill_being_id_from_prime_prefix(self):
+        """backfill_being_id sets being_id from 'prime->X' user_id patterns."""
+        store, db = self._store()
+        import uuid
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        db.execute(
+            """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
+               evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
+            VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
+            (str(uuid.uuid4()), "prime->forge", "backfill_test", "data", now, now, now),
+        )
+        db.commit()
+        updated = store.consolidator.backfill_being_id()
+        self.assertEqual(updated, 1)
+        row = db.execute(
+            "SELECT being_id FROM memories WHERE memory_key = 'backfill_test'"
+        ).fetchone()
+        self.assertEqual(row["being_id"], "forge")
+
+    def test_backfill_skips_non_matching_user_ids(self):
+        """backfill_being_id ignores user_ids without prime-> prefix."""
+        store, db = self._store()
+        import uuid
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        db.execute(
+            """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
+               evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
+            VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
+            (str(uuid.uuid4()), "regular-user", "no_backfill", "data", now, now, now),
+        )
+        db.commit()
+        updated = store.consolidator.backfill_being_id()
+        self.assertEqual(updated, 0)
 
 
 if __name__ == "__main__":

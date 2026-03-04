@@ -448,3 +448,84 @@ class TestE2EMemoryArchitecture:
         # Casual messages should NOT trigger
         assert not _REPRESENTATION_KEYWORDS.search("hello how are you")
         assert not _REPRESENTATION_KEYWORDS.search("write a report on AI")
+
+    # ── Unified Peer Identity (being_id) ──
+
+    def test_resolve_being_id_from_mc_chat_session(self):
+        """resolve_being_id extracts being_id from mc-chat-{being_id} pattern."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        assert resolve_being_id("mc-chat-forge") == "forge"
+        assert resolve_being_id("mc-chat-scholar") == "scholar"
+
+    def test_resolve_being_id_from_subtask_session(self):
+        """resolve_being_id extracts being_id from subtask:{task_id}:{being_id}."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        assert resolve_being_id("subtask:abc123:forge") == "forge"
+
+    def test_resolve_being_id_from_user_id_prefix(self):
+        """resolve_being_id falls back to prime->X user_id pattern."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        assert resolve_being_id("some-session", "prime->scholar") == "scholar"
+
+    def test_resolve_being_id_returns_none_for_unknown(self):
+        """resolve_being_id returns None for sessions without being patterns."""
+        from bomba_sr.memory.hybrid import resolve_being_id
+        assert resolve_being_id("sess-123") is None
+        assert resolve_being_id("sess-123", "user-local") is None
+
+    def test_being_id_stored_in_semantic_memory(self):
+        """learn_semantic with being_id stores it in the memories table."""
+        from bomba_sr.memory.hybrid import HybridMemoryStore
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            memory = HybridMemoryStore(db=db, memory_root=os.path.join(tmp, "notes"))
+            memory.learn_semantic(
+                tenant_id="t1", user_id="u1", memory_key="test_key",
+                content="test content", confidence=0.8, being_id="forge",
+            )
+            row = db.execute(
+                "SELECT being_id FROM memories WHERE memory_key = 'test_key' AND active = 1"
+            ).fetchone()
+            assert row is not None
+            assert row["being_id"] == "forge"
+
+    def test_being_id_recall_cross_context(self):
+        """recall_by_being retrieves memories tagged with being_id."""
+        from bomba_sr.memory.hybrid import HybridMemoryStore
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            memory = HybridMemoryStore(db=db, memory_root=os.path.join(tmp, "notes"))
+            # Write memory with user_id="prime->forge" and being_id="forge"
+            memory.learn_semantic(
+                tenant_id="t1", user_id="prime->forge", memory_key="forge_work",
+                content="Forge completed task analysis", confidence=0.9,
+                being_id="forge",
+            )
+            # Recall by being_id — should find it even though user_id differs
+            result = memory.recall_by_being(being_id="forge", query="task analysis")
+            assert len(result["semantic"]) >= 1
+            assert "task analysis" in result["semantic"][0]["content"]
+
+    def test_being_id_backfill(self):
+        """backfill_being_id populates being_id from prime->X user_id patterns."""
+        from bomba_sr.memory.consolidation import MemoryConsolidator
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            consolidator = MemoryConsolidator(db)
+            # Insert with old-style user_id but no being_id
+            import uuid
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat()
+            db.execute(
+                """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
+                   evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
+                VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
+                (str(uuid.uuid4()), "prime->forge", "old_mem", "old content", now, now, now),
+            )
+            db.commit()
+            updated = consolidator.backfill_being_id()
+            assert updated == 1
+            row = db.execute(
+                "SELECT being_id FROM memories WHERE memory_key = 'old_mem'"
+            ).fetchone()
+            assert row["being_id"] == "forge"

@@ -32,7 +32,7 @@ from bomba_sr.identity.soul import SoulConfig, load_soul_from_workspace
 from bomba_sr.info.retrieval import GenericInfoRetriever
 from bomba_sr.llm.providers import ChatMessage, LLMProvider, provider_from_env
 from bomba_sr.memory.embeddings import OpenAIEmbeddingProvider
-from bomba_sr.memory.hybrid import HybridMemoryStore
+from bomba_sr.memory.hybrid import HybridMemoryStore, resolve_being_id
 from bomba_sr.models.capabilities import CapabilityError, ModelCapabilityService
 from bomba_sr.plugins.registry import PluginRegistry
 from bomba_sr.projects.service import ProjectService
@@ -174,6 +174,7 @@ class RuntimeBridge:
         runtime = self._tenant_runtime(request.tenant_id, request.workspace_root)
         turn_id = request.turn_id or str(uuid.uuid4())
         model_id = request.model_id or self.config.default_model_id
+        _being_id_for_write = resolve_being_id(request.session_id, request.user_id)
 
         effective_user_message = request.user_message
         selected_skill_context = ""
@@ -542,22 +543,28 @@ class RuntimeBridge:
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
 
-        # Cross-namespace read: if this is a direct chat session (mc-chat-{being_id}),
-        # also recall memories from the orchestration namespace (prime->{being_id})
-        # so the being sees what it did during orchestrated tasks.
-        if request.session_id.startswith("mc-chat-"):
-            _being_id = request.session_id[len("mc-chat-"):]
-            if _being_id:
-                _orch_user_id = f"prime->{_being_id}"
-                try:
-                    _orch_recall = runtime.memory.recall(
-                        user_id=_orch_user_id, query=search_query, limit=4,
-                    )
-                    for item in _orch_recall:
-                        item["source"] = item.get("source", "memory://orchestration_work")
-                    recall.extend(_orch_recall)
-                except Exception:
-                    pass  # non-critical — don't fail the turn
+        # Unified peer identity: if we can resolve a being_id from the session,
+        # also recall memories tagged with that being_id (cross-context access).
+        # This replaces the old cross-namespace hack that used user_id prefixes.
+        _being_id = resolve_being_id(request.session_id, request.user_id)
+        if _being_id:
+            try:
+                _being_recall = runtime.memory.recall_by_being(
+                    being_id=_being_id, query=search_query, limit=4,
+                )
+                # Merge being-scoped semantic/markdown into recall, dedup by memory_id
+                _seen_ids = {m.get("memory_id") for m in recall.get("semantic", [])}
+                for item in _being_recall.get("semantic", []):
+                    if item.get("memory_id") not in _seen_ids:
+                        recall["semantic"].append(item)
+                        _seen_ids.add(item.get("memory_id"))
+                _seen_note_ids = {m.get("note_id") for m in recall.get("markdown", [])}
+                for item in _being_recall.get("markdown", []):
+                    if item.get("note_id") not in _seen_note_ids:
+                        recall["markdown"].append(item)
+                        _seen_note_ids.add(item.get("note_id"))
+            except Exception:
+                pass  # non-critical — don't fail the turn
 
         procedural_memories = runtime.memory.recall_procedural(user_id=request.user_id, query=search_query, limit=5)
         # Orchestration/subtask sessions get stripped replay (text only,
@@ -913,6 +920,7 @@ class RuntimeBridge:
                     strategy_key=strategy_key,
                     content=strategy_content,
                     success=strategy_success,
+                    being_id=_being_id_for_write,
                 )
                 procedural_learning = {
                     "memory_id": strategy_memory_id,
@@ -955,6 +963,7 @@ class RuntimeBridge:
             content=f"User: {effective_user_message}\n\nAssistant: {assistant_text}",
             tags=["chat", "runtime", "generic_info" if generic_mode else "project_mode"],
             confidence=1.0,
+            being_id=_being_id_for_write,
         )
         turn_number = runtime.memory.record_turn(
             tenant_id=request.tenant_id,
@@ -1006,6 +1015,7 @@ class RuntimeBridge:
                 confidence=confidence,
                 evidence_refs=[note["note_id"]],
                 reason=reason,
+                being_id=_being_id_for_write,
             )
 
         identity_update = runtime.identity.ingest_turn(

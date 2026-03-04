@@ -254,16 +254,16 @@ class DreamCycle:
         except Exception:
             return result
 
-        # Working notes (from markdown_notes table)
+        # Working notes (from markdown_notes table) — query both user_id and being_id
         try:
             rows = runtime.db.execute(
                 """
                 SELECT note_id, relative_path, title, tags, confidence, created_at
                 FROM markdown_notes
-                WHERE user_id = ?
+                WHERE user_id = ? OR being_id = ?
                 ORDER BY created_at DESC LIMIT ?
                 """,
-                (being_id, MAX_WORKING_NOTES),
+                (being_id, being_id, MAX_WORKING_NOTES),
             ).fetchall()
             notes = []
             for r in rows:
@@ -279,16 +279,16 @@ class DreamCycle:
             log.debug("Could not gather working notes for %s: %s", being_id, exc)
             result["working_notes"] = []
 
-        # Semantic memories
+        # Semantic memories — query both user_id and being_id
         try:
             rows = runtime.db.execute(
                 """
                 SELECT id, memory_key, content, recency_ts, version
                 FROM memories
-                WHERE user_id = ? AND active = 1 AND tier = 'semantic'
+                WHERE (user_id = ? OR being_id = ?) AND active = 1 AND tier = 'semantic'
                 ORDER BY updated_at DESC LIMIT ?
                 """,
-                (being_id, MAX_SEMANTIC_MEMORIES),
+                (being_id, being_id, MAX_SEMANTIC_MEMORIES),
             ).fetchall()
             result["semantic_memories"] = [
                 {
@@ -303,16 +303,16 @@ class DreamCycle:
             log.debug("Could not gather semantic memories for %s: %s", being_id, exc)
             result["semantic_memories"] = []
 
-        # Procedural memories
+        # Procedural memories — query both user_id and being_id
         try:
             rows = runtime.db.execute(
                 """
                 SELECT id, strategy_key, content, success_count, failure_count
                 FROM procedural_memories
-                WHERE user_id = ? AND active = 1
+                WHERE (user_id = ? OR being_id = ?) AND active = 1
                 ORDER BY updated_at DESC LIMIT ?
                 """,
-                (being_id, MAX_PROCEDURAL_MEMORIES),
+                (being_id, being_id, MAX_PROCEDURAL_MEMORIES),
             ).fetchall()
             result["procedural_memories"] = [
                 {
@@ -501,6 +501,7 @@ class DreamCycle:
                     memory_key=key,
                     content=f"[Dream cycle insight] {content}",
                     confidence=DERIVED_INSIGHT_CONFIDENCE,
+                    being_id=being_id,
                 )
                 stored.append(insight)
         except Exception as exc:
@@ -521,8 +522,8 @@ class DreamCycle:
 
         try:
             count_row = runtime.db.execute(
-                "SELECT COUNT(*) AS c FROM memories WHERE user_id = ? AND active = 1 AND tier = 'semantic'",
-                (being_id,),
+                "SELECT COUNT(*) AS c FROM memories WHERE (user_id = ? OR being_id = ?) AND active = 1 AND tier = 'semantic'",
+                (being_id, being_id),
             ).fetchone()
             total = int(count_row["c"]) if count_row else 0
 
@@ -536,11 +537,11 @@ class DreamCycle:
                 """
                 SELECT id, memory_key, content
                 FROM memories
-                WHERE user_id = ? AND active = 1 AND tier = 'semantic'
+                WHERE (user_id = ? OR being_id = ?) AND active = 1 AND tier = 'semantic'
                 ORDER BY recency_ts ASC, version ASC
                 LIMIT ?
                 """,
-                (being_id, excess),
+                (being_id, being_id, excess),
             ).fetchall()
 
             pruned = 0
@@ -616,6 +617,7 @@ class DreamCycle:
                         memory_key=insight_key,
                         content=f"[From {source_name}'s dream cycle] {content}",
                         confidence=CROSS_POLLINATE_CONFIDENCE,
+                        being_id=target_bid,
                     )
                     pollinated += 1
                     log.info(
@@ -712,10 +714,10 @@ class DreamCycle:
         row = runtime.db.execute(
             """
             SELECT id, content FROM memories
-            WHERE user_id = ? AND memory_key = ? AND active = 1
+            WHERE (user_id = ? OR being_id = ?) AND memory_key = ? AND active = 1
             ORDER BY version DESC LIMIT 1
             """,
-            (user_id, memory_key),
+            (user_id, user_id, memory_key),
         ).fetchone()
         if row is None:
             return False

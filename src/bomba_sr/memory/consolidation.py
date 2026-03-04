@@ -33,6 +33,7 @@ class MemoryCandidate:
     entities: tuple[str, ...] = ()
     evidence_refs: tuple[str, ...] = ()
     recency_ts: str | None = None
+    being_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,17 @@ class MemoryConsolidator:
             """
         )
         self.db.commit()
+        # Add being_id column to existing tables (migration)
+        self._ensure_column("memories", "being_id", "TEXT")
+        self._ensure_column("procedural_memories", "being_id", "TEXT")
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
+        existing = {str(row["name"]) for row in rows}
+        if column in existing:
+            return
+        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        self.db.commit()
 
     def upsert(self, candidate: MemoryCandidate) -> str:
         now = utc_now_iso()
@@ -121,8 +133,8 @@ class MemoryConsolidator:
                 """
                 INSERT INTO memories (
                   id, user_id, memory_key, tier, content, entities, evidence_refs,
-                  recency_ts, active, version, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
+                  recency_ts, active, version, created_at, updated_at, being_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -135,6 +147,7 @@ class MemoryConsolidator:
                     recency_ts,
                     now,
                     now,
+                    candidate.being_id,
                 ),
             )
             self.db.commit()
@@ -181,8 +194,8 @@ class MemoryConsolidator:
             """
             INSERT INTO memories (
               id, user_id, memory_key, tier, content, entities, evidence_refs,
-              recency_ts, active, version, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+              recency_ts, active, version, created_at, updated_at, being_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
             """,
             (
                 new_id,
@@ -196,6 +209,7 @@ class MemoryConsolidator:
                 version + 1,
                 now,
                 now,
+                candidate.being_id,
             ),
         )
         self.db.commit()
@@ -249,7 +263,14 @@ class MemoryConsolidator:
         ).fetchone()
         return int(row["c"]) if row is not None else 0
 
-    def learn_procedural(self, user_id: str, strategy_key: str, content: str, success: bool) -> str:
+    def learn_procedural(
+        self,
+        user_id: str,
+        strategy_key: str,
+        content: str,
+        success: bool,
+        being_id: str | None = None,
+    ) -> str:
         normalized_key = strategy_key.strip()
         normalized_content = content.strip()
         if not normalized_key:
@@ -273,8 +294,9 @@ class MemoryConsolidator:
             self.db.execute(
                 """
                 INSERT INTO procedural_memories (
-                  id, user_id, strategy_key, content, success_count, failure_count, active, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+                  id, user_id, strategy_key, content, success_count, failure_count,
+                  active, created_at, updated_at, being_id
+                ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -285,6 +307,7 @@ class MemoryConsolidator:
                     0 if success else 1,
                     now,
                     now,
+                    being_id,
                 ),
             )
             self.db.commit()
@@ -345,6 +368,108 @@ class MemoryConsolidator:
             )
         scored.sort(key=lambda item: item["score"], reverse=True)
         return scored[: max(1, int(limit))]
+
+    def retrieve_by_being(
+        self,
+        being_id: str,
+        query: str,
+        limit: int = 10,
+        recency_half_life_days: float = 14.0,
+        recency_weight: float = 0.15,
+    ) -> list[RetrievedMemory]:
+        """Retrieve semantic memories scoped by being_id (cross-context)."""
+        rows = self.db.execute(
+            "SELECT * FROM memories WHERE being_id = ? AND active = 1 AND tier = 'semantic'",
+            (being_id,),
+        ).fetchall()
+
+        scored: list[RetrievedMemory] = []
+        for row in rows:
+            content = str(row["content"])
+            if self._is_meta_noise(content):
+                continue
+            lexical = self._lexical_score(query, content)
+            recency_boost = self._recency_boost(
+                recency_ts=str(row["recency_ts"]),
+                half_life_days=recency_half_life_days,
+                weight=recency_weight,
+            )
+            score = lexical + recency_boost
+            scored.append(
+                RetrievedMemory(
+                    memory_id=str(row["id"]),
+                    key=str(row["memory_key"]),
+                    content=content,
+                    score=score,
+                    recency_boost=recency_boost,
+                    lexical_score=lexical,
+                    recency_ts=str(row["recency_ts"]),
+                )
+            )
+        scored.sort(key=lambda x: x.score, reverse=True)
+        return scored[:limit]
+
+    def recall_procedural_by_being(self, being_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        """Recall procedural memories scoped by being_id."""
+        rows = self.db.execute(
+            """
+            SELECT *
+            FROM procedural_memories
+            WHERE being_id = ? AND active = 1
+            ORDER BY updated_at DESC
+            LIMIT 200
+            """,
+            (being_id,),
+        ).fetchall()
+        scored: list[dict[str, Any]] = []
+        for row in rows:
+            content = str(row["content"])
+            lexical = self._lexical_score(query, content)
+            success_count = int(row["success_count"])
+            failure_count = int(row["failure_count"])
+            total = success_count + failure_count
+            success_ratio = (success_count + 1) / (total + 2)
+            score = lexical * success_ratio
+            scored.append(
+                {
+                    "id": str(row["id"]),
+                    "strategy_key": str(row["strategy_key"]),
+                    "content": content,
+                    "success_count": success_count,
+                    "failure_count": failure_count,
+                    "success_ratio": success_ratio,
+                    "lexical_score": lexical,
+                    "score": score,
+                    "updated_at": str(row["updated_at"]),
+                }
+            )
+        scored.sort(key=lambda item: item["score"], reverse=True)
+        return scored[: max(1, int(limit))]
+
+    def backfill_being_id(self) -> int:
+        """Backfill being_id from user_id patterns like 'prime->forge'."""
+        import re as _re
+        pattern = _re.compile(r"^prime->(.+)$")
+        updated = 0
+
+        for table in ("memories", "procedural_memories"):
+            rows = self.db.execute(
+                f"SELECT id, user_id FROM {table} WHERE being_id IS NULL"
+            ).fetchall()
+            for row in rows:
+                uid = str(row["user_id"])
+                m = pattern.match(uid)
+                if m:
+                    bid = m.group(1)
+                    self.db.execute(
+                        f"UPDATE {table} SET being_id = ? WHERE id = ?",
+                        (bid, str(row["id"])),
+                    )
+                    updated += 1
+
+        if updated:
+            self.db.commit()
+        return updated
 
     @staticmethod
     def _is_meta_noise(text: str) -> bool:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bomba_sr.memory.hybrid import HybridMemoryStore
+from bomba_sr.memory.hybrid import HybridMemoryStore, resolve_being_id
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
@@ -36,6 +36,7 @@ def _memory_store_factory(memory: HybridMemoryStore):
             raise ValueError("key and content are required")
         confidence = float(arguments.get("confidence") or 0.5)
         reason = str(arguments.get("reason") or "memory_store_tool")
+        _being_id = resolve_being_id(context.session_id, context.user_id)
         decision = memory.learn_semantic(
             tenant_id=context.tenant_id,
             user_id=context.user_id,
@@ -44,6 +45,7 @@ def _memory_store_factory(memory: HybridMemoryStore):
             confidence=confidence,
             evidence_refs=[],
             reason=reason,
+            being_id=_being_id,
         )
         return {
             "update_id": decision.update_id,
