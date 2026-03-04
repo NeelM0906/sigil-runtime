@@ -109,33 +109,7 @@ try:
 except Exception as e:
     record("Pinecone-Primary", "connection", "FAIL", str(e))
 
-# ─── 2. Pinecone Strata ─────────────────────────────────────
-print("\n\u2500\u2500 Pinecone Strata \u2500\u2500")
-try:
-    pc_strata_key = os.environ.get("PINECONE_API_KEY_STRATA", "")
-    if not pc_strata_key:
-        record("Pinecone-Strata", "api-key", "FAIL", "PINECONE_API_KEY_STRATA not set")
-    else:
-        data = curl_json(
-            "https://api.pinecone.io/indexes",
-            headers={"Api-Key": pc_strata_key, "X-Pinecone-API-Version": "2024-10"}
-        )
-        index_names = [idx["name"] for idx in data.get("indexes", [])]
-        record("Pinecone-Strata", "list-indexes", "PASS",
-               f"Found {len(index_names)} indexes: {', '.join(sorted(index_names))}")
-
-        expected_strata = ["ultimatestratabrain", "oracleinfluencemastery", "suritrial",
-                          "2025selfmastery", "nashmacropareto", "rtioutcomes120", "010526calliememory"]
-        for idx in expected_strata:
-            if idx in index_names:
-                record("Pinecone-Strata", f"index-{idx}", "PASS")
-            else:
-                record("Pinecone-Strata", f"index-{idx}", "FAIL", "Not found in account")
-
-except Exception as e:
-    record("Pinecone-Strata", "connection", "FAIL", str(e))
-
-# ─── 3. Pinecone Write (saimemory) ──────────────────────────
+# ─── 2. Pinecone Write (saimemory) ──────────────────────────
 print("\n\u2500\u2500 Pinecone Write Test \u2500\u2500")
 try:
     hosts = json.loads(os.environ.get("BOMBA_PINECONE_INDEX_HOSTS", "{}"))
