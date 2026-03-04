@@ -73,7 +73,12 @@ class ArtifactStore:
         self.db = db
         self.artifacts_root = Path(artifacts_root).resolve()
         self.artifacts_root.mkdir(parents=True, exist_ok=True)
+        self._on_created: Any = None
         self._ensure_schema()
+
+    def set_on_created(self, callback: Any) -> None:
+        """Set callback invoked after each artifact is created. Receives ArtifactRecord."""
+        self._on_created = callback
 
     def _ensure_schema(self) -> None:
         self.db.script(
@@ -243,13 +248,19 @@ class ArtifactStore:
             ),
         )
         self.db.commit()
-        return ArtifactRecord(
+        record = ArtifactRecord(
             artifact_id=artifact_id, tenant_id=tenant_id, session_id=session_id,
             turn_id=turn_id, project_id=project_id, task_id=task_id,
             artifact_type=artifact_type, title=title, path=path, preview=preview,
             mime_type=mime_type, created_at=created_at, file_size=file_size,
             created_by=created_by, skill_id=skill_id,
         )
+        if self._on_created is not None:
+            try:
+                self._on_created(record)
+            except Exception:
+                pass
+        return record
 
     # ------------------------------------------------------------------
     # Query

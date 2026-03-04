@@ -100,6 +100,7 @@ class AgenticLoop:
         resolved_policy: ResolvedPolicy,
         model_id: str,
         tool_format: str = "openai",
+        on_iteration: Any = None,
     ) -> LoopResult:
         state = LoopState(
             messages=list(initial_messages),
@@ -156,6 +157,12 @@ class AgenticLoop:
                 resolved_policy=resolved_policy,
             )
             state.tool_calls_history.extend(results)
+
+            if on_iteration is not None:
+                try:
+                    on_iteration(state.iteration, state)
+                except Exception:
+                    pass
 
             state.messages.extend(self._assistant_and_tool_messages(response, tool_calls, results))
 

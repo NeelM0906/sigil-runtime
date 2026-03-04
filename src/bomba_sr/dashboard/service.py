@@ -155,6 +155,7 @@ class DashboardService:
         self.bridge = bridge
         self.sisters = sisters
         self.project_service: Any | None = None
+        self.orchestration_engine: Any | None = None
         self._sse_clients: dict[str, queue.Queue] = {}
         self._sse_lock = threading.Lock()
         self._ensure_schema()
@@ -683,6 +684,16 @@ class DashboardService:
         classification = self._classify_message(content)
         log.debug("Message classified as %s: %.80s", classification, content)
 
+        # ── Orchestration intercept: full_task to Prime triggers multi-being orchestration ──
+        if (
+            classification == "full_task"
+            and being_id == "prime"
+            and self.orchestration_engine is not None
+            and self.project_service is not None
+        ):
+            self._handle_orchestrated_task(being_id, being, content, sender, session_id)
+            return
+
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
             task_id = self._auto_create_task(being_id, being, content)
@@ -708,6 +719,17 @@ class DashboardService:
         if task_id:
             self._auto_update_task_status(task_id, "in_progress")
 
+        # Build step-advancing callback for real-time progress
+        all_steps = self.get_task_steps(task_id) if task_id and classification == "full_task" else []
+        step_cursor = [0]
+        num_steps = len(all_steps)
+
+        def _on_loop_iteration(iteration, loop_state):
+            if num_steps == 0 or step_cursor[0] >= num_steps - 1:
+                return
+            self.advance_task_step(task_id)
+            step_cursor[0] += 1
+
         error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
@@ -717,6 +739,9 @@ class DashboardService:
                 user_id=sender,
                 user_message=content,
                 workspace_root=workspace,
+                task_id=task_id,
+                project_id=MC_PROJECT_ID,
+                on_iteration=_on_loop_iteration if all_steps else None,
             )
             result = self.bridge.handle_turn(req)
             # handle_turn returns {"assistant": {"text": "..."}, ...}
@@ -758,6 +783,79 @@ class DashboardService:
             msg_type="direct",
             task_ref=task_id,
         )
+
+    def init_orchestration(self, project_svc: Any) -> None:
+        """Initialize the orchestration engine. Call after bridge + project_svc are set."""
+        if self.bridge is None:
+            return
+        from bomba_sr.orchestration.engine import OrchestrationEngine
+        self.orchestration_engine = OrchestrationEngine(
+            bridge=self.bridge,
+            dashboard_svc=self,
+            project_svc=project_svc,
+        )
+        log.info("Orchestration engine initialized")
+
+    def _handle_orchestrated_task(
+        self,
+        being_id: str,
+        being: dict,
+        content: str,
+        sender: str,
+        session_id: str,
+    ) -> None:
+        """Route a full_task to Prime's orchestration engine instead of direct LLM."""
+        # Acknowledge in chat immediately
+        self.create_message(
+            sender="prime",
+            content=(
+                f"I'll orchestrate this across the team. "
+                f"Planning sub-tasks now — you can track progress on the task board."
+            ),
+            targets=[sender],
+            msg_type="direct",
+        )
+
+        # Update Prime status
+        self.update_being("prime", {"status": "busy"})
+        self._emit_event("being_status", {
+            "being_id": "prime",
+            "status": "orchestrating",
+            "task_preview": content[:80],
+        })
+
+        try:
+            result = self.orchestration_engine.start(
+                goal=content,
+                requester_session_id=session_id,
+                sender=sender,
+            )
+            log.info(
+                "Orchestration started: task=%s status=%s",
+                result.get("task_id", "?")[:8],
+                result.get("status"),
+            )
+        except Exception as exc:
+            log.exception("Failed to start orchestration")
+            self.create_message(
+                sender="prime",
+                content=f"[Orchestration failed to start: {exc}]",
+                targets=[sender],
+                msg_type="direct",
+            )
+            self.update_being("prime", {"status": "online"})
+
+    def get_orchestration_status(self, task_id: str) -> dict[str, Any] | None:
+        """Get the current orchestration status for a task."""
+        if self.orchestration_engine is None:
+            return None
+        return self.orchestration_engine.get_status(task_id)
+
+    def get_orchestration_log(self, task_id: str) -> list[dict[str, Any]]:
+        """Get the orchestration log (conversation turns) for a task."""
+        if self.orchestration_engine is None:
+            return []
+        return self.orchestration_engine.get_orchestration_log(task_id)
 
     def _auto_create_task(self, being_id: str, being: dict, content: str) -> str | None:
         """Auto-create a task on the board when a being receives a message."""
@@ -956,6 +1054,13 @@ class DashboardService:
             return rec.to_dict() if rec else None
         except Exception:
             return None
+
+    def notify_artifact_created(self, record) -> None:
+        """SSE notification when an artifact is created during task execution."""
+        d = record.to_dict() if hasattr(record, "to_dict") else record
+        task_id = d.get("task_id")
+        if task_id:
+            self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
 
     def get_being_skill_list(self, being_id: str) -> list[dict]:
         """Return skills available to a being with metadata."""
@@ -1211,6 +1316,69 @@ class DashboardService:
             "INSERT INTO mc_task_history (id,task_id,action,details,timestamp) VALUES (?,?,?,?,?)",
             (str(uuid.uuid4()), task_id, action, json.dumps(details), self._now()),
         )
+
+    # ------------------------------------------------------------------
+    # Orchestration — parent/child task views
+    # ------------------------------------------------------------------
+
+    def get_task_children(self, task_id: str) -> list[str]:
+        """Return child task IDs created during orchestration of this task."""
+        rows = self.db.execute(
+            """SELECT details FROM mc_task_history
+               WHERE task_id = ? AND action = 'subtask_created'
+               ORDER BY timestamp ASC""",
+            (task_id,),
+        ).fetchall()
+        children = []
+        for r in rows:
+            try:
+                d = json.loads(r["details"]) if isinstance(r["details"], str) else r["details"]
+                child_id = d.get("child_task_id")
+                if child_id:
+                    children.append(child_id)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return children
+
+    def get_task_parent(self, task_id: str) -> str | None:
+        """Return the parent task ID if this task was delegated."""
+        row = self.db.execute(
+            """SELECT details FROM mc_task_history
+               WHERE task_id = ? AND action = 'delegated_from'
+               LIMIT 1""",
+            (task_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            d = json.loads(row["details"]) if isinstance(row["details"], str) else row["details"]
+            return d.get("parent_task_id")
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def get_task_with_orchestration(
+        self,
+        project_service: Any,
+        task_id: str,
+    ) -> dict:
+        """Get a task enriched with orchestration data (children, parent, orch log)."""
+        task = self.get_task(project_service, task_id)
+        # Add parent/child info
+        task["parent_task_id"] = self.get_task_parent(task_id)
+        child_ids = self.get_task_children(task_id)
+        task["children"] = []
+        for cid in child_ids:
+            try:
+                child = self.get_task(project_service, cid)
+                task["children"].append(child)
+            except Exception:
+                task["children"].append({"id": cid, "status": "unknown"})
+        # Add orchestration log if this is an orchestrated task
+        task["orchestration_log"] = self.get_orchestration_log(task_id)
+        # Add orchestration status if active
+        orch_status = self.get_orchestration_status(task_id)
+        task["orchestration_status"] = orch_status
+        return task
 
     # ------------------------------------------------------------------
     # Sub-agents

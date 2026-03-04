@@ -1313,10 +1313,41 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     deleted = dashboard_svc.clean_casual_tasks(project_svc)
                     self._write_cors(200, {"deleted": deleted})
                     return
+                if path.startswith("/api/mc/tasks/") and path.endswith("/orchestration"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    task = dashboard_svc.get_task_with_orchestration(project_svc, tid)
+                    self._write_cors(200, {"task": task})
+                    return
+                if path.startswith("/api/mc/tasks/") and path.endswith("/children"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    child_ids = dashboard_svc.get_task_children(tid)
+                    children = []
+                    for cid in child_ids:
+                        try:
+                            children.append(dashboard_svc.get_task(project_svc, cid))
+                        except Exception:
+                            children.append({"id": cid, "status": "unknown"})
+                    self._write_cors(200, {"children": children, "parent_task_id": tid})
+                    return
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
                     task = dashboard_svc.get_task(project_svc, tid)
                     self._write_cors(200, {"task": task})
+                    return
+
+                # --- Orchestration ---
+                if path.startswith("/api/mc/orchestration/") and path.endswith("/status"):
+                    oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    status = dashboard_svc.get_orchestration_status(oid)
+                    if status is None:
+                        self._write_cors(404, {"error": "orchestration not found"})
+                        return
+                    self._write_cors(200, {"orchestration": status})
+                    return
+                if path.startswith("/api/mc/orchestration/") and path.endswith("/log"):
+                    oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    log_entries = dashboard_svc.get_orchestration_log(oid)
+                    self._write_cors(200, {"log": log_entries})
                     return
 
                 # --- Chat ---
@@ -1338,6 +1369,38 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     return
 
                 # --- Artifacts ---
+                if path.startswith("/api/mc/artifacts/") and path.endswith("/preview"):
+                    aid = path.split("/api/mc/artifacts/", 1)[1].split("/")[0]
+                    rec = dashboard_svc.get_artifact(aid)
+                    if not rec:
+                        self._write_cors(404, {"error": "artifact not found"})
+                        return
+                    fpath = Path(rec["path"])
+                    if not fpath.is_file():
+                        self._write_cors(404, {"error": "artifact file missing"})
+                        return
+                    from bomba_sr.artifacts.store import get_artifact_type_info
+                    _, _, is_binary = get_artifact_type_info(rec.get("artifact_type", ""))
+                    if is_binary:
+                        self._write_cors(200, {
+                            "type": "binary",
+                            "download_url": f"/api/mc/artifacts/{aid}/download",
+                            "mime_type": rec.get("mime_type", "application/octet-stream"),
+                            "artifact": rec,
+                        })
+                    else:
+                        try:
+                            text = fpath.read_text(encoding="utf-8", errors="replace")[:50000]
+                        except Exception:
+                            text = ""
+                        self._write_cors(200, {
+                            "type": "text",
+                            "content": text,
+                            "mime_type": rec.get("mime_type", "text/plain"),
+                            "artifact": rec,
+                        })
+                    return
+
                 if path.startswith("/api/mc/artifacts/") and path.endswith("/download"):
                     aid = path.split("/api/mc/artifacts/", 1)[1].split("/")[0]
                     rec = dashboard_svc.get_artifact(aid)
@@ -1396,6 +1459,19 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         owner_agent_id=body.get("owner_agent_id"),
                     )
                     self._write_cors(201, {"task": task})
+                    return
+
+                # --- Orchestration ---
+                if path == "/api/mc/orchestration":
+                    if not dashboard_svc.orchestration_engine:
+                        self._write_cors(503, {"error": "orchestration engine not initialized"})
+                        return
+                    result = dashboard_svc.orchestration_engine.start(
+                        goal=body["goal"],
+                        requester_session_id=body.get("session_id", "mc-chat-prime"),
+                        sender=body.get("sender", "user"),
+                    )
+                    self._write_cors(201, {"orchestration": result})
                     return
 
                 # --- Chat ---
@@ -1583,9 +1659,11 @@ def main() -> int:
         artifacts_root = runtime_home / "artifacts"
         artifact_store = ArtifactStore(mc_db, artifacts_root)
         dashboard_svc.set_artifact_store(artifact_store)
+        artifact_store.set_on_created(dashboard_svc.notify_artifact_created)
         loaded = dashboard_svc.load_beings_from_configs()
+        dashboard_svc.init_orchestration(project_svc)
         print(f"mission control: loaded {loaded} beings from configs")
-        print("mission control: dashboard service ready")
+        print("mission control: dashboard service ready (orchestration enabled)")
     except Exception as exc:
         print(f"mission control: init failed ({exc}), MC endpoints disabled")
 

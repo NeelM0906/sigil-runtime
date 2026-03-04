@@ -87,6 +87,7 @@ class TurnRequest:
     project_id: str | None = None
     task_id: str | None = None
     max_loop_iterations: int | None = None
+    on_iteration: Any = None
 
 
 @dataclass
@@ -746,6 +747,7 @@ class RuntimeBridge:
                 resolved_policy=resolved_policy,
                 model_id=model_id,
                 tool_format=tool_format,
+                on_iteration=request.on_iteration,
             )
             assistant_text = loop_result.final_text
             assistant_usage = {

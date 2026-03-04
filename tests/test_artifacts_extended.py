@@ -253,3 +253,60 @@ class TestBeingSkillMapping:
         skills = get_being_skills("unknown-being")
         assert "pdf-generator" in skills
         assert "screenshot" not in skills
+
+
+# ── Artifact callback ─────────────────────────────────────────
+
+class TestArtifactCallback:
+    def test_on_created_fires_for_text(self, store):
+        captured = []
+        store.set_on_created(lambda rec: captured.append(rec))
+        store.create_text_artifact(
+            "t1", "s1", "turn1", None, "task-cb",
+            "markdown", "CB Test", "content",
+        )
+        assert len(captured) == 1
+        assert captured[0].task_id == "task-cb"
+        assert captured[0].title == "CB Test"
+
+    def test_on_created_fires_for_binary(self, store):
+        captured = []
+        store.set_on_created(lambda rec: captured.append(rec))
+        store.create_binary_artifact(
+            "t1", "s1", "turn1", None, "task-cb2",
+            "pdf", "PDF CB", b"%PDF-test",
+        )
+        assert len(captured) == 1
+        assert captured[0].artifact_type == "pdf"
+
+    def test_callback_error_doesnt_break(self, store):
+        def bad_cb(rec):
+            raise RuntimeError("boom")
+        store.set_on_created(bad_cb)
+        # Should not raise
+        rec = store.create_text_artifact(
+            "t1", "s1", "turn1", None, None,
+            "code", "Safe", "print(1)",
+        )
+        assert rec.title == "Safe"
+
+
+# ── Loop on_iteration callback ────────────────────────────────
+
+class TestLoopOnIteration:
+    def test_run_accepts_on_iteration(self):
+        """Verify AgenticLoop.run() accepts the on_iteration parameter."""
+        import inspect
+        from bomba_sr.runtime.loop import AgenticLoop
+        sig = inspect.signature(AgenticLoop.run)
+        assert "on_iteration" in sig.parameters
+
+    def test_turn_request_has_on_iteration(self):
+        """Verify TurnRequest accepts the on_iteration field."""
+        from bomba_sr.runtime.bridge import TurnRequest
+        cb = lambda it, st: None
+        req = TurnRequest(
+            tenant_id="t", session_id="s", user_id="u",
+            user_message="test", on_iteration=cb,
+        )
+        assert req.on_iteration is cb

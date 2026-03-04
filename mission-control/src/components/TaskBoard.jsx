@@ -255,7 +255,7 @@ function TaskModal({ task, onSave, onClose, beings }) {
 
 // ── Task Detail Slide-out ────────────────────────────────────
 
-function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, onBeingClick }) {
+function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, onBeingClick, onPreview }) {
   const config = STATUS_CONFIG[task.status]
   const prio = PRIORITY_CONFIG[task.priority]
 
@@ -355,7 +355,7 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
           <StepChecklist steps={task.steps} />
 
           {/* Artifacts */}
-          <ArtifactList artifacts={task.artifacts} getBeingById={getBeingById} />
+          <ArtifactList artifacts={task.artifacts} getBeingById={getBeingById} onPreview={onPreview} />
 
           {/* Activity History */}
           <div>
@@ -411,11 +411,12 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
 
 // ── Step Progress Bar (compact, for card) ────────────────────
 
-function StepProgress({ steps }) {
+function StepProgress({ steps, created }) {
   if (!steps || steps.length === 0) return null
   const done = steps.filter(s => s.status === 'done').length
   const total = steps.length
   const pct = Math.round((done / total) * 100)
+  const activeStep = steps.find(s => s.status === 'in_progress')
   return (
     <div className="mt-1.5 mb-1">
       <div className="flex items-center justify-between mb-0.5">
@@ -428,6 +429,15 @@ function StepProgress({ steps }) {
           style={{ width: `${pct}%` }}
         />
       </div>
+      {activeStep && (
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse shrink-0" />
+          <span className="text-[9px] text-accent-blue truncate">{activeStep.label}</span>
+        </div>
+      )}
+      {created && done < total && (
+        <div className="text-[8px] text-text-muted mt-0.5">{timeAgo(created)}</div>
+      )}
     </div>
   )
 }
@@ -519,9 +529,79 @@ function ArtifactBadge({ artifacts }) {
   )
 }
 
+// ── Artifact Preview Modal ───────────────────────────────────
+
+const PREVIEWABLE_TYPES = new Set(['markdown', 'code', 'json', 'csv', 'html', 'svg', 'image'])
+
+function ArtifactPreview({ artifact, onClose }) {
+  const [content, setContent] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!artifact) return
+    fetch(`/api/mc/artifacts/${artifact.artifact_id}/preview`)
+      .then(r => r.json())
+      .then(data => { setContent(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [artifact])
+
+  if (!artifact) return null
+  const cfg = ARTIFACT_ICONS[artifact.artifact_type] || ARTIFACT_ICONS.code
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="bg-bg-secondary border border-border rounded-lg w-[90vw] max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color}`}>{cfg.icon}</span>
+            <span className="text-sm font-medium">{artifact.title}</span>
+            <span className="text-[10px] text-text-muted">{formatFileSize(artifact.file_size)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/mc/artifacts/${artifact.artifact_id}/download`}
+              className="text-[10px] px-2 py-1 bg-accent-blue/20 text-accent-blue rounded hover:bg-accent-blue/30 transition-colors"
+              download
+            >
+              Download
+            </a>
+            <button onClick={onClose} className="text-text-muted hover:text-text-primary transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4">
+          {loading ? (
+            <div className="text-xs text-text-muted text-center py-8">Loading preview...</div>
+          ) : content?.type === 'text' ? (
+            <pre className="text-xs text-text-secondary font-mono whitespace-pre-wrap break-words leading-relaxed">{content.content}</pre>
+          ) : content?.type === 'binary' && (artifact.artifact_type === 'image' || artifact.artifact_type === 'svg') ? (
+            <div className="flex items-center justify-center">
+              <img src={`/api/mc/artifacts/${artifact.artifact_id}/download`} alt={artifact.title} className="max-w-full max-h-[60vh] object-contain rounded" />
+            </div>
+          ) : (
+            <div className="text-xs text-text-muted text-center py-8">
+              Preview not available for this file type.
+              <a href={`/api/mc/artifacts/${artifact.artifact_id}/download`} className="text-accent-blue ml-1 hover:underline" download>Download instead</a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Artifact List (detailed, for detail panel) ──────────────
 
-function ArtifactList({ artifacts, getBeingById }) {
+function ArtifactList({ artifacts, getBeingById, onPreview }) {
   if (!artifacts || artifacts.length === 0) return null
   return (
     <div className="mb-4">
@@ -534,8 +614,13 @@ function ArtifactList({ artifacts, getBeingById }) {
           const cfg = ARTIFACT_ICONS[a.artifact_type] || ARTIFACT_ICONS.code
           const being = a.created_by ? getBeingById(a.created_by) : null
           const filename = a.path ? a.path.split('/').pop() : a.title
+          const canPreview = PREVIEWABLE_TYPES.has(a.artifact_type)
           return (
-            <div key={a.artifact_id} className="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-card border border-border group">
+            <div
+              key={a.artifact_id}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded bg-bg-card border border-border group ${canPreview ? 'cursor-pointer hover:border-accent-blue/40' : ''}`}
+              onClick={() => canPreview && onPreview?.(a)}
+            >
               <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color} shrink-0`}>
                 {cfg.icon}
               </span>
@@ -598,7 +683,7 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
       <h3 className="text-sm font-medium mb-1 leading-snug group-hover:text-accent-blue transition-colors">{task.title}</h3>
       <p className="text-xs text-text-secondary mb-1 line-clamp-2 leading-relaxed">{task.description}</p>
 
-      <StepProgress steps={task.steps} />
+      <StepProgress steps={task.steps} created={task.created} />
       <ArtifactBadge artifacts={task.artifacts} />
 
       <div className="flex items-center gap-1">
@@ -668,6 +753,7 @@ export function TaskBoard({ fullWidth = false }) {
   const [showModal, setShowModal] = useState(false) // false | 'create' | task object for edit
   const [detailTask, setDetailTask] = useState(null)
   const [detailHistory, setDetailHistory] = useState([])
+  const [previewArtifact, setPreviewArtifact] = useState(null)
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
@@ -740,6 +826,24 @@ export function TaskBoard({ fullWidth = false }) {
             return { ...prev, steps: prev.steps.map(s => s.id === step.id ? step : s) }
           }
           return prev
+        })
+      }
+    },
+    artifact_created(evt) {
+      const { task_id, artifact } = evt
+      if (!task_id || !artifact) return
+      setTasks(prev => prev.map(t => {
+        if (t.id !== task_id) return t
+        const arts = t.artifacts || []
+        if (arts.some(a => a.artifact_id === artifact.artifact_id)) return t
+        return { ...t, artifacts: [...arts, artifact] }
+      }))
+      if (detailTask?.id === task_id) {
+        setDetailTask(prev => {
+          if (!prev || prev.id !== task_id) return prev
+          const arts = prev.artifacts || []
+          if (arts.some(a => a.artifact_id === artifact.artifact_id)) return prev
+          return { ...prev, artifacts: [...arts, artifact] }
         })
       }
     },
@@ -896,7 +1000,13 @@ export function TaskBoard({ fullWidth = false }) {
           onDelete={handleDelete}
           getBeingById={getBeingById}
           onBeingClick={openBeingDetail}
+          onPreview={setPreviewArtifact}
         />
+      )}
+
+      {/* Artifact Preview Modal */}
+      {previewArtifact && (
+        <ArtifactPreview artifact={previewArtifact} onClose={() => setPreviewArtifact(null)} />
       )}
     </div>
   )
