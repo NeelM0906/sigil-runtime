@@ -42,6 +42,7 @@ class ProjectService:
               status TEXT NOT NULL,
               priority TEXT NOT NULL,
               owner_agent_id TEXT,
+              parent_task_id TEXT DEFAULT NULL,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL,
               UNIQUE(tenant_id, task_id)
@@ -52,9 +53,21 @@ class ProjectService:
 
             CREATE INDEX IF NOT EXISTS idx_project_tasks_project
               ON project_tasks(project_id, updated_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_project_tasks_parent
+              ON project_tasks(parent_task_id);
             """
         )
         self.db.commit()
+        # Migrate existing databases: add parent_task_id column if missing.
+        try:
+            self.db.execute("SELECT parent_task_id FROM project_tasks LIMIT 0")
+        except Exception:
+            try:
+                self.db.execute("ALTER TABLE project_tasks ADD COLUMN parent_task_id TEXT DEFAULT NULL")
+                self.db.commit()
+            except Exception:
+                pass
 
     def create_project(
         self,
@@ -127,6 +140,7 @@ class ProjectService:
         status: str = "todo",
         priority: str = "normal",
         owner_agent_id: str | None = None,
+        parent_task_id: str | None = None,
     ) -> dict:
         if status not in TASK_STATUSES:
             raise ValueError("invalid task status")
@@ -141,8 +155,9 @@ class ProjectService:
             """
             INSERT INTO project_tasks (
               id, tenant_id, task_id, project_id, title, description,
-              status, priority, owner_agent_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              status, priority, owner_agent_id, parent_task_id,
+              created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(uuid.uuid4()),
@@ -154,6 +169,7 @@ class ProjectService:
                 status,
                 priority,
                 owner_agent_id,
+                parent_task_id,
                 now,
                 now,
             ),
@@ -170,7 +186,13 @@ class ProjectService:
             raise ValueError(f"task not found: {task_id}")
         return self._task_row(row)
 
-    def list_tasks(self, tenant_id: str, project_id: str | None = None, status: str | None = None) -> list[dict]:
+    def list_tasks(
+        self,
+        tenant_id: str,
+        project_id: str | None = None,
+        status: str | None = None,
+        top_level_only: bool = False,
+    ) -> list[dict]:
         sql = "SELECT * FROM project_tasks WHERE tenant_id = ?"
         params: list = [tenant_id]
         if project_id is not None:
@@ -179,6 +201,8 @@ class ProjectService:
         if status is not None:
             sql += " AND status = ?"
             params.append(status)
+        if top_level_only:
+            sql += " AND parent_task_id IS NULL"
         sql += " ORDER BY updated_at DESC"
         rows = self.db.execute(sql, tuple(params)).fetchall()
         return [self._task_row(row) for row in rows]
@@ -236,6 +260,7 @@ class ProjectService:
             "status": str(row["status"]),
             "priority": str(row["priority"]),
             "owner_agent_id": str(row["owner_agent_id"]) if row["owner_agent_id"] is not None else None,
+            "parent_task_id": str(row["parent_task_id"]) if row["parent_task_id"] is not None else None,
             "created_at": str(row["created_at"]),
             "updated_at": str(row["updated_at"]),
         }

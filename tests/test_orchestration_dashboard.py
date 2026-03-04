@@ -55,22 +55,15 @@ class TestParentChildTasks:
         )
         parent_id = parent["id"]
 
-        # Create child task
+        # Create child task with parent_task_id
         child = dashboard.create_task(
             project_svc, title="Child task", status="in_progress",
             assignees=["forge"],
+            parent_task_id=parent_id,
         )
         child_id = child["id"]
 
-        # Simulate orchestration logging
-        dashboard._log_task_history(parent_id, "subtask_created", {
-            "child_task_id": child_id, "being_id": "forge", "title": "Child task",
-        })
-        dashboard._log_task_history(child_id, "delegated_from", {
-            "parent_task_id": parent_id, "being_id": "forge",
-        })
-
-        # Verify relationships
+        # Verify relationships via parent_task_id column
         children = dashboard.get_task_children(parent_id)
         assert children == [child_id]
 
@@ -88,12 +81,10 @@ class TestParentChildTasks:
             child = dashboard.create_task(
                 project_svc, title=f"Child {i}",
                 assignees=[f"being-{i}"],
+                parent_task_id=pid,
             )
             cid = child["id"]
             child_ids.append(cid)
-            dashboard._log_task_history(pid, "subtask_created", {
-                "child_task_id": cid, "being_id": f"being-{i}",
-            })
 
         result = dashboard.get_task_children(pid)
         assert result == child_ids
@@ -108,15 +99,9 @@ class TestParentChildTasks:
 
         child = dashboard.create_task(
             project_svc, title="Sub-task 1", status="done",
+            parent_task_id=pid,
         )
         cid = child["id"]
-
-        dashboard._log_task_history(pid, "subtask_created", {
-            "child_task_id": cid, "being_id": "forge",
-        })
-        dashboard._log_task_history(cid, "delegated_from", {
-            "parent_task_id": pid,
-        })
 
         enriched = dashboard.get_task_with_orchestration(project_svc, pid)
         assert enriched["parent_task_id"] is None  # parent has no parent

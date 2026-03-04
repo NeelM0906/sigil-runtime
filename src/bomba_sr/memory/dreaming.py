@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-DREAM_MODEL = os.environ.get("BOMBA_DREAM_MODEL", "openai/gpt-4o-mini")
+DREAM_MODEL = os.environ.get("BOMBA_DREAM_MODEL", "minimax/minimax-m2.5")
 MEMORY_PRUNE_THRESHOLD = 200  # max active semantic memories per being
 CROSS_POLLINATE_CONFIDENCE = 0.5
 DERIVED_INSIGHT_CONFIDENCE = 0.6

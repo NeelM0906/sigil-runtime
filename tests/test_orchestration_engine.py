@@ -1078,9 +1078,69 @@ class TestTaskFailureHandling:
 
 
 class TestTaskBoardFiltering:
-    """Test that list_tasks properly filters auto-created tasks."""
+    """Test that list_tasks properly filters child/sub-tasks via parent_task_id."""
 
-    def test_exclude_auto_created_filters_dashboard_tasks(self):
+    def test_parent_task_id_column_exists(self):
+        """Verify the parent_task_id column is present in project_tasks table."""
+        from bomba_sr.projects.service import ProjectService
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = ProjectService(db)
+            proj = svc.create_project("t1", "Test Project", "/tmp/test")
+            proj_id = proj["project_id"]
+            task = svc.create_task("t1", proj_id, "A task", parent_task_id="parent-123")
+            assert task["parent_task_id"] == "parent-123"
+
+            task2 = svc.create_task("t1", proj_id, "Top-level task")
+            assert task2["parent_task_id"] is None
+
+    def test_list_tasks_top_level_only_true(self):
+        """top_level_only=True returns only tasks with parent_task_id IS NULL."""
+        from bomba_sr.projects.service import ProjectService
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = ProjectService(db)
+            proj = svc.create_project("t1", "Test Project", "/tmp/test")
+            proj_id = proj["project_id"]
+            # Create top-level task
+            parent = svc.create_task("t1", proj_id, "Parent task")
+            pid = parent["task_id"]
+            # Create child tasks
+            svc.create_task("t1", proj_id, "Child 1", parent_task_id=pid)
+            svc.create_task("t1", proj_id, "Child 2", parent_task_id=pid)
+
+            top_only = svc.list_tasks("t1", top_level_only=True)
+            assert len(top_only) == 1
+            assert top_only[0]["title"] == "Parent task"
+            assert top_only[0]["parent_task_id"] is None
+
+    def test_list_tasks_top_level_only_false(self):
+        """top_level_only=False returns all tasks including children."""
+        from bomba_sr.projects.service import ProjectService
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = ProjectService(db)
+            proj = svc.create_project("t1", "Test Project", "/tmp/test")
+            proj_id = proj["project_id"]
+            parent = svc.create_task("t1", proj_id, "Parent task")
+            pid = parent["task_id"]
+            svc.create_task("t1", proj_id, "Child 1", parent_task_id=pid)
+            svc.create_task("t1", proj_id, "Child 2", parent_task_id=pid)
+
+            all_tasks = svc.list_tasks("t1", top_level_only=False)
+            assert len(all_tasks) == 3
+
+    def test_dashboard_list_tasks_top_level_only(self):
+        """DashboardService.list_tasks passes top_level_only through to ProjectService."""
         from bomba_sr.dashboard.service import DashboardService
         from bomba_sr.storage.db import RuntimeDB
         import tempfile, os
@@ -1091,22 +1151,76 @@ class TestTaskBoardFiltering:
 
             project_svc = MagicMock()
             project_svc.list_tasks.return_value = [
-                {"task_id": "t1", "title": "Real task", "description": "User created this",
-                 "status": "backlog", "priority": "high"},
-                {"task_id": "t2", "title": "Chat message", "description": "Auto-created from chat message to Forge",
-                 "status": "done", "priority": "medium"},
-                {"task_id": "t3", "title": "Another real task", "description": "Orchestration task",
-                 "status": "in_progress", "priority": "high"},
+                {"task_id": "t1", "title": "Top-level task",
+                 "description": "Main task", "status": "in_progress",
+                 "priority": "high", "parent_task_id": None},
             ]
 
-            # Without filter: all 3 tasks
-            all_tasks = svc.list_tasks(project_svc, exclude_auto_created=False)
-            assert len(all_tasks) == 3
+            tasks = svc.list_tasks(project_svc, top_level_only=True)
+            # Verify the parameter was passed through
+            project_svc.list_tasks.assert_called_once()
+            call_kwargs = project_svc.list_tasks.call_args
+            assert call_kwargs.kwargs.get("top_level_only") is True
 
-            # With filter: only 2 real tasks
-            filtered = svc.list_tasks(project_svc, exclude_auto_created=True)
-            assert len(filtered) == 2
-            assert all("Auto-created" not in (t.get("description") or "") for t in filtered)
+    def test_dashboard_create_task_with_parent_task_id(self):
+        """DashboardService.create_task passes parent_task_id through."""
+        from bomba_sr.dashboard.service import DashboardService, MC_TENANT, MC_PROJECT_ID
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = DashboardService(db=db, bridge=MagicMock())
+
+            project_svc = MagicMock()
+            project_svc.create_task.return_value = {
+                "task_id": "child-1", "title": "Sub-task",
+                "description": "A child", "status": "backlog",
+                "priority": "medium", "parent_task_id": "parent-1",
+                "owner_agent_id": None, "created_at": "2026-01-01",
+                "updated_at": "2026-01-01",
+            }
+
+            svc.create_task(
+                project_svc, title="Sub-task",
+                description="A child", parent_task_id="parent-1",
+            )
+            call_kwargs = project_svc.create_task.call_args
+            assert call_kwargs.kwargs.get("parent_task_id") == "parent-1"
+
+    def test_cleanup_orphaned_tasks(self):
+        """cleanup_orphaned_tasks removes stale auto-created and casual tasks."""
+        from bomba_sr.dashboard.service import DashboardService
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = DashboardService(db=db, bridge=MagicMock())
+
+            project_svc = MagicMock()
+            project_svc.list_tasks.return_value = [
+                {"task_id": "t1", "title": "Real orchestration task",
+                 "description": "User requested analysis", "status": "in_progress",
+                 "priority": "high"},
+                {"task_id": "t2", "title": "Hello there...",
+                 "description": "Auto-created from chat message to Forge",
+                 "status": "backlog", "priority": "medium"},
+                {"task_id": "t3", "title": "Research competitors",
+                 "description": "Auto-created from chat message to Scholar",
+                 "status": "done", "priority": "medium"},
+            ]
+
+            # Mock delete_task so we don't need the project_tasks table
+            svc.delete_task = MagicMock(return_value=True)
+
+            deleted = svc.cleanup_orphaned_tasks(project_svc)
+            # t2 matches casual pattern ("Hello") + t3 is auto-created + done
+            assert deleted == 2
+            assert svc.delete_task.call_count == 2
+            deleted_ids = [c[0][1] for c in svc.delete_task.call_args_list]
+            assert "t2" in deleted_ids
+            assert "t3" in deleted_ids
 
 
 class TestDreamModelDefault:
@@ -1117,4 +1231,4 @@ class TestDreamModelDefault:
         # Must not be the invalid anthropic/claude-sonnet-4-20250514
         assert "claude-sonnet-4-20250514" not in DREAM_MODEL
         # Should be a known-valid model
-        assert DREAM_MODEL in ("openai/gpt-4o-mini", "anthropic/claude-3-5-haiku-20241022")
+        assert DREAM_MODEL in ("minimax/minimax-m2.5", "openai/gpt-4o-mini", "anthropic/claude-3-5-haiku-20241022")

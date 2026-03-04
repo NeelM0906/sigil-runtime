@@ -1311,9 +1311,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"history": history})
                     return
                 if path == "/api/mc/tasks":
-                    # Default: exclude auto-created tasks for clean board view.
-                    # Pass ?include_auto=true to see all tasks.
-                    include_auto = query.get("include_auto", ["false"])[0].lower() == "true"
+                    # Default: show top-level tasks only for a clean board view.
+                    # Pass ?top_level_only=false to include child/sub-tasks.
+                    top_level_only = query.get("top_level_only", ["true"])[0].lower() != "false"
                     tasks = dashboard_svc.list_tasks(
                         project_svc,
                         assignee=query.get("assignee", [None])[0],
@@ -1321,7 +1321,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         status=query.get("status", [None])[0],
                         from_date=query.get("from", [None])[0],
                         to_date=query.get("to", [None])[0],
-                        exclude_auto_created=not include_auto,
+                        top_level_only=top_level_only,
                     )
                     self._write_cors(200, {"tasks": tasks})
                     return
@@ -1483,6 +1483,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         priority=body.get("priority", "medium"),
                         assignees=body.get("assignees"),
                         owner_agent_id=body.get("owner_agent_id"),
+                        parent_task_id=body.get("parent_task_id"),
                     )
                     self._write_cors(201, {"task": task})
                     return

@@ -586,7 +586,9 @@ class OrchestrationEngine:
             + f"INSTRUCTIONS:\n{sub.instructions}\n\n"
             f"ACCEPTANCE CRITERIA:\n{sub.done_when}\n\n"
             f"Complete this task using your available tools and skills. "
-            f"When finished, provide your results as a clear response."
+            f"When finished, provide your results as a clear response.\n\n"
+            f"After completing your work, update your KNOWLEDGE.md with any "
+            f"significant findings using the update_knowledge tool."
         )
 
         # ── Log Point A: Prime sends delegation ──

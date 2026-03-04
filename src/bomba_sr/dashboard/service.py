@@ -872,6 +872,13 @@ class DashboardService:
             dashboard_svc=self,
             project_svc=project_svc,
         )
+        # Clean up stale/orphaned tasks from previous sessions on startup.
+        try:
+            cleaned = self.cleanup_orphaned_tasks(project_svc)
+            if cleaned:
+                log.info("Cleaned up %d orphaned tasks on startup", cleaned)
+        except Exception as exc:
+            log.debug("Orphaned task cleanup failed (non-fatal): %s", exc)
         log.info("Orchestration engine initialized")
 
     def _handle_orchestrated_task(
@@ -1218,19 +1225,14 @@ class DashboardService:
         status: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
-        exclude_auto_created: bool = False,
+        top_level_only: bool = False,
     ) -> list[dict]:
-        tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID, status=status)
+        tasks = project_service.list_tasks(
+            MC_TENANT, MC_PROJECT_ID, status=status,
+            top_level_only=top_level_only,
+        )
         if priority:
             tasks = [t for t in tasks if t.get("priority") == priority]
-
-        # Filter out auto-created tasks (from _auto_create_task) to keep the
-        # board clean — these are internal routing artifacts, not user-facing.
-        if exclude_auto_created:
-            tasks = [
-                t for t in tasks
-                if "Auto-created from chat message" not in (t.get("description") or "")
-            ]
 
         # Enrich with assignees
         for t in tasks:
@@ -1279,6 +1281,37 @@ class DashboardService:
                 deleted += 1
         return deleted
 
+    def cleanup_orphaned_tasks(self, project_service: Any) -> int:
+        """Delete stale auto-created tasks that pollute the board.
+
+        Targets:
+        1. Tasks whose title matches casual/greeting patterns.
+        2. Auto-created tasks (description contains 'Auto-created from chat
+           message') that are in 'done' or 'backlog' status.
+
+        Returns the number of tasks deleted.
+        """
+        tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID)
+        deleted = 0
+        for t in tasks:
+            desc = t.get("description") or ""
+            title = t.get("title") or ""
+            status = t.get("status") or ""
+
+            # 1) Title matches a casual/greeting pattern
+            if _NOT_TASK_PATTERNS.match(title.rstrip("...")):
+                self.delete_task(project_service, t["task_id"])
+                deleted += 1
+                continue
+
+            # 2) Auto-created + terminal/stale status
+            if "Auto-created from chat message" in desc and status in ("done", "backlog"):
+                self.delete_task(project_service, t["task_id"])
+                deleted += 1
+                continue
+
+        return deleted
+
     def create_task(
         self,
         project_service: Any,
@@ -1288,6 +1321,7 @@ class DashboardService:
         priority: str = "medium",
         assignees: list[str] | None = None,
         owner_agent_id: str | None = None,
+        parent_task_id: str | None = None,
     ) -> dict:
         task = project_service.create_task(
             tenant_id=MC_TENANT,
@@ -1297,6 +1331,7 @@ class DashboardService:
             status=status,
             priority=priority,
             owner_agent_id=owner_agent_id,
+            parent_task_id=parent_task_id,
         )
         tid = task["task_id"]
         if assignees:
@@ -1432,39 +1467,27 @@ class DashboardService:
     # ------------------------------------------------------------------
 
     def get_task_children(self, task_id: str) -> list[str]:
-        """Return child task IDs created during orchestration of this task."""
+        """Return child task IDs that have this task as parent_task_id."""
         rows = self.db.execute(
-            """SELECT details FROM mc_task_history
-               WHERE task_id = ? AND action = 'subtask_created'
-               ORDER BY timestamp ASC""",
-            (task_id,),
+            """SELECT task_id FROM project_tasks
+               WHERE parent_task_id = ? AND tenant_id = ?
+               ORDER BY created_at ASC""",
+            (task_id, MC_TENANT),
         ).fetchall()
-        children = []
-        for r in rows:
-            try:
-                d = json.loads(r["details"]) if isinstance(r["details"], str) else r["details"]
-                child_id = d.get("child_task_id")
-                if child_id:
-                    children.append(child_id)
-            except (json.JSONDecodeError, TypeError):
-                continue
-        return children
+        return [str(r["task_id"]) for r in rows]
 
     def get_task_parent(self, task_id: str) -> str | None:
-        """Return the parent task ID if this task was delegated."""
+        """Return the parent task ID if this task has one."""
         row = self.db.execute(
-            """SELECT details FROM mc_task_history
-               WHERE task_id = ? AND action = 'delegated_from'
+            """SELECT parent_task_id FROM project_tasks
+               WHERE task_id = ? AND tenant_id = ?
                LIMIT 1""",
-            (task_id,),
+            (task_id, MC_TENANT),
         ).fetchone()
         if row is None:
             return None
-        try:
-            d = json.loads(row["details"]) if isinstance(row["details"], str) else row["details"]
-            return d.get("parent_task_id")
-        except (json.JSONDecodeError, TypeError):
-            return None
+        ptid = row["parent_task_id"]
+        return str(ptid) if ptid is not None else None
 
     def get_task_with_orchestration(
         self,
