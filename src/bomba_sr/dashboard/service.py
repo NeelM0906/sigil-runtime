@@ -77,7 +77,9 @@ _NOT_TASK_PATTERNS = re.compile(
     r"|gm"
     r"|gn"
     r"|sup"
-    r")[\s?!.]*$",
+    r")"
+    r"(\s+\S+){0,4}"   # Allow up to 4 trailing words (e.g. "hey how are you doing")
+    r"[\s?!.,]*$",
     re.IGNORECASE,
 )
 
@@ -983,14 +985,15 @@ class DashboardService:
             )
             payload = _extract_json(resp.text)
             if payload:
-                classification = payload.get("classification", "light_task")
+                classification = payload.get("classification", "not_task")
                 if classification in ("not_task", "light_task", "full_task"):
                     return classification
         except Exception as exc:
-            log.debug("Task classification failed, defaulting to light_task: %s", exc)
+            log.debug("Task classification failed, defaulting to not_task: %s", exc)
 
-        # Default: treat as light_task (creates a task but no sub-steps)
-        return "light_task"
+        # Safe default: do NOT create a task when the classifier is uncertain.
+        # Creating spurious tasks is worse than missing a real one.
+        return "not_task"
 
     def _generate_task_steps(self, content: str) -> list[str]:
         """Use LLM to break a full_task message into sub-steps."""

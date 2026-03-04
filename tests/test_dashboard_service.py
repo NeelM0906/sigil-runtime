@@ -405,7 +405,8 @@ class TestTasks:
         history = svc.task_history(task_id=task["task_id"])
         assert len(history) == 2  # created + updated
 
-    def test_route_auto_creates_task(self, db, project_svc):
+    @patch.object(DashboardService, "_classify_message", return_value="light_task")
+    def test_route_auto_creates_task(self, _mock_cls, db, project_svc):
         """Messaging a being should auto-create a task that transitions through statuses."""
         mock_bridge = MagicMock()
         mock_bridge.handle_turn.return_value = {"reply": "Done!"}
@@ -440,7 +441,8 @@ class TestTasks:
         task_events = [e for e in events if e["event"] == "task_update"]
         assert len(task_events) >= 2, f"Expected >=2 task events, got {len(task_events)}"
 
-    def test_route_error_reverts_task(self, db, project_svc):
+    @patch.object(DashboardService, "_classify_message", return_value="light_task")
+    def test_route_error_reverts_task(self, _mock_cls, db, project_svc):
         """If bridge.handle_turn raises, task should revert to backlog."""
         mock_bridge = MagicMock()
         mock_bridge.handle_turn.side_effect = RuntimeError("LLM failed")
@@ -624,11 +626,11 @@ class TestTaskClassification:
         assert result == "full_task"
 
     @patch("bomba_sr.llm.providers.provider_from_env")
-    def test_classify_message_llm_failure_defaults_light(self, mock_pfe, svc):
-        """If LLM fails, default to light_task."""
+    def test_classify_message_llm_failure_defaults_not_task(self, mock_pfe, svc):
+        """If LLM fails, default to not_task (safe fallback)."""
         mock_pfe.side_effect = RuntimeError("No API key")
         result = svc._classify_message("Do something complex with the data")
-        assert result == "light_task"
+        assert result == "not_task"
 
     def test_route_not_task_creates_no_task(self, db, project_svc):
         """'not_task' messages should NOT create a task on the board."""
@@ -702,7 +704,8 @@ class TestTaskClassification:
         assert len(steps) == 3
         assert all(s["status"] == "done" for s in steps)
 
-    def test_route_auto_creates_task(self, db, project_svc):
+    @patch.object(DashboardService, "_classify_message", return_value="light_task")
+    def test_route_auto_creates_task(self, _mock_cls, db, project_svc):
         """Messaging a being should auto-create a task that transitions through statuses."""
         mock_bridge = MagicMock()
         mock_bridge.handle_turn.return_value = {"reply": "Done!"}
@@ -737,7 +740,8 @@ class TestTaskClassification:
         task_events = [e for e in events if e["event"] == "task_update"]
         assert len(task_events) >= 2, f"Expected >=2 task events, got {len(task_events)}"
 
-    def test_route_error_reverts_task(self, db, project_svc):
+    @patch.object(DashboardService, "_classify_message", return_value="light_task")
+    def test_route_error_reverts_task(self, _mock_cls, db, project_svc):
         """If bridge.handle_turn raises, task should revert to backlog."""
         mock_bridge = MagicMock()
         mock_bridge.handle_turn.side_effect = RuntimeError("LLM failed")

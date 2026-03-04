@@ -340,7 +340,9 @@ class OrchestrationEngine:
             f"Each being should receive clear, self-contained instructions."
         )
 
-        # Call LLM via handle_turn in the orchestration session
+        # Call LLM via handle_turn in the orchestration session.
+        # disable_tools=True prevents the LLM from calling code search
+        # tools (which would pass this prompt to ripgrep and fail).
         from bomba_sr.runtime.bridge import TurnRequest
         result = self.bridge.handle_turn(TurnRequest(
             tenant_id=self.prime_tenant_id,
@@ -352,6 +354,7 @@ class OrchestrationEngine:
                 f"{plan_prompt}"
             ),
             workspace_root=self._prime_workspace(),
+            disable_tools=True,
         ))
 
         reply = (result.get("assistant") or {}).get("text", "")
@@ -527,6 +530,7 @@ class OrchestrationEngine:
                     user_id="orchestrator",
                     user_message=f"[REVIEW] Being: {sub.being_id}\n\n{review_prompt}",
                     workspace_root=self._prime_workspace(),
+                    disable_tools=True,
                 ))
                 reply = (result.get("assistant") or {}).get("text", "")
                 review = self._parse_review(reply)
@@ -630,6 +634,7 @@ class OrchestrationEngine:
             user_id="orchestrator",
             user_message=f"[SYNTHESIZE]\n\n{synthesis_prompt}",
             workspace_root=self._prime_workspace(),
+            disable_tools=True,
         ))
         final_output = (result.get("assistant") or {}).get("text", "")
 

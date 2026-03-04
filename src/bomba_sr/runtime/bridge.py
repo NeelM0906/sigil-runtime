@@ -88,6 +88,7 @@ class TurnRequest:
     task_id: str | None = None
     max_loop_iterations: int | None = None
     on_iteration: Any = None
+    disable_tools: bool = False
 
 
 @dataclass
@@ -742,7 +743,7 @@ class RuntimeBridge:
                     *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],
-                tool_schemas=runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format),
+                tool_schemas=[] if request.disable_tools else runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format),
                 context=tool_context,
                 resolved_policy=resolved_policy,
                 model_id=model_id,
