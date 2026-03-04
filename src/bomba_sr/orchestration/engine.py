@@ -694,6 +694,9 @@ class OrchestrationEngine:
         # Persist the full task record for cross-task recall
         self._persist_task_result(task_id, state, final_output)
 
+        # Auto-update shared TEAM_CONTEXT.md so all sisters passively know
+        self._update_team_context_outcomes(task_id, state)
+
         # Post final output back to user's chat
         self.dashboard.create_message(
             sender="prime",
@@ -824,6 +827,60 @@ class OrchestrationEngine:
             )
         except Exception as exc:
             log.warning("Failed to persist task result for %s: %s", task_id[:8], exc)
+
+    def _update_team_context_outcomes(
+        self, task_id: str, state: dict[str, Any],
+    ) -> None:
+        """Append a one-line summary to TEAM_CONTEXT.md 'Recent Task Outcomes'."""
+        try:
+            from bomba_sr.tools.builtin_team_context import (
+                TEAM_CONTEXT_MAX_CHARS,
+                _TEAM_CONTEXT_TEMPLATE,
+                _resolve_team_context_path,
+            )
+            import re as _re
+
+            workspace = Path(self._prime_workspace())
+            tc_path = _resolve_team_context_path(workspace)
+
+            if tc_path.exists():
+                text = tc_path.read_text(encoding="utf-8")
+            else:
+                text = _TEAM_CONTEXT_TEMPLATE
+
+            goal = state.get("goal", "unknown task")
+            plan: OrchestrationPlan | None = state.get("plan")
+            beings = ", ".join(
+                sub.being_id for sub in plan.sub_tasks
+            ) if plan else "unknown"
+            ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+            new_line = f"- [{ts}] {goal[:100]} (by {beings})"
+
+            # Find the Recent Task Outcomes section and prepend the new line
+            pattern = _re.compile(
+                r"(^## Recent Task Outcomes\s*\n)(.*?)(?=^## |\Z)",
+                _re.MULTILINE | _re.DOTALL,
+            )
+            match = pattern.search(text)
+            if match:
+                existing = match.group(2).strip()
+                # Keep only the most recent entries to stay under budget
+                lines = [new_line]
+                if existing:
+                    lines.extend(existing.splitlines()[:9])  # keep last 9
+                new_section = "\n".join(lines) + "\n\n"
+                new_text = pattern.sub(rf"\g<1>{new_section}", text, count=1)
+            else:
+                new_text = text.rstrip() + f"\n\n## Recent Task Outcomes\n{new_line}\n"
+
+            # Enforce size cap
+            if len(new_text) > TEAM_CONTEXT_MAX_CHARS:
+                new_text = new_text[:TEAM_CONTEXT_MAX_CHARS]
+
+            tc_path.write_text(new_text, encoding="utf-8")
+            log.info("Updated TEAM_CONTEXT.md with outcome for task %s", task_id[:8])
+        except Exception as exc:
+            log.warning("Failed to update TEAM_CONTEXT.md: %s", exc)
 
     def _collect_prior_outputs(
         self, task_id: str, plan: OrchestrationPlan, current_being_id: str,

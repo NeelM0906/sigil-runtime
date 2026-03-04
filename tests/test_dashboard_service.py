@@ -572,6 +572,8 @@ class TestTaskClassification:
             "How are you?", "how's it going?", "thanks", "thank you",
             "ok", "okay", "bye", "see ya",
             "tell me about yourself", "who are you", "what can you do",
+            "what tools do you have", "what tools are available",
+            "what are your capabilities", "what do you know",
             "Good morning!", "HELLO", "Hi!",
         ]
         for msg in not_tasks:
@@ -631,6 +633,27 @@ class TestTaskClassification:
         mock_pfe.side_effect = RuntimeError("No API key")
         result = svc._classify_message("Do something complex with the data")
         assert result == "not_task"
+
+    def test_auto_create_task_rejects_not_task(self, svc):
+        """_auto_create_task must raise ValueError if classification is not_task."""
+        with pytest.raises(ValueError, match="not a task-creating classification"):
+            svc._auto_create_task(
+                "prime", {"name": "Prime"}, "hey how are you",
+                classification="not_task",
+            )
+
+    def test_auto_create_task_rejects_unknown_classification(self, svc):
+        """_auto_create_task must reject any unknown classification value."""
+        with pytest.raises(ValueError, match="not a task-creating classification"):
+            svc._auto_create_task(
+                "prime", {"name": "Prime"}, "something",
+                classification="maybe_task",
+            )
+
+    def test_auto_create_task_requires_classification_kwarg(self, svc):
+        """_auto_create_task cannot be called without the classification parameter."""
+        with pytest.raises(TypeError):
+            svc._auto_create_task("prime", {"name": "Prime"}, "do stuff")
 
     def test_route_not_task_creates_no_task(self, db, project_svc):
         """'not_task' messages should NOT create a task on the board."""

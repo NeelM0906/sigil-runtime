@@ -74,6 +74,12 @@ _NOT_TASK_PATTERNS = re.compile(
     r"|who are you"
     r"|what are you"
     r"|what can you do"
+    r"|what tools do you have"
+    r"|what tools are available"
+    r"|show me your tools"
+    r"|list your tools"
+    r"|what do you know"
+    r"|what are your capabilities"
     r"|gm"
     r"|gn"
     r"|sup"
@@ -742,7 +748,11 @@ class DashboardService:
 
         # ── Classify the message before creating any task ──
         classification = self._classify_message(content)
-        log.debug("Message classified as %s: %.80s", classification, content)
+        log.info(
+            '[CLASSIFY] message="%.50s" → %s',
+            content.replace('"', "'"),
+            classification,
+        )
 
         # ── Orchestration intercept: full_task to Prime triggers multi-being orchestration ──
         if (
@@ -756,7 +766,7 @@ class DashboardService:
 
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
-            task_id = self._auto_create_task(being_id, being, content)
+            task_id = self._auto_create_task(being_id, being, content, classification=classification)
 
         # For full_task, generate and attach sub-steps
         if classification == "full_task" and task_id:
@@ -917,8 +927,29 @@ class DashboardService:
             return []
         return self.orchestration_engine.get_orchestration_log(task_id)
 
-    def _auto_create_task(self, being_id: str, being: dict, content: str) -> str | None:
-        """Auto-create a task on the board when a being receives a message."""
+    # Valid classifications that permit task creation.
+    _TASK_CLASSIFICATIONS = frozenset({"light_task", "full_task"})
+
+    def _auto_create_task(
+        self,
+        being_id: str,
+        being: dict,
+        content: str,
+        *,
+        classification: str,
+    ) -> str | None:
+        """Auto-create a task on the board when a being receives a classified message.
+
+        The ``classification`` parameter is **required** and must be one of
+        ``light_task`` or ``full_task``.  Passing ``not_task`` (or any other
+        value) raises ``ValueError`` — this is an architectural gate that makes
+        it structurally impossible to create a task without a valid classification.
+        """
+        if classification not in self._TASK_CLASSIFICATIONS:
+            raise ValueError(
+                f"Cannot create task: classification '{classification}' is not "
+                f"a task-creating classification. Must be one of {sorted(self._TASK_CLASSIFICATIONS)}."
+            )
         if not self.project_service:
             return None
         try:
@@ -936,6 +967,7 @@ class DashboardService:
                 assignees=[being_id],
                 owner_agent_id=being_id,
             )
+            log.info('[CLASSIFY] Task created: id=%s classification=%s', task.get("id", "?")[:8], classification)
             return task.get("id")
         except Exception:
             return None

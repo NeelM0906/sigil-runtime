@@ -58,6 +58,7 @@ from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
 from bomba_sr.tools.builtin_exec import builtin_exec_tools
 from bomba_sr.tools.builtin_fs import builtin_fs_tools
 from bomba_sr.tools.builtin_knowledge import builtin_knowledge_tools
+from bomba_sr.tools.builtin_team_context import builtin_team_context_tools
 from bomba_sr.tools.builtin_memory import builtin_memory_tools
 from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
 from bomba_sr.tools.builtin_pinecone import builtin_pinecone_tools
@@ -618,6 +619,12 @@ class RuntimeBridge:
                     "<knowledge editable=\"true\">\n"
                     + runtime.soul.knowledge_text.strip()[:4000]
                     + "\n</knowledge>"
+                )
+            if runtime.soul.team_context_text and runtime.soul.team_context_text.strip():
+                system_prefix_parts.append(
+                    "<team-context readonly=\"true\">\n"
+                    + runtime.soul.team_context_text.strip()[:3000]
+                    + "\n</team-context>"
                 )
 
         if runtime.soul is None:
@@ -2514,6 +2521,9 @@ class RuntimeBridge:
             )
         tool_executor.register_many(builtin_memory_tools(memory))
         tool_executor.register_many(builtin_knowledge_tools())
+        # Team context tool — only registered for Prime
+        if "prime" in tenant_id.lower() or tenant_id == "tenant-local":
+            tool_executor.register_many(builtin_team_context_tools())
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(
             builtin_subagent_tools(

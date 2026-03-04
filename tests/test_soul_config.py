@@ -146,6 +146,37 @@ class SoulConfigTests(unittest.TestCase):
             assert soul is not None
             self.assertIsNone(soul.knowledge_text)
 
+    def test_team_context_md_loaded_from_same_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            (root / "TEAM_CONTEXT.md").write_text("## Active Priorities\nShip v2.", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIn("Ship v2", soul.team_context_text)
+
+    def test_team_context_md_loaded_from_parent_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            child = root / "forge"
+            child.mkdir()
+            (child / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            (root / "TEAM_CONTEXT.md").write_text("## Notes\nShared note.", encoding="utf-8")
+            soul = load_soul_from_workspace(child)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIn("Shared note", soul.team_context_text)
+
+    def test_team_context_md_none_when_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIsNone(soul.team_context_text)
+
 
 if __name__ == "__main__":
     unittest.main()
