@@ -419,24 +419,36 @@ class OrchestrationEngine:
                 "task_id": child_id,
             })
 
-        # Now execute all sub-tasks (sequentially for now, could be parallelized)
+        # Execute sub-tasks.  For "sequential" strategy, run one at a time
+        # so later beings receive the output of earlier ones as context.
+        # For other strategies, run in parallel.
         self._set_status(task_id, STATUS_AWAITING)
-        threads: list[threading.Thread] = []
-        for sub in plan.sub_tasks:
-            t = threading.Thread(
-                target=self._execute_subtask,
-                args=(task_id, sub),
-                daemon=True,
-                name=f"subtask-{sub.being_id[:12]}",
-            )
-            threads.append(t)
-            t.start()
 
-        # Wait for all to complete
-        for t in threads:
-            t.join(timeout=300)  # 5 min per sub-task max
+        if plan.synthesis_strategy == "sequential":
+            for sub in plan.sub_tasks:
+                # Collect outputs from previously completed beings
+                prior_outputs = self._collect_prior_outputs(task_id, plan, sub.being_id)
+                self._execute_subtask(task_id, sub, prior_outputs=prior_outputs)
+        else:
+            threads: list[threading.Thread] = []
+            for sub in plan.sub_tasks:
+                t = threading.Thread(
+                    target=self._execute_subtask,
+                    args=(task_id, sub),
+                    daemon=True,
+                    name=f"subtask-{sub.being_id[:12]}",
+                )
+                threads.append(t)
+                t.start()
+            for t in threads:
+                t.join(timeout=300)  # 5 min per sub-task max
 
-    def _execute_subtask(self, parent_task_id: str, sub: SubTaskPlan) -> None:
+    def _execute_subtask(
+        self,
+        parent_task_id: str,
+        sub: SubTaskPlan,
+        prior_outputs: dict[str, str] | None = None,
+    ) -> None:
         """Execute a single sub-task by calling handle_turn for the being."""
         session = subtask_session_id(parent_task_id, sub.being_id)
         being = self.dashboard.get_being(sub.being_id) or {}
@@ -449,20 +461,33 @@ class OrchestrationEngine:
         else:
             workspace = "/Users/zidane/Downloads/PROJEKT"
 
+        # Build context section from prior beings' outputs
+        context_section = ""
+        if prior_outputs:
+            parts = []
+            for bid, output in prior_outputs.items():
+                parts.append(f"--- {bid}'s findings ---\n{output}")
+            context_section = (
+                f"\nCONTEXT FROM OTHER BEINGS:\n"
+                + "\n\n".join(parts)
+                + "\n\n"
+            )
+
         delegation_message = (
             f"You have been assigned a sub-task by SAI Prime.\n\n"
             f"TASK TITLE: {sub.title}\n\n"
-            f"INSTRUCTIONS:\n{sub.instructions}\n\n"
+            + (context_section if context_section else "")
+            + f"INSTRUCTIONS:\n{sub.instructions}\n\n"
             f"ACCEPTANCE CRITERIA:\n{sub.done_when}\n\n"
             f"Complete this task using your available tools and skills. "
             f"When finished, provide your results as a clear response."
         )
 
         # ── Log Point A: Prime sends delegation ──
-        log.warning(f"[ORCH] ── Log Point A: Delegating to {sub.being_id} ──")
-        log.warning(f"[ORCH] Tenant: {tenant_id}, Session: {session}")
-        log.warning(f"[ORCH] Workspace: {workspace}")
-        log.warning(f"[ORCH] Message (first 300 chars): {delegation_message[:300]}")
+        log.debug(f"[ORCH] ── Log Point A: Delegating to {sub.being_id} ──")
+        log.debug(f"[ORCH] Tenant: {tenant_id}, Session: {session}")
+        log.debug(f"[ORCH] Workspace: {workspace}")
+        log.debug(f"[ORCH] Message (first 300 chars): {delegation_message[:300]}")
 
         try:
             from bomba_sr.runtime.bridge import TurnRequest
@@ -480,17 +505,17 @@ class OrchestrationEngine:
             output = (result.get("assistant") or {}).get("text", "")
 
             # ── Log Point E: Result returns to orchestration engine ──
-            log.warning(f"[ORCH] ── Log Point E: Result from {sub.being_id} ──")
-            log.warning(f"[ORCH] Received from {sub.being_id}: length={len(output)}")
-            log.warning(f"[ORCH] Result preview: {output[:300]}")
+            log.debug(f"[ORCH] ── Log Point E: Result from {sub.being_id} ──")
+            log.debug(f"[ORCH] Received from {sub.being_id}: length={len(output)}")
+            log.debug(f"[ORCH] Result preview: {output[:300]}")
             if not output:
-                log.warning(f"[ORCH] EMPTY result from {sub.being_id} — full result dict keys: {list(result.keys())}")
+                log.debug(f"[ORCH] EMPTY result from {sub.being_id} — full result dict keys: {list(result.keys())}")
                 assistant_block = result.get("assistant")
-                log.warning(f"[ORCH] assistant block: {assistant_block}")
+                log.debug(f"[ORCH] assistant block: {assistant_block}")
         except Exception as exc:
             output = f"[Error: {exc}]"
-            log.warning(f"[ORCH] ── Log Point E: EXCEPTION from {sub.being_id} ──")
-            log.warning(f"[ORCH] Error: {exc}")
+            log.debug(f"[ORCH] ── Log Point E: EXCEPTION from {sub.being_id} ──")
+            log.debug(f"[ORCH] Error: {exc}")
             log.exception("Subtask execution failed for being %s", sub.being_id)
         finally:
             # Restore being status
@@ -642,12 +667,12 @@ class OrchestrationEngine:
             )
 
         # ── Log Point F: Context being passed to synthesis ──
-        log.warning(f"[ORCH] ── Log Point F: Synthesis phase ──")
+        log.debug(f"[ORCH] ── Log Point F: Synthesis phase ──")
         for sub in plan.sub_tasks:
             out = state["subtask_outputs"].get(sub.being_id, "(no output)")
             review = state["subtask_reviews"].get(sub.being_id, {})
-            log.warning(f"[ORCH] Being {sub.being_id}: output_len={len(out)}, approved={review.get('approved', 'N/A')}, quality={review.get('quality_score', 'N/A')}")
-            log.warning(f"[ORCH] Output preview ({sub.being_id}): {out[:300]}")
+            log.debug(f"[ORCH] Being {sub.being_id}: output_len={len(out)}, approved={review.get('approved', 'N/A')}, quality={review.get('quality_score', 'N/A')}")
+            log.debug(f"[ORCH] Output preview ({sub.being_id}): {out[:300]}")
 
         synthesis_prompt = SYNTHESIS_SYSTEM_PROMPT.format(
             original_goal=state["goal"],
@@ -712,6 +737,20 @@ class OrchestrationEngine:
 
     def _prime_workspace(self) -> str:
         return "/Users/zidane/Downloads/PROJEKT/workspaces/prime"
+
+    def _collect_prior_outputs(
+        self, task_id: str, plan: OrchestrationPlan, current_being_id: str,
+    ) -> dict[str, str]:
+        """Gather outputs from beings that have already completed, for context injection."""
+        state = self._get_state(task_id)
+        prior: dict[str, str] = {}
+        for sub in plan.sub_tasks:
+            if sub.being_id == current_being_id:
+                break  # only include beings that come before this one in the plan
+            output = state["subtask_outputs"].get(sub.being_id, "")
+            if output and not output.startswith("[Error"):
+                prior[sub.being_id] = output
+        return prior
 
     def _parse_plan(
         self,

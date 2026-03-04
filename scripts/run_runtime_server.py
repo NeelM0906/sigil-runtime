@@ -14,8 +14,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 # Configure logging early so all modules can emit to stderr.
+# Use DEBUG to enable [ORCH] orchestration diagnostics; WARNING for production.
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
     stream=sys.stderr,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%H:%M:%S",

@@ -125,13 +125,13 @@ class AgenticLoop:
             # ── Log Point C: LLM API call ──
             _is_orch = any("subtask:" in m.content or "orchestration:" in (m.content if isinstance(m.content, str) else "") for m in state.messages[:3] if isinstance(m.content, str))
             if _is_orch:
-                log.warning(f"[ORCH] ── Log Point C: Sending to LLM ──")
-                log.warning(f"[ORCH] Model: {state.current_model_id} via {self.provider.provider_name}")
-                log.warning(f"[ORCH] Message count: {len(state.messages)}")
+                log.debug(f"[ORCH] ── Log Point C: Sending to LLM ──")
+                log.debug(f"[ORCH] Model: {state.current_model_id} via {self.provider.provider_name}")
+                log.debug(f"[ORCH] Message count: {len(state.messages)}")
                 _sys_len = sum(len(m.content) if isinstance(m.content, str) else 0 for m in state.messages if m.role == "system")
-                log.warning(f"[ORCH] System prompt length: {_sys_len} chars")
-                log.warning(f"[ORCH] Tool schemas count: {len(effective_schemas)}")
-                log.warning(f"[ORCH] Iteration: {state.iteration}")
+                log.debug(f"[ORCH] System prompt length: {_sys_len} chars")
+                log.debug(f"[ORCH] Tool schemas count: {len(effective_schemas)}")
+                log.debug(f"[ORCH] Iteration: {state.iteration}")
 
             try:
                 response = self.provider.generate(
@@ -141,22 +141,22 @@ class AgenticLoop:
                 )
             except Exception as exc:
                 if _is_orch:
-                    log.warning(f"[ORCH] ── Log Point D: LLM ERROR ──")
-                    log.warning(f"[ORCH] Exception: {exc}")
+                    log.debug(f"[ORCH] ── Log Point D: LLM ERROR ──")
+                    log.debug(f"[ORCH] Exception: {exc}")
                 state.stopped_reason = "error"
                 state.final_text = f"loop_error: {exc}"
                 break
 
             # ── Log Point D: LLM response received ──
             if _is_orch:
-                log.warning(f"[ORCH] ── Log Point D: Response received ──")
-                log.warning(f"[ORCH] Response length: {len(response.text)} chars")
-                log.warning(f"[ORCH] Response model: {response.model}")
-                log.warning(f"[ORCH] Stop reason: {response.stop_reason}")
-                log.warning(f"[ORCH] Response preview: {response.text[:300]}")
+                log.debug(f"[ORCH] ── Log Point D: Response received ──")
+                log.debug(f"[ORCH] Response length: {len(response.text)} chars")
+                log.debug(f"[ORCH] Response model: {response.model}")
+                log.debug(f"[ORCH] Stop reason: {response.stop_reason}")
+                log.debug(f"[ORCH] Response preview: {response.text[:300]}")
                 if not response.text:
-                    log.warning(f"[ORCH] EMPTY RESPONSE — raw keys: {list(response.raw.keys())}")
-                    log.warning(f"[ORCH] Raw choices: {response.raw.get('choices', response.raw.get('content', 'N/A'))}")
+                    log.debug(f"[ORCH] EMPTY RESPONSE — raw keys: {list(response.raw.keys())}")
+                    log.debug(f"[ORCH] Raw choices: {response.raw.get('choices', response.raw.get('content', 'N/A'))}")
 
             delta_input, delta_output = self._accumulate_usage(response, state)
             state.estimated_cost_usd += estimate_cost(
@@ -172,6 +172,31 @@ class AgenticLoop:
 
             tool_calls = self._parse_tool_calls(response)
             if not tool_calls:
+                # Detect empty final response after tool use: the LLM
+                # returned stop_reason=stop with content=None after having
+                # made tool calls earlier in the session.  Re-prompt once.
+                if (
+                    not response.text
+                    and state.tool_calls_history
+                    and not getattr(state, "_summary_retry_done", False)
+                ):
+                    state._summary_retry_done = True  # type: ignore[attr-defined]
+                    log.debug(
+                        "[loop] Empty final response after %d tool calls — re-prompting for summary",
+                        len(state.tool_calls_history),
+                    )
+                    state.messages.append(ChatMessage(
+                        role="assistant", content=response.text or "",
+                    ))
+                    state.messages.append(ChatMessage(
+                        role="user",
+                        content=(
+                            "You made tool calls and received results, but your last response "
+                            "was empty. Please summarize your findings based on the tool "
+                            "results you received."
+                        ),
+                    ))
+                    continue  # one more iteration
                 state.final_text = response.text
                 break
 
