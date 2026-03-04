@@ -107,7 +107,7 @@ class AgenticSearchExecutor:
 
         commands: list[list[str]] = []
 
-        base = ["rg", "-n"]
+        base = ["rg", "-n", "-F"]  # -F = fixed-string (literal, not regex)
         if unrestricted:
             base.append("-uuu")
         else:

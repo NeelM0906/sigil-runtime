@@ -446,7 +446,22 @@ class RuntimeBridge:
         tool_results: list[dict[str, str]] = []
         web_snippets: list[dict[str, Any]] = []
 
-        if generic_mode:
+        # When tools are disabled (e.g. orchestration phases), skip the
+        # context search entirely — the user_message is a structured prompt
+        # that would be invalid as a ripgrep pattern.
+        if request.disable_tools:
+            search_result = {
+                "planId": str(uuid.uuid4()),
+                "executedAt": datetime.now(timezone.utc).timestamp(),
+                "pass": 0,
+                "escalated": False,
+                "executionMs": 0,
+                "lowValueHitRatio": 0.0,
+                "avgConfidence": 0.0,
+                "commands": [],
+                "results": [],
+            }
+        elif generic_mode:
             snippets = runtime.info.retrieve(search_query, limit=2)
             web_snippets = [
                 {

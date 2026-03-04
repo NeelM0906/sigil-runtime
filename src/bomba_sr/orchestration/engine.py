@@ -450,12 +450,12 @@ class OrchestrationEngine:
             workspace = "/Users/zidane/Downloads/PROJEKT"
 
         delegation_message = (
-            f"[DELEGATED TASK FROM SAI PRIME]\n\n"
-            f"Task: {sub.title}\n\n"
-            f"Instructions:\n{sub.instructions}\n\n"
-            f"Acceptance criteria:\n{sub.done_when}\n\n"
-            f"Complete this task to the best of your abilities. "
-            f"Focus on quality and thoroughness."
+            f"You have been assigned a sub-task by SAI Prime.\n\n"
+            f"TASK TITLE: {sub.title}\n\n"
+            f"INSTRUCTIONS:\n{sub.instructions}\n\n"
+            f"ACCEPTANCE CRITERIA:\n{sub.done_when}\n\n"
+            f"Complete this task using your available tools and skills. "
+            f"When finished, provide your results as a clear response."
         )
 
         try:
@@ -466,6 +466,10 @@ class OrchestrationEngine:
                 user_id=f"prime->{sub.being_id}",
                 user_message=delegation_message,
                 workspace_root=workspace,
+                # Use the short task title as the search query so the bridge's
+                # context search uses a valid rg pattern instead of the full
+                # multi-line delegation message.
+                search_query=sub.title,
             ))
             output = (result.get("assistant") or {}).get("text", "")
         except Exception as exc:

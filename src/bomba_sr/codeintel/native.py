@@ -17,6 +17,32 @@ _SYMBOL_LINE_PATTERNS = [
     re.compile(r"^\s*(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*="),
 ]
 
+_MAX_SYMBOL_NAME_LEN = 200
+_VALID_SYMBOL_RE = re.compile(r"^[a-zA-Z0-9_./$\-: ]+$")
+
+
+def _validate_symbol_name(name: str) -> str:
+    """Validate that a symbol name looks like a code identifier, not freeform text."""
+    if not name or not name.strip():
+        raise CodeIntelError("symbol_name is required")
+    name = name.strip()
+    if len(name) > _MAX_SYMBOL_NAME_LEN:
+        raise CodeIntelError(
+            f"Invalid symbol_name — must be a code identifier (max {_MAX_SYMBOL_NAME_LEN} chars), "
+            f"got {len(name)} chars. Do not pass freeform text or prompts."
+        )
+    if "\n" in name or "\r" in name:
+        raise CodeIntelError(
+            "Invalid symbol_name — must be a code identifier, not multi-line text."
+        )
+    if not _VALID_SYMBOL_RE.match(name):
+        raise CodeIntelError(
+            "Invalid symbol_name — must contain only alphanumeric characters, "
+            "underscores, dots, slashes, dashes, colons, or dollar signs. "
+            "Do not pass freeform text or prompts as symbol names."
+        )
+    return name
+
 
 class NativeCodeIntelAdapter(CodeIntelligenceAdapter):
     @property
@@ -64,7 +90,7 @@ class NativeCodeIntelAdapter(CodeIntelligenceAdapter):
         return {"symbols": symbols, "file_path": str(file_path)}
 
     def _find_symbol(self, tenant: TenantContext, arguments: dict[str, Any], references_only: bool) -> dict[str, Any]:
-        symbol = str(arguments["symbol_name"])
+        symbol = _validate_symbol_name(str(arguments.get("symbol_name") or ""))
         scope = arguments.get("scope") or ["."]
         cmd = [
             "rg",
@@ -155,8 +181,8 @@ class NativeCodeIntelAdapter(CodeIntelligenceAdapter):
         }
 
     def _rename_symbol(self, tenant: TenantContext, arguments: dict[str, Any]) -> dict[str, Any]:
-        old = str(arguments["old_name"])
-        new = str(arguments["new_name"])
+        old = _validate_symbol_name(str(arguments.get("old_name") or ""))
+        new = _validate_symbol_name(str(arguments.get("new_name") or ""))
         if not old or not new:
             raise ValueError("old_name and new_name are required")
 

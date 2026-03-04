@@ -14,6 +14,13 @@ from bomba_sr.storage.db import RuntimeDB
 
 ToolCallable = Callable[[dict[str, Any], "ToolContext"], dict[str, Any]]
 
+# Parameters that are allowed to carry large content (file bodies, messages, etc.)
+_LARGE_VALUE_PARAMS = frozenset({
+    "content", "file_content", "body", "new_body", "text", "message",
+    "message_body", "instructions", "prompt", "data", "payload",
+})
+_MAX_PARAM_VALUE_LEN = 500
+
 
 def truncate_output(output: dict[str, Any], max_chars: int = 15000) -> dict[str, Any]:
     """Truncate oversized top-level string values in a tool output dict."""
@@ -198,6 +205,31 @@ class ToolExecutor:
                 tool_name=canonical,
                 status="denied",
                 output={"reason": decision.reason},
+                risk_class=risk_class,
+                duration_ms=0,
+            )
+
+        # Guard: reject mega-strings in non-content parameters.
+        violations = []
+        for param_name, param_val in arguments.items():
+            if param_name in _LARGE_VALUE_PARAMS:
+                continue
+            if isinstance(param_val, str) and len(param_val) > _MAX_PARAM_VALUE_LEN:
+                violations.append(
+                    f"{param_name}: {len(param_val)} chars (max {_MAX_PARAM_VALUE_LEN})"
+                )
+        if violations:
+            return ToolCallResult(
+                tool_call_id=call_id,
+                tool_name=canonical,
+                status="error",
+                output={
+                    "error": (
+                        f"Parameter value too long for tool '{canonical}'. "
+                        f"Search/identifier parameters must be under {_MAX_PARAM_VALUE_LEN} chars. "
+                        f"Violations: {'; '.join(violations)}"
+                    ),
+                },
                 risk_class=risk_class,
                 duration_ms=0,
             )
