@@ -231,18 +231,21 @@ def provider_from_env() -> LLMProvider:
     if os.getenv("ANTHROPIC_API_KEY"):
         return AnthropicProvider(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    if os.getenv("OPENAI_API_KEY"):
-        return OpenAICompatibleProvider(
-            provider_name="openai",
-            api_key=os.environ["OPENAI_API_KEY"],
-            api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        )
-
+    # OpenRouter before OpenAI — OPENAI_API_KEY may be set only for
+    # embeddings; routing LLM calls to api.openai.com with an
+    # OpenRouter model ID like "anthropic/claude-opus-4.6" would fail.
     if os.getenv("OPENROUTER_API_KEY"):
         return OpenAICompatibleProvider(
             provider_name="openrouter",
             api_key=os.environ["OPENROUTER_API_KEY"],
             api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+        )
+
+    if os.getenv("OPENAI_API_KEY"):
+        return OpenAICompatibleProvider(
+            provider_name="openai",
+            api_key=os.environ["OPENAI_API_KEY"],
+            api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         )
 
     return StaticEchoProvider()

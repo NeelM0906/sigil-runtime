@@ -147,6 +147,12 @@ class AgenticLoop:
                 state.final_text = response.text
                 break
 
+            # Preserve any text the LLM returned alongside tool calls so
+            # that if the loop exits (max_iterations / loop_detected) we
+            # still have the last meaningful response.
+            if response.text:
+                state.final_text = response.text
+
             if len(tool_calls) > self.config.max_tool_calls_per_iteration:
                 tool_calls = tool_calls[: self.config.max_tool_calls_per_iteration]
 
