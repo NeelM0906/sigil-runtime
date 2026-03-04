@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 from bomba_sr.governance.policy_pipeline import ResolvedPolicy
 from bomba_sr.llm.providers import ChatMessage, LLMProvider, LLMResponse
@@ -119,6 +122,17 @@ class AgenticLoop:
                 tool_format=tool_format,
             )
 
+            # ── Log Point C: LLM API call ──
+            _is_orch = any("subtask:" in m.content or "orchestration:" in (m.content if isinstance(m.content, str) else "") for m in state.messages[:3] if isinstance(m.content, str))
+            if _is_orch:
+                log.warning(f"[ORCH] ── Log Point C: Sending to LLM ──")
+                log.warning(f"[ORCH] Model: {state.current_model_id} via {self.provider.provider_name}")
+                log.warning(f"[ORCH] Message count: {len(state.messages)}")
+                _sys_len = sum(len(m.content) if isinstance(m.content, str) else 0 for m in state.messages if m.role == "system")
+                log.warning(f"[ORCH] System prompt length: {_sys_len} chars")
+                log.warning(f"[ORCH] Tool schemas count: {len(effective_schemas)}")
+                log.warning(f"[ORCH] Iteration: {state.iteration}")
+
             try:
                 response = self.provider.generate(
                     model=state.current_model_id,
@@ -126,9 +140,23 @@ class AgenticLoop:
                     tools=effective_schemas or None,
                 )
             except Exception as exc:
+                if _is_orch:
+                    log.warning(f"[ORCH] ── Log Point D: LLM ERROR ──")
+                    log.warning(f"[ORCH] Exception: {exc}")
                 state.stopped_reason = "error"
                 state.final_text = f"loop_error: {exc}"
                 break
+
+            # ── Log Point D: LLM response received ──
+            if _is_orch:
+                log.warning(f"[ORCH] ── Log Point D: Response received ──")
+                log.warning(f"[ORCH] Response length: {len(response.text)} chars")
+                log.warning(f"[ORCH] Response model: {response.model}")
+                log.warning(f"[ORCH] Stop reason: {response.stop_reason}")
+                log.warning(f"[ORCH] Response preview: {response.text[:300]}")
+                if not response.text:
+                    log.warning(f"[ORCH] EMPTY RESPONSE — raw keys: {list(response.raw.keys())}")
+                    log.warning(f"[ORCH] Raw choices: {response.raw.get('choices', response.raw.get('content', 'N/A'))}")
 
             delta_input, delta_output = self._accumulate_usage(response, state)
             state.estimated_cost_usd += estimate_cost(

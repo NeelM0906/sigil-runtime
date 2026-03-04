@@ -458,6 +458,12 @@ class OrchestrationEngine:
             f"When finished, provide your results as a clear response."
         )
 
+        # ── Log Point A: Prime sends delegation ──
+        log.warning(f"[ORCH] ── Log Point A: Delegating to {sub.being_id} ──")
+        log.warning(f"[ORCH] Tenant: {tenant_id}, Session: {session}")
+        log.warning(f"[ORCH] Workspace: {workspace}")
+        log.warning(f"[ORCH] Message (first 300 chars): {delegation_message[:300]}")
+
         try:
             from bomba_sr.runtime.bridge import TurnRequest
             result = self.bridge.handle_turn(TurnRequest(
@@ -472,8 +478,19 @@ class OrchestrationEngine:
                 search_query=sub.title,
             ))
             output = (result.get("assistant") or {}).get("text", "")
+
+            # ── Log Point E: Result returns to orchestration engine ──
+            log.warning(f"[ORCH] ── Log Point E: Result from {sub.being_id} ──")
+            log.warning(f"[ORCH] Received from {sub.being_id}: length={len(output)}")
+            log.warning(f"[ORCH] Result preview: {output[:300]}")
+            if not output:
+                log.warning(f"[ORCH] EMPTY result from {sub.being_id} — full result dict keys: {list(result.keys())}")
+                assistant_block = result.get("assistant")
+                log.warning(f"[ORCH] assistant block: {assistant_block}")
         except Exception as exc:
             output = f"[Error: {exc}]"
+            log.warning(f"[ORCH] ── Log Point E: EXCEPTION from {sub.being_id} ──")
+            log.warning(f"[ORCH] Error: {exc}")
             log.exception("Subtask execution failed for being %s", sub.being_id)
         finally:
             # Restore being status
@@ -623,6 +640,14 @@ class OrchestrationEngine:
                 f"Approved: {review.get('approved', False)}\n\n"
                 f"{output}\n"
             )
+
+        # ── Log Point F: Context being passed to synthesis ──
+        log.warning(f"[ORCH] ── Log Point F: Synthesis phase ──")
+        for sub in plan.sub_tasks:
+            out = state["subtask_outputs"].get(sub.being_id, "(no output)")
+            review = state["subtask_reviews"].get(sub.being_id, {})
+            log.warning(f"[ORCH] Being {sub.being_id}: output_len={len(out)}, approved={review.get('approved', 'N/A')}, quality={review.get('quality_score', 'N/A')}")
+            log.warning(f"[ORCH] Output preview ({sub.being_id}): {out[:300]}")
 
         synthesis_prompt = SYNTHESIS_SYSTEM_PROMPT.format(
             original_goal=state["goal"],

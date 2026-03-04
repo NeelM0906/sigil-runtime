@@ -3,13 +3,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import mimetypes
 import os
+import sys
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+# Configure logging early so all modules can emit to stderr.
+logging.basicConfig(
+    level=logging.WARNING,
+    stream=sys.stderr,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest

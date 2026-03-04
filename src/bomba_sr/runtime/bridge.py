@@ -741,6 +741,17 @@ class RuntimeBridge:
                 guard_path=lambda p: self.registry.guard_path(runtime.context, p),
             )
             tool_format = "anthropic" if self.provider.provider_name == "anthropic" else "openai"
+            # ── Log Point B: handle_turn receives orchestration request ──
+            if "subtask:" in request.session_id or "orchestration:" in request.session_id:
+                tool_names = [] if request.disable_tools else runtime.tool_executor.known_tool_names()
+                logger.warning(f"[ORCH] ── Log Point B: handle_turn called ──")
+                logger.warning(f"[ORCH] handle_turn for {request.tenant_id}/{request.session_id}")
+                logger.warning(f"[ORCH] Model: {model_id}")
+                logger.warning(f"[ORCH] Provider: {self.provider.provider_name} base_url={getattr(self.provider, 'api_base', 'N/A')}")
+                logger.warning(f"[ORCH] Tools enabled: {tool_names[:20]}{'...' if len(tool_names) > 20 else ''}")
+                logger.warning(f"[ORCH] disable_tools={request.disable_tools}")
+                logger.warning(f"[ORCH] System prompt length: {len(system_prompt)} chars")
+
             loop = AgenticLoop(
                 provider=self.provider,
                 tool_executor=runtime.tool_executor,
