@@ -387,6 +387,110 @@ class TestOrchestrationLifecycle:
 # SubTaskPlan / OrchestrationPlan model tests
 # ---------------------------------------------------------------------------
 
+class TestTaskResultPersistence:
+    """Verify that completed orchestrations write a task_results row."""
+
+    def _make_engine_with_db(self):
+        """Build an engine backed by a real RuntimeDB so we can inspect task_results."""
+        import os
+        import tempfile
+        from bomba_sr.storage.db import RuntimeDB
+
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "runtime.db"))
+
+        # Minimal _TenantRuntime stand-in with a real db
+        tenant_runtime = MagicMock()
+        tenant_runtime.db = db
+
+        bridge = MagicMock()
+        bridge._tenant_runtime.return_value = tenant_runtime
+
+        dashboard = MagicMock()
+        project_svc = MagicMock()
+
+        dashboard.list_beings.return_value = [
+            {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Research",
+             "skills": "", "tenant_id": "t-forge", "workspace": "workspaces/forge"},
+        ]
+        dashboard.get_being.return_value = {
+            "id": "forge", "tenant_id": "t-forge", "workspace": "workspaces/forge", "status": "online",
+        }
+        dashboard.create_task.return_value = {"id": "task-persist-1"}
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        def mock_handle_turn(req):
+            msg = req.user_message
+            if "ORCHESTRATION MODE" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "summary": "Persist test",
+                    "synthesis_strategy": "merge",
+                    "sub_tasks": [
+                        {"being_id": "forge", "title": "Do work",
+                         "instructions": "Execute", "done_when": "Done"},
+                    ],
+                })}}
+            if "[REVIEW]" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "approved": True, "feedback": "", "quality_score": 0.9, "notes": "OK",
+                })}}
+            if "[SYNTHESIZE]" in msg:
+                return {"assistant": {"text": "Synthesized output for persistence test."}}
+            return {"assistant": {"text": "Sub-task output from forge."}}
+
+        bridge.handle_turn.side_effect = mock_handle_turn
+
+        engine = OrchestrationEngine(
+            bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+        )
+        return engine, db
+
+    def test_task_result_written_after_synthesis(self):
+        engine, db = self._make_engine_with_db()
+        result = engine.start(
+            goal="Persistence test goal",
+            requester_session_id="mc-chat-prime",
+            sender="user",
+        )
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+        # Verify row in task_results
+        row = db.execute(
+            "SELECT * FROM task_results WHERE task_id = ?", (task_id,)
+        ).fetchone()
+        assert row is not None
+        assert row["goal"] == "Persistence test goal"
+        assert row["strategy"] == "merge"
+        assert json.loads(row["beings_used"]) == ["forge"]
+        assert "forge" in json.loads(row["outputs"])
+        assert "Synthesized output" in row["synthesis"]
+        assert row["tenant_id"] == "tenant-prime"
+        assert row["created_at"]  # non-empty ISO timestamp
+
+    def test_task_result_schema_is_idempotent(self):
+        """Calling _ensure_task_results_schema multiple times does not error."""
+        engine, db = self._make_engine_with_db()
+        # __init__ already called it once; call again
+        engine._ensure_task_results_schema()
+        tables = db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='task_results'"
+        ).fetchone()
+        assert tables is not None
+
+
 class TestModels:
     def test_subtask_plan_to_dict(self):
         p = SubTaskPlan(being_id="forge", title="Research", instructions="Do it", done_when="Done")

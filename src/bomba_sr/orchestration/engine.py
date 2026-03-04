@@ -184,6 +184,7 @@ class OrchestrationEngine:
         self.prime_tenant_id = prime_tenant_id
         self._active: dict[str, dict[str, Any]] = {}  # task_id -> state
         self._lock = threading.Lock()
+        self._ensure_task_results_schema()
 
     # ------------------------------------------------------------------
     # Public API
@@ -669,6 +670,9 @@ class OrchestrationEngine:
         ))
         final_output = (result.get("assistant") or {}).get("text", "")
 
+        # Persist the full task record for cross-task recall
+        self._persist_task_result(task_id, state, final_output)
+
         # Post final output back to user's chat
         self.dashboard.create_message(
             sender="prime",
@@ -714,6 +718,75 @@ class OrchestrationEngine:
 
     def _prime_workspace(self) -> str:
         return "/Users/zidane/Downloads/PROJEKT/workspaces/prime"
+
+    # ------------------------------------------------------------------
+    # Task result persistence
+    # ------------------------------------------------------------------
+
+    def _ensure_task_results_schema(self) -> None:
+        """Create the task_results table in the prime tenant DB if it doesn't exist."""
+        try:
+            runtime = self.bridge._tenant_runtime(
+                self.prime_tenant_id,
+                self._prime_workspace(),
+            )
+            runtime.db.script(
+                """
+                CREATE TABLE IF NOT EXISTS task_results (
+                    task_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    goal TEXT NOT NULL,
+                    strategy TEXT NOT NULL,
+                    beings_used TEXT NOT NULL,
+                    outputs TEXT NOT NULL,
+                    synthesis TEXT NOT NULL,
+                    artifacts TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_task_results_created
+                    ON task_results(tenant_id, created_at DESC);
+                """
+            )
+        except Exception as exc:
+            log.warning("Could not ensure task_results schema: %s", exc)
+
+    def _persist_task_result(
+        self,
+        task_id: str,
+        state: dict[str, Any],
+        synthesis_text: str,
+    ) -> None:
+        """Write a permanent task result record after synthesis completes."""
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            plan: OrchestrationPlan | None = state.get("plan")
+            beings_used = (
+                [sub.being_id for sub in plan.sub_tasks] if plan else []
+            )
+            strategy = plan.synthesis_strategy if plan else "unknown"
+            outputs = dict(state.get("subtask_outputs", {}))
+            runtime.db.execute_commit(
+                """
+                INSERT INTO task_results
+                    (task_id, tenant_id, goal, strategy, beings_used,
+                     outputs, synthesis, artifacts, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    self.prime_tenant_id,
+                    state.get("goal", ""),
+                    strategy,
+                    json.dumps(beings_used),
+                    json.dumps(outputs),
+                    synthesis_text,
+                    json.dumps([]),  # artifacts — populated by future work
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+            log.info("Persisted task result for %s", task_id[:8])
+        except Exception as exc:
+            log.warning("Failed to persist task result for %s: %s", task_id[:8], exc)
 
     def _collect_prior_outputs(
         self, task_id: str, plan: OrchestrationPlan, current_being_id: str,
