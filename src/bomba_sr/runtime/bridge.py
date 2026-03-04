@@ -515,10 +515,21 @@ class RuntimeBridge:
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
         procedural_memories = runtime.memory.recall_procedural(user_id=request.user_id, query=search_query, limit=5)
-        recent_turn_messages = runtime.memory.get_recent_turns(
-            tenant_id=request.tenant_id,
-            session_id=request.session_id,
-            limit=5,
+        # Skip conversation replay for subtask/orchestration sessions —
+        # they are single-turn by design and old tool_use blocks cause
+        # API errors when replayed.
+        _is_subtask_session = (
+            "subtask:" in request.session_id
+            or "orchestration:" in request.session_id
+        )
+        recent_turn_messages = (
+            []
+            if _is_subtask_session
+            else runtime.memory.get_recent_turns(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                limit=5,
+            )
         )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,

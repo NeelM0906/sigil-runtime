@@ -452,7 +452,7 @@ class OrchestrationEngine:
         """Execute a single sub-task by calling handle_turn for the being."""
         session = subtask_session_id(parent_task_id, sub.being_id)
         being = self.dashboard.get_being(sub.being_id) or {}
-        tenant_id = being.get("tenant_id") or self.prime_tenant_id
+        tenant_id = being.get("tenant_id") or f"tenant-{sub.being_id}"
 
         ws = being.get("workspace")
         if ws and ws != ".":
@@ -801,10 +801,24 @@ class OrchestrationEngine:
                 done_when="Task completed",
             )]
 
+        strategy = data.get("synthesis_strategy", "merge")
+
+        # Auto-detect sequential need: if any sub-task's instructions
+        # reference other beings or mention combining/summarizing results,
+        # upgrade to sequential so later beings get earlier outputs.
+        if strategy != "sequential" and len(sub_tasks) > 1:
+            _combine_keywords = {"combine", "combining", "summary", "summarize", "synthesize", "merge", "both results", "other beings", "receive"}
+            for st in sub_tasks:
+                instr_lower = st.instructions.lower()
+                if any(kw in instr_lower for kw in _combine_keywords):
+                    strategy = "sequential"
+                    log.debug("[ORCH] Auto-upgraded strategy to 'sequential' — sub-task '%s' references combining results", st.title)
+                    break
+
         return OrchestrationPlan(
             summary=data.get("summary", ""),
             sub_tasks=sub_tasks,
-            synthesis_strategy=data.get("synthesis_strategy", "merge"),
+            synthesis_strategy=strategy,
         )
 
     def _parse_review(self, llm_reply: str) -> dict[str, Any]:
