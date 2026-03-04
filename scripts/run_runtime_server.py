@@ -1268,6 +1268,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         self._write_cors(200, {"content": content, "path": rel_path})
                         return
 
+                    # GET /api/mc/beings/:id/skills
+                    if sub == "skills":
+                        skills = dashboard_svc.get_being_skill_list(bid)
+                        self._write_cors(200, {"skills": skills})
+                        return
+
                     # GET /api/mc/beings/:id  (basic being record)
                     being = dashboard_svc.get_being(bid)
                     if not being:
@@ -1298,6 +1304,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     steps = dashboard_svc.get_task_steps(tid)
                     self._write_cors(200, {"steps": steps})
                     return
+                if path.startswith("/api/mc/tasks/") and path.endswith("/artifacts"):
+                    tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
+                    artifacts = dashboard_svc.list_task_artifacts(tid)
+                    self._write_cors(200, {"artifacts": artifacts})
+                    return
                 if path == "/api/mc/tasks/cleanup":
                     deleted = dashboard_svc.clean_casual_tasks(project_svc)
                     self._write_cors(200, {"deleted": deleted})
@@ -1324,6 +1335,28 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 if path == "/api/mc/subagents":
                     runs = dashboard_svc.list_subagent_runs()
                     self._write_cors(200, {"runs": runs})
+                    return
+
+                # --- Artifacts ---
+                if path.startswith("/api/mc/artifacts/") and path.endswith("/download"):
+                    aid = path.split("/api/mc/artifacts/", 1)[1].split("/")[0]
+                    rec = dashboard_svc.get_artifact(aid)
+                    if not rec:
+                        self._write_cors(404, {"error": "artifact not found"})
+                        return
+                    import mimetypes
+                    fpath = Path(rec["path"])
+                    if not fpath.is_file():
+                        self._write_cors(404, {"error": "artifact file missing"})
+                        return
+                    content_type = rec.get("mime_type", "application/octet-stream")
+                    self.send_response(200)
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Content-Disposition", f'attachment; filename="{fpath.name}"')
+                    self.send_header("Content-Length", str(fpath.stat().st_size))
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(fpath.read_bytes())
                     return
 
                 # --- SSE ---
@@ -1545,6 +1578,11 @@ def main() -> int:
         project_svc = ProjectService(mc_db)
         dashboard_svc = DashboardService(db=mc_db, bridge=bridge)
         dashboard_svc.ensure_mc_project(project_svc)
+        # Wire artifact store for dashboard artifact tracking
+        from bomba_sr.artifacts.store import ArtifactStore
+        artifacts_root = runtime_home / "artifacts"
+        artifact_store = ArtifactStore(mc_db, artifacts_root)
+        dashboard_svc.set_artifact_store(artifact_store)
         loaded = dashboard_svc.load_beings_from_configs()
         print(f"mission control: loaded {loaded} beings from configs")
         print("mission control: dashboard service ready")

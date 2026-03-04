@@ -354,6 +354,9 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
           {/* Sub-Steps Checklist */}
           <StepChecklist steps={task.steps} />
 
+          {/* Artifacts */}
+          <ArtifactList artifacts={task.artifacts} getBeingById={getBeingById} />
+
           {/* Activity History */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Activity Log</div>
@@ -472,6 +475,95 @@ function StepChecklist({ steps }) {
   )
 }
 
+// ── Artifact type icons ──────────────────────────────────────
+
+const ARTIFACT_ICONS = {
+  pdf: { icon: 'PDF', color: 'text-red-400', bg: 'bg-red-400/10' },
+  docx: { icon: 'DOC', color: 'text-blue-400', bg: 'bg-blue-400/10' },
+  markdown: { icon: 'MD', color: 'text-gray-400', bg: 'bg-gray-400/10' },
+  code: { icon: 'CODE', color: 'text-green-400', bg: 'bg-green-400/10' },
+  image: { icon: 'IMG', color: 'text-purple-400', bg: 'bg-purple-400/10' },
+  html: { icon: 'HTML', color: 'text-orange-400', bg: 'bg-orange-400/10' },
+  csv: { icon: 'CSV', color: 'text-teal-400', bg: 'bg-teal-400/10' },
+  json: { icon: 'JSON', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
+  svg: { icon: 'SVG', color: 'text-pink-400', bg: 'bg-pink-400/10' },
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
+// ── Artifact Badge (compact, for card) ──────────────────────
+
+function ArtifactBadge({ artifacts }) {
+  if (!artifacts || artifacts.length === 0) return null
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <svg className="w-3 h-3 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+      </svg>
+      <span className="text-[9px] text-text-muted font-mono">{artifacts.length} artifact{artifacts.length !== 1 ? 's' : ''}</span>
+      {artifacts.slice(0, 3).map(a => {
+        const cfg = ARTIFACT_ICONS[a.artifact_type] || ARTIFACT_ICONS.code
+        return (
+          <span key={a.artifact_id} className={`text-[8px] font-bold px-1 rounded ${cfg.bg} ${cfg.color}`}>
+            {cfg.icon}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Artifact List (detailed, for detail panel) ──────────────
+
+function ArtifactList({ artifacts, getBeingById }) {
+  if (!artifacts || artifacts.length === 0) return null
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted">Artifacts</div>
+        <span className="text-[10px] text-text-muted font-mono">{artifacts.length} file{artifacts.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        {artifacts.map(a => {
+          const cfg = ARTIFACT_ICONS[a.artifact_type] || ARTIFACT_ICONS.code
+          const being = a.created_by ? getBeingById(a.created_by) : null
+          const filename = a.path ? a.path.split('/').pop() : a.title
+          return (
+            <div key={a.artifact_id} className="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-card border border-border group">
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.color} shrink-0`}>
+                {cfg.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium truncate">{a.title}</div>
+                <div className="flex items-center gap-2 text-[9px] text-text-muted">
+                  <span>{formatFileSize(a.file_size)}</span>
+                  {a.skill_id && <span className="font-mono">{a.skill_id}</span>}
+                  {being && <span>{being.name}</span>}
+                  <span>{timeAgo(a.created_at)}</span>
+                </div>
+              </div>
+              <a
+                href={`/api/mc/artifacts/${a.artifact_id}/download`}
+                onClick={e => e.stopPropagation()}
+                className="opacity-0 group-hover:opacity-100 text-[10px] text-accent-blue hover:underline transition-opacity shrink-0"
+                download
+              >
+                Download
+              </a>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
   const isWorking = task.status === 'in_progress' && task.assignees.some(id => {
@@ -507,6 +599,7 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
       <p className="text-xs text-text-secondary mb-1 line-clamp-2 leading-relaxed">{task.description}</p>
 
       <StepProgress steps={task.steps} />
+      <ArtifactBadge artifacts={task.artifacts} />
 
       <div className="flex items-center gap-1">
         {task.assignees.map(id => {

@@ -89,6 +89,27 @@ Each step should be a short imperative sentence (max 60 chars).
 Respond with ONLY a JSON object: {"steps": ["step 1", "step 2", ...]}
 Nothing else."""
 
+# ── Being → Skill mapping ────────────────────────────────────
+# Default skills each being has access to. Any being can request
+# a skill it doesn't have by default if the task requires it.
+
+BEING_SKILL_MAP: dict[str, list[str]] = {
+    # All beings get these by default
+    "__default__": ["pdf-generator", "docx-generator", "code-generator"],
+    # Per-being additions
+    "sai-forge": ["screenshot"],
+    "sai-scholar": ["screenshot"],
+    "sai-recovery": [],
+    "sai-memory": [],
+}
+
+
+def get_being_skills(being_id: str) -> list[str]:
+    """Return the skill IDs available to a being."""
+    defaults = list(BEING_SKILL_MAP.get("__default__", []))
+    extras = BEING_SKILL_MAP.get(being_id, [])
+    return defaults + extras
+
 
 def _extract_json(text: str) -> dict | None:
     """Extract a JSON object from an LLM response (tolerates markdown fences)."""
@@ -907,6 +928,66 @@ class DashboardService:
         return completed_step
 
     # ------------------------------------------------------------------
+    # Artifacts (wraps ArtifactStore for dashboard context)
+    # ------------------------------------------------------------------
+
+    def set_artifact_store(self, store: Any) -> None:
+        """Set the artifact store reference for dashboard artifact tracking."""
+        self._artifact_store = store
+
+    def list_task_artifacts(self, task_id: str) -> list[dict]:
+        """List artifacts attached to a task."""
+        store = getattr(self, "_artifact_store", None)
+        if not store:
+            return []
+        try:
+            records = store.list_task_artifacts(MC_TENANT, task_id)
+            return [r.to_dict() for r in records]
+        except Exception:
+            return []
+
+    def get_artifact(self, artifact_id: str) -> dict | None:
+        """Get a single artifact record."""
+        store = getattr(self, "_artifact_store", None)
+        if not store:
+            return None
+        try:
+            rec = store.get_artifact(artifact_id)
+            return rec.to_dict() if rec else None
+        except Exception:
+            return None
+
+    def get_being_skill_list(self, being_id: str) -> list[dict]:
+        """Return skills available to a being with metadata."""
+        skill_ids = get_being_skills(being_id)
+        skills: list[dict] = []
+        for sid in skill_ids:
+            # Try to find the SKILL.md for richer metadata
+            skill_dir = _PROJECT_ROOT / "skills" / sid.replace("-", "_")
+            if not skill_dir.is_dir():
+                skill_dir = _PROJECT_ROOT / "skills" / sid
+            desc = ""
+            if skill_dir.is_dir():
+                skill_md = skill_dir / "SKILL.md"
+                if skill_md.is_file():
+                    try:
+                        text = skill_md.read_text(encoding="utf-8", errors="replace")
+                        # Extract description from YAML frontmatter
+                        in_fm = False
+                        for line in text.splitlines():
+                            s = line.strip()
+                            if s == "---":
+                                in_fm = not in_fm
+                                continue
+                            if in_fm and s.startswith("description:"):
+                                desc = s.split(":", 1)[1].strip().strip('"\'')
+                                break
+                    except OSError:
+                        pass
+            skills.append({"skill_id": sid, "description": desc})
+        return skills
+
+    # ------------------------------------------------------------------
     # Tasks  (wraps ProjectService)
     # ------------------------------------------------------------------
 
@@ -1285,6 +1366,16 @@ class DashboardService:
 
         # ── 4. Skills section ────────────────────────────────────
         skills_list = self._resolve_skills(being, ws_abs if ws_exists else None)
+        # Merge in the per-being skill mapping (artifact skills)
+        mapped_skills = self.get_being_skill_list(being.get("id", ""))
+        seen = {s.get("name") for s in skills_list}
+        for ms in mapped_skills:
+            if ms["skill_id"] not in seen:
+                skills_list.append({
+                    "name": ms["skill_id"],
+                    "description": ms.get("description", ""),
+                    "path": None,
+                })
 
         # ── 5. Workspace file tree ───────────────────────────────
         file_tree = self._build_file_tree(ws_abs, max_depth=2) if ws_exists else []
@@ -1585,6 +1676,11 @@ class DashboardService:
             task_id = t.get("id") or t.get("task_id")
             if task_id:
                 t["steps"] = self.get_task_steps(task_id)
+        # Enrich with artifacts if present
+        if "artifacts" not in t:
+            task_id = t.get("id") or t.get("task_id")
+            if task_id:
+                t["artifacts"] = self.list_task_artifacts(task_id)
         return t
 
     @staticmethod
