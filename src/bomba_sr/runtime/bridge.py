@@ -127,6 +127,28 @@ class _TenantRuntime:
     team_manager: Any | None
 
 
+def _strip_tool_blocks(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove tool_use and tool_result content blocks, keep text only.
+
+    Ensures orchestration/subtask replay messages don't contain stale
+    tool blocks that can cause API errors when replayed.
+    """
+    cleaned: list[dict[str, Any]] = []
+    for msg in messages:
+        role = msg.get("role", "")
+        if role == "tool":
+            continue  # Skip tool result messages entirely
+        content = msg.get("content")
+        if isinstance(content, list):
+            # Filter to text-only blocks
+            text_blocks = [b for b in content if isinstance(b, dict) and b.get("type") == "text"]
+            if text_blocks:
+                cleaned.append({**msg, "content": text_blocks})
+        elif isinstance(content, str):
+            cleaned.append(msg)
+    return cleaned
+
+
 class RuntimeBridge:
     def __init__(
         self,
@@ -538,22 +560,26 @@ class RuntimeBridge:
                     pass  # non-critical — don't fail the turn
 
         procedural_memories = runtime.memory.recall_procedural(user_id=request.user_id, query=search_query, limit=5)
-        # Skip conversation replay for subtask/orchestration sessions —
-        # they are single-turn by design and old tool_use blocks cause
-        # API errors when replayed.
-        _is_subtask_session = (
+        # Orchestration/subtask sessions get stripped replay (text only,
+        # no tool_use/tool_result blocks) to give beings continuity during
+        # revision rounds without risking API errors from stale tool blocks.
+        _is_orch_session = (
             "subtask:" in request.session_id
             or "orchestration:" in request.session_id
         )
-        recent_turn_messages = (
-            []
-            if _is_subtask_session
-            else runtime.memory.get_recent_turns(
+        if _is_orch_session:
+            raw_turns = runtime.memory.get_recent_turns(
+                tenant_id=request.tenant_id,
+                session_id=request.session_id,
+                limit=3,  # Fewer turns for subtask context — keep it focused
+            )
+            recent_turn_messages = _strip_tool_blocks(raw_turns)
+        else:
+            recent_turn_messages = runtime.memory.get_recent_turns(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 limit=5,
             )
-        )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,
             session_id=request.session_id,

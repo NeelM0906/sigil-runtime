@@ -350,5 +350,154 @@ class RuntimeBridgeTests(unittest.TestCase):
             self.assertIn("web_fetch", names_enabled)
 
 
+class TestStripToolBlocks(unittest.TestCase):
+    """Verify _strip_tool_blocks removes tool blocks and keeps text."""
+
+    def test_strip_removes_tool_role_messages(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        messages = [
+            {"role": "user", "content": "do something"},
+            {"role": "assistant", "content": "sure, calling tool"},
+            {"role": "tool", "content": "tool result here"},
+        ]
+        cleaned = _strip_tool_blocks(messages)
+        roles = [m["role"] for m in cleaned]
+        self.assertNotIn("tool", roles)
+        self.assertEqual(len(cleaned), 2)
+
+    def test_strip_keeps_string_content(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        messages = [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "world"},
+        ]
+        cleaned = _strip_tool_blocks(messages)
+        self.assertEqual(len(cleaned), 2)
+        self.assertEqual(cleaned[0]["content"], "hello")
+        self.assertEqual(cleaned[1]["content"], "world")
+
+    def test_strip_filters_list_content_to_text_only(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        messages = [
+            {"role": "assistant", "content": [
+                {"type": "text", "text": "Let me search"},
+                {"type": "tool_use", "id": "t1", "name": "web_search", "input": {}},
+            ]},
+        ]
+        cleaned = _strip_tool_blocks(messages)
+        self.assertEqual(len(cleaned), 1)
+        self.assertEqual(len(cleaned[0]["content"]), 1)
+        self.assertEqual(cleaned[0]["content"][0]["type"], "text")
+
+    def test_strip_drops_message_with_only_tool_blocks(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        messages = [
+            {"role": "assistant", "content": [
+                {"type": "tool_use", "id": "t1", "name": "search", "input": {}},
+            ]},
+        ]
+        cleaned = _strip_tool_blocks(messages)
+        self.assertEqual(len(cleaned), 0)
+
+    def test_strip_empty_input(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        self.assertEqual(_strip_tool_blocks([]), [])
+
+    def test_strip_preserves_message_metadata(self) -> None:
+        from bomba_sr.runtime.bridge import _strip_tool_blocks
+        messages = [
+            {"role": "user", "content": "test", "extra_key": "preserved"},
+        ]
+        cleaned = _strip_tool_blocks(messages)
+        self.assertEqual(cleaned[0]["extra_key"], "preserved")
+
+
+class TestOrchSubtaskReplay(unittest.TestCase):
+    """Verify orchestration/subtask sessions get stripped replay, not zero replay."""
+
+    def test_subtask_session_gets_replay(self) -> None:
+        """A subtask session should replay previous turns (stripped), not skip them."""
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            provider = CaptureProvider()
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=provider,
+            )
+            session_id = "subtask:task-abc:forge"
+            # Turn 1
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-sub",
+                    session_id=session_id,
+                    user_id="forge",
+                    user_message="first pass at the task",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            # Turn 2 (revision round)
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-sub",
+                    session_id=session_id,
+                    user_id="forge",
+                    user_message="revise: expand section 3",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            self.assertGreaterEqual(len(provider.calls), 2)
+            second_call = provider.calls[1]
+            # The second call should contain replay of the first turn's content
+            all_content = " ".join(
+                getattr(m, "content", "") for m in second_call
+                if isinstance(getattr(m, "content", ""), str)
+            )
+            self.assertIn("first pass at the task", all_content)
+
+    def test_orchestration_session_gets_replay(self) -> None:
+        """An orchestration session should also get stripped replay."""
+        with tempfile.TemporaryDirectory() as td:
+            runtime_home = Path(td) / "runtime-home"
+            workspace = Path(td) / "workspace"
+            workspace.mkdir(parents=True, exist_ok=True)
+            provider = CaptureProvider()
+            bridge = RuntimeBridge(
+                config=RuntimeConfig(runtime_home=runtime_home),
+                provider=provider,
+            )
+            session_id = "orchestration:task-xyz"
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-orch",
+                    session_id=session_id,
+                    user_id="orchestrator",
+                    user_message="plan the task",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            bridge.handle_turn(
+                TurnRequest(
+                    tenant_id="tenant-orch",
+                    session_id=session_id,
+                    user_id="orchestrator",
+                    user_message="now synthesize",
+                    profile=TurnProfile.CHAT,
+                    workspace_root=str(workspace),
+                )
+            )
+            self.assertGreaterEqual(len(provider.calls), 2)
+            second_call = provider.calls[1]
+            all_content = " ".join(
+                getattr(m, "content", "") for m in second_call
+                if isinstance(getattr(m, "content", ""), str)
+            )
+            self.assertIn("plan the task", all_content)
+
+
 if __name__ == "__main__":
     unittest.main()
