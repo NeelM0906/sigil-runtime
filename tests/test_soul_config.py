@@ -177,6 +177,28 @@ class SoulConfigTests(unittest.TestCase):
             assert soul is not None
             self.assertIsNone(soul.team_context_text)
 
+    def test_representation_md_loaded(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            (root / "REPRESENTATION.md").write_text(
+                "# Being Representation: SAI Forge\n\n## Task History Summary\nTotal tasks completed: 3\n",
+                encoding="utf-8",
+            )
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIn("Total tasks completed: 3", soul.representation_text)
+
+    def test_representation_md_none_when_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIsNone(soul.representation_text)
+
 
 if __name__ == "__main__":
     unittest.main()

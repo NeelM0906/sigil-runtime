@@ -89,6 +89,12 @@ _NOT_TASK_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_REPRESENTATION_KEYWORDS = re.compile(
+    r"\b(capabilities?|history|performance|strengths?|weaknesses?"
+    r"|track\s+record|how.*been\s+doing|past\s+tasks?|profile|background)\b",
+    re.IGNORECASE,
+)
+
 _STEP_GENERATION_PROMPT = """\
 You are planning sub-steps for an AI agent task.
 Given the task message, break it into 2-6 concrete sub-steps the agent should follow.
@@ -803,6 +809,7 @@ class DashboardService:
         error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
+            _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(content))
             req = TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -812,6 +819,7 @@ class DashboardService:
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
                 on_iteration=_on_loop_iteration if all_steps else None,
+                include_representation=_inc_rep,
             )
             result = self.bridge.handle_turn(req)
             # handle_turn returns {"assistant": {"text": "..."}, ...}
@@ -1540,7 +1548,7 @@ class DashboardService:
     # Identity files to look for in a being's workspace
     _IDENTITY_FILES = (
         "SOUL.md", "IDENTITY.md", "MISSION.md", "VISION.md",
-        "FORMULA.md", "PRIORITIES.md",
+        "FORMULA.md", "PRIORITIES.md", "REPRESENTATION.md",
     )
 
     def get_being_detail(self, being_id: str) -> dict | None:
@@ -1641,6 +1649,16 @@ class DashboardService:
         # ── 5. Workspace file tree ───────────────────────────────
         file_tree = self._build_file_tree(ws_abs, max_depth=2) if ws_exists else []
 
+        # ── 6. Representation (live from disk) ────────────────────
+        representation_text = None
+        if ws_exists:
+            rep_path = ws_abs / "REPRESENTATION.md"
+            if rep_path.is_file():
+                try:
+                    representation_text = rep_path.read_text(encoding="utf-8")
+                except OSError:
+                    pass
+
         return {
             "being": being,
             "identity": identity,
@@ -1648,6 +1666,7 @@ class DashboardService:
             "tools": tools_list,
             "skills": skills_list,
             "file_tree": file_tree,
+            "representation": representation_text,
         }
 
     def get_being_file(self, being_id: str, rel_path: str) -> str | None:

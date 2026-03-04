@@ -28,6 +28,7 @@ from bomba_sr.orchestration.engine import (
 from bomba_sr.dashboard.service import (
     DashboardService,
     _NOT_TASK_PATTERNS,
+    _REPRESENTATION_KEYWORDS,
 )
 from bomba_sr.identity.soul import load_soul_from_workspace
 from bomba_sr.storage.db import RuntimeDB
@@ -419,3 +420,31 @@ class TestE2EMemoryArchitecture:
                 # but we verify the fast-path returns correctly
                 result = svc._classify_message("hey how are you")
                 assert result == "not_task"
+
+    # ── Being Representations (Phase 2) ──
+
+    def test_representation_loaded_into_soul(self):
+        """REPRESENTATION.md is loaded into SoulConfig."""
+        with tempfile.TemporaryDirectory() as tmp:
+            ws = _WorkspaceFixture(Path(tmp))
+            (ws.forge_ws / "REPRESENTATION.md").write_text(
+                "# Being Representation: SAI Forge\n\n"
+                "## Task History Summary\nTotal tasks completed: 2\n"
+            )
+            soul = load_soul_from_workspace(ws.forge_ws)
+            assert soul is not None
+            assert soul.representation_text is not None
+            assert "Total tasks completed: 2" in soul.representation_text
+
+    def test_representation_keywords_trigger_flag(self):
+        """Messages about capabilities/history should trigger include_representation."""
+        assert _REPRESENTATION_KEYWORDS.search("what are your capabilities?")
+        assert _REPRESENTATION_KEYWORDS.search("tell me about your performance")
+        assert _REPRESENTATION_KEYWORDS.search("what is your track record?")
+        assert _REPRESENTATION_KEYWORDS.search("how have you been doing?")
+        assert _REPRESENTATION_KEYWORDS.search("what are your strengths?")
+        assert _REPRESENTATION_KEYWORDS.search("show me your past tasks")
+        assert _REPRESENTATION_KEYWORDS.search("what's your background?")
+        # Casual messages should NOT trigger
+        assert not _REPRESENTATION_KEYWORDS.search("hello how are you")
+        assert not _REPRESENTATION_KEYWORDS.search("write a report on AI")

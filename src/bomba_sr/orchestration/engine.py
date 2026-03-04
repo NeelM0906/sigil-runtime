@@ -152,6 +152,32 @@ Respond with ONLY a JSON object (no markdown fences):
 }}
 """
 
+REPRESENTATION_UPDATE_SYSTEM_PROMPT = """\
+You are SAI Memory, the Central Memory Manager for the ACT-I ecosystem.
+Your task is to update a being's REPRESENTATION.md profile based on new task data.
+
+Being: {being_id}
+Task completed: {goal}
+This being's role in the task: {subtask_title}
+Quality score: {quality_score}
+Reviewer notes: {review_notes}
+Synthesis summary (abbreviated): {synthesis_summary}
+
+Current REPRESENTATION.md:
+{current_representation}
+
+Update the REPRESENTATION.md to reflect this new task data. Rules:
+- Preserve the existing section structure exactly (Task History Summary, Performance Profile, Domain Expertise Map, Collaboration Profile, Evolution Log).
+- Increment the task count.
+- Add a one-line entry to Recent tasks.
+- Update Strengths/Weaknesses/Most effective tool chains ONLY if the new data provides clear evidence.
+- Add relevant topics to Domain Expertise Map if the task covered a new domain.
+- Update Collaboration Profile if this being worked alongside others.
+- Add a dated entry to the Evolution Log only for significant changes.
+- Be concise. Do not invent data that is not supported by the task information provided.
+- Return ONLY the updated markdown content — no fences, no explanation.
+"""
+
 SYNTHESIS_SYSTEM_PROMPT = """\
 You are SAI Prime synthesizing the outputs from your team of beings into a final deliverable.
 
@@ -321,17 +347,28 @@ class OrchestrationEngine:
 
         # Gather available beings
         beings = self.dashboard.list_beings() if self.dashboard else []
-        assignable = [
-            {
+        assignable = []
+        for b in beings:
+            if b.get("status") == "offline" or b.get("id") == "prime":
+                continue
+            entry = {
                 "id": b["id"],
                 "name": b["name"],
                 "role": b.get("role", ""),
                 "status": b.get("status", "offline"),
                 "skills": b.get("skills", ""),
             }
-            for b in beings
-            if b.get("status") != "offline" and b.get("id") != "prime"
-        ]
+            # Enrich with representation data (truncated to 800 chars)
+            ws = b.get("workspace")
+            if ws and ws != ".":
+                ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                rep_path = ws_path / "REPRESENTATION.md"
+                if rep_path.exists():
+                    try:
+                        entry["representation"] = rep_path.read_text(encoding="utf-8")[:800]
+                    except OSError:
+                        pass
+            assignable.append(entry)
 
         if not assignable:
             raise RuntimeError("No online beings available for delegation")
@@ -357,6 +394,7 @@ class OrchestrationEngine:
             ),
             workspace_root=self._prime_workspace(),
             disable_tools=True,
+            include_representation=True,
         ))
 
         reply = (result.get("assistant") or {}).get("text", "")
@@ -698,6 +736,9 @@ class OrchestrationEngine:
         # Auto-update shared TEAM_CONTEXT.md so all sisters passively know
         self._update_team_context_outcomes(task_id, state)
 
+        # Auto-update each participating being's REPRESENTATION.md
+        self._update_being_representations(task_id, state, final_output)
+
         # Post final output back to user's chat
         self.dashboard.create_message(
             sender="prime",
@@ -882,6 +923,68 @@ class OrchestrationEngine:
             log.info("Updated TEAM_CONTEXT.md with outcome for task %s", task_id[:8])
         except Exception as exc:
             log.warning("Failed to update TEAM_CONTEXT.md: %s", exc)
+
+    def _update_being_representations(
+        self,
+        task_id: str,
+        state: dict[str, Any],
+        synthesis_text: str,
+    ) -> None:
+        """Have SAI Memory update each participating being's REPRESENTATION.md."""
+        plan: OrchestrationPlan | None = state.get("plan")
+        if plan is None:
+            return
+
+        import os
+        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+
+        for sub in plan.sub_tasks:
+            try:
+                being = self.dashboard.get_being(sub.being_id) or {}
+                ws = being.get("workspace")
+                if ws and ws != ".":
+                    ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                else:
+                    ws_path = Path("/Users/zidane/Downloads/PROJEKT")
+
+                rep_path = ws_path / "REPRESENTATION.md"
+                current_rep = ""
+                if rep_path.exists():
+                    current_rep = rep_path.read_text(encoding="utf-8")
+
+                review = state.get("subtask_reviews", {}).get(sub.being_id, {})
+                quality_score = review.get("quality_score", "N/A")
+                review_notes = review.get("notes", "")
+
+                prompt = REPRESENTATION_UPDATE_SYSTEM_PROMPT.format(
+                    being_id=sub.being_id,
+                    goal=state.get("goal", "unknown task"),
+                    subtask_title=sub.title,
+                    quality_score=quality_score,
+                    review_notes=review_notes,
+                    synthesis_summary=synthesis_text[:500],
+                    current_representation=current_rep[:3000],
+                )
+
+                # Use direct provider.generate() — lightweight, not handle_turn
+                from bomba_sr.llm.providers import ChatMessage, provider_from_env
+                provider = provider_from_env()
+                messages = [ChatMessage(role="user", content=prompt)]
+                updated = provider.generate(messages, model=classify_model)
+
+                if updated and updated.strip():
+                    # Cap at 3000 chars
+                    final_text = updated.strip()[:3000]
+                    rep_path.write_text(final_text, encoding="utf-8")
+                    log.info(
+                        "Updated REPRESENTATION.md for %s (task %s)",
+                        sub.being_id, task_id[:8],
+                    )
+            except Exception as exc:
+                log.warning(
+                    "Failed to update REPRESENTATION.md for %s: %s",
+                    sub.being_id, exc,
+                )
 
     def _collect_prior_outputs(
         self, task_id: str, plan: OrchestrationPlan, current_being_id: str,

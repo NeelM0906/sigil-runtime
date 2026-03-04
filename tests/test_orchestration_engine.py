@@ -572,6 +572,196 @@ class TestTaskResultPersistence:
             assert call_kwargs["confidence"] == 0.8
 
 
+# ---------------------------------------------------------------------------
+# Being Representation tests
+# ---------------------------------------------------------------------------
+
+class TestBeingRepresentations:
+    """Verify that REPRESENTATION.md is updated after orchestration synthesis."""
+
+    def _make_engine_with_workspace(self):
+        """Build engine with temp workspace and REPRESENTATION.md files."""
+        import os
+        import tempfile
+        from pathlib import Path as P
+        from bomba_sr.storage.db import RuntimeDB
+
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "runtime.db"))
+
+        # Create workspace structure
+        ws_root = P(tmpdir) / "workspaces"
+        ws_root.mkdir()
+        forge_ws = ws_root / "forge"
+        forge_ws.mkdir()
+
+        # Seed REPRESENTATION.md
+        (forge_ws / "REPRESENTATION.md").write_text(
+            "# Being Representation: SAI Forge\n\n"
+            "## Task History Summary\nTotal tasks completed: 0\nRecent tasks: (none yet)\n\n"
+            "## Performance Profile\nAverage task quality: N/A\n\n"
+            "## Domain Expertise Map\n\n"
+            "## Collaboration Profile\n\n"
+            "## Evolution Log\n",
+            encoding="utf-8",
+        )
+
+        tenant_runtime = MagicMock()
+        tenant_runtime.db = db
+
+        bridge = MagicMock()
+        bridge._tenant_runtime.return_value = tenant_runtime
+
+        dashboard = MagicMock()
+        project_svc = MagicMock()
+
+        dashboard.list_beings.return_value = [
+            {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Research",
+             "skills": "", "tenant_id": "t-forge", "workspace": str(forge_ws)},
+        ]
+        dashboard.get_being.return_value = {
+            "id": "forge", "tenant_id": "t-forge",
+            "workspace": str(forge_ws), "status": "online",
+        }
+        dashboard.create_task.return_value = {"id": "task-rep-1"}
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        def mock_handle_turn(req):
+            msg = req.user_message
+            if "ORCHESTRATION MODE" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "summary": "Rep test",
+                    "synthesis_strategy": "merge",
+                    "sub_tasks": [
+                        {"being_id": "forge", "title": "Do work",
+                         "instructions": "Execute", "done_when": "Done"},
+                    ],
+                })}}
+            if "[REVIEW]" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "approved": True, "feedback": "", "quality_score": 0.9, "notes": "Solid",
+                })}}
+            if "[SYNTHESIZE]" in msg:
+                return {"assistant": {"text": "Synthesized representation test output."}}
+            return {"assistant": {"text": "Sub-task output from forge."}}
+
+        bridge.handle_turn.side_effect = mock_handle_turn
+
+        engine = OrchestrationEngine(
+            bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+        )
+        engine._prime_workspace = lambda: str(ws_root / "prime")
+
+        return engine, forge_ws, tmpdir
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_representation_written_after_synthesis(self, mock_provider_from_env):
+        """After orchestration completes, REPRESENTATION.md should be updated."""
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = (
+            "# Being Representation: SAI Forge\n\n"
+            "## Task History Summary\nTotal tasks completed: 1\n"
+            "Recent tasks: [2026-03-04] Do work\n\n"
+            "## Performance Profile\nAverage task quality: 0.9\n"
+        )
+        mock_provider_from_env.return_value = mock_provider
+
+        engine, forge_ws, tmpdir = self._make_engine_with_workspace()
+        result = engine.start(goal="Rep test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+        # Verify REPRESENTATION.md was updated
+        rep_text = (forge_ws / "REPRESENTATION.md").read_text()
+        assert "Total tasks completed: 1" in rep_text
+        mock_provider.generate.assert_called_once()
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_representation_failure_does_not_block_synthesis(self, mock_provider_from_env):
+        """If LLM call for representation fails, orchestration still completes."""
+        mock_provider = MagicMock()
+        mock_provider.generate.side_effect = RuntimeError("LLM down")
+        mock_provider_from_env.return_value = mock_provider
+
+        engine, forge_ws, tmpdir = self._make_engine_with_workspace()
+        result = engine.start(goal="Rep fail test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        # Orchestration should still complete despite representation failure
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_representation_capped_at_3000(self, mock_provider_from_env):
+        """Oversized LLM response is truncated to 3000 chars."""
+        oversized = "x" * 5000
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = oversized
+        mock_provider_from_env.return_value = mock_provider
+
+        engine, forge_ws, tmpdir = self._make_engine_with_workspace()
+        result = engine.start(goal="Cap test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+        rep_text = (forge_ws / "REPRESENTATION.md").read_text()
+        assert len(rep_text) <= 3000
+
+    def test_planning_enriched_with_representations(self):
+        """Verify that the planning phase includes representation data in assignable beings."""
+        engine, forge_ws, tmpdir = self._make_engine_with_workspace()
+
+        # Capture the handle_turn calls to inspect the planning prompt
+        original_handle_turn = engine.bridge.handle_turn.side_effect
+        planning_msg = []
+
+        def capturing_handle_turn(req):
+            if "ORCHESTRATION MODE" in req.user_message:
+                planning_msg.append(req.user_message)
+            return original_handle_turn(req)
+
+        engine.bridge.handle_turn.side_effect = capturing_handle_turn
+
+        result = engine.start(goal="Enrichment test", requester_session_id="s1", sender="user")
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(result["task_id"])
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        # Verify planning prompt contained representation data
+        assert len(planning_msg) >= 1
+        assert "representation" in planning_msg[0].lower() or "Task History" in planning_msg[0]
+
+
 class TestModels:
     def test_subtask_plan_to_dict(self):
         p = SubTaskPlan(being_id="forge", title="Research", instructions="Do it", done_when="Done")

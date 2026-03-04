@@ -12,7 +12,7 @@ import pytest
 from bomba_sr.dashboard.service import (
     DashboardService, MC_TENANT, MC_PROJECT_ID,
     TYPE_SISTER, TYPE_RUNTIME, TYPE_VOICE_AGENT, TYPE_SUBAGENT,
-    _extract_json, _NOT_TASK_PATTERNS,
+    _extract_json, _NOT_TASK_PATTERNS, _REPRESENTATION_KEYWORDS,
 )
 from bomba_sr.projects.service import ProjectService
 from bomba_sr.storage.db import RuntimeDB

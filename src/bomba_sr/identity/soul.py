@@ -27,6 +27,7 @@ class SoulConfig:
     priorities_text: str | None = None
     knowledge_text: str | None = None
     team_context_text: str | None = None
+    representation_text: str | None = None
 
 
 def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
@@ -44,6 +45,7 @@ def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
     team_context_text = _read_text(root / "TEAM_CONTEXT.md")
     if team_context_text is None:
         team_context_text = _read_text(root.parent / "TEAM_CONTEXT.md")
+    representation_text = _read_text(root / "REPRESENTATION.md")
     if soul_text is None and identity_text is None:
         return None
 
@@ -101,6 +103,7 @@ def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
         priorities_text=priorities_text,
         knowledge_text=knowledge_text,
         team_context_text=team_context_text,
+        representation_text=representation_text,
     )
 
 

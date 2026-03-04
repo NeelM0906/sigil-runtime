@@ -91,6 +91,7 @@ class TurnRequest:
     max_loop_iterations: int | None = None
     on_iteration: Any = None
     disable_tools: bool = False
+    include_representation: bool = False
 
 
 @dataclass
@@ -625,6 +626,14 @@ class RuntimeBridge:
                     "<team-context readonly=\"true\">\n"
                     + runtime.soul.team_context_text.strip()[:3000]
                     + "\n</team-context>"
+                )
+            if (request.include_representation
+                    and runtime.soul.representation_text
+                    and runtime.soul.representation_text.strip()):
+                system_prefix_parts.append(
+                    '<representation readonly="true">\n'
+                    + runtime.soul.representation_text.strip()[:3000]
+                    + '\n</representation>'
                 )
 
         if runtime.soul is None:
