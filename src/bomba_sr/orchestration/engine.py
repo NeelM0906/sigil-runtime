@@ -513,6 +513,27 @@ class OrchestrationEngine:
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
 
+        # Write a semantic memory into the being's tenant so it accumulates
+        # domain knowledge across orchestration tasks.
+        if output and not output.startswith("[Error"):
+            try:
+                being_runtime = self.bridge._tenant_runtime(tenant_id)
+                being_runtime.memory.learn_semantic(
+                    tenant_id=tenant_id,
+                    user_id=f"prime->{sub.being_id}",
+                    memory_key=f"task_work::{parent_task_id}::{sub.being_id}",
+                    content=(
+                        f"Task: '{sub.title}'. "
+                        f"My findings: {output[:800]}"
+                    ),
+                    confidence=0.8,
+                )
+            except Exception as exc:
+                log.warning(
+                    "Failed to write being memory for %s: %s",
+                    sub.being_id, exc,
+                )
+
         # Log the delegation exchange
         self.dashboard._log_task_history(
             parent_task_id, "being_responded",
@@ -785,6 +806,22 @@ class OrchestrationEngine:
                 ),
             )
             log.info("Persisted task result for %s", task_id[:8])
+
+            # Write a semantic memory so future planning phases can recall
+            # past task outcomes via standard memory retrieval.
+            goal = state.get("goal", "")
+            runtime.memory.learn_semantic(
+                tenant_id=self.prime_tenant_id,
+                user_id="orchestrator",
+                memory_key=f"task_result::{task_id}",
+                content=(
+                    f"Completed task: '{goal}'. "
+                    f"Beings: {', '.join(beings_used)}. "
+                    f"Strategy: {strategy}. "
+                    f"Outcome: {synthesis_text[:500]}"
+                ),
+                confidence=0.9,
+            )
         except Exception as exc:
             log.warning("Failed to persist task result for %s: %s", task_id[:8], exc)
 

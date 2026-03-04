@@ -490,6 +490,87 @@ class TestTaskResultPersistence:
         ).fetchone()
         assert tables is not None
 
+    def test_orchestrator_semantic_memory_written(self):
+        """Fix 2: Prime's planner gets a semantic memory of the completed task."""
+        engine, db = self._make_engine_with_db()
+        runtime_mock = engine.bridge._tenant_runtime.return_value
+
+        result = engine.start(
+            goal="Cross-task recall test",
+            requester_session_id="mc-chat-prime",
+            sender="user",
+        )
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+        # Find the learn_semantic call for the orchestrator
+        orch_calls = [
+            c for c in runtime_mock.memory.learn_semantic.call_args_list
+            if c.kwargs.get("user_id") == "orchestrator"
+               or (c.args and len(c.args) > 1 and c.args[1] == "orchestrator")
+        ]
+        # Use keyword matching since our code uses kwargs
+        if not orch_calls:
+            # Check all calls by keyword
+            orch_calls = [
+                c for c in runtime_mock.memory.learn_semantic.call_args_list
+                if "orchestrator" in str(c)
+            ]
+        assert len(orch_calls) >= 1, (
+            f"Expected orchestrator semantic memory write, got: "
+            f"{runtime_mock.memory.learn_semantic.call_args_list}"
+        )
+        call_kwargs = orch_calls[0].kwargs if orch_calls[0].kwargs else {}
+        if call_kwargs:
+            assert call_kwargs["user_id"] == "orchestrator"
+            assert call_kwargs["memory_key"].startswith("task_result::")
+            assert "Cross-task recall test" in call_kwargs["content"]
+            assert call_kwargs["confidence"] == 0.9
+
+    def test_being_semantic_memory_written(self):
+        """Fix 3: Beings get a semantic memory of their sub-task work."""
+        engine, db = self._make_engine_with_db()
+        runtime_mock = engine.bridge._tenant_runtime.return_value
+
+        result = engine.start(
+            goal="Being memory test",
+            requester_session_id="mc-chat-prime",
+            sender="user",
+        )
+        task_id = result["task_id"]
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(task_id)["status"] == STATUS_COMPLETED
+
+        # Find the learn_semantic call for the being (prime->forge)
+        being_calls = [
+            c for c in runtime_mock.memory.learn_semantic.call_args_list
+            if "prime->forge" in str(c)
+        ]
+        assert len(being_calls) >= 1, (
+            f"Expected being semantic memory write, got: "
+            f"{runtime_mock.memory.learn_semantic.call_args_list}"
+        )
+        call_kwargs = being_calls[0].kwargs if being_calls[0].kwargs else {}
+        if call_kwargs:
+            assert call_kwargs["user_id"] == "prime->forge"
+            assert "task_work::" in call_kwargs["memory_key"]
+            assert call_kwargs["confidence"] == 0.8
+
 
 class TestModels:
     def test_subtask_plan_to_dict(self):
