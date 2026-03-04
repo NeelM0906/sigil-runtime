@@ -1311,6 +1311,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"history": history})
                     return
                 if path == "/api/mc/tasks":
+                    # Default: exclude auto-created tasks for clean board view.
+                    # Pass ?include_auto=true to see all tasks.
+                    include_auto = query.get("include_auto", ["false"])[0].lower() == "true"
                     tasks = dashboard_svc.list_tasks(
                         project_svc,
                         assignee=query.get("assignee", [None])[0],
@@ -1318,6 +1321,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         status=query.get("status", [None])[0],
                         from_date=query.get("from", [None])[0],
                         to_date=query.get("to", [None])[0],
+                        exclude_auto_created=not include_auto,
                     )
                     self._write_cors(200, {"tasks": tasks})
                     return

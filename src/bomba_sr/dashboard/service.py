@@ -1218,10 +1218,19 @@ class DashboardService:
         status: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        exclude_auto_created: bool = False,
     ) -> list[dict]:
         tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID, status=status)
         if priority:
             tasks = [t for t in tasks if t.get("priority") == priority]
+
+        # Filter out auto-created tasks (from _auto_create_task) to keep the
+        # board clean — these are internal routing artifacts, not user-facing.
+        if exclude_auto_created:
+            tasks = [
+                t for t in tasks
+                if "Auto-created from chat message" not in (t.get("description") or "")
+            ]
 
         # Enrich with assignees
         for t in tasks:

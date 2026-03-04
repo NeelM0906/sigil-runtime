@@ -438,7 +438,7 @@ class TestTaskResultPersistence:
                 return {"assistant": {"text": json.dumps({
                     "approved": True, "feedback": "", "quality_score": 0.9, "notes": "OK",
                 })}}
-            if "[SYNTHESIZE]" in msg:
+            if "[SYNTHESIZE" in msg:
                 return {"assistant": {"text": "Synthesized output for persistence test."}}
             return {"assistant": {"text": "Sub-task output from forge."}}
 
@@ -763,7 +763,8 @@ class TestBeingRepresentations:
         # Verify REPRESENTATION.md was updated
         rep_text = (forge_ws / "REPRESENTATION.md").read_text()
         assert "Total tasks completed: 1" in rep_text
-        mock_provider.generate.assert_called_once()
+        # Called twice: once after delegation (with empty synthesis), once after synthesis
+        assert mock_provider.generate.call_count == 2
 
     @patch("bomba_sr.llm.providers.provider_from_env")
     def test_representation_failure_does_not_block_synthesis(self, mock_provider_from_env):
@@ -899,3 +900,221 @@ class TestDashboardIntegration:
             svc = DashboardService(db=db)
             assert svc.get_orchestration_status("nonexistent") is None
             assert svc.get_orchestration_log("nonexistent") == []
+
+
+# ---------------------------------------------------------------------------
+# Synthesis budget & fallback tests
+# ---------------------------------------------------------------------------
+
+class TestSynthesisBudget:
+    def test_truncate_outputs_to_budget_short_outputs_unchanged(self):
+        """Short outputs should pass through unchanged."""
+        from bomba_sr.orchestration.engine import _truncate_outputs_to_budget
+        outputs = {"forge": "short text", "scholar": "also short"}
+        result = _truncate_outputs_to_budget(outputs)
+        assert result == outputs
+
+    def test_truncate_outputs_to_budget_long_outputs_truncated(self):
+        """Outputs exceeding per-being budget should be truncated."""
+        from bomba_sr.orchestration.engine import _truncate_outputs_to_budget
+        # With 2 beings and default model, per-being budget is huge, so use a small model_max_input
+        long_text = "x" * 50000
+        outputs = {"forge": long_text, "scholar": long_text}
+        result = _truncate_outputs_to_budget(outputs, model_max_input=80000)
+        for being_id, text in result.items():
+            assert len(text) < 50000
+            assert text.endswith("[... output truncated to fit synthesis budget ...]")
+
+    def test_truncate_empty_outputs(self):
+        from bomba_sr.orchestration.engine import _truncate_outputs_to_budget
+        assert _truncate_outputs_to_budget({}) == {}
+
+    def test_truncate_per_being_budget_scales_with_count(self):
+        """More beings = smaller per-being budget."""
+        from bomba_sr.orchestration.engine import _truncate_outputs_to_budget
+        text = "y" * 100000
+        two_beings = _truncate_outputs_to_budget(
+            {"a": text, "b": text}, model_max_input=100000,
+        )
+        four_beings = _truncate_outputs_to_budget(
+            {"a": text, "b": text, "c": text, "d": text}, model_max_input=100000,
+        )
+        # With 4 beings, each gets less budget than with 2
+        assert len(four_beings["a"]) < len(two_beings["a"])
+
+
+class TestSynthesisFallback:
+    """Tests for the two-stage synthesis fallback."""
+
+    def _make_engine_with_failing_synthesis(self, *, fail_stage_1=True, fail_stage_2=False):
+        """Create engine where synthesis handle_turn can be configured to fail."""
+        dashboard = MagicMock()
+        project_svc = MagicMock()
+        bridge = MagicMock()
+
+        dashboard.list_beings.return_value = [
+            {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Dev",
+             "skills": "", "tenant_id": "t-forge", "workspace": "workspaces/forge"},
+        ]
+        dashboard.get_being.return_value = {
+            "id": "forge", "tenant_id": "t-forge", "workspace": "workspaces/forge",
+        }
+        dashboard.create_task.return_value = {"id": "task-fb-1"}
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        call_count = [0]
+
+        def mock_handle_turn(req):
+            msg = req.user_message
+            if "ORCHESTRATION MODE" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "summary": "Fallback test",
+                    "synthesis_strategy": "merge",
+                    "sub_tasks": [
+                        {"being_id": "forge", "title": "Do work",
+                         "instructions": "Execute", "done_when": "Done"},
+                    ],
+                })}}
+            if "[REVIEW]" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "approved": True, "feedback": "", "quality_score": 0.8, "notes": "OK",
+                })}}
+            if "[SYNTHESIZE-FALLBACK]" in msg:
+                if fail_stage_2:
+                    raise RuntimeError("Stage 2 also failed")
+                return {"assistant": {"text": "Fallback synthesis result."}}
+            if "[SYNTHESIZE]" in msg:
+                if fail_stage_1:
+                    raise RuntimeError("Simulated 400 context overflow")
+                return {"assistant": {"text": "Normal synthesis result."}}
+            return {"assistant": {"text": "Sub-task output from forge about testing."}}
+
+        bridge.handle_turn.side_effect = mock_handle_turn
+
+        engine = OrchestrationEngine(
+            bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+        )
+        return engine
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_stage1_fails_falls_back_to_stage2(self, mock_provider):
+        """When stage 1 synthesis fails (400), stage 2 summarize-then-synthesize succeeds."""
+        mock_prov = MagicMock()
+        mock_prov.generate.return_value = "Summary of forge output."
+        mock_provider.return_value = mock_prov
+
+        engine = self._make_engine_with_failing_synthesis(fail_stage_1=True)
+        result = engine.start(goal="Fallback test", requester_session_id="s1", sender="user")
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(result["task_id"])
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(result["task_id"])["status"] == STATUS_COMPLETED
+
+    @patch("bomba_sr.llm.providers.provider_from_env")
+    def test_both_stages_fail_returns_concatenated(self, mock_provider):
+        """When both stages fail, concatenated summaries are returned."""
+        mock_prov = MagicMock()
+        mock_prov.generate.return_value = "Summary text."
+        mock_provider.return_value = mock_prov
+
+        engine = self._make_engine_with_failing_synthesis(
+            fail_stage_1=True, fail_stage_2=True,
+        )
+        result = engine.start(goal="Total failure test", requester_session_id="s1", sender="user")
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(result["task_id"])
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        # Should still complete with concatenated fallback
+        assert engine.get_status(result["task_id"])["status"] == STATUS_COMPLETED
+
+
+class TestTaskFailureHandling:
+    """Test that failed orchestrations are properly handled."""
+
+    def test_failed_task_sends_user_notification(self):
+        """On orchestration failure, user gets notified and task is marked failed."""
+        dashboard = MagicMock()
+        project_svc = MagicMock()
+        bridge = MagicMock()
+
+        dashboard.list_beings.return_value = []  # No beings → will raise
+        dashboard.create_task.return_value = {"id": "task-fail-1"}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_task.return_value = {}
+        dashboard.create_message = MagicMock()
+
+        engine = OrchestrationEngine(
+            bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+        )
+        result = engine.start(goal="Will fail", requester_session_id="s1", sender="user")
+
+        import time
+        for _ in range(50):
+            status = engine.get_status(result["task_id"])
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+
+        assert engine.get_status(result["task_id"])["status"] == STATUS_FAILED
+        # Verify user notification was sent
+        dashboard.create_message.assert_called()
+        call_kwargs = dashboard.create_message.call_args
+        assert "failed" in str(call_kwargs).lower() or "error" in str(call_kwargs).lower()
+
+
+class TestTaskBoardFiltering:
+    """Test that list_tasks properly filters auto-created tasks."""
+
+    def test_exclude_auto_created_filters_dashboard_tasks(self):
+        from bomba_sr.dashboard.service import DashboardService
+        from bomba_sr.storage.db import RuntimeDB
+        import tempfile, os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            db = RuntimeDB(os.path.join(tmp, "test.db"))
+            svc = DashboardService(db=db, bridge=MagicMock())
+
+            project_svc = MagicMock()
+            project_svc.list_tasks.return_value = [
+                {"task_id": "t1", "title": "Real task", "description": "User created this",
+                 "status": "backlog", "priority": "high"},
+                {"task_id": "t2", "title": "Chat message", "description": "Auto-created from chat message to Forge",
+                 "status": "done", "priority": "medium"},
+                {"task_id": "t3", "title": "Another real task", "description": "Orchestration task",
+                 "status": "in_progress", "priority": "high"},
+            ]
+
+            # Without filter: all 3 tasks
+            all_tasks = svc.list_tasks(project_svc, exclude_auto_created=False)
+            assert len(all_tasks) == 3
+
+            # With filter: only 2 real tasks
+            filtered = svc.list_tasks(project_svc, exclude_auto_created=True)
+            assert len(filtered) == 2
+            assert all("Auto-created" not in (t.get("description") or "") for t in filtered)
+
+
+class TestDreamModelDefault:
+    """Verify the dream model default is valid for OpenRouter."""
+
+    def test_dream_model_default_is_valid(self):
+        from bomba_sr.memory.dreaming import DREAM_MODEL
+        # Must not be the invalid anthropic/claude-sonnet-4-20250514
+        assert "claude-sonnet-4-20250514" not in DREAM_MODEL
+        # Should be a known-valid model
+        assert DREAM_MODEL in ("openai/gpt-4o-mini", "anthropic/claude-3-5-haiku-20241022")

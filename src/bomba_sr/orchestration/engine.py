@@ -49,6 +49,46 @@ STATUS_COMPLETED = "completed"
 STATUS_FAILED = "failed"
 
 # ---------------------------------------------------------------------------
+# Synthesis budget constants
+# ---------------------------------------------------------------------------
+
+# Reserve for system prompt, plan summary, and other overhead
+SYNTHESIS_OVERHEAD_TOKENS = 40_000
+# Reserve for the synthesis output itself
+SYNTHESIS_OUTPUT_RESERVE = 16_000
+# Default model max input (conservative — Claude Opus/Sonnet)
+DEFAULT_MODEL_MAX_INPUT = 200_000
+# Chars-per-token estimate (conservative)
+CHARS_PER_TOKEN = 3.5
+# Fallback summary word limit per being (stage A of two-stage fallback)
+FALLBACK_SUMMARY_WORDS = 500
+
+
+def _truncate_outputs_to_budget(
+    outputs: dict[str, str],
+    *,
+    model_max_input: int = DEFAULT_MODEL_MAX_INPUT,
+) -> dict[str, str]:
+    """Truncate subtask outputs so they fit within the synthesis token budget.
+
+    Budget = (model_max_input - overhead - output_reserve) / num_beings
+    """
+    if not outputs:
+        return outputs
+    available_tokens = model_max_input - SYNTHESIS_OVERHEAD_TOKENS - SYNTHESIS_OUTPUT_RESERVE
+    per_being_tokens = max(available_tokens // len(outputs), 2000)
+    per_being_chars = int(per_being_tokens * CHARS_PER_TOKEN)
+
+    truncated: dict[str, str] = {}
+    for being_id, text in outputs.items():
+        if len(text) > per_being_chars:
+            truncated[being_id] = text[:per_being_chars] + "\n\n[... output truncated to fit synthesis budget ...]"
+        else:
+            truncated[being_id] = text
+    return truncated
+
+
+# ---------------------------------------------------------------------------
 # Plan model
 # ---------------------------------------------------------------------------
 
@@ -330,17 +370,55 @@ class OrchestrationEngine:
         try:
             self._phase_plan(task_id)
             self._phase_delegate(task_id)
+
+            # Fire representation + TEAM_CONTEXT updates after delegation completes
+            # (before synthesis) so partial completions are still recorded.
+            state = self._get_state(task_id)
+            self._update_team_context_outcomes(task_id, state)
+            self._update_being_representations(task_id, state, "")
+
             self._phase_review(task_id)
             self._phase_synthesize(task_id)
         except Exception as exc:
             log.exception("Orchestration failed for task %s", task_id)
             self._set_status(task_id, STATUS_FAILED)
+
+            # Persist partial results even on failure
+            try:
+                fail_state = self._get_state(task_id)
+                self._persist_task_result(task_id, fail_state, f"[FAILED: {exc}]")
+            except Exception:
+                pass
+
+            # Mark task as failed on the board
+            try:
+                self.dashboard.update_task(self.project_svc, task_id, status="failed")
+            except Exception:
+                pass
+
             self.dashboard._log_task_history(
                 task_id, "orchestration_failed", {"error": str(exc)},
             )
             self.dashboard._emit_event("orchestration_update", {
                 "task_id": task_id, "status": STATUS_FAILED, "error": str(exc),
             })
+
+            # Notify the user so they don't wait forever
+            try:
+                fail_state = self._get_state(task_id)
+                self.dashboard.create_message(
+                    sender="prime",
+                    content=(
+                        f"Orchestration failed for task: {fail_state.get('goal', task_id)[:100]}\n\n"
+                        f"Error: {str(exc)[:300]}\n\n"
+                        f"Sub-task outputs were saved. You can retry or review partial results."
+                    ),
+                    targets=[fail_state.get("sender", "user")],
+                    msg_type="direct",
+                    task_ref=task_id,
+                )
+            except Exception:
+                pass
 
     def _phase_plan(self, task_id: str) -> None:
         """Use LLM to decompose the task into sub-tasks."""
@@ -696,10 +774,17 @@ class OrchestrationEngine:
         if plan is None:
             return
 
-        # Build sub-task outputs section
+        # ── Step 1: Persist task_results BEFORE synthesis (with empty synthesis) ──
+        self._persist_task_result(task_id, state, "")
+
+        # ── Step 2: Truncate subtask outputs to fit within token budget ──
+        raw_outputs = dict(state["subtask_outputs"])
+        truncated_outputs = _truncate_outputs_to_budget(raw_outputs)
+
+        # Build sub-task outputs section from truncated outputs
         output_parts = []
         for sub in plan.sub_tasks:
-            output = state["subtask_outputs"].get(sub.being_id, "(no output)")
+            output = truncated_outputs.get(sub.being_id, "(no output)")
             review = state["subtask_reviews"].get(sub.being_id, {})
             output_parts.append(
                 f"### {sub.title} (by {sub.being_id})\n"
@@ -709,38 +794,27 @@ class OrchestrationEngine:
             )
 
         # ── Log Point F: Context being passed to synthesis ──
-        log.debug(f"[ORCH] ── Log Point F: Synthesis phase ──")
+        log.debug("[ORCH] ── Log Point F: Synthesis phase ──")
         for sub in plan.sub_tasks:
-            out = state["subtask_outputs"].get(sub.being_id, "(no output)")
+            out = truncated_outputs.get(sub.being_id, "(no output)")
             review = state["subtask_reviews"].get(sub.being_id, {})
-            log.debug(f"[ORCH] Being {sub.being_id}: output_len={len(out)}, approved={review.get('approved', 'N/A')}, quality={review.get('quality_score', 'N/A')}")
-            log.debug(f"[ORCH] Output preview ({sub.being_id}): {out[:300]}")
+            log.debug(
+                "[ORCH] Being %s: output_len=%d (raw=%d), approved=%s, quality=%s",
+                sub.being_id, len(out),
+                len(raw_outputs.get(sub.being_id, "")),
+                review.get("approved", "N/A"),
+                review.get("quality_score", "N/A"),
+            )
 
-        synthesis_prompt = SYNTHESIS_SYSTEM_PROMPT.format(
-            original_goal=state["goal"],
-            plan_summary=plan.summary,
-            subtask_outputs="\n---\n".join(output_parts),
-            strategy=plan.synthesis_strategy,
+        # ── Step 3: Attempt synthesis with two-stage fallback ──
+        final_output = self._attempt_synthesis(
+            task_id, state, plan, output_parts, truncated_outputs,
         )
 
-        from bomba_sr.runtime.bridge import TurnRequest
-        result = self.bridge.handle_turn(TurnRequest(
-            tenant_id=self.prime_tenant_id,
-            session_id=state["orchestration_session"],
-            user_id="orchestrator",
-            user_message=f"[SYNTHESIZE]\n\n{synthesis_prompt}",
-            workspace_root=self._prime_workspace(),
-            disable_tools=True,
-        ))
-        final_output = (result.get("assistant") or {}).get("text", "")
+        # ── Step 4: Update task_results with actual synthesis ──
+        self._update_task_result_synthesis(task_id, final_output)
 
-        # Persist the full task record for cross-task recall
-        self._persist_task_result(task_id, state, final_output)
-
-        # Auto-update shared TEAM_CONTEXT.md so all sisters passively know
-        self._update_team_context_outcomes(task_id, state)
-
-        # Auto-update each participating being's REPRESENTATION.md
+        # Update representations again with synthesis context
         self._update_being_representations(task_id, state, final_output)
 
         # Post final output back to user's chat
@@ -788,6 +862,153 @@ class OrchestrationEngine:
             )
         except Exception as exc:
             log.warning("Auto-triggered dream cycle failed: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Synthesis helpers
+    # ------------------------------------------------------------------
+
+    def _attempt_synthesis(
+        self,
+        task_id: str,
+        state: dict[str, Any],
+        plan: OrchestrationPlan,
+        output_parts: list[str],
+        truncated_outputs: dict[str, str],
+    ) -> str:
+        """Try synthesis with truncated outputs; fall back to summarize-then-synthesize."""
+        from bomba_sr.runtime.bridge import TurnRequest
+
+        synthesis_prompt = SYNTHESIS_SYSTEM_PROMPT.format(
+            original_goal=state["goal"],
+            plan_summary=plan.summary,
+            subtask_outputs="\n---\n".join(output_parts),
+            strategy=plan.synthesis_strategy,
+        )
+
+        # Stage 1: Try with truncated outputs
+        try:
+            result = self.bridge.handle_turn(TurnRequest(
+                tenant_id=self.prime_tenant_id,
+                session_id=state["orchestration_session"],
+                user_id="orchestrator",
+                user_message=f"[SYNTHESIZE]\n\n{synthesis_prompt}",
+                workspace_root=self._prime_workspace(),
+                disable_tools=True,
+            ))
+            text = (result.get("assistant") or {}).get("text", "")
+            if text:
+                return text
+        except Exception as exc:
+            log.warning(
+                "Synthesis stage 1 failed for task %s: %s — trying stage 2 (summarize first)",
+                task_id[:8], exc,
+            )
+
+        # Stage 2: Summarize each being's output to ~500 words, then synthesize
+        return self._fallback_summarize_then_synthesize(task_id, state, plan, truncated_outputs)
+
+    def _fallback_summarize_then_synthesize(
+        self,
+        task_id: str,
+        state: dict[str, Any],
+        plan: OrchestrationPlan,
+        outputs: dict[str, str],
+    ) -> str:
+        """Two-stage fallback: summarize each being's output, then synthesize from summaries."""
+        from bomba_sr.runtime.bridge import TurnRequest
+        from bomba_sr.llm.providers import ChatMessage, provider_from_env
+
+        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+        provider = provider_from_env()
+
+        summaries: dict[str, str] = {}
+        for sub in plan.sub_tasks:
+            raw = outputs.get(sub.being_id, "(no output)")
+            if len(raw) < 800:
+                summaries[sub.being_id] = raw
+                continue
+            try:
+                resp = provider.generate(classify_model, [ChatMessage(
+                    role="user",
+                    content=(
+                        f"Summarize the following output from {sub.being_id} in under {FALLBACK_SUMMARY_WORDS} words. "
+                        f"Preserve all key findings, data points, and conclusions:\n\n{raw[:12000]}"
+                    ),
+                )])
+                summaries[sub.being_id] = resp.text if hasattr(resp, "text") else str(resp)
+            except Exception as exc:
+                log.warning("Fallback summary failed for %s: %s", sub.being_id, exc)
+                summaries[sub.being_id] = raw[:2000] + "\n[... truncated ...]"
+
+        # Build compact synthesis prompt from summaries
+        summary_parts = []
+        for sub in plan.sub_tasks:
+            summary_parts.append(
+                f"### {sub.title} (by {sub.being_id})\n{summaries.get(sub.being_id, '(no output)')}\n"
+            )
+        fallback_prompt = SYNTHESIS_SYSTEM_PROMPT.format(
+            original_goal=state["goal"],
+            plan_summary=plan.summary,
+            subtask_outputs="\n---\n".join(summary_parts),
+            strategy=plan.synthesis_strategy,
+        )
+
+        try:
+            result = self.bridge.handle_turn(TurnRequest(
+                tenant_id=self.prime_tenant_id,
+                session_id=state["orchestration_session"],
+                user_id="orchestrator",
+                user_message=f"[SYNTHESIZE-FALLBACK]\n\n{fallback_prompt}",
+                workspace_root=self._prime_workspace(),
+                disable_tools=True,
+            ))
+            text = (result.get("assistant") or {}).get("text", "")
+            if text:
+                log.info("Stage 2 synthesis succeeded for task %s", task_id[:8])
+                return text
+        except Exception as exc:
+            log.error("Stage 2 synthesis also failed for task %s: %s", task_id[:8], exc)
+
+        # Last resort: concatenate summaries directly
+        log.warning("Both synthesis stages failed — returning concatenated summaries for task %s", task_id[:8])
+        return (
+            f"# Task Results: {state.get('goal', 'unknown')}\n\n"
+            + "\n---\n".join(summary_parts)
+            + "\n\n*Note: Automated synthesis was not available. These are the individual being outputs.*"
+        )
+
+    def _update_task_result_synthesis(self, task_id: str, synthesis_text: str) -> None:
+        """Update the task_results row with the actual synthesis output and write semantic memory."""
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            runtime.db.execute_commit(
+                "UPDATE task_results SET synthesis = ? WHERE task_id = ?",
+                (synthesis_text, task_id),
+            )
+            # Now write the semantic memory for cross-task recall
+            if synthesis_text and not synthesis_text.startswith("[FAILED"):
+                # Read back the goal/beings from the task_results row
+                row = runtime.db.execute(
+                    "SELECT goal, beings_used, strategy FROM task_results WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                if row:
+                    beings_used = json.loads(row["beings_used"]) if row["beings_used"] else []
+                    runtime.memory.learn_semantic(
+                        tenant_id=self.prime_tenant_id,
+                        user_id="orchestrator",
+                        memory_key=f"task_result::{task_id}",
+                        content=(
+                            f"Completed task: '{row['goal']}'. "
+                            f"Beings: {', '.join(beings_used)}. "
+                            f"Strategy: {row['strategy']}. "
+                            f"Outcome: {synthesis_text[:500]}"
+                        ),
+                        confidence=0.9,
+                        being_id="prime",
+                    )
+        except Exception as exc:
+            log.warning("Failed to update synthesis for task %s: %s", task_id[:8], exc)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -859,7 +1080,7 @@ class OrchestrationEngine:
             outputs = dict(state.get("subtask_outputs", {}))
             runtime.db.execute_commit(
                 """
-                INSERT INTO task_results
+                INSERT OR REPLACE INTO task_results
                     (task_id, tenant_id, goal, strategy, beings_used,
                      outputs, synthesis, artifacts, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -880,20 +1101,22 @@ class OrchestrationEngine:
 
             # Write a semantic memory so future planning phases can recall
             # past task outcomes via standard memory retrieval.
-            goal = state.get("goal", "")
-            runtime.memory.learn_semantic(
-                tenant_id=self.prime_tenant_id,
-                user_id="orchestrator",
-                memory_key=f"task_result::{task_id}",
-                content=(
-                    f"Completed task: '{goal}'. "
-                    f"Beings: {', '.join(beings_used)}. "
-                    f"Strategy: {strategy}. "
-                    f"Outcome: {synthesis_text[:500]}"
-                ),
-                confidence=0.9,
-                being_id="prime",
-            )
+            # Skip if synthesis_text is empty (pre-synthesis persist).
+            if synthesis_text and not synthesis_text.startswith("[FAILED"):
+                goal = state.get("goal", "")
+                runtime.memory.learn_semantic(
+                    tenant_id=self.prime_tenant_id,
+                    user_id="orchestrator",
+                    memory_key=f"task_result::{task_id}",
+                    content=(
+                        f"Completed task: '{goal}'. "
+                        f"Beings: {', '.join(beings_used)}. "
+                        f"Strategy: {strategy}. "
+                        f"Outcome: {synthesis_text[:500]}"
+                    ),
+                    confidence=0.9,
+                    being_id="prime",
+                )
         except Exception as exc:
             log.warning("Failed to persist task result for %s: %s", task_id[:8], exc)
 
