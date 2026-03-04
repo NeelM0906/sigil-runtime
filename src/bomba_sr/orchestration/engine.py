@@ -970,7 +970,8 @@ class OrchestrationEngine:
                 from bomba_sr.llm.providers import ChatMessage, provider_from_env
                 provider = provider_from_env()
                 messages = [ChatMessage(role="user", content=prompt)]
-                updated = provider.generate(messages, model=classify_model)
+                resp = provider.generate(classify_model, messages)
+                updated = resp.text if hasattr(resp, 'text') else str(resp)
 
                 if updated and updated.strip():
                     # Cap at 3000 chars

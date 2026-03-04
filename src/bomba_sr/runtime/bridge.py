@@ -17,6 +17,7 @@ from bomba_sr.adaptation.runtime_adaptation import RuntimeAdaptationEngine
 from bomba_sr.adaptation.self_evaluation import SelfEvaluator
 from bomba_sr.autonomy.heartbeat import HeartbeatEngine
 from bomba_sr.autonomy.scheduler import CronScheduler
+from bomba_sr.memory.dreaming import DreamCycle
 from bomba_sr.artifacts.store import ArtifactStore
 from bomba_sr.codeintel.router import CodeIntelRouter
 from bomba_sr.commands.disclosure import SkillDisclosure
@@ -144,6 +145,7 @@ class RuntimeBridge:
         self._tenants: dict[str, _TenantRuntime] = {}
         self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
         self._cron_schedulers: dict[str, CronScheduler] = {}
+        self._dream_cycle: DreamCycle | None = None
         self._start_time: float = time.time()
 
     def handle_turn(self, request: TurnRequest) -> dict[str, Any]:
@@ -1872,6 +1874,13 @@ class RuntimeBridge:
             status["cron"] = scheduler.status()
         else:
             status["cron"] = {"running": False, "reason": "disabled_by_config"}
+
+        if self.config.dream_cycle_enabled:
+            dc = self._ensure_dream_cycle()
+            dc.start()
+            status["dream_cycle"] = dc.status()
+        else:
+            status["dream_cycle"] = {"running": False, "reason": "disabled_by_config"}
         return status
 
     def heartbeat_status(self, tenant_id: str, user_id: str, workspace_root: str | None = None) -> dict[str, Any]:
@@ -1963,6 +1972,42 @@ class RuntimeBridge:
     ) -> list[dict[str, Any]]:
         scheduler = self._ensure_cron_scheduler(tenant_id=tenant_id, user_id=user_id, workspace_root=workspace_root)
         return scheduler.run_due_once()
+
+    # ------------------------------------------------------------------
+    # Dream cycle
+    # ------------------------------------------------------------------
+
+    def dream_cycle_status(self) -> dict[str, Any]:
+        dc = self._dream_cycle
+        if dc is None:
+            return {"running": False, "reason": "not_initialized"}
+        return dc.status()
+
+    def dream_cycle_start(self, dashboard_svc: Any = None) -> dict[str, Any]:
+        dc = self._ensure_dream_cycle(dashboard_svc)
+        dc.start()
+        return dc.status()
+
+    def dream_cycle_stop(self) -> dict[str, Any]:
+        dc = self._dream_cycle
+        if dc is None:
+            return {"running": False}
+        dc.stop()
+        return dc.status()
+
+    def dream_cycle_run_once(self, being_id: str | None = None, dashboard_svc: Any = None) -> dict[str, Any]:
+        dc = self._ensure_dream_cycle(dashboard_svc)
+        return dc.run_cycle(being_id=being_id)
+
+    def _ensure_dream_cycle(self, dashboard_svc: Any = None) -> DreamCycle:
+        if self._dream_cycle is not None:
+            return self._dream_cycle
+        self._dream_cycle = DreamCycle(
+            bridge=self,
+            dashboard_svc=dashboard_svc,
+            interval_seconds=self.config.dream_cycle_interval_seconds,
+        )
+        return self._dream_cycle
 
     def list_sisters(self, tenant_id: str, workspace_root: str | None = None) -> list[dict[str, Any]]:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
@@ -2174,6 +2219,7 @@ class RuntimeBridge:
             autonomy_info["schedules"] = self.list_schedules(tenant_id, user_id, workspace_root)
         except Exception:
             autonomy_info["schedules"] = []
+        autonomy_info["dream_cycle"] = self.dream_cycle_status()
 
         # ── skills ──
         try:
