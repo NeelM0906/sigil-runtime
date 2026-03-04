@@ -385,30 +385,15 @@ class OrchestrationEngine:
         from bomba_sr.runtime.bridge import TurnRequest
 
         for sub in plan.sub_tasks:
-            # Create child task on the board
-            child_task = self.dashboard.create_task(
-                self.project_svc,
-                title=sub.title,
-                description=sub.instructions,
-                status="in_progress",
-                priority="high",
-                assignees=[sub.being_id],
-                owner_agent_id=sub.being_id,
-            )
-            child_id = child_task.get("id") or child_task.get("task_id")
-
-            # Store parent-child relationship in task history
+            # Track sub-tasks internally — no separate board entries.
+            # The parent task card is the only visible item.
             self.dashboard._log_task_history(
                 task_id, "subtask_created",
-                {"child_task_id": child_id, "being_id": sub.being_id, "title": sub.title},
-            )
-            self.dashboard._log_task_history(
-                child_id, "delegated_from",
-                {"parent_task_id": task_id, "being_id": sub.being_id},
+                {"being_id": sub.being_id, "title": sub.title},
             )
 
             with self._lock:
-                self._active[task_id]["subtask_ids"][sub.being_id] = child_id
+                self._active[task_id]["subtask_ids"][sub.being_id] = task_id
 
             # Update being status
             self.dashboard.update_being(sub.being_id, {"status": "busy"})
@@ -416,7 +401,7 @@ class OrchestrationEngine:
                 "being_id": sub.being_id,
                 "status": "busy",
                 "task_name": sub.title,
-                "task_id": child_id,
+                "task_id": task_id,
             })
 
         # Execute sub-tasks.  For "sequential" strategy, run one at a time
@@ -528,12 +513,10 @@ class OrchestrationEngine:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
 
         # Log the delegation exchange
-        child_id = self._active[parent_task_id]["subtask_ids"].get(sub.being_id)
-        if child_id:
-            self.dashboard._log_task_history(
-                child_id, "being_responded",
-                {"being_id": sub.being_id, "output_length": len(output)},
-            )
+        self.dashboard._log_task_history(
+            parent_task_id, "being_responded",
+            {"being_id": sub.being_id, "output_length": len(output)},
+        )
         self.dashboard._emit_event("orchestration_update", {
             "task_id": parent_task_id,
             "event": "subtask_completed",
@@ -584,16 +567,10 @@ class OrchestrationEngine:
                 if review["approved"] or revision_round >= max_revisions:
                     with self._lock:
                         self._active[task_id]["subtask_reviews"][sub.being_id] = review
-                    child_id = state["subtask_ids"].get(sub.being_id)
-                    if child_id:
-                        final_status = "done" if review["approved"] else "in_review"
-                        self.dashboard.update_task(
-                            self.project_svc, child_id, status=final_status,
-                        )
-                        self.dashboard._log_task_history(
-                            child_id, "review_completed",
-                            {"approved": review["approved"], "quality_score": review.get("quality_score", 0)},
-                        )
+                    self.dashboard._log_task_history(
+                        task_id, "review_completed",
+                        {"being_id": sub.being_id, "approved": review["approved"], "quality_score": review.get("quality_score", 0)},
+                    )
                     break
 
                 # Request revision

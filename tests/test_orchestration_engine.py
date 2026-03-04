@@ -342,8 +342,8 @@ class TestOrchestrationLifecycle:
         chat_sessions = [s for s in sessions_used if "mc-chat" in s or "sister-chat" in s]
         assert len(chat_sessions) == 0
 
-    def test_child_tasks_created_on_board(self):
-        """Verify sub-tasks appear on the task board."""
+    def test_single_parent_task_on_board(self):
+        """Verify only one task card (parent) is created — no child tasks."""
         engine, bridge, dashboard = self._make_engine()
         result = engine.start(goal="Test task", requester_session_id="mc-chat-prime")
         task_id = result["task_id"]
@@ -355,15 +355,8 @@ class TestOrchestrationLifecycle:
                 break
             time.sleep(0.1)
 
-        # Parent task + 2 child tasks = 3 create_task calls
-        assert dashboard.create_task.call_count == 3
-
-        # Verify child tasks have assignees
-        child_calls = dashboard.create_task.call_args_list[1:]  # skip parent
-        for call in child_calls:
-            kwargs = call[1] if len(call) > 1 else {}
-            # assignees should include the being_id
-            assert kwargs.get("assignees") is not None
+        # Only 1 create_task call — parent task only, no child tasks
+        assert dashboard.create_task.call_count == 1
 
     def test_being_status_updates(self):
         """Verify beings go busy then back to online."""
