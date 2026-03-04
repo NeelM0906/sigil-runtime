@@ -53,9 +53,6 @@ class ProjectService:
 
             CREATE INDEX IF NOT EXISTS idx_project_tasks_project
               ON project_tasks(project_id, updated_at DESC);
-
-            CREATE INDEX IF NOT EXISTS idx_project_tasks_parent
-              ON project_tasks(parent_task_id);
             """
         )
         self.db.commit()
@@ -68,6 +65,14 @@ class ProjectService:
                 self.db.commit()
             except Exception:
                 pass
+        # Create the parent_task_id index AFTER the migration ensures the column exists.
+        try:
+            self.db.execute(
+                "CREATE INDEX IF NOT EXISTS idx_project_tasks_parent ON project_tasks(parent_task_id)"
+            )
+            self.db.commit()
+        except Exception:
+            pass
 
     def create_project(
         self,
