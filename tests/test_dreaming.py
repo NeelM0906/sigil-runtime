@@ -434,6 +434,120 @@ class TestFullDreamCycle:
 # JSON parsing
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Dream log reporting
+# ---------------------------------------------------------------------------
+
+class TestDreamLogReporting:
+    @patch("bomba_sr.memory.dreaming.provider_from_env")
+    def test_dream_log_written_after_cycle(self, mock_prov):
+        """run_cycle() should write a markdown report to dream_logs/."""
+        mock_provider = MagicMock()
+        consolidate_resp = MagicMock(text=json.dumps({
+            "duplicates": [{"keep": "mem_0", "remove": ["mem_1"]}],
+            "contradictions": [], "stale": ["mem_2"],
+        }))
+        derive_resp = MagicMock(text=json.dumps([
+            {"key": "derived::x", "content": "Test insight", "relevance_to_others": []},
+        ]))
+        mock_provider.generate.side_effect = [consolidate_resp, derive_resp]
+        mock_prov.return_value = mock_provider
+
+        dc, db, bridge, dashboard, tmpdir = _make_dream_cycle(with_memories=5, being_ids=["forge"])
+
+        # Point dream logs to tmp dir
+        log_dir = os.path.join(tmpdir, "dream_logs")
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
+                results = dc.run_cycle()
+
+                # Verify log file was created
+                assert os.path.isdir(log_dir)
+                md_files = [f for f in os.listdir(log_dir) if f.endswith(".md")]
+                assert len(md_files) == 1
+
+                # Verify content
+                content = Path(os.path.join(log_dir, md_files[0])).read_text()
+                assert "Dream Cycle Report" in content
+                assert "forge" in content
+                assert "Duplicates removed:" in content
+
+    @patch("bomba_sr.memory.dreaming.provider_from_env")
+    def test_dream_log_contains_per_being_stats(self, mock_prov):
+        mock_provider = MagicMock()
+        mock_provider.generate.side_effect = [
+            # forge consolidate + derive
+            MagicMock(text=json.dumps({"duplicates": [], "contradictions": [], "stale": []})),
+            MagicMock(text=json.dumps([])),
+            # scholar consolidate + derive
+            MagicMock(text=json.dumps({"duplicates": [], "contradictions": [], "stale": []})),
+            MagicMock(text=json.dumps([])),
+        ]
+        mock_prov.return_value = mock_provider
+
+        dc, db, bridge, dashboard, tmpdir = _make_dream_cycle(with_memories=3, being_ids=["forge", "scholar"])
+
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
+                dc.run_cycle()
+
+                log_dir = os.path.join(tmpdir, "dream_logs")
+                md_files = [f for f in os.listdir(log_dir) if f.endswith(".md")]
+                content = Path(os.path.join(log_dir, md_files[0])).read_text()
+                # Both beings should appear
+                assert "## Being: forge" in content
+                assert "## Being: scholar" in content
+
+    def test_dream_log_failure_does_not_crash_cycle(self):
+        """If writing the log fails, the cycle still completes."""
+        dc, *_ = _make_dream_cycle(being_ids=["forge"])
+        dc.dashboard.get_being.return_value = None  # will skip all beings
+
+        # Force a write error by pointing to invalid path
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": "/nonexistent/path"}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
+                results = dc.run_cycle()
+                # Still completes
+                assert dc.status()["total_runs"] == 1
+
+    def test_list_dream_logs_returns_empty_when_no_dir(self):
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tempfile.mkdtemp()}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "nonexistent"):
+                logs = DreamCycle.list_dream_logs()
+                assert logs == []
+
+    def test_list_dream_logs_returns_files(self):
+        tmpdir = tempfile.mkdtemp()
+        log_dir = os.path.join(tmpdir, "dream_logs")
+        os.makedirs(log_dir)
+        # Create 3 log files
+        for i in range(3):
+            Path(os.path.join(log_dir, f"2026-03-0{i+1}-12:00.md")).write_text(f"Log {i}")
+
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
+                logs = DreamCycle.list_dream_logs()
+                assert len(logs) == 3
+                # Newest first
+                assert logs[0]["filename"] == "2026-03-03-12:00.md"
+
+    def test_list_dream_logs_respects_limit(self):
+        tmpdir = tempfile.mkdtemp()
+        log_dir = os.path.join(tmpdir, "dream_logs")
+        os.makedirs(log_dir)
+        for i in range(5):
+            Path(os.path.join(log_dir, f"2026-03-0{i+1}-12:00.md")).write_text(f"Log {i}")
+
+        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+            with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
+                logs = DreamCycle.list_dream_logs(limit=2)
+                assert len(logs) == 2
+
+
+# ---------------------------------------------------------------------------
+# JSON parsing
+# ---------------------------------------------------------------------------
+
 class TestJsonParsing:
     def test_parse_clean_json(self):
         data = DreamCycle._parse_json('{"key": "value"}')

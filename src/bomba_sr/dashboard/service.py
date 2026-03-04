@@ -1659,7 +1659,16 @@ class DashboardService:
                 except OSError:
                     pass
 
-        return {
+        # ── 7. Dream logs (sai-memory only) ───────────────────────
+        dream_logs: list[dict] | None = None
+        if being_id == "sai-memory":
+            try:
+                from bomba_sr.memory.dreaming import DreamCycle
+                dream_logs = DreamCycle.list_dream_logs(limit=10)
+            except Exception:
+                dream_logs = []
+
+        result_dict: dict[str, Any] = {
             "being": being,
             "identity": identity,
             "memory": memory_info,
@@ -1668,6 +1677,9 @@ class DashboardService:
             "file_tree": file_tree,
             "representation": representation_text,
         }
+        if dream_logs is not None:
+            result_dict["dream_logs"] = dream_logs
+        return result_dict
 
     def get_being_file(self, being_id: str, rel_path: str) -> str | None:
         """Read a file relative to PROJECT_ROOT and return its text content.

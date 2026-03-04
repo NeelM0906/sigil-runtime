@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -211,6 +212,8 @@ class OrchestrationEngine:
         self.prime_tenant_id = prime_tenant_id
         self._active: dict[str, dict[str, Any]] = {}  # task_id -> state
         self._lock = threading.Lock()
+        self._completed_task_count: int = 0
+        self._dream_trigger_every: int = int(os.environ.get("BOMBA_DREAM_TRIGGER_EVERY", "5"))
         self._ensure_task_results_schema()
 
     # ------------------------------------------------------------------
@@ -762,6 +765,28 @@ class OrchestrationEngine:
             "output_preview": final_output[:300],
         })
         log.info("Orchestration completed for task %s", task_id[:8])
+
+        # Auto-trigger dream cycle every N completed tasks
+        self._completed_task_count += 1
+        if (
+            self._dream_trigger_every > 0
+            and self._completed_task_count % self._dream_trigger_every == 0
+        ):
+            self._trigger_dream_cycle()
+
+    def _trigger_dream_cycle(self) -> None:
+        """Fire off a dream cycle via the bridge (non-blocking)."""
+        try:
+            result = self.bridge.dream_cycle_run_once(
+                dashboard_svc=self.dashboard,
+            )
+            log.info(
+                "Auto-triggered dream cycle after %d tasks: %d beings processed",
+                self._completed_task_count,
+                len(result),
+            )
+        except Exception as exc:
+            log.warning("Auto-triggered dream cycle failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Helpers

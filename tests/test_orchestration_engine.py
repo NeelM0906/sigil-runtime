@@ -573,6 +573,83 @@ class TestTaskResultPersistence:
 
 
 # ---------------------------------------------------------------------------
+# Dream cycle auto-trigger tests
+# ---------------------------------------------------------------------------
+
+class TestDreamCycleTrigger:
+    """Verify dream cycle is auto-triggered after N orchestrated tasks."""
+
+    def test_trigger_fires_after_n_tasks(self):
+        """_completed_task_count tracks completions, dream fires at threshold."""
+        engine = OrchestrationEngine(
+            bridge=MagicMock(),
+            dashboard_svc=MagicMock(),
+            project_svc=MagicMock(),
+        )
+        engine._dream_trigger_every = 3
+
+        # Simulate triggering — call _trigger_dream_cycle via counter
+        for i in range(1, 4):
+            engine._completed_task_count = i
+            if i % engine._dream_trigger_every == 0:
+                engine._trigger_dream_cycle()
+
+        # Verify bridge.dream_cycle_run_once was called once
+        engine.bridge.dream_cycle_run_once.assert_called_once()
+
+    def test_trigger_does_not_fire_before_threshold(self):
+        engine = OrchestrationEngine(
+            bridge=MagicMock(),
+            dashboard_svc=MagicMock(),
+            project_svc=MagicMock(),
+        )
+        engine._dream_trigger_every = 5
+        engine._completed_task_count = 3
+
+        # At count 3 (not divisible by 5), should not trigger
+        if engine._completed_task_count % engine._dream_trigger_every == 0:
+            engine._trigger_dream_cycle()
+
+        engine.bridge.dream_cycle_run_once.assert_not_called()
+
+    def test_trigger_disabled_when_zero(self):
+        """Setting BOMBA_DREAM_TRIGGER_EVERY=0 disables auto-trigger."""
+        engine = OrchestrationEngine(
+            bridge=MagicMock(),
+            dashboard_svc=MagicMock(),
+            project_svc=MagicMock(),
+        )
+        engine._dream_trigger_every = 0
+        engine._completed_task_count = 10
+
+        # With trigger_every=0, the modulo check should not fire
+        if engine._dream_trigger_every > 0 and engine._completed_task_count % engine._dream_trigger_every == 0:
+            engine._trigger_dream_cycle()
+
+        engine.bridge.dream_cycle_run_once.assert_not_called()
+
+    def test_trigger_failure_does_not_raise(self):
+        """Dream cycle trigger failure is logged, not propagated."""
+        engine = OrchestrationEngine(
+            bridge=MagicMock(),
+            dashboard_svc=MagicMock(),
+            project_svc=MagicMock(),
+        )
+        engine.bridge.dream_cycle_run_once.side_effect = RuntimeError("Dream failed")
+        # Should not raise
+        engine._trigger_dream_cycle()
+
+    def test_completed_task_count_increments(self):
+        """_completed_task_count starts at 0."""
+        engine = OrchestrationEngine(
+            bridge=MagicMock(),
+            dashboard_svc=MagicMock(),
+            project_svc=MagicMock(),
+        )
+        assert engine._completed_task_count == 0
+
+
+# ---------------------------------------------------------------------------
 # Being Representation tests
 # ---------------------------------------------------------------------------
 

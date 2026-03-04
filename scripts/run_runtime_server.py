@@ -1293,6 +1293,17 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"being": being})
                     return
 
+                # --- Dream Cycle ---
+                if path == "/api/mc/dream-cycle/logs":
+                    from bomba_sr.memory.dreaming import DreamCycle
+                    limit = int(query.get("limit", ["20"])[0])
+                    logs = DreamCycle.list_dream_logs(limit=limit)
+                    self._write_cors(200, {"logs": logs})
+                    return
+                if path == "/api/mc/dream-cycle/status":
+                    self._write_cors(200, {"dream_cycle": bridge.dream_cycle_status()})
+                    return
+
                 # --- Tasks ---
                 if path == "/api/mc/tasks/history":
                     tid = query.get("taskId", [None])[0]
@@ -1483,6 +1494,16 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         sender=body.get("sender", "user"),
                     )
                     self._write_cors(201, {"orchestration": result})
+                    return
+
+                # --- Dream Cycle ---
+                if path == "/api/mc/dream-cycle":
+                    being_id = body.get("being_id")
+                    result = bridge.dream_cycle_run_once(
+                        being_id=being_id,
+                        dashboard_svc=dashboard_svc,
+                    )
+                    self._write_cors(200, {"dream_cycle": result})
                     return
 
                 # --- Chat ---

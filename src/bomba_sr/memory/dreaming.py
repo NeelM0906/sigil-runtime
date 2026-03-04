@@ -37,6 +37,7 @@ DERIVED_INSIGHT_CONFIDENCE = 0.6
 MAX_WORKING_NOTES = 50
 MAX_SEMANTIC_MEMORIES = 20
 MAX_PROCEDURAL_MEMORIES = 10
+DREAM_LOGS_DIR = "workspaces/sai-memory/dream_logs"
 
 CONSOLIDATE_SYSTEM_PROMPT = """\
 You are SAI Memory running a dream cycle for {being_name} ({being_id}).
@@ -183,6 +184,13 @@ class DreamCycle:
             self._last_error = None
 
         log.info("Dream cycle completed for %d beings", len(beings))
+
+        # Write dream log report
+        try:
+            self._write_dream_log(results)
+        except Exception as exc:
+            log.warning("Failed to write dream log: %s", exc)
+
         return results
 
     # ------------------------------------------------------------------
@@ -621,6 +629,72 @@ class DreamCycle:
                     )
 
         return pollinated
+
+    # ------------------------------------------------------------------
+    # Dream log reporting
+    # ------------------------------------------------------------------
+
+    def _write_dream_log(self, results: dict[str, Any]) -> Path | None:
+        """Write a markdown report of the dream cycle to dream_logs/."""
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
+        log_dir = project_root / DREAM_LOGS_DIR
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        now = datetime.now(timezone.utc)
+        filename = now.strftime("%Y-%m-%d-%H:%M") + ".md"
+        log_path = log_dir / filename
+
+        lines = [f"# Dream Cycle Report — {now.strftime('%Y-%m-%d %H:%M UTC')}\n"]
+
+        for being_id, result in results.items():
+            lines.append(f"\n## Being: {being_id}")
+
+            if result.get("skipped"):
+                lines.append(f"- Skipped: {result.get('reason', 'unknown')}")
+                continue
+
+            if result.get("error"):
+                lines.append(f"- Error: {result['error']}")
+                continue
+
+            consolidation = result.get("consolidation", {})
+            lines.append(f"- Duplicates removed: {consolidation.get('duplicates', 0)}")
+            lines.append(f"- Contradictions resolved: {consolidation.get('contradictions', 0)}")
+            lines.append(f"- Stale entries archived: {consolidation.get('stale', 0)}")
+            lines.append(f"- New insights derived: {result.get('derived_count', 0)}")
+            lines.append(f"- Memories pruned: {result.get('pruned_count', 0)}")
+            lines.append(f"- Cross-pollinated: {result.get('cross_pollinated_count', 0)}")
+
+            counts = result.get("gathered_counts", {})
+            lines.append(f"- Sources gathered: notes={counts.get('working_notes', 0)}, "
+                         f"semantic={counts.get('semantic_memories', 0)}, "
+                         f"procedural={counts.get('procedural_memories', 0)}")
+
+        report_text = "\n".join(lines) + "\n"
+        log_path.write_text(report_text, encoding="utf-8")
+        log.info("Dream log written: %s", log_path)
+        return log_path
+
+    @staticmethod
+    def list_dream_logs(limit: int = 20) -> list[dict[str, Any]]:
+        """Return recent dream log entries (newest first)."""
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
+        log_dir = project_root / DREAM_LOGS_DIR
+        if not log_dir.is_dir():
+            return []
+
+        logs: list[dict[str, Any]] = []
+        for fpath in sorted(log_dir.glob("*.md"), reverse=True):
+            if len(logs) >= limit:
+                break
+            stat = fpath.stat()
+            logs.append({
+                "filename": fpath.name,
+                "path": str(fpath.relative_to(project_root)),
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            })
+        return logs
 
     # ------------------------------------------------------------------
     # Helpers
