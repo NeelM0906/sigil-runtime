@@ -127,6 +127,25 @@ class SoulConfigTests(unittest.TestCase):
             self.assertEqual(soul.raw_soul_text, "")
             self.assertEqual(soul.raw_identity_text, "")
 
+    def test_knowledge_md_loaded(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            (root / "KNOWLEDGE.md").write_text("## Key Facts\nFact one.", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIn("Fact one", soul.knowledge_text)
+
+    def test_knowledge_md_none_when_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "SOUL.md").write_text("# SOUL", encoding="utf-8")
+            soul = load_soul_from_workspace(root)
+            self.assertIsNotNone(soul)
+            assert soul is not None
+            self.assertIsNone(soul.knowledge_text)
+
 
 if __name__ == "__main__":
     unittest.main()

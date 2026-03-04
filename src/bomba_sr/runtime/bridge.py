@@ -57,6 +57,7 @@ from bomba_sr.tools.builtin_compaction import builtin_compaction_tools
 from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
 from bomba_sr.tools.builtin_exec import builtin_exec_tools
 from bomba_sr.tools.builtin_fs import builtin_fs_tools
+from bomba_sr.tools.builtin_knowledge import builtin_knowledge_tools
 from bomba_sr.tools.builtin_memory import builtin_memory_tools
 from bomba_sr.tools.builtin_model_switch import builtin_model_switch_tools
 from bomba_sr.tools.builtin_pinecone import builtin_pinecone_tools
@@ -514,6 +515,24 @@ class RuntimeBridge:
             ]
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+
+        # Cross-namespace read: if this is a direct chat session (mc-chat-{being_id}),
+        # also recall memories from the orchestration namespace (prime->{being_id})
+        # so the being sees what it did during orchestrated tasks.
+        if request.session_id.startswith("mc-chat-"):
+            _being_id = request.session_id[len("mc-chat-"):]
+            if _being_id:
+                _orch_user_id = f"prime->{_being_id}"
+                try:
+                    _orch_recall = runtime.memory.recall(
+                        user_id=_orch_user_id, query=search_query, limit=4,
+                    )
+                    for item in _orch_recall:
+                        item["source"] = item.get("source", "memory://orchestration_work")
+                    recall.extend(_orch_recall)
+                except Exception:
+                    pass  # non-critical — don't fail the turn
+
         procedural_memories = runtime.memory.recall_procedural(user_id=request.user_id, query=search_query, limit=5)
         # Skip conversation replay for subtask/orchestration sessions —
         # they are single-turn by design and old tool_use blocks cause
@@ -594,6 +613,12 @@ class RuntimeBridge:
                 system_prefix_parts.append("<formula>\n" + runtime.soul.formula_text.strip()[:12000] + "\n</formula>")
             if runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
                 system_prefix_parts.append("<priorities>\n" + runtime.soul.priorities_text.strip()[:8000] + "\n</priorities>")
+            if runtime.soul.knowledge_text and runtime.soul.knowledge_text.strip():
+                system_prefix_parts.append(
+                    "<knowledge editable=\"true\">\n"
+                    + runtime.soul.knowledge_text.strip()[:4000]
+                    + "\n</knowledge>"
+                )
 
         if runtime.soul is None:
             # Fallback identity only when no SoulConfig is present.
@@ -2488,6 +2513,7 @@ class RuntimeBridge:
                 )
             )
         tool_executor.register_many(builtin_memory_tools(memory))
+        tool_executor.register_many(builtin_knowledge_tools())
         tool_executor.register_many(builtin_approval_tools(governance, memory))
         tool_executor.register_many(
             builtin_subagent_tools(
