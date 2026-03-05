@@ -498,6 +498,72 @@ export function BeingDetail({ onOpenTask }) {
                 )}
               </Section>
 
+              {/* ── ACT-I Profile Section ──────────────────── */}
+              {detail?.acti && (
+                <Section title="ACT-I Profile" icon="⚡" accentColor="accent-cyan"
+                  count={`${detail.acti.positions_total}p`}>
+                  <div className="flex flex-col gap-2">
+                    {/* Summary */}
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.beings.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Beings</div>
+                      </div>
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.clusters.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Clusters</div>
+                      </div>
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.levers.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Levers</div>
+                      </div>
+                    </div>
+
+                    {/* Beings operated */}
+                    <div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Beings Operated</div>
+                      <div className="flex flex-col gap-1">
+                        {detail.acti.beings.map(ab => (
+                          <div key={ab.id} className="flex items-center justify-between px-2 py-1 rounded bg-bg-card border border-border">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[11px] font-medium text-text-primary truncate">{ab.name}</span>
+                              <span className="text-[9px] text-text-muted truncate">{ab.domain}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-accent-cyan shrink-0">{ab.positions}p</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Lever coverage */}
+                    <div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Lever Coverage</div>
+                      <div className="flex flex-wrap gap-1">
+                        {detail.acti.levers.map(lv => (
+                          <span key={lv} className="px-1.5 py-0.5 text-[9px] bg-accent-blue/10 text-accent-blue rounded border border-accent-blue/20">
+                            L{lv}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Heart skills */}
+                    {detail.acti.shared_heart_skills && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Heart Skills</div>
+                        <div className="flex flex-wrap gap-1">
+                          {detail.acti.shared_heart_skills.map(s => (
+                            <span key={s} className="px-1.5 py-0.5 text-[9px] bg-accent-purple/10 text-accent-purple rounded border border-accent-purple/20">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
               {/* ── Workspace Section ─────────────────────── */}
               {fileTree.length > 0 && (
                 <Section title="Workspace" icon="WS" accentColor="accent-cyan" count={fileTree.length}>

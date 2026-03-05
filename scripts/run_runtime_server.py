@@ -294,13 +294,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
-            # ── Dashboard static files ──
-            if parsed.path == "/dashboard" or parsed.path == "/dashboard/":
-                self._serve_static("index.html")
-                return
-            if parsed.path.startswith("/dashboard/"):
-                rel = parsed.path[len("/dashboard/"):]
-                self._serve_static(rel)
+            # ── Dashboard redirect (frontend served by Vite at :5173) ──
+            if parsed.path == "/dashboard" or parsed.path.startswith("/dashboard/"):
+                self.send_response(302)
+                self.send_header("Location", "http://127.0.0.1:5173/")
+                self.end_headers()
                 return
             # ── Mission Control GET routes ──
             if parsed.path.startswith("/api/mc/"):
@@ -1757,7 +1755,7 @@ def main() -> int:
         make_handler(bridge, dashboard_svc=dashboard_svc, project_svc=project_svc),
     )
     print(f"runtime server listening on http://{args.host}:{args.port}")
-    print(f"dashboard available at http://{args.host}:{args.port}/dashboard")
+    print(f"mission control dashboard: http://127.0.0.1:5173  (start with: cd mission-control && npx vite)")
     server.serve_forever()
     return 0
 
