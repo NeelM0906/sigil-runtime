@@ -169,6 +169,9 @@ Rules:
 - Each being should get at most one sub-task unless the task truly requires multiple from the same being.
 - Instructions must be self-contained — the being has no access to the parent task context.
 - Keep sub-tasks focused and achievable in a single turn.
+- Beings with type "acti" are specialized ACT-I agents with domain expertise.
+  Prefer assigning to the most specific ACT-I being when the task matches their domain.
+  They run through their parent sister's runtime but have distinct capabilities.
 """
 
 REVIEW_SYSTEM_PROMPT = """\
@@ -441,6 +444,18 @@ class OrchestrationEngine:
                 "status": b.get("status", "offline"),
                 "skills": b.get("skills", ""),
             }
+            # Enrich ACT-I beings with domain + cluster info
+            if b.get("type") == "acti":
+                entry["type"] = "acti"
+                entry["parent_sister"] = b.get("tenant_id", "").replace("tenant-", "")
+                try:
+                    from bomba_sr.acti.loader import load_beings as _lb
+                    acti_match = next((ab for ab in _lb() if ab["id"] == b["id"]), None)
+                    if acti_match:
+                        entry["domain"] = acti_match.get("domain", "")
+                        entry["top_clusters"] = [c["name"] for c in acti_match.get("clusters", [])[:3]]
+                except Exception:
+                    pass
             # Enrich with representation data (truncated to 800 chars)
             ws = b.get("workspace")
             if ws and ws != ".":
@@ -581,6 +596,22 @@ class OrchestrationEngine:
         else:
             workspace = "/Users/zidane/Downloads/PROJEKT"
 
+        # Build ACT-I identity prefix for specialized beings
+        acti_identity_prefix = ""
+        if being.get("type") == "acti":
+            try:
+                from bomba_sr.acti.loader import get_being_identity_text
+                identity_text = get_being_identity_text(sub.being_id)
+                if identity_text:
+                    acti_identity_prefix = (
+                        f"[IDENTITY CONTEXT]\n"
+                        f"You are operating as an ACT-I specialized being.\n"
+                        f"{identity_text}\n"
+                        f"[END IDENTITY CONTEXT]\n\n"
+                    )
+            except Exception:
+                pass
+
         # Build context section from prior beings' outputs
         context_section = ""
         if prior_outputs:
@@ -594,7 +625,8 @@ class OrchestrationEngine:
             )
 
         delegation_message = (
-            f"You have been assigned a sub-task by SAI Prime.\n\n"
+            acti_identity_prefix
+            + f"You have been assigned a sub-task by SAI Prime.\n\n"
             f"TASK TITLE: {sub.title}\n\n"
             + (context_section if context_section else "")
             + f"INSTRUCTIONS:\n{sub.instructions}\n\n"

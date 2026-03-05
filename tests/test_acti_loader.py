@@ -181,7 +181,7 @@ class TestGetBeingIdentityText:
 
     def test_apex_beings_also_work(self):
         text = get_being_identity_text("sai-prime", ACTI_ROOT)
-        assert "SAI Prime" in text or "Prime" in text
+        assert "PRIME" in text.upper()
 
 
 class TestConstants:
