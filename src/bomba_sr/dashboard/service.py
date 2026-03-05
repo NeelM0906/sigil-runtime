@@ -19,6 +19,12 @@ from pathlib import Path
 from typing import Any
 
 from bomba_sr.storage.db import RuntimeDB, dict_from_row
+from bomba_sr.acti.loader import (
+    get_full_architecture,
+    get_sister_profile,
+    SHARED_HEART_SKILLS,
+    BEING_SISTER_MAP,
+)
 
 
 MC_TENANT = "tenant-local"
@@ -122,7 +128,9 @@ def get_being_skills(being_id: str) -> list[str]:
     """Return the skill IDs available to a being."""
     defaults = list(BEING_SKILL_MAP.get("__default__", []))
     extras = BEING_SKILL_MAP.get(being_id, [])
-    return defaults + extras
+    # Add shared heart skills from ACT-I
+    heart = [s["id"] for s in SHARED_HEART_SKILLS]
+    return defaults + extras + heart
 
 
 def _extract_json(text: str) -> dict | None:
@@ -1691,6 +1699,37 @@ class DashboardService:
                 except OSError:
                     pass
 
+        # ── 6b. ACT-I architecture (beings + clusters for this sister) ──
+        acti_profile = None
+        sister_id_for_acti = being_id
+        # Map being IDs to sister IDs (e.g. "sai-forge" -> "forge")
+        if being_id.startswith("sai-"):
+            sister_id_for_acti = being_id[4:]  # strip "sai-" prefix
+        if being_id == "prime":
+            sister_id_for_acti = "prime"
+        try:
+            profile = get_sister_profile(sister_id_for_acti)
+            if profile["beings"]:
+                acti_profile = {
+                    "beings": [
+                        {
+                            "id": b["id"],
+                            "name": b["name"],
+                            "positions": b["positions"],
+                            "domain": b["domain"],
+                            "levers": b["levers"],
+                            "clusters": b["clusters"],
+                        }
+                        for b in profile["beings"]
+                    ],
+                    "clusters": profile["clusters"],
+                    "levers": profile["levers"],
+                    "positions_total": profile["positions_total"],
+                    "shared_heart_skills": [s["name"] for s in SHARED_HEART_SKILLS],
+                }
+        except Exception:
+            pass
+
         # ── 7. Dream logs (sai-memory only) ───────────────────────
         dream_logs: list[dict] | None = None
         if being_id == "sai-memory":
@@ -1708,10 +1747,15 @@ class DashboardService:
             "skills": skills_list,
             "file_tree": file_tree,
             "representation": representation_text,
+            "acti": acti_profile,
         }
         if dream_logs is not None:
             result_dict["dream_logs"] = dream_logs
         return result_dict
+
+    def get_acti_architecture(self) -> dict:
+        """Return the full ACT-I architecture for the dashboard."""
+        return get_full_architecture()
 
     def get_being_file(self, being_id: str, rel_path: str) -> str | None:
         """Read a file relative to PROJECT_ROOT and return its text content.

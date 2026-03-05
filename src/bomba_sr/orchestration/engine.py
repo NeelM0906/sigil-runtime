@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from bomba_sr.acti.loader import get_planning_context as get_acti_planning_context
+
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -454,11 +456,23 @@ class OrchestrationEngine:
         if not assignable:
             raise RuntimeError("No online beings available for delegation")
 
+        acti_context = ""
+        try:
+            acti_context = get_acti_planning_context()
+        except Exception:
+            pass
         plan_prompt = (
             f"Task to decompose:\n{goal}\n\n"
             f"Assign sub-tasks to the available beings. "
             f"Each being should receive clear, self-contained instructions."
         )
+        if acti_context:
+            plan_prompt += (
+                f"\n\n{acti_context}\n"
+                f"Use the ACT-I architecture above to inform your delegation decisions. "
+                f"Match tasks to the sister whose mapped beings best cover the required "
+                f"skill clusters and levers."
+            )
 
         # Call LLM via handle_turn in the orchestration session.
         # disable_tools=True prevents the LLM from calling code search

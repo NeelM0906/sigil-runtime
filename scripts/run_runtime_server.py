@@ -1376,6 +1376,54 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"log": log_entries})
                     return
 
+                # --- ACT-I Architecture ---
+                if path == "/api/mc/acti/architecture":
+                    from bomba_sr.acti.loader import get_full_architecture
+                    self._write_cors(200, get_full_architecture())
+                    return
+                if path == "/api/mc/acti/beings":
+                    from bomba_sr.acti.loader import load_beings
+                    self._write_cors(200, {"beings": load_beings()})
+                    return
+                if path.startswith("/api/mc/acti/beings/"):
+                    from bomba_sr.acti.loader import load_beings
+                    acti_bid = path.split("/api/mc/acti/beings/", 1)[1].split("/")[0]
+                    beings = load_beings()
+                    match = next((b for b in beings if b["id"] == acti_bid), None)
+                    if not match:
+                        self._write_cors(404, {"error": "ACT-I being not found"})
+                        return
+                    self._write_cors(200, {"being": match})
+                    return
+                if path == "/api/mc/acti/clusters":
+                    from bomba_sr.acti.loader import load_clusters
+                    family = query.get("family", [None])[0]
+                    being = query.get("being", [None])[0]
+                    clusters = load_clusters()
+                    if family:
+                        clusters = [c for c in clusters if c["family"] == family]
+                    if being:
+                        clusters = [c for c in clusters if c["being"] == being]
+                    self._write_cors(200, {"clusters": clusters})
+                    return
+                if path == "/api/mc/acti/skill-families":
+                    from bomba_sr.acti.loader import load_skill_families
+                    self._write_cors(200, {"skill_families": load_skill_families()})
+                    return
+                if path == "/api/mc/acti/levers":
+                    from bomba_sr.acti.loader import LEVERS, load_lever_matrix
+                    self._write_cors(200, {"levers": LEVERS, "matrix": load_lever_matrix()})
+                    return
+                if path.startswith("/api/mc/acti/sisters/"):
+                    from bomba_sr.acti.loader import get_sister_profile
+                    sid = path.split("/api/mc/acti/sisters/", 1)[1].split("/")[0]
+                    profile = get_sister_profile(sid)
+                    if not profile["beings"]:
+                        self._write_cors(404, {"error": "no ACT-I beings mapped to this sister"})
+                        return
+                    self._write_cors(200, {"sister_id": sid, "profile": profile})
+                    return
+
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
                     msgs = dashboard_svc.list_messages(
