@@ -396,3 +396,38 @@ def get_full_architecture(root: Path | None = None) -> dict[str, Any]:
             "total_levers": len(LEVERS),
         },
     }
+
+
+def get_being_identity_text(being_id: str, root: Path | None = None) -> str:
+    """Return a formatted identity block for an ACT-I being.
+
+    Used by the orchestration engine to inject identity context into
+    delegation messages when routing work to ACT-I beings.
+    """
+    beings = load_beings(root)
+    being = next((b for b in beings if b["id"] == being_id), None)
+    if not being:
+        return ""
+
+    lines = [
+        f"# {being['name']}",
+        f"Domain: {being.get('domain', 'N/A')}",
+    ]
+
+    clusters = being.get("clusters", [])
+    if clusters:
+        lines.append(f"\nClusters ({len(clusters)}):")
+        for c in clusters:
+            lines.append(f"  - {c['name']}: {c['function']} ({c['positions']}p)")
+
+    heart = being.get("shared_heart_skills", [])
+    if heart:
+        lines.append(f"\nHeart Skills: {', '.join(heart)}")
+
+    levers = being.get("levers", [])
+    if levers:
+        lever_names = {lv["id"]: lv["name"] for lv in LEVERS}
+        coverage = [f"L{lv} ({lever_names.get(lv, lv)})" for lv in levers]
+        lines.append(f"\nLever Coverage: {', '.join(coverage)}")
+
+    return "\n".join(lines)

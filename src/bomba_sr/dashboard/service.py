@@ -36,6 +36,7 @@ TYPE_SISTER = "sister"
 TYPE_RUNTIME = "runtime"       # Prime — the host runtime itself
 TYPE_VOICE_AGENT = "voice"     # Bland.ai voice agents — not chat-routable
 TYPE_SUBAGENT = "subagent"     # BD-PIP, BD-WC etc.
+TYPE_ACTI = "acti"             # ACT-I specialized beings
 
 log = logging.getLogger(__name__)
 
@@ -440,6 +441,43 @@ class DashboardService:
                     "auto_start": False,
                     "agent_id": agent_id,
                 })
+
+        # ── Tier 3: ACT-I specialized beings ──────────────────────
+        try:
+            from bomba_sr.acti.loader import load_beings as load_acti_beings, SHARED_HEART_SKILLS as _ACTI_HEART
+
+            # Build a lookup for sister tenant_id/workspace/color/model from already-loaded beings
+            sister_lookup: dict[str, dict] = {}
+            for b in beings:
+                if b.get("type") == TYPE_SISTER:
+                    sister_lookup[b["id"]] = b
+
+            acti_beings = load_acti_beings()
+            for ab in acti_beings:
+                # Skip apex beings (Prime, Executive Assistant) — they're already loaded
+                if ab["id"] in ("sai-prime", "executive-assistant"):
+                    continue
+                sister_id = ab.get("sister_id", "")
+                parent = sister_lookup.get(sister_id, {})
+                top_clusters = ab.get("clusters", [])[:3]
+                beings.append({
+                    "id": ab["id"],
+                    "name": ab["name"],
+                    "role": (ab.get("domain") or "")[:200],
+                    "avatar": "\U0001f3af",  # 🎯
+                    "status": "online",
+                    "description": ab.get("domain", ""),
+                    "type": TYPE_ACTI,
+                    "tools": [],
+                    "skills": [s["name"] for s in _ACTI_HEART] + [c["name"] for c in top_clusters],
+                    "color": parent.get("color", self._color_for_sister(sister_id)),
+                    "model_id": parent.get("model_id", ""),
+                    "workspace": parent.get("workspace", f"workspaces/{sister_id}"),
+                    "tenant_id": parent.get("tenant_id", f"tenant-{sister_id}"),
+                    "auto_start": False,
+                })
+        except Exception:
+            pass  # ACT-I data not available — skip silently
 
         # ── Upsert all beings ─────────────────────────────────────
         now = self._now()
@@ -1730,6 +1768,26 @@ class DashboardService:
         except Exception:
             pass
 
+        # ── 6c. ACT-I being detail (for type=acti beings) ─────────
+        acti_being = None
+        if being.get("type") == TYPE_ACTI:
+            try:
+                from bomba_sr.acti.loader import load_beings as _load_acti, SHARED_HEART_SKILLS as _HS
+                for ab in _load_acti():
+                    if ab["id"] == being_id:
+                        acti_being = {
+                            "acti_id": ab.get("acti_id", ""),
+                            "domain": ab.get("domain", ""),
+                            "positions": ab.get("positions", 0),
+                            "levers": ab.get("levers", []),
+                            "clusters": ab.get("clusters", []),
+                            "shared_heart_skills": [s["name"] for s in _HS],
+                            "sister_id": ab.get("sister_id", ""),
+                        }
+                        break
+            except Exception:
+                pass
+
         # ── 7. Dream logs (sai-memory only) ───────────────────────
         dream_logs: list[dict] | None = None
         if being_id == "sai-memory":
@@ -1751,6 +1809,8 @@ class DashboardService:
         }
         if dream_logs is not None:
             result_dict["dream_logs"] = dream_logs
+        if acti_being is not None:
+            result_dict["acti_being"] = acti_being
         return result_dict
 
     def get_acti_architecture(self) -> dict:

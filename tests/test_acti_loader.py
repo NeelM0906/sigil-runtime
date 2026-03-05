@@ -12,6 +12,7 @@ from bomba_sr.acti.loader import (
     get_sister_profile,
     get_planning_context,
     get_full_architecture,
+    get_being_identity_text,
     BEING_SISTER_MAP,
     LEVERS,
     SHARED_HEART_SKILLS,
@@ -162,6 +163,25 @@ class TestFullArchitecture:
         assert arch["stats"]["total_positions"] == 2524
         assert arch["stats"]["total_skill_families"] == 9
         assert arch["stats"]["total_levers"] == 8
+
+
+@pytest.mark.skipif(SKIP, reason=reason)
+class TestGetBeingIdentityText:
+    def test_analyst_identity(self):
+        text = get_being_identity_text("the-analyst", ACTI_ROOT)
+        assert "The Analyst" in text
+        assert "Domain:" in text
+        assert "Clusters" in text
+        assert "Heart Skills:" in text
+        assert "Lever Coverage:" in text
+
+    def test_unknown_being_returns_empty(self):
+        text = get_being_identity_text("nonexistent", ACTI_ROOT)
+        assert text == ""
+
+    def test_apex_beings_also_work(self):
+        text = get_being_identity_text("sai-prime", ACTI_ROOT)
+        assert "SAI Prime" in text or "Prime" in text
 
 
 class TestConstants:
