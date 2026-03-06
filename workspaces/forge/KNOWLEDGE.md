@@ -16,3 +16,11 @@
 - **Critical rule:** Never launch without an email list. Build list weeks 1-6, launch weeks 7-9, scale weeks 10-12.
 
 ## Learned Patterns
+### 30-Second Video Ad Script Architecture (High-Performance Coaching Offers)
+- **Beat structure:** Hook (0-3s) → Pain (3-8s) → Reframe/Mechanism (8-17s) → Solution Position (17-24s) → CTA (24-30s)
+- **Hook principle:** Validate effort first, THEN name the gap. "You've done everything right and still…" outperforms attack-based hooks ("You're failing because…") for high-performer audiences.
+- **Differentiation technique:** Use metaphor to reframe category ("operating system" vs. "coaching program"). Avoids direct comparison to competitors.
+- **CTA pattern:** Scarcity (limited cohort) + agency reframe ("Your ceiling is optional") — closes the emotional loop opened by the hook.
+- **Word count target:** 75-90 words spoken copy for :30 spot at natural conversational pace.
+- **Stage direction principle:** Visual progression should mirror emotional arc — isolation → chaos → community/warmth.
+

@@ -11,6 +11,18 @@
           }
         ]
       }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-commit-push.sh",
+            "timeout": 30,
+            "statusMessage": "Committing and pushing task..."
+          }
+        ]
+      }
     ]
   }
 }

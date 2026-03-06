@@ -25,4 +25,22 @@
 
 **File:** `CAMPAIGN_FAILURE_MODES_AND_90_DAY_RESILIENCE_FRAMEWORK.md` (~35KB)
 
+### Objection Handling — 4-Step Communication Model for Premium Programs
+
+**Key patterns from Visionary Program script build (2026-03-06):**
+
+1. **"I need to think about it"** = fear of commitment / fear of change. Rapport first, then name the pattern (thinking = stalling), then reframe toward a specific decision point. Never pressure — clarify.
+
+2. **"It's too expensive"** = they see cost, not ROI. Validate the number, then reframe: what is NOT changing costing them? Make the math concrete. Shift from "expense" to "investment with measurable return."
+
+3. **"I've tried coaching before"** = trust wound. Honor the past experience explicitly. Distinguish between "coaching doesn't work" vs "that coaching didn't work." Use the founder's real track record ($700M) as proof separation. Turn skepticism into an asset.
+
+4. **The 4-Step Model applied to objections:** (a) Emotional Rapport — validate without flinching, (b) Truth to Pain — name what's really happening, (c) Heroic Unique Identity — separate this from everything else, (d) Agreement Formation — invite, don't push.
+
+5. **Transition lines should open doors, not close them.** End with a question that moves toward clarity (yes or no), not toward guilt. Offer a concrete next micro-step (talk to an alumnus, review payment structure, identify the one remaining concern).
+
+6. **Level 5 Listening in objection handling:** The first objection stated is almost never the real one. Go one layer deeper. Silence after the transition line is critical — don't fill the space.
+
+7. **Integrity-based influence principles:** Agreement ≠ Closing. If it's not right for them, say so. Every question must be a real question. GHIC alignment in every word.
+
 ## Learned Patterns

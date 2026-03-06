@@ -25,4 +25,15 @@
 
 **Research document stored at:** /Users/zidane/Downloads/PROJEKT/workspaces/scholar/DIGITAL_MARKETING_SCALE_RESEARCH.md (~39KB)
 
+### Competitive Landscape — Premium Coaching/Mastermind Market (March 2026)
+
+**Top 3 Competitors to The Visionary Program:**
+1. **Tony Robbins Platinum Partnership** — ~$75K-$100K+/yr, invite-only. Immersive destination experiences + elite network. Weakness: personality-cult dependency, thin post-event implementation, no AI/diagnostic tech.
+2. **Strategic Coach (Dan Sullivan)** — ~$48K-$60K/yr (10x tier). Quarterly workshops, proprietary thinking frameworks (Who Not How, 10x Is Easier Than 2x). Since 1989, 25K+ alumni. Weakness: no operational execution, no emotional/relational dimension, aging/old-school, no tech integration.
+3. **Cardone Ventures 10X360** — ~$30K-$50K+/yr tiered. Done-with-you operational consulting, 34,475+ clients, $550M generated in 5 years. Weakness: aggressive sales culture, narrow audience (trades/services), no personal development dimension, polarizing brand.
+
+**Identified White Space:** AI-powered holistic actualization with diagnostic precision. No competitor offers a complete, diagnostic, dynamic system addressing business + health + relationships + purpose + energy, powered by adaptive AI. The Visionary Program can unify Robbins' emotional depth, Sullivan's strategic rigor, and Cardone's operational accountability through proprietary ACT-I technology.
+
+**Competitive snapshot stored at:** /Users/zidane/Downloads/PROJEKT/workspaces/scholar/COMPETITIVE_LANDSCAPE_SNAPSHOT.md
+
 ## Learned Patterns
