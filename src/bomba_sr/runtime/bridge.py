@@ -25,6 +25,7 @@ from bomba_sr.commands.parser import CommandParser
 from bomba_sr.commands.router import CommandContext, CommandRouter
 from bomba_sr.commands.skill_nl_router import parse_skill_nl_intent
 from bomba_sr.context.policy import ContextPolicyEngine, TurnProfile, calculate_budget, estimate_tokens
+from bomba_sr.governance.being_tool_profiles import get_denied_tools_for_tenant
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
 from bomba_sr.identity.profile import UserIdentityService
@@ -818,6 +819,23 @@ class RuntimeBridge:
                 ),
                 available_tools=runtime.tool_executor.known_tool_names(),
             )
+            # ── Per-being tool filtering (ACT-I Phase 2) ──────────────
+            being_denied = get_denied_tools_for_tenant(
+                request.tenant_id,
+                runtime.tool_executor.known_tool_names(),
+            )
+            if being_denied:
+                from dataclasses import replace
+                merged_denied = resolved_policy.denied_tools | being_denied
+                merged_allowed = resolved_policy.allowed_tools
+                if merged_allowed is not None:
+                    merged_allowed = merged_allowed - being_denied
+                resolved_policy = replace(
+                    resolved_policy,
+                    denied_tools=merged_denied,
+                    allowed_tools=merged_allowed,
+                    source_layers=resolved_policy.source_layers + ("being_profile",),
+                )
             tool_context = ToolContext(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
