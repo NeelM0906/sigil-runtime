@@ -142,7 +142,7 @@ class TestUpsertTenantScoping:
 class TestQueryTenantScoping:
     """pinecone_query must add a tenant_id filter to the Pinecone request."""
 
-    def _run_query(self, context, query="test query"):
+    def _run_query(self, context, query="test query", extra_args=None):
         run = _pinecone_query_factory(default_index="test-idx", default_namespace="ns1")
         captured_payloads: list[dict] = []
 
@@ -150,13 +150,17 @@ class TestQueryTenantScoping:
             captured_payloads.append({"method": method, "url": url, "payload": payload})
             return {"matches": []}
 
+        args = {"query": query}
+        if extra_args:
+            args.update(extra_args)
+
         with (
             patch("bomba_sr.tools.builtin_pinecone._embed_query", return_value=[0.1, 0.2, 0.3]),
             patch("bomba_sr.tools.builtin_pinecone._choose_pinecone_api_key", return_value="fake-key"),
             patch("bomba_sr.tools.builtin_pinecone._resolve_index_host", return_value="host.pinecone.io"),
             patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
         ):
-            result = run({"query": query}, context)
+            result = run(args, context)
         return result, captured_payloads
 
     def test_tenant_filter_added(self):
@@ -170,6 +174,35 @@ class TestQueryTenantScoping:
         _, payloads = self._run_query(ctx)
         query_payload = payloads[0]["payload"]
         assert "filter" not in query_payload
+
+    def test_caller_filter_merged_with_tenant(self):
+        """Caller-supplied filter is merged via $and with tenant scoping."""
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        caller_filter = {"source": {"$eq": "docs"}}
+        _, payloads = self._run_query(ctx, extra_args={"filter": caller_filter})
+        query_payload = payloads[0]["payload"]
+        assert query_payload["filter"] == {
+            "$and": [
+                {"tenant_id": {"$eq": "tenant-acme"}},
+                {"source": {"$eq": "docs"}},
+            ]
+        }
+
+    def test_caller_filter_alone_when_no_tenant(self):
+        """Without tenant, caller filter is used as-is."""
+        ctx = _FakeContext(tenant_id="")
+        caller_filter = {"source": {"$eq": "docs"}}
+        _, payloads = self._run_query(ctx, extra_args={"filter": caller_filter})
+        query_payload = payloads[0]["payload"]
+        assert query_payload["filter"] == {"source": {"$eq": "docs"}}
+
+    def test_no_being_id_filter(self):
+        """Query must NOT filter by being_id — beings read all tenant vectors."""
+        ctx = _FakeContext(tenant_id="tenant-acme", session_id="mc-chat-scholar")
+        _, payloads = self._run_query(ctx)
+        query_payload = payloads[0]["payload"]
+        filt = query_payload["filter"]
+        assert "being_id" not in json.dumps(filt)
 
     def test_query_still_returns_results(self):
         ctx = _FakeContext()
@@ -185,13 +218,16 @@ class TestQueryTenantScoping:
 class TestMultiQueryTenantScoping:
     """pinecone_multi_query must add tenant_id filter to each sub-query."""
 
-    def _run_multi_query(self, context):
+    def _run_multi_query(self, context, indexes=None):
         run = _pinecone_multi_query_factory(default_namespace="ns1")
         captured_payloads: list[dict] = []
 
         def fake_http(method, url, *, headers=None, payload=None, timeout=30):
             captured_payloads.append({"method": method, "url": url, "payload": payload})
             return {"matches": []}
+
+        if indexes is None:
+            indexes = [{"index_name": "idx-a"}, {"index_name": "idx-b"}]
 
         with (
             patch("bomba_sr.tools.builtin_pinecone._embed_query", return_value=[0.1, 0.2, 0.3]),
@@ -200,13 +236,7 @@ class TestMultiQueryTenantScoping:
             patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
         ):
             result = run(
-                {
-                    "query": "multi test",
-                    "indexes": [
-                        {"index_name": "idx-a"},
-                        {"index_name": "idx-b"},
-                    ],
-                },
+                {"query": "multi test", "indexes": indexes},
                 context,
             )
         return result, captured_payloads
@@ -225,3 +255,19 @@ class TestMultiQueryTenantScoping:
         query_calls = [p for p in payloads if "/query" in p["url"]]
         for call in query_calls:
             assert "filter" not in call["payload"]
+
+    def test_per_index_filter_merged_with_tenant(self):
+        """Per-index caller filter merged with tenant via $and."""
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        indexes = [
+            {"index_name": "idx-a", "filter": {"category": {"$eq": "finance"}}},
+        ]
+        _, payloads = self._run_multi_query(ctx, indexes=indexes)
+        query_calls = [p for p in payloads if "/query" in p["url"]]
+        assert len(query_calls) == 1
+        assert query_calls[0]["payload"]["filter"] == {
+            "$and": [
+                {"tenant_id": {"$eq": "tenant-acme"}},
+                {"category": {"$eq": "finance"}},
+            ]
+        }

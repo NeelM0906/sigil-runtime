@@ -263,10 +263,19 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         }
         if namespace_value:
             payload["namespace"] = namespace_value
-        # Scope query to calling tenant
+        # Build metadata filter: tenant scoping + optional caller filter
         tenant_id = context.tenant_id
+        caller_filter = arguments.get("filter")
+        if not isinstance(caller_filter, dict):
+            caller_filter = None
         if tenant_id:
-            payload["filter"] = {"tenant_id": {"$eq": tenant_id}}
+            tenant_clause = {"tenant_id": {"$eq": tenant_id}}
+            if caller_filter:
+                payload["filter"] = {"$and": [tenant_clause, caller_filter]}
+            else:
+                payload["filter"] = tenant_clause
+        elif caller_filter:
+            payload["filter"] = caller_filter
         url = f"https://{host}/query"
         response = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
 
@@ -444,8 +453,18 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
             }
             if ns_value:
                 payload["namespace"] = ns_value
+            # Tenant scoping + optional per-index caller filter
+            per_index_filter = spec.get("filter")
+            if not isinstance(per_index_filter, dict):
+                per_index_filter = None
             if tenant_id:
-                payload["filter"] = {"tenant_id": {"$eq": tenant_id}}
+                tenant_clause = {"tenant_id": {"$eq": tenant_id}}
+                if per_index_filter:
+                    payload["filter"] = {"$and": [tenant_clause, per_index_filter]}
+                else:
+                    payload["filter"] = tenant_clause
+            elif per_index_filter:
+                payload["filter"] = per_index_filter
             url = f"https://{host}/query"
             resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
             matches = resp.get("matches")
@@ -526,6 +545,7 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
                     "namespace": {"type": ["string", "null"], "description": "Optional namespace filter."},
                     "top_k": {"type": "integer", "description": "Maximum matches to return (1-20)."},
                     "score_threshold": {"type": "number", "description": "Minimum similarity score to keep a match."},
+                    "filter": {"type": "object", "description": "Optional Pinecone metadata filter (merged with automatic tenant scoping)."},
                 },
                 "required": ["query"],
                 "additionalProperties": False,
@@ -584,10 +604,11 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
                             "properties": {
                                 "index_name": {"type": "string", "description": "Pinecone index name."},
                                 "namespace": {"type": ["string", "null"], "description": "Optional namespace."},
+                                "filter": {"type": "object", "description": "Optional per-index metadata filter (merged with tenant scoping)."},
                             },
                             "required": ["index_name"],
                         },
-                        "description": "List of indexes (with optional namespaces) to query.",
+                        "description": "List of indexes (with optional namespaces and filters) to query.",
                     },
                     "top_k": {"type": "integer", "description": "Maximum matches per index (1-20)."},
                     "score_threshold": {"type": "number", "description": "Minimum similarity score."},
