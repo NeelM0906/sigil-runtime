@@ -407,3 +407,150 @@ class TestLegacyFallback:
         # Fallback call: only caller filter, no tenant
         fallback_filter = captured_payloads[1]["payload"].get("filter")
         assert fallback_filter == {"source": {"$eq": "docs"}}
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.1 verification tests (exact names from spec)
+# ---------------------------------------------------------------------------
+
+def _pinecone_patches(**overrides):
+    """Context manager bundle for all Pinecone external calls."""
+    defaults = {
+        "_embed_query": [0.1, 0.2],
+        "_embed_batch": [[0.1, 0.2]],
+        "_choose_pinecone_api_key": "fake-key",
+        "_resolve_index_host": "host.pinecone.io",
+    }
+    defaults.update(overrides)
+    from contextlib import ExitStack
+    stack = ExitStack()
+    for name in ("_embed_query", "_embed_batch"):
+        if name in defaults:
+            stack.enter_context(
+                patch(f"bomba_sr.tools.builtin_pinecone.{name}", return_value=defaults[name])
+            )
+    for name in ("_choose_pinecone_api_key", "_resolve_index_host"):
+        if name in defaults:
+            stack.enter_context(
+                patch(f"bomba_sr.tools.builtin_pinecone.{name}", return_value=defaults[name])
+            )
+    return stack
+
+
+class TestPhase51Verification:
+    """Phase 5.1 acceptance tests — exact names from spec."""
+
+    def test_upsert_injects_tenant_id(self):
+        """Upsert with tenant_id='tenant-scholar' includes it in metadata."""
+        run = _pinecone_upsert_factory(default_index="idx", default_namespace="ns")
+        captured: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured.append(payload)
+            return {"upsertedCount": 1}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ):
+            run({"texts": ["test chunk"]}, ctx)
+
+        meta = captured[0]["vectors"][0]["metadata"]
+        assert meta["tenant_id"] == "tenant-scholar"
+
+    def test_upsert_injects_being_id(self):
+        """Upsert includes being_id derived from session context."""
+        run = _pinecone_upsert_factory(default_index="idx", default_namespace="ns")
+        captured: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured.append(payload)
+            return {"upsertedCount": 1}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar", session_id="mc-chat-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ):
+            run({"texts": ["test chunk"]}, ctx)
+
+        meta = captured[0]["vectors"][0]["metadata"]
+        assert meta["being_id"] == "scholar"
+
+    def test_upsert_caller_metadata_preserved(self):
+        """Extra metadata source='research' preserved alongside tenant_id."""
+        run = _pinecone_upsert_factory(default_index="idx", default_namespace="ns")
+        captured: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured.append(payload)
+            return {"upsertedCount": 1}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar", session_id="mc-chat-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ):
+            run({"texts": ["chunk"], "metadata": {"source": "research"}}, ctx)
+
+        meta = captured[0]["vectors"][0]["metadata"]
+        assert meta["tenant_id"] == "tenant-scholar"
+        assert meta["source"] == "research"
+
+    def test_query_filters_by_tenant(self):
+        """Query with tenant_id='tenant-scholar' adds $eq filter."""
+        run = _pinecone_query_factory(default_index="idx", default_namespace="ns")
+        captured: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured.append(payload)
+            return {"matches": [{"id": "v1", "score": 0.9, "metadata": {"text": "x"}}]}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ):
+            run({"query": "find research"}, ctx)
+
+        assert captured[0]["filter"] == {"tenant_id": {"$eq": "tenant-scholar"}}
+
+    def test_query_fallback_on_empty_filtered_results(self):
+        """Filtered returns 0 → fallback returns 3 → warning logged."""
+        run = _pinecone_query_factory(default_index="idx", default_namespace="ns")
+        call_count = [0]
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return {"matches": []}
+            return {"matches": [
+                {"id": f"v{i}", "score": 0.8, "metadata": {"text": f"legacy-{i}"}}
+                for i in range(3)
+            ]}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ), patch("bomba_sr.tools.builtin_pinecone.log") as mock_log:
+            result = run({"query": "find"}, ctx)
+
+        assert len(result["results"]) == 3
+        assert result["legacy_fallback"] is True
+        mock_log.warning.assert_called_once()
+        assert "re-indexing" in mock_log.warning.call_args[0][0]
+
+    def test_query_does_not_filter_by_being_id(self):
+        """being_id must NOT appear in query filter — only used on upsert."""
+        run = _pinecone_query_factory(default_index="idx", default_namespace="ns")
+        captured: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured.append(payload)
+            return {"matches": [{"id": "v1", "score": 0.9, "metadata": {"text": "x"}}]}
+
+        ctx = _FakeContext(tenant_id="tenant-scholar", session_id="mc-chat-scholar")
+        with _pinecone_patches() as _, patch(
+            "bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http
+        ):
+            run({"query": "test"}, ctx)
+
+        filter_json = json.dumps(captured[0].get("filter", {}))
+        assert "being_id" not in filter_json
