@@ -220,7 +220,7 @@ class TestPhase1Orchestration:
 
         engine, db, _, _ = _make_orchestration_engine()
 
-        stale_time = (_utc_now() - timedelta(hours=2)).isoformat()
+        stale_time = (_utc_now() - timedelta(hours=25)).isoformat()
         db.execute_commit(
             """
             INSERT INTO orchestration_state
