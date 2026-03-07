@@ -261,6 +261,7 @@ class OrchestrationEngine:
         self._dream_trigger_every: int = int(os.environ.get("BOMBA_DREAM_TRIGGER_EVERY", "5"))
         self._ensure_task_results_schema()
         self._ensure_orchestration_state_schema()
+        self.cleanup_orphaned_orchestrations()
 
     # ------------------------------------------------------------------
     # Public API
@@ -340,8 +341,19 @@ class OrchestrationEngine:
     def get_status(self, task_id: str) -> dict[str, Any] | None:
         with self._lock:
             state = self._active.get(task_id)
-        if state is None:
-            state = self._db_load_state(task_id)
+            if state is not None:
+                # Snapshot fields under lock to avoid TOCTOU on mutable state
+                plan = state["plan"]
+                return {
+                    "task_id": task_id,
+                    "status": state["status"],
+                    "plan": plan.to_dict() if plan else None,
+                    "subtask_ids": dict(state.get("subtask_ids", {})),
+                    "subtask_outputs": {k: v[:200] for k, v in state.get("subtask_outputs", {}).items()},
+                    "subtask_reviews": dict(state.get("subtask_reviews", {})),
+                }
+        # Fallback to DB (immutable snapshot, no lock needed)
+        state = self._db_load_state(task_id)
         if state is None:
             return None
         return {
@@ -1084,15 +1096,16 @@ class OrchestrationEngine:
     def _get_state(self, task_id: str) -> dict[str, Any]:
         with self._lock:
             state = self._active.get(task_id)
-        if state is not None:
-            return state
+            if state is not None:
+                return state
         # Fallback: load from DB
         state = self._db_load_state(task_id)
         if state is None:
             raise RuntimeError(f"No active orchestration for task {task_id}")
         with self._lock:
-            self._active[task_id] = state
-        return state
+            # Use setdefault to avoid overwriting fresher state from a concurrent thread
+            self._active.setdefault(task_id, state)
+            return self._active[task_id]
 
     def _set_status(self, task_id: str, status: str) -> None:
         with self._lock:
@@ -1223,16 +1236,18 @@ class OrchestrationEngine:
     ) -> None:
         try:
             runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
-            row = runtime.db.execute(
-                "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
-                (task_id,),
-            ).fetchone()
-            current = json.loads(row["subtask_outputs"]) if row else {}
-            current[being_id] = output
-            runtime.db.execute_commit(
-                "UPDATE orchestration_state SET subtask_outputs = ?, updated_at = ? WHERE task_id = ?",
-                (json.dumps(current), datetime.now(timezone.utc).isoformat(), task_id),
-            )
+            now = datetime.now(timezone.utc).isoformat()
+            with runtime.db.transaction() as conn:
+                row = conn.execute(
+                    "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                current = json.loads(row["subtask_outputs"]) if row else {}
+                current[being_id] = output
+                conn.execute(
+                    "UPDATE orchestration_state SET subtask_outputs = ?, updated_at = ? WHERE task_id = ?",
+                    (json.dumps(current), now, task_id),
+                )
         except Exception as exc:
             log.warning("Failed to merge subtask output for %s/%s: %s", task_id[:8], being_id, exc)
 
@@ -1241,16 +1256,18 @@ class OrchestrationEngine:
     ) -> None:
         try:
             runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
-            row = runtime.db.execute(
-                "SELECT subtask_reviews FROM orchestration_state WHERE task_id = ?",
-                (task_id,),
-            ).fetchone()
-            current = json.loads(row["subtask_reviews"]) if row else {}
-            current[being_id] = review
-            runtime.db.execute_commit(
-                "UPDATE orchestration_state SET subtask_reviews = ?, updated_at = ? WHERE task_id = ?",
-                (json.dumps(current), datetime.now(timezone.utc).isoformat(), task_id),
-            )
+            now = datetime.now(timezone.utc).isoformat()
+            with runtime.db.transaction() as conn:
+                row = conn.execute(
+                    "SELECT subtask_reviews FROM orchestration_state WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                current = json.loads(row["subtask_reviews"]) if row else {}
+                current[being_id] = review
+                conn.execute(
+                    "UPDATE orchestration_state SET subtask_reviews = ?, updated_at = ? WHERE task_id = ?",
+                    (json.dumps(current), now, task_id),
+                )
         except Exception as exc:
             log.warning("Failed to merge subtask review for %s/%s: %s", task_id[:8], being_id, exc)
 
