@@ -101,11 +101,13 @@ function TeamGrid({ clusters, beings, tasks, families, filter, setFilter, groupB
 
   // Task counts per being name
   const taskCountByBeing = useMemo(() => {
+    const beingById = {}
+    for (const b of beings) beingById[b.id] = b
     const m = {}
     for (const t of tasks) {
       if (t.status === 'done') continue
       for (const aid of (t.assignees || [])) {
-        const b = beings.find(b2 => b2.id === aid)
+        const b = beingById[aid]
         if (b) m[b.name] = (m[b.name] || 0) + 1
       }
     }
@@ -142,12 +144,6 @@ function TeamGrid({ clusters, beings, tasks, families, filter, setFilter, groupB
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([family, teams]) => ({ family, teams: teams.sort((a, b) => a.name.localeCompare(b.name)) }))
   }, [filtered, groupBy])
-
-  // Count tiers for a cluster (the cluster itself has a tier + the PM being has a tier)
-  const getTeamMembers = useCallback((cluster) => {
-    const key = getTierKey(cluster.tier)
-    return { active: key === 'active' ? 1 : 0, contractor: key === 'contractor' ? 1 : 0, baby: key === 'baby' ? 1 : 0 }
-  }, [])
 
   return (
     <div className="flex flex-col gap-3">
@@ -268,10 +264,10 @@ function TeamDetail({ team, clusters, beings, tasks, levers, leverMatrix, shared
   const pmRegistry = registryBeings.find(b => b.name === team.being)
   const pmBeingId = pmRegistry?.id || pmBeing?.id
 
-  // Find all teams owned by the same PM, to show "team members" from related clusters
-  const pmClusters = useMemo(
-    () => clusters.filter(c => c.being === team.being),
-    [clusters, team.being]
+  // Related clusters owned by the same PM (for context, not "members")
+  const relatedClusters = useMemo(
+    () => clusters.filter(c => c.being === team.being && c.id !== team.id),
+    [clusters, team.being, team.id]
   )
 
   // Lever coverage from PM being
@@ -339,40 +335,31 @@ function TeamDetail({ team, clusters, beings, tasks, levers, leverMatrix, shared
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* ── Left column: Members + Tasks ─────────────── */}
         <div className="lg:col-span-2 flex flex-col gap-3">
-          {/* Members Section */}
-          <DetailSection title="Team Members" icon="👥" count={pmClusters.length}>
+          {/* Team Positions */}
+          <DetailSection title="Positions" icon="👥" count={team.positions || 0}>
             <div className="flex flex-col gap-1">
-              {/* Group by tier */}
-              {['active', 'contractor', 'baby'].map(tierGroup => {
-                const inTier = pmClusters.filter(c => getTierKey(c.tier) === tierGroup)
-                if (inTier.length === 0) return null
-                return (
-                  <div key={tierGroup}>
-                    <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1 mt-1 flex items-center gap-1.5">
-                      <span>{TIER_ICON[tierGroup]}</span>
-                      <span>{TIER_LABEL[tierGroup]} ({inTier.length})</span>
-                    </div>
-                    {inTier.map(c => (
-                      <div
-                        key={c.id}
-                        className="flex items-center justify-between px-2.5 py-1.5 rounded hover:bg-bg-hover transition-colors"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`px-1 py-0.5 text-[8px] font-bold rounded border ${TIER_BADGE_CLASS[getTierKey(c.tier)]}`}>
-                            {TIER_ICON[getTierKey(c.tier)]}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-text-primary truncate">{c.name}</div>
-                            <div className="text-[10px] text-text-muted truncate">{c.function}</div>
-                          </div>
-                        </div>
-                        <span className="text-[9px] text-text-muted shrink-0">{c.family}</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
+              <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-bg-card border border-border">
+                <span className="text-xs text-text-primary">{team.name}</span>
+                <span className="text-[10px] font-mono text-accent-cyan">{team.positions || 0}p</span>
+              </div>
+              <div className="text-[10px] text-text-secondary px-2.5 py-1">{team.function}</div>
             </div>
+            {relatedClusters.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border">
+                <div className="text-[9px] text-text-muted uppercase tracking-wider mb-1 px-2.5">Related clusters by same PM</div>
+                {relatedClusters.map(c => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between px-2.5 py-1 rounded hover:bg-bg-hover transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[10px] text-text-primary truncate">{c.name}</div>
+                    </div>
+                    <span className="text-[9px] font-mono text-text-muted shrink-0">{c.positions || 0}p</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </DetailSection>
 
           {/* Tasks Section */}
