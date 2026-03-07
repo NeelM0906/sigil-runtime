@@ -461,7 +461,7 @@ class TestDreamLogReporting:
 
         # Point dream logs to tmp dir
         log_dir = os.path.join(tmpdir, "dream_logs")
-        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+        with patch("bomba_sr.memory.dreaming._PROJECT_ROOT", Path(tmpdir)):
             with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
                 results = dc.run_cycle()
 
@@ -491,7 +491,7 @@ class TestDreamLogReporting:
 
         dc, db, bridge, dashboard, tmpdir = _make_dream_cycle(with_memories=3, being_ids=["forge", "scholar"])
 
-        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+        with patch("bomba_sr.memory.dreaming._PROJECT_ROOT", Path(tmpdir)):
             with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
                 dc.run_cycle()
 
@@ -515,7 +515,7 @@ class TestDreamLogReporting:
                 assert dc.status()["total_runs"] == 1
 
     def test_list_dream_logs_returns_empty_when_no_dir(self):
-        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tempfile.mkdtemp()}):
+        with patch("bomba_sr.memory.dreaming._PROJECT_ROOT", Path(tempfile.mkdtemp())):
             with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "nonexistent"):
                 logs = DreamCycle.list_dream_logs()
                 assert logs == []
@@ -528,7 +528,7 @@ class TestDreamLogReporting:
         for i in range(3):
             Path(os.path.join(log_dir, f"2026-03-0{i+1}-12:00.md")).write_text(f"Log {i}")
 
-        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+        with patch("bomba_sr.memory.dreaming._PROJECT_ROOT", Path(tmpdir)):
             with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
                 logs = DreamCycle.list_dream_logs()
                 assert len(logs) == 3
@@ -542,7 +542,7 @@ class TestDreamLogReporting:
         for i in range(5):
             Path(os.path.join(log_dir, f"2026-03-0{i+1}-12:00.md")).write_text(f"Log {i}")
 
-        with patch.dict(os.environ, {"BOMBA_PROJECT_ROOT": tmpdir}):
+        with patch("bomba_sr.memory.dreaming._PROJECT_ROOT", Path(tmpdir)):
             with patch("bomba_sr.memory.dreaming.DREAM_LOGS_DIR", "dream_logs"):
                 logs = DreamCycle.list_dream_logs(limit=2)
                 assert len(logs) == 2

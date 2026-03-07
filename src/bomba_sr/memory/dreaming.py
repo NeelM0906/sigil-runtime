@@ -26,6 +26,10 @@ from bomba_sr.llm.providers import ChatMessage, provider_from_env
 
 log = logging.getLogger(__name__)
 
+_PROJECT_ROOT = Path(
+    os.environ.get("BOMBA_PROJECT_ROOT", str(Path(__file__).resolve().parents[3]))
+)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -330,7 +334,7 @@ class DreamCycle:
         # KNOWLEDGE.md and REPRESENTATION.md from workspace
         ws = being.get("workspace")
         if ws and ws != ".":
-            ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+            ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
             for fname in ("KNOWLEDGE.md", "REPRESENTATION.md"):
                 fpath = ws_path / fname
                 if fpath.exists():
@@ -341,7 +345,9 @@ class DreamCycle:
 
         # Task results (recent participation) — lives in Prime's DB, not being's DB
         try:
-            prime_runtime = self.bridge._tenant_runtime("tenant-prime")
+            prime_being = self.dashboard.get_being("prime") if self.dashboard else None
+            prime_tenant = (prime_being.get("tenant_id") if prime_being else None) or "tenant-prime"
+            prime_runtime = self.bridge._tenant_runtime(prime_tenant)
             rows = prime_runtime.db.execute(
                 """
                 SELECT task_id, goal, strategy, beings_used, synthesis, created_at
@@ -641,8 +647,7 @@ class DreamCycle:
 
     def _write_dream_log(self, results: dict[str, Any]) -> Path | None:
         """Write a markdown report of the dream cycle to dream_logs/."""
-        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
-        log_dir = project_root / DREAM_LOGS_DIR
+        log_dir = _PROJECT_ROOT / DREAM_LOGS_DIR
         log_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now(timezone.utc)
@@ -683,8 +688,7 @@ class DreamCycle:
     @staticmethod
     def list_dream_logs(limit: int = 20) -> list[dict[str, Any]]:
         """Return recent dream log entries (newest first)."""
-        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
-        log_dir = project_root / DREAM_LOGS_DIR
+        log_dir = _PROJECT_ROOT / DREAM_LOGS_DIR
         if not log_dir.is_dir():
             return []
 
@@ -695,7 +699,7 @@ class DreamCycle:
             stat = fpath.stat()
             logs.append({
                 "filename": fpath.name,
-                "path": str(fpath.relative_to(project_root)),
+                "path": str(fpath.relative_to(_PROJECT_ROOT)),
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
             })

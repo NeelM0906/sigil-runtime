@@ -2579,7 +2579,7 @@ class RuntimeBridge:
         )
         sisters_registry: SisterRegistry | None = None
         sisters_config_path = context.workspace_root / "sisters.json"
-        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "prime"}:
+        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "tenant-local", "prime"}:
             sisters_registry = SisterRegistry(
                 config_path=sisters_config_path,
                 orchestrator=orchestrator,

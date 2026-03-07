@@ -26,6 +26,10 @@ from bomba_sr.acti.loader import get_planning_context as get_acti_planning_conte
 
 log = logging.getLogger(__name__)
 
+_PROJECT_ROOT = Path(
+    os.environ.get("BOMBA_PROJECT_ROOT", str(Path(__file__).resolve().parents[3]))
+)
+
 # ---------------------------------------------------------------------------
 # Session ID helpers
 # ---------------------------------------------------------------------------
@@ -255,7 +259,21 @@ class OrchestrationEngine:
         self.bridge = bridge
         self.dashboard = dashboard_svc
         self.project_svc = project_svc
-        self.prime_tenant_id = prime_tenant_id
+        # Resolve Prime's actual tenant from the being registry.
+        # Falls back to the parameter default if Prime isn't registered yet.
+        resolved = prime_tenant_id
+        try:
+            prime_being = dashboard_svc.get_being("prime") if dashboard_svc else None
+            if prime_being and prime_being.get("tenant_id"):
+                resolved = prime_being["tenant_id"]
+                if resolved != prime_tenant_id:
+                    log.info(
+                        "Prime tenant resolved from registry: %s (overriding default %s)",
+                        resolved, prime_tenant_id,
+                    )
+        except Exception:
+            log.warning("Could not resolve Prime tenant from registry, using default: %s", prime_tenant_id)
+        self.prime_tenant_id = resolved
         self._active: dict[str, dict[str, Any]] = {}  # task_id -> in-memory cache
         self._lock = threading.Lock()
         self._completed_task_count: int = 0
@@ -485,7 +503,7 @@ class OrchestrationEngine:
             # Enrich with representation data (truncated to 800 chars)
             ws = b.get("workspace")
             if ws and ws != ".":
-                ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
                 rep_path = ws_path / "REPRESENTATION.md"
                 if rep_path.exists():
                     try:
@@ -623,10 +641,9 @@ class OrchestrationEngine:
 
         ws = being.get("workspace")
         if ws and ws != ".":
-            from pathlib import Path
-            workspace = str(Path("/Users/zidane/Downloads/PROJEKT") / ws)
+            workspace = str(_PROJECT_ROOT / ws)
         else:
-            workspace = "/Users/zidane/Downloads/PROJEKT"
+            workspace = str(_PROJECT_ROOT)
 
         # Build ACT-I identity prefix for specialized beings
         acti_identity_prefix = ""
@@ -819,10 +836,9 @@ class OrchestrationEngine:
                 tenant_id = being.get("tenant_id") or self.prime_tenant_id
                 ws = being.get("workspace")
                 if ws and ws != ".":
-                    from pathlib import Path
-                    workspace = str(Path("/Users/zidane/Downloads/PROJEKT") / ws)
+                    workspace = str(_PROJECT_ROOT / ws)
                 else:
-                    workspace = "/Users/zidane/Downloads/PROJEKT"
+                    workspace = str(_PROJECT_ROOT)
 
                 revision_msg = (
                     f"[REVISION REQUEST FROM SAI PRIME — Round {revision_round + 1}]\n\n"
@@ -1125,7 +1141,7 @@ class OrchestrationEngine:
         })
 
     def _prime_workspace(self) -> str:
-        return "/Users/zidane/Downloads/PROJEKT/workspaces/prime"
+        return str(_PROJECT_ROOT / "workspaces" / "prime")
 
     # ------------------------------------------------------------------
     # Task result persistence
@@ -1534,9 +1550,9 @@ class OrchestrationEngine:
                 being = self.dashboard.get_being(sub.being_id) or {}
                 ws = being.get("workspace")
                 if ws and ws != ".":
-                    ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                    ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
                 else:
-                    ws_path = Path("/Users/zidane/Downloads/PROJEKT")
+                    ws_path = _PROJECT_ROOT
 
                 rep_path = ws_path / "REPRESENTATION.md"
                 current_rep = ""

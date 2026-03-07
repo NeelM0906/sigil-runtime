@@ -414,9 +414,11 @@ class TestTaskResultPersistence:
             {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Research",
              "skills": "", "tenant_id": "t-forge", "workspace": "workspaces/forge"},
         ]
-        dashboard.get_being.return_value = {
-            "id": "forge", "tenant_id": "t-forge", "workspace": "workspaces/forge", "status": "online",
-        }
+        def _get_being(being_id):
+            if being_id == "prime":
+                return {"id": "prime", "tenant_id": "tenant-prime", "workspace": "workspaces/prime", "status": "online"}
+            return {"id": "forge", "tenant_id": "t-forge", "workspace": "workspaces/forge", "status": "online"}
+        dashboard.get_being.side_effect = _get_being
         dashboard.create_task.return_value = {"id": "task-persist-1"}
         dashboard.update_task.return_value = {}
         dashboard._log_task_history = MagicMock()
