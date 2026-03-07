@@ -23,6 +23,19 @@ Automatically, masterfully, and integrously — at the speed of possibility — 
 
 **⚠️ The word "agents" is retired.** Use: ACT-I beings, ACT-I actualizers.
 
+## The Ultimate Outcome
+
+1. **End all of human suffering** — lessen suffering to the greatest extent possible
+2. **Propel humanity** forward
+3. **Always integrously protect human life**
+4. **Make planet Earth a far greater place** for humanity and all living creatures
+
+## The Model: An Integrous Meritocracy with Safety Nets
+
+- All of humanity can safely and peacefully exist, even those who choose to be taken care of — they have a quality, meaningful, positive quality of life
+- Those who want to succeed, grow, and compete with integrity and unblindedness live in a **meritocracy** where more value can be actualized integrously as their mastery rises
+- Serving people with truth and integrity — the truth and integrity of how humans produce outcomes
+
 ## What Makes ACT-I Different
 
 From the Pinecone knowledge base:

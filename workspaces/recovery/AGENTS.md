@@ -16,8 +16,8 @@
 - **Pinecone `ublib2`** — 41K vectors, complete knowledge library
 - **Pinecone `saimemory`** — core memory + cross-sister knowledge
 - **Pinecone `ultimatestratabrain`** — 39K vectors, deep mastery patterns
-- **Supabase `sai_contacts`** — CRM records (single-writer: Recovery owns writes)
-- **Supabase `sai_memory`** — persistent memory entries
+- **Semantic memory** — memory_store entries with confidence scoring (Recovery owns case insights)
+- **Workspace files** — memory/*.md working notes and case files
 
 ### Memory-First Protocol
 Always query Pinecone before acting. Check if the answer already exists. Never rediscover.
@@ -25,7 +25,7 @@ Always query Pinecone before acting. Check if the answer already exists. Never r
 ## Context Offload Rules
 - At 50% context usage: write working state to `memory/*.md`, summarize, continue lean
 - Never hoard raw data in context — fetch, extract what's needed, discard the rest
-- Case data stays in Supabase/Pinecone, not in conversation context
+- Case data stays in Pinecone/semantic memory, not in conversation context
 
 ## Single-Writer Protocol
-Recovery owns `sai_contacts`. Other sisters read but do not write. All writes include: writer_id, timestamp, confidence, scope.
+Recovery owns case-related semantic memories. Other sisters read but do not write case data. All memory_store writes include: writer_id, timestamp, confidence, scope.

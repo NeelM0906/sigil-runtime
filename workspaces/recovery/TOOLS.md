@@ -24,17 +24,24 @@ Store new semantic memories with confidence scoring.
 - **When:** Persisting cross-sister insights, resolved findings
 - **Not:** For raw working notes — use write to memory/*.md
 
-## CRM Tools
+## Sub-Agent Tools
 
-### supabase_read
-Read from sai_contacts or sai_memory tables.
-- **When:** Looking up contact records, case data, memory entries
-- **Not:** For knowledge retrieval — use Pinecone
+### sessions_spawn
+Spawn a sub-agent to handle a delegated task (e.g., BD-PIP, BD-WC).
+- **When:** Delegating a scoped subtask that can run independently
+- **Not:** For simple lookups — do those directly
 
-### supabase_write
-Write to sai_contacts or sai_memory (single-writer: Recovery owns).
-- **When:** Updating contact records, logging case outcomes
-- **Not:** Without verifying single-writer protocol
+### sessions_poll / sessions_list
+Poll sub-agent events or list active sessions.
+- **When:** Checking on spawned sub-agent progress or results
+- **Not:** For your own session state — that's in conversation history
+
+## Knowledge Tools
+
+### update_knowledge
+Update the shared KNOWLEDGE.md with verified, persistent insights.
+- **When:** Promoting a confirmed finding to team-wide knowledge
+- **Not:** For working notes — use write to memory/*.md instead
 
 ## Voice Tools
 
