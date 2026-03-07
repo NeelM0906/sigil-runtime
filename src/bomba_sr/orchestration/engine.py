@@ -1489,55 +1489,277 @@ class OrchestrationEngine:
             return None
 
     def cleanup_orphaned_orchestrations(self) -> int:
-        """Mark stale in-progress orchestrations as failed.
+        """Recover or fail orphaned in-progress orchestrations on startup.
 
-        Should be called on startup to clean up orchestrations that were
-        running when the server last shut down.
+        Orchestrations younger than 24 hours are resumed.
+        Orchestrations older than 24 hours are marked failed.
 
-        Returns the number of orchestrations cleaned up.
+        Returns the number of orchestrations processed.
         """
-        cleaned = 0
+        processed = 0
         try:
             runtime = self.bridge._tenant_runtime(
                 self.prime_tenant_id,
                 self._prime_workspace(),
             )
-            cutoff = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
             terminal = (STATUS_COMPLETED, STATUS_FAILED)
             rows = runtime.db.execute(
                 """
-                SELECT task_id, goal FROM orchestration_state
+                SELECT task_id, goal, status, updated_at FROM orchestration_state
                 WHERE status NOT IN (?, ?)
-                  AND updated_at < ?
                 """,
-                (*terminal, cutoff),
+                terminal,
             ).fetchall()
 
+            now = datetime.now(timezone.utc)
             for row in rows:
                 task_id = row["task_id"]
-                log.warning(
-                    "Cleaning up orphaned orchestration %s (goal: %s)",
-                    task_id[:8], (row["goal"] or "")[:80],
-                )
-                runtime.db.execute_commit(
-                    "UPDATE orchestration_state SET status = ?, updated_at = ? WHERE task_id = ?",
-                    (STATUS_FAILED, datetime.now(timezone.utc).isoformat(), task_id),
-                )
+                updated_at = row["updated_at"]
                 try:
-                    self.dashboard.update_task(self.project_svc, task_id, status="failed")
+                    age_hours = (now - datetime.fromisoformat(updated_at)).total_seconds() / 3600
+                except (ValueError, TypeError):
+                    age_hours = 999.0
+
+                if age_hours > 24:
+                    log.warning(
+                        "Orchestration %s is %.1fh old — marking failed (too stale to resume, goal: %s)",
+                        task_id[:8], age_hours, (row["goal"] or "")[:80],
+                    )
+                    runtime.db.execute_commit(
+                        "UPDATE orchestration_state SET status = ?, updated_at = ? WHERE task_id = ?",
+                        (STATUS_FAILED, now.isoformat(), task_id),
+                    )
+                    try:
+                        self.dashboard.update_task(self.project_svc, task_id, status="failed")
+                    except Exception:
+                        pass
+                    self.dashboard._log_task_history(
+                        task_id, "orchestration_cleanup",
+                        {"reason": "Too stale to resume (>24h) — marked failed"},
+                    )
+                    processed += 1
+                else:
+                    log.info(
+                        "Attempting resume for orchestration %s (age: %.1fh, status: %s)",
+                        task_id[:8], age_hours, row["status"],
+                    )
+                    self.resume_orchestration(task_id)
+                    processed += 1
+
+            if processed:
+                log.info("Processed %d orphaned orchestrations on startup", processed)
+        except Exception as exc:
+            log.warning("Failed to process orphaned orchestrations: %s", exc)
+        return processed
+
+    # ------------------------------------------------------------------
+    # Orchestration resume (server restart recovery)
+    # ------------------------------------------------------------------
+
+    def resume_orchestration(self, task_id: str) -> None:
+        """Resume an in-progress orchestration from its last persisted state.
+
+        Called on startup for any orchestration_state with non-terminal status
+        that is recent enough to attempt recovery (< 24h).
+        """
+        state = self._db_load_state(task_id)
+        if not state:
+            log.error("Cannot resume %s: state not found in DB", task_id[:8])
+            return
+
+        # Re-populate in-memory cache so the pipeline phases can operate
+        with self._lock:
+            self._active[task_id] = state
+
+        log.info(
+            "Resuming orchestration %s from status=%s (goal: %s)",
+            task_id[:8], state["status"], (state.get("goal") or "")[:80],
+        )
+
+        # Notify user that we're resuming
+        try:
+            self.dashboard.create_message(
+                sender="prime",
+                content=(
+                    f"System restarted. Resuming your task: "
+                    f"{(state.get('goal') or task_id)[:100]}..."
+                ),
+                targets=[state.get("sender", "user")],
+                msg_type="direct",
+                task_ref=task_id,
+            )
+        except Exception:
+            pass
+
+        t = threading.Thread(
+            target=self._resume_from_status,
+            args=(task_id, state),
+            daemon=True,
+            name=f"orch-resume-{task_id[:8]}",
+        )
+        t.start()
+
+    def _resume_from_status(self, task_id: str, state: dict[str, Any]) -> None:
+        """Re-enter the orchestration pipeline at the correct phase."""
+        try:
+            status = state["status"]
+
+            if status == STATUS_PLANNING:
+                # Plan never completed — restart from scratch
+                self._phase_plan(task_id)
+                self._phase_delegate(task_id)
+                self._update_post_delegation(task_id)
+                self._phase_review(task_id)
+                self._phase_synthesize(task_id)
+
+            elif status == STATUS_DELEGATING:
+                self._resume_delegation(task_id, state)
+                self._update_post_delegation(task_id)
+                self._phase_review(task_id)
+                self._phase_synthesize(task_id)
+
+            elif status == STATUS_REVIEWING or status == STATUS_REVISING:
+                # Re-populate subtask_outputs from shared memory for review
+                self._reload_outputs_from_shared_memory(task_id, state)
+                self._phase_review(task_id)
+                self._phase_synthesize(task_id)
+
+            elif status == STATUS_SYNTHESIZING:
+                self._reload_outputs_from_shared_memory(task_id, state)
+                self._phase_synthesize(task_id)
+
+            else:
+                log.warning("Cannot resume %s from status=%s", task_id[:8], status)
+                self._set_status(task_id, STATUS_FAILED)
+                return
+
+        except Exception as exc:
+            log.exception("Resume failed for %s", task_id[:8])
+            self._set_status(task_id, STATUS_FAILED)
+
+            if self.protocol is not None:
+                try:
+                    orch_session = orchestration_session_id(task_id)
+                    self.protocol.cascade_stop_session(
+                        tenant_id=self.prime_tenant_id,
+                        session_id=orch_session,
+                        reason=f"resume failed: {exc}",
+                    )
                 except Exception:
                     pass
-                self.dashboard._log_task_history(
-                    task_id, "orchestration_cleanup",
-                    {"reason": "Server restart — orphaned orchestration marked failed"},
-                )
-                cleaned += 1
 
-            if cleaned:
-                log.info("Cleaned up %d orphaned orchestrations", cleaned)
+            try:
+                self.dashboard.update_task(self.project_svc, task_id, status="failed")
+            except Exception:
+                pass
+        finally:
+            try:
+                self.dashboard.update_being("prime", {"status": "online"})
+            except Exception:
+                pass
+
+    def _resume_delegation(self, task_id: str, state: dict[str, Any]) -> None:
+        """Resume delegation phase — re-spawn only incomplete subtasks."""
+        plan = state["plan"]
+        if plan is None:
+            raise RuntimeError("Cannot resume delegation: no plan in state")
+
+        self._set_status(task_id, STATUS_DELEGATING)
+        subtask_ids = state.get("subtask_ids") or {}
+
+        completed_beings: set[str] = set()
+
+        for being_id, run_id in subtask_ids.items():
+            if self.protocol is None:
+                break
+            try:
+                run = self.protocol.get_run(run_id)
+                if run and run["status"] == "completed":
+                    completed_beings.add(being_id)
+                elif run and run["status"] not in ("completed", "failed", "timed_out"):
+                    # Was running/accepted when server died — mark failed
+                    try:
+                        self.protocol.fail(
+                            run_id,
+                            reason="Server restart — run interrupted",
+                        )
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # Load outputs from already-completed subtasks into in-memory state
+        self._reload_outputs_from_shared_memory(task_id, state)
+
+        # Determine what needs to be (re-)spawned
+        pending_subs = [
+            s for s in plan.sub_tasks
+            if s.being_id not in completed_beings
+        ]
+
+        if not pending_subs:
+            log.info("All subtasks already completed for %s", task_id[:8])
+            return
+
+        log.info(
+            "Resuming %d subtasks for %s (completed: %s)",
+            len(pending_subs), task_id[:8], completed_beings,
+        )
+
+        if plan.synthesis_strategy == "sequential":
+            for sub in pending_subs:
+                prior = self._collect_prior_outputs_from_shared_memory(
+                    task_id, plan, sub.being_id,
+                )
+                run_id = self._execute_subtask(task_id, sub, prior_outputs=prior)
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+        else:
+            run_ids: list[tuple[SubTaskPlan, str]] = []
+            for sub in pending_subs:
+                run_id = self._execute_subtask(task_id, sub)
+                run_ids.append((sub, run_id))
+            for sub, run_id in run_ids:
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+
+        # Persist updated subtask_ids
+        with self._lock:
+            ids_snapshot = dict(self._active[task_id]["subtask_ids"])
+        self._db_update_subtask_ids(task_id, ids_snapshot)
+
+    def _reload_outputs_from_shared_memory(
+        self, task_id: str, state: dict[str, Any],
+    ) -> None:
+        """Reload subtask outputs from shared_working_memory_writes into in-memory state."""
+        if self.protocol is None:
+            return
+        plan = state.get("plan")
+        if plan is None:
+            return
+        writes = self.protocol.read_shared_memory(
+            ticket_id=task_id, scope="committed",
+        )
+        outputs_by_agent: dict[str, str] = {}
+        for w in writes:
+            agent = w["writer_agent_id"]
+            if agent not in outputs_by_agent:
+                outputs_by_agent[agent] = w["content"]
+        with self._lock:
+            for sub in plan.sub_tasks:
+                if sub.being_id in outputs_by_agent:
+                    self._active[task_id]["subtask_outputs"][sub.being_id] = (
+                        outputs_by_agent[sub.being_id]
+                    )
+
+    def _update_post_delegation(self, task_id: str) -> None:
+        """Run team context + representation updates after delegation."""
+        try:
+            state = self._get_state(task_id)
+            self._update_team_context_outcomes(task_id, state)
+            self._update_being_representations(task_id, state, "")
         except Exception as exc:
-            log.warning("Failed to clean up orphaned orchestrations: %s", exc)
-        return cleaned
+            log.warning("Post-delegation updates failed for %s: %s", task_id[:8], exc)
 
     def _persist_task_result(
         self,

@@ -288,8 +288,8 @@ class TestCleanupOrphaned:
 
     def test_cleanup_marks_stale_as_failed(self):
         engine, db, _ = _make_engine()
-        # Insert a stale task (updated_at 2 hours ago)
-        stale_time = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+        # Insert a stale task (updated_at 25 hours ago — past the 24h resume cutoff)
+        stale_time = (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat()
         now = datetime.now(timezone.utc).isoformat()
 
         db.execute_commit(
@@ -339,7 +339,8 @@ class TestCleanupOrphaned:
         cleaned = engine.cleanup_orphaned_orchestrations()
         assert cleaned == 0
 
-    def test_cleanup_ignores_recent_tasks(self):
+    def test_cleanup_resumes_recent_tasks(self):
+        """Recent non-terminal tasks (< 24h) are attempted for resume, not marked failed."""
         engine, db, _ = _make_engine()
         recent_time = datetime.now(timezone.utc).isoformat()
 
@@ -358,8 +359,9 @@ class TestCleanupOrphaned:
             ),
         )
 
-        cleaned = engine.cleanup_orphaned_orchestrations()
-        assert cleaned == 0
+        processed = engine.cleanup_orphaned_orchestrations()
+        # Recent non-terminal tasks are now resumed (processed), not ignored
+        assert processed == 1
 
 
 # ---------------------------------------------------------------------------
