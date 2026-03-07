@@ -126,23 +126,26 @@ class SubTaskPlan:
 
 
 class OrchestrationPlan:
-    __slots__ = ("summary", "sub_tasks", "synthesis_strategy")
+    __slots__ = ("summary", "sub_tasks", "synthesis_strategy", "max_rounds")
 
     def __init__(
         self,
         summary: str,
         sub_tasks: list[SubTaskPlan],
         synthesis_strategy: str = "merge",
+        max_rounds: int = 1,
     ):
         self.summary = summary
         self.sub_tasks = sub_tasks
         self.synthesis_strategy = synthesis_strategy
+        self.max_rounds = min(max(max_rounds, 1), 4)  # clamp to [1, 4]
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "summary": self.summary,
             "sub_tasks": [st.to_dict() for st in self.sub_tasks],
             "synthesis_strategy": self.synthesis_strategy,
+            "max_rounds": self.max_rounds,
         }
 
 
@@ -160,7 +163,8 @@ Available beings:
 Respond with ONLY a JSON object (no markdown fences):
 {{
   "summary": "Brief plan summary",
-  "synthesis_strategy": "merge|sequential|compare",
+  "synthesis_strategy": "merge|sequential|compare|critique",
+  "max_rounds": 1,
   "sub_tasks": [
     {{
       "being_id": "the being's id",
@@ -179,6 +183,11 @@ Rules:
 - Beings with type "acti" are specialized ACT-I agents with domain expertise.
   Prefer assigning to the most specific ACT-I being when the task matches their domain.
   They run through their parent sister's runtime but have distinct capabilities.
+- max_rounds (optional, 1-4): Number of collaboration rounds. Use 1 for straightforward tasks.
+  Use 2-3 for tasks requiring beings to build on each other's work iteratively.
+  Use 4 only for complex research synthesis.
+- synthesis_strategy "critique": Each round after the first, every being sees all others' outputs
+  and refines their own work. Best for tasks where cross-pollination improves quality.
 """
 
 REVIEW_SYSTEM_PROMPT = """\
@@ -448,15 +457,38 @@ class OrchestrationEngine:
         """Full orchestration lifecycle — runs in background thread."""
         try:
             self._phase_plan(task_id)
-            self._phase_delegate(task_id)
 
-            # Fire representation + TEAM_CONTEXT updates after delegation completes
-            # (before synthesis) so partial completions are still recorded.
             state = self._get_state(task_id)
-            self._update_team_context_outcomes(task_id, state)
-            self._update_being_representations(task_id, state, "")
+            plan = state["plan"]
+            max_rounds = plan.max_rounds if plan else 1
 
-            self._phase_review(task_id)
+            for round_number in range(1, max_rounds + 1):
+                if round_number == 1:
+                    self._phase_delegate(task_id)
+                else:
+                    self._phase_delegate_iteration(task_id, round_number)
+
+                # Fire representation + TEAM_CONTEXT updates after delegation
+                state = self._get_state(task_id)
+                self._update_team_context_outcomes(task_id, state)
+                self._update_being_representations(task_id, state, "")
+
+                self._phase_review(task_id)
+
+                # Early stop if all reviews approved and more rounds remain
+                if round_number < max_rounds:
+                    if self._all_reviews_approved(task_id):
+                        log.info(
+                            "All reviews approved after round %d — skipping remaining rounds",
+                            round_number,
+                        )
+                        break
+                    else:
+                        log.info(
+                            "Round %d reviews mixed — proceeding to round %d",
+                            round_number, round_number + 1,
+                        )
+
             self._phase_synthesize(task_id)
         except Exception as exc:
             log.exception("Orchestration failed for task %s", task_id)
@@ -658,6 +690,189 @@ class OrchestrationEngine:
         with self._lock:
             ids_snapshot = dict(self._active[task_id]["subtask_ids"])
         self._db_update_subtask_ids(task_id, ids_snapshot)
+
+    def _phase_delegate_iteration(self, task_id: str, round_number: int) -> None:
+        """Delegate a subsequent round where each being sees all prior outputs."""
+        self._set_status(task_id, f"delegating_round_{round_number}")
+        state = self._get_state(task_id)
+        plan = state["plan"]
+        if plan is None:
+            raise RuntimeError("No plan available for iteration delegation")
+
+        # Read all committed outputs from prior rounds
+        all_outputs = self._read_all_committed_outputs(task_id)
+
+        if plan.synthesis_strategy == "critique":
+            # Critique: every being sees every other being's work
+            run_ids: list[tuple[SubTaskPlan, str]] = []
+            for sub in plan.sub_tasks:
+                message = self._build_critique_round_message(sub, round_number, all_outputs)
+                run_id = self._execute_subtask_with_message(
+                    task_id, sub, message,
+                    idempotency_suffix=f":round:{round_number}",
+                )
+                run_ids.append((sub, run_id))
+
+            for sub, run_id in run_ids:
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+
+        elif plan.synthesis_strategy == "sequential":
+            for sub in plan.sub_tasks:
+                prior = self._collect_prior_outputs_from_shared_memory(
+                    task_id, plan, sub.being_id,
+                )
+                message = self._build_iteration_message(sub, round_number, prior)
+                run_id = self._execute_subtask_with_message(
+                    task_id, sub, message,
+                    idempotency_suffix=f":round:{round_number}",
+                )
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+        else:
+            # Parallel merge/compare: each being gets all outputs
+            run_ids = []
+            for sub in plan.sub_tasks:
+                message = self._build_iteration_message(sub, round_number, all_outputs)
+                run_id = self._execute_subtask_with_message(
+                    task_id, sub, message,
+                    idempotency_suffix=f":round:{round_number}",
+                )
+                run_ids.append((sub, run_id))
+
+            for sub, run_id in run_ids:
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+
+        # Persist subtask_ids
+        with self._lock:
+            ids_snapshot = dict(self._active[task_id]["subtask_ids"])
+        self._db_update_subtask_ids(task_id, ids_snapshot)
+
+        log.info("Iteration round %d completed for %s", round_number, task_id[:8])
+
+    def _read_all_committed_outputs(self, task_id: str) -> dict[str, str]:
+        """Read all committed outputs from shared memory, newest per agent."""
+        if self.protocol is None:
+            return {}
+        writes = self.protocol.read_shared_memory(
+            ticket_id=task_id, scope="committed",
+        )
+        # Newest first — first write per agent wins
+        outputs: dict[str, str] = {}
+        for w in writes:
+            agent = w["writer_agent_id"]
+            if agent not in outputs:
+                outputs[agent] = w["content"]
+        return outputs
+
+    def _execute_subtask_with_message(
+        self,
+        parent_task_id: str,
+        sub: SubTaskPlan,
+        message: str,
+        idempotency_suffix: str = "",
+    ) -> str:
+        """Spawn a subtask with a custom message. Used for iteration rounds."""
+        if self.subagent_orch is None:
+            raise RuntimeError("SubAgentOrchestrator not available — cannot execute subtask")
+
+        state = self._get_state(parent_task_id)
+        being = self.dashboard.get_being(sub.being_id) or {}
+        tenant_id = being.get("tenant_id") or f"tenant-{sub.being_id}"
+
+        ws = being.get("workspace")
+        if ws and ws != ".":
+            workspace = str(_PROJECT_ROOT / ws)
+        else:
+            workspace = str(_PROJECT_ROOT)
+
+        task = SubAgentTask(
+            tenant_id=tenant_id,
+            task_id=sub.being_id,
+            ticket_id=parent_task_id,
+            idempotency_key=f"{parent_task_id}:{sub.being_id}{idempotency_suffix}",
+            goal=message,
+            done_when=tuple(
+                [sub.done_when] if sub.done_when else ["Complete the task as instructed"]
+            ),
+            input_context_refs=(),
+            output_schema={},
+            priority="high",
+            run_timeout_seconds=300,
+            cleanup="archive",
+            workspace_root=workspace,
+        )
+
+        orch_session = state["orchestration_session"]
+        handle = self.subagent_orch.spawn_async(
+            task=task,
+            parent_session_id=orch_session,
+            parent_turn_id=f"orch-{parent_task_id}-{sub.being_id}{idempotency_suffix}",
+            parent_agent_id="prime",
+            child_agent_id=sub.being_id,
+            worker=self._orchestration_worker,
+        )
+
+        run_id = handle.run_id
+        with self._lock:
+            self._active[parent_task_id]["subtask_ids"][sub.being_id] = run_id
+
+        return run_id
+
+    def _build_critique_round_message(
+        self,
+        sub: SubTaskPlan,
+        round_number: int,
+        all_prior_outputs: dict[str, str],
+    ) -> str:
+        """Build delegation message for a critique round (N > 1)."""
+        sections = [f"This is Round {round_number} of a collaborative task."]
+        sections.append(f"\nYour original task: {sub.instructions}")
+        sections.append("\nHere is what all beings produced in the previous round:")
+
+        for being_id, output in all_prior_outputs.items():
+            label = "YOUR PREVIOUS OUTPUT" if being_id == sub.being_id else f"{being_id}'s output"
+            sections.append(f"\n--- {label} ---\n{output[:4000]}")
+
+        sections.append("\nINSTRUCTIONS FOR THIS ROUND:")
+        sections.append("1. Review all outputs from the previous round")
+        sections.append("2. Identify gaps, contradictions, or areas that need deeper work")
+        sections.append("3. Produce an improved version of YOUR contribution that addresses these issues")
+        sections.append("4. Build on insights from other beings' work where relevant")
+
+        return "\n".join(sections)
+
+    def _build_iteration_message(
+        self,
+        sub: SubTaskPlan,
+        round_number: int,
+        prior_outputs: dict[str, str],
+    ) -> str:
+        """Build delegation message for a non-critique iteration round."""
+        sections = [f"This is Round {round_number} of an iterative task."]
+        sections.append(f"\nYour task: {sub.instructions}")
+
+        if prior_outputs:
+            sections.append("\nContext from previous round:")
+            for being_id, output in prior_outputs.items():
+                label = "Your previous output" if being_id == sub.being_id else f"{being_id}'s output"
+                sections.append(f"\n--- {label} ---\n{output[:4000]}")
+
+        sections.append(
+            f"\nProduce an improved version building on the previous round's work. "
+            f"Acceptance criteria: {sub.done_when or 'Complete the task as instructed'}"
+        )
+
+        return "\n".join(sections)
+
+    def _all_reviews_approved(self, task_id: str) -> bool:
+        """Check if all beings' reviews from the current round are approved."""
+        state = self._get_state(task_id)
+        reviews = state.get("subtask_reviews", {})
+        if not reviews:
+            return False
+        return all(r.get("approved", False) for r in reviews.values())
 
     def _await_run_completion(
         self, run_id: str, timeout: int = 300,
@@ -1463,6 +1678,7 @@ class OrchestrationEngine:
                             for st in plan_data.get("sub_tasks", [])
                         ],
                         synthesis_strategy=plan_data.get("synthesis_strategy", "merge"),
+                        max_rounds=int(plan_data.get("max_rounds", 1)),
                     )
                 except (json.JSONDecodeError, KeyError) as exc:
                     log.error(
@@ -1604,6 +1820,15 @@ class OrchestrationEngine:
         try:
             status = state["status"]
 
+            # Parse round-specific delegating status (e.g. "delegating_round_2")
+            resume_round = 0
+            if status.startswith("delegating_round_"):
+                try:
+                    resume_round = int(status.split("_")[-1])
+                except (ValueError, IndexError):
+                    pass
+                status = STATUS_DELEGATING  # normalize for routing
+
             if status == STATUS_PLANNING:
                 # Plan never completed — restart from scratch
                 self._phase_plan(task_id)
@@ -1613,9 +1838,21 @@ class OrchestrationEngine:
                 self._phase_synthesize(task_id)
 
             elif status == STATUS_DELEGATING:
-                self._resume_delegation(task_id, state)
-                self._update_post_delegation(task_id)
-                self._phase_review(task_id)
+                if resume_round >= 2:
+                    # Resume mid-iteration — re-enter at the correct round
+                    self._reload_outputs_from_shared_memory(task_id, state)
+                    plan = state["plan"]
+                    max_rounds = plan.max_rounds if plan else 1
+                    for rn in range(resume_round, max_rounds + 1):
+                        self._phase_delegate_iteration(task_id, rn)
+                        self._update_post_delegation(task_id)
+                        self._phase_review(task_id)
+                        if rn < max_rounds and self._all_reviews_approved(task_id):
+                            break
+                else:
+                    self._resume_delegation(task_id, state)
+                    self._update_post_delegation(task_id)
+                    self._phase_review(task_id)
                 self._phase_synthesize(task_id)
 
             elif status == STATUS_REVIEWING or status == STATUS_REVISING:
@@ -2028,10 +2265,13 @@ class OrchestrationEngine:
                     log.debug("[ORCH] Auto-upgraded strategy to 'sequential' — sub-task '%s' references combining results", st.title)
                     break
 
+        max_rounds = int(data.get("max_rounds", 1))
+
         return OrchestrationPlan(
             summary=data.get("summary", ""),
             sub_tasks=sub_tasks,
             synthesis_strategy=strategy,
+            max_rounds=max_rounds,
         )
 
     def _parse_review(self, llm_reply: str) -> dict[str, Any]:
