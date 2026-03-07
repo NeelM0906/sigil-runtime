@@ -5,13 +5,15 @@ embedding provider is available, matching the behavior of _recall_markdown().
 """
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import tempfile
+import textwrap
 import uuid
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from bomba_sr.memory.hybrid import HybridMemoryStore
 from bomba_sr.storage.db import RuntimeDB
@@ -202,3 +204,158 @@ class TestEmbeddingScoresByBeing:
 
             assert scholar_note["note_id"] in scores
             assert forge_note["note_id"] not in scores
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.2 verification tests (exact names from spec)
+# ---------------------------------------------------------------------------
+
+class TestPhase52Verification:
+    """Phase 5.2 acceptance tests — exact names from spec."""
+
+    def test_recall_by_being_uses_embeddings_when_available(self):
+        """Verify _embedding_scores_by_being is called and results are re-ranked."""
+        provider = _FakeEmbeddingProvider(vectors={
+            "test query": [1.0, 0.0, 0.0],
+            # Lexically both have "note" but embedding distances differ
+            "First note stored early": [0.1, 0.9, 0.0],   # far from query
+            "Second note stored later": [0.95, 0.05, 0.0],  # close to query
+        })
+        with tempfile.TemporaryDirectory() as td:
+            store, db = _make_store(td, embedding_provider=provider)
+            _save_note(store, "scholar", "First", "First note stored early")
+            _save_note(store, "scholar", "Second", "Second note stored later")
+
+            with patch.object(
+                store, "_embedding_scores_by_being", wraps=store._embedding_scores_by_being
+            ) as spy:
+                results = store._recall_markdown_by_being("scholar", "test query", limit=10)
+
+                # Spy was called
+                spy.assert_called_once_with(being_id="scholar", query="test query")
+
+            # Embedding-based re-ranking: Second is closer to query vector
+            assert len(results) == 2
+            assert results[0]["title"] == "Second"
+            assert results[0]["score"] > results[1]["score"]
+
+    def test_recall_by_being_lexical_only_without_embeddings(self):
+        """No embedding provider → pure lexical, no embedding calls."""
+        with tempfile.TemporaryDirectory() as td:
+            store, db = _make_store(td, embedding_provider=None)
+            _save_note(store, "scholar", "Python Tips", "Python programming tips and tricks")
+            _save_note(store, "scholar", "Cooking", "How to cook pasta al dente")
+
+            with patch.object(
+                store, "_embedding_scores_by_being", wraps=store._embedding_scores_by_being
+            ) as spy:
+                results = store._recall_markdown_by_being("scholar", "python programming", limit=10)
+
+                # Called but returns {} immediately (provider is None)
+                spy.assert_called_once()
+
+            # Results returned via lexical
+            assert len(results) == 2
+            assert results[0]["title"] == "Python Tips"
+            # No embedding provider means _embedding_scores_by_being returns {}
+            assert store._embedding_scores_by_being("scholar", "anything") == {}
+
+    def test_embedding_scores_by_being_filters_correctly(self):
+        """Only scholar's note_ids in returned dict, not forge's."""
+        provider = _FakeEmbeddingProvider(vectors={
+            "test": [1.0, 0.0, 0.0],
+            "Scholar data": [0.8, 0.2, 0.0],
+            "Forge data": [0.9, 0.1, 0.0],
+        })
+        with tempfile.TemporaryDirectory() as td:
+            store, db = _make_store(td, embedding_provider=provider)
+            scholar_note = _save_note(store, "scholar", "S", "Scholar data")
+            forge_note = _save_note(store, "forge", "F", "Forge data")
+
+            provider.calls.clear()
+            scores = store._embedding_scores_by_being("scholar", "test")
+
+            assert scholar_note["note_id"] in scores
+            assert forge_note["note_id"] not in scores
+            assert len(scores) == 1
+
+    def test_embedding_scores_by_being_empty_when_no_embeddings(self):
+        """Notes exist for being but no embedding rows → empty dict, no crash."""
+        provider = _FakeEmbeddingProvider()
+        with tempfile.TemporaryDirectory() as td:
+            store, db = _make_store(td, embedding_provider=provider)
+
+            # Insert note directly into DB without embedding row
+            note_id = str(uuid.uuid4())
+            rel_path = f"notes/{note_id}.md"
+            abs_path = Path(td) / "memory" / rel_path
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            abs_path.write_text("---\n{}\n---\n\nsome content", encoding="utf-8")
+            db.execute(
+                """
+                INSERT INTO markdown_notes (note_id, user_id, session_id, relative_path, title,
+                  tags, confidence, created_at, being_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (note_id, "user-1", "sess-1", rel_path, "No Embedding Note",
+                 "[]", 1.0, "2025-01-01T00:00:00", "scholar"),
+            )
+            db.commit()
+
+            # Verify note exists for scholar
+            rows = db.execute(
+                "SELECT note_id FROM markdown_notes WHERE being_id = ?", ("scholar",)
+            ).fetchall()
+            assert len(rows) == 1
+
+            # But no embedding rows for it
+            scores = store._embedding_scores_by_being("scholar", "query")
+            assert scores == {}
+
+    def test_recall_by_being_score_weights_match_recall_by_user(self):
+        """The scoring logic in _recall_markdown_by_being matches _recall_markdown exactly.
+
+        Both methods use embedding score when available, else lexical — no
+        weighted blend. We verify by running both on identical data and
+        comparing the resulting scores.
+        """
+        provider = _FakeEmbeddingProvider(vectors={
+            "search query": [1.0, 0.0, 0.0],
+            "Note A content": [0.9, 0.1, 0.0],
+            "Note B content": [0.3, 0.7, 0.0],
+        })
+        with tempfile.TemporaryDirectory() as td:
+            store, db = _make_store(td, embedding_provider=provider)
+            user_id = "user-weight-test"
+            being_id = "weight-tester"
+
+            # Save notes with both user_id and being_id
+            note_a = store.append_working_note(
+                user_id=user_id, session_id="s1",
+                title="Note A", content="Note A content",
+                being_id=being_id,
+            )
+            note_b = store.append_working_note(
+                user_id=user_id, session_id="s1",
+                title="Note B", content="Note B content",
+                being_id=being_id,
+            )
+
+            # Recall by user_id
+            user_results = store._recall_markdown(user_id, "search query", limit=10)
+            # Recall by being_id
+            being_results = store._recall_markdown_by_being(being_id, "search query", limit=10)
+
+            # Both should return same notes in same order with same scores
+            assert len(user_results) == len(being_results) == 2
+
+            user_scores = {r["note_id"]: r["score"] for r in user_results}
+            being_scores = {r["note_id"]: r["score"] for r in being_results}
+
+            for nid in user_scores:
+                assert abs(user_scores[nid] - being_scores[nid]) < 1e-9, (
+                    f"Score mismatch for {nid}: user={user_scores[nid]}, being={being_scores[nid]}"
+                )
+
+            # Same ranking order
+            assert [r["note_id"] for r in user_results] == [r["note_id"] for r in being_results]
