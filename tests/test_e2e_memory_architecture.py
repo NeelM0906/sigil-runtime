@@ -25,6 +25,7 @@ from bomba_sr.orchestration.engine import (
     STATUS_COMPLETED,
     STATUS_FAILED,
 )
+from test_orchestration_engine import _make_mock_subagent_orch
 from bomba_sr.dashboard.service import (
     DashboardService,
     _NOT_TASK_PATTERNS,
@@ -160,8 +161,13 @@ def _make_engine(workspace: _WorkspaceFixture):
     bridge.handle_turn.side_effect = mock_handle_turn
 
     # Patch _prime_workspace to use our test workspace
+    mock_orch = _make_mock_subagent_orch({
+        "forge": "Sub-task output: completed analysis of assigned topic.",
+        "scholar": "Sub-task output: completed analysis of assigned topic.",
+    })
     engine = OrchestrationEngine(
         bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+        subagent_orchestrator=mock_orch,
     )
     engine._prime_workspace = lambda: str(workspace.prime_ws)
 
