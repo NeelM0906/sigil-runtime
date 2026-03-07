@@ -102,6 +102,20 @@ def _list_factory(protocol: SubAgentProtocol):
     return run
 
 
+def _read_shared_memory_factory(protocol: SubAgentProtocol):
+    def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        ticket_id = str(arguments.get("ticket_id") or "").strip()
+        if not ticket_id:
+            raise ValueError("ticket_id is required")
+        scope = arguments.get("scope")
+        if scope is not None:
+            scope = str(scope).strip() or None
+        writes = protocol.read_shared_memory(ticket_id=ticket_id, scope=scope)
+        return {"ticket_id": ticket_id, "writes": writes, "count": len(writes)}
+
+    return run
+
+
 def builtin_subagent_tools(
     orchestrator: SubAgentOrchestrator,
     protocol: SubAgentProtocol,
@@ -165,5 +179,25 @@ def builtin_subagent_tools(
             risk_level="low",
             action_type="read",
             execute=_list_factory(protocol),
+        ),
+        ToolDefinition(
+            name="sessions_read_shared_memory",
+            description="Read shared working memory writes for a ticket. Returns all writes ordered by newest first, optionally filtered by scope.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "ticket_id": {"type": "string", "description": "The ticket ID to read shared memory for"},
+                    "scope": {
+                        "type": "string",
+                        "enum": ["scratch", "proposal", "committed"],
+                        "description": "Optional scope filter",
+                    },
+                },
+                "required": ["ticket_id"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_read_shared_memory_factory(protocol),
         ),
     ]

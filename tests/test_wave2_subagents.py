@@ -111,6 +111,59 @@ class SubAgentProtocolTests(unittest.TestCase):
             self.assertEqual(row["scope"], "committed")
             self.assertTrue(row["merged_by_agent_id"])
 
+    def test_read_shared_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            db = RuntimeDB(f"{td}/runtime.db")
+            p = SubAgentProtocol(db)
+
+            run = p.spawn(
+                task=self._task(str(uuid.uuid4()), "turn-read::hash-read1"),
+                parent_session_id=str(uuid.uuid4()),
+                parent_turn_id="turn-read",
+                parent_agent_id=str(uuid.uuid4()),
+                child_agent_id=str(uuid.uuid4()),
+            )
+            ticket = run["ticket_id"]
+
+            # Write two entries: one scratch, one committed
+            p.write_shared_memory(
+                run_id=run["run_id"],
+                writer_agent_id="agent-a",
+                ticket_id=ticket,
+                scope="scratch",
+                confidence=0.5,
+                content="Scratch note",
+            )
+            w2 = p.write_shared_memory(
+                run_id=run["run_id"],
+                writer_agent_id="agent-b",
+                ticket_id=ticket,
+                scope="committed",
+                confidence=0.9,
+                content="Committed finding",
+                source_refs=["ref-1", "ref-2"],
+            )
+
+            # Read all — should get both
+            all_writes = p.read_shared_memory(ticket)
+            self.assertEqual(len(all_writes), 2)
+
+            # Read filtered by scope — should get one
+            committed = p.read_shared_memory(ticket, scope="committed")
+            self.assertEqual(len(committed), 1)
+            self.assertEqual(committed[0]["content"], "Committed finding")
+            self.assertEqual(committed[0]["scope"], "committed")
+            self.assertEqual(committed[0]["source_refs"], ["ref-1", "ref-2"])
+            self.assertEqual(committed[0]["write_id"], w2)
+
+            # Read with non-matching scope — empty
+            proposals = p.read_shared_memory(ticket, scope="proposal")
+            self.assertEqual(len(proposals), 0)
+
+            # Invalid scope raises
+            with self.assertRaises(ValueError):
+                p.read_shared_memory(ticket, scope="invalid")
+
     def test_cascade_stop_and_announce_retry(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             db = RuntimeDB(f"{td}/runtime.db")

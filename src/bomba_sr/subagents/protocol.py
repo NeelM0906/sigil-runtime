@@ -389,6 +389,33 @@ class SubAgentProtocol:
         self.db.commit()
         return write_id
 
+    def read_shared_memory(self, ticket_id: str, scope: str | None = None) -> list[dict[str, Any]]:
+        """Read shared memory writes for a ticket, optionally filtered by scope."""
+        if scope and scope not in VALID_SCOPES:
+            raise ValueError(f"invalid scope: {scope}")
+        if scope:
+            rows = self.db.execute(
+                "SELECT * FROM shared_working_memory_writes WHERE ticket_id = ? AND scope = ? ORDER BY created_at DESC",
+                (ticket_id, scope),
+            ).fetchall()
+        else:
+            rows = self.db.execute(
+                "SELECT * FROM shared_working_memory_writes WHERE ticket_id = ? ORDER BY created_at DESC",
+                (ticket_id,),
+            ).fetchall()
+        return [self._shared_write_row_to_dict(dict_from_row(row) or {}) for row in rows]
+
+    @staticmethod
+    def _shared_write_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
+        out = dict(row)
+        value = out.get("source_refs")
+        if isinstance(value, str) and value:
+            try:
+                out["source_refs"] = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+        return out
+
     def promote_shared_write(self, write_id: str, merged_by_agent_id: str) -> None:
         self.db.execute(
             """
