@@ -1,0 +1,219 @@
+"""Tests for Pinecone tenant/being scoping.
+
+Verifies that:
+- pinecone_upsert injects tenant_id and being_id into vector metadata
+- pinecone_query adds a tenant_id filter to the Pinecone request
+- pinecone_multi_query adds a tenant_id filter to each sub-query
+- Extra metadata from the caller is preserved alongside scoping fields
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from bomba_sr.tools.builtin_pinecone import (
+    _pinecone_multi_query_factory,
+    _pinecone_query_factory,
+    _pinecone_upsert_factory,
+)
+
+
+@dataclass
+class _FakeContext:
+    """Minimal stand-in for ToolContext used in pinecone tool tests."""
+    tenant_id: str = "tenant-acme"
+    session_id: str = "sister:scholar:sess-1"
+    turn_id: str = "turn-1"
+    user_id: str = "user-local"
+    workspace_root: Path = field(default_factory=lambda: Path("/tmp/fake"))
+    db: Any = None
+    guard_path: Any = None
+    loop_state_ref: Any = None
+
+
+# ---------------------------------------------------------------------------
+# Upsert scoping
+# ---------------------------------------------------------------------------
+
+class TestUpsertTenantScoping:
+    """pinecone_upsert must inject tenant_id and being_id into metadata."""
+
+    def _run_upsert(self, context, extra_metadata=None):
+        """Run the upsert factory with mocked HTTP + embeddings."""
+        run = _pinecone_upsert_factory(default_index="test-idx", default_namespace="ns1")
+        args: dict[str, Any] = {"texts": ["hello world"]}
+        if extra_metadata is not None:
+            args["metadata"] = extra_metadata
+
+        captured_payloads: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured_payloads.append({"method": method, "url": url, "payload": payload})
+            if "upsert" in url:
+                return {"upsertedCount": 1}
+            return {}
+
+        with (
+            patch("bomba_sr.tools.builtin_pinecone._embed_batch", return_value=[[0.1, 0.2, 0.3]]),
+            patch("bomba_sr.tools.builtin_pinecone._choose_pinecone_api_key", return_value="fake-key"),
+            patch("bomba_sr.tools.builtin_pinecone._resolve_index_host", return_value="host.pinecone.io"),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            result = run(args, context)
+        return result, captured_payloads
+
+    def test_tenant_id_injected(self):
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["tenant_id"] == "tenant-acme"
+
+    def test_being_id_injected_via_session(self):
+        ctx = _FakeContext(session_id="mc-chat-scholar")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["being_id"] == "scholar"
+
+    def test_being_id_injected_via_subtask(self):
+        ctx = _FakeContext(session_id="subtask:task-123:forge")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["being_id"] == "forge"
+
+    def test_being_id_injected_via_user_id(self):
+        ctx = _FakeContext(session_id="plain-session", user_id="prime->analyst")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["being_id"] == "analyst"
+
+    def test_being_id_none_when_unresolvable(self):
+        ctx = _FakeContext(session_id="plain-session", user_id="user-local")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert "being_id" not in vec_meta
+        assert vec_meta["tenant_id"] == "tenant-acme"
+
+    def test_extra_metadata_preserved(self):
+        ctx = _FakeContext()
+        _, payloads = self._run_upsert(ctx, extra_metadata={"source": "docs", "page": 3})
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["source"] == "docs"
+        assert vec_meta["page"] == 3
+        assert vec_meta["tenant_id"] == "tenant-acme"
+
+    def test_text_field_present(self):
+        ctx = _FakeContext()
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["text"] == "hello world"
+
+    def test_empty_tenant_id_not_injected(self):
+        ctx = _FakeContext(tenant_id="")
+        _, payloads = self._run_upsert(ctx)
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert "tenant_id" not in vec_meta
+
+
+# ---------------------------------------------------------------------------
+# Query scoping
+# ---------------------------------------------------------------------------
+
+class TestQueryTenantScoping:
+    """pinecone_query must add a tenant_id filter to the Pinecone request."""
+
+    def _run_query(self, context, query="test query"):
+        run = _pinecone_query_factory(default_index="test-idx", default_namespace="ns1")
+        captured_payloads: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured_payloads.append({"method": method, "url": url, "payload": payload})
+            return {"matches": []}
+
+        with (
+            patch("bomba_sr.tools.builtin_pinecone._embed_query", return_value=[0.1, 0.2, 0.3]),
+            patch("bomba_sr.tools.builtin_pinecone._choose_pinecone_api_key", return_value="fake-key"),
+            patch("bomba_sr.tools.builtin_pinecone._resolve_index_host", return_value="host.pinecone.io"),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            result = run({"query": query}, context)
+        return result, captured_payloads
+
+    def test_tenant_filter_added(self):
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        _, payloads = self._run_query(ctx)
+        query_payload = payloads[0]["payload"]
+        assert query_payload["filter"] == {"tenant_id": {"$eq": "tenant-acme"}}
+
+    def test_no_filter_when_tenant_empty(self):
+        ctx = _FakeContext(tenant_id="")
+        _, payloads = self._run_query(ctx)
+        query_payload = payloads[0]["payload"]
+        assert "filter" not in query_payload
+
+    def test_query_still_returns_results(self):
+        ctx = _FakeContext()
+        result, _ = self._run_query(ctx)
+        assert "results" in result
+        assert result["query"] == "test query"
+
+
+# ---------------------------------------------------------------------------
+# Multi-query scoping
+# ---------------------------------------------------------------------------
+
+class TestMultiQueryTenantScoping:
+    """pinecone_multi_query must add tenant_id filter to each sub-query."""
+
+    def _run_multi_query(self, context):
+        run = _pinecone_multi_query_factory(default_namespace="ns1")
+        captured_payloads: list[dict] = []
+
+        def fake_http(method, url, *, headers=None, payload=None, timeout=30):
+            captured_payloads.append({"method": method, "url": url, "payload": payload})
+            return {"matches": []}
+
+        with (
+            patch("bomba_sr.tools.builtin_pinecone._embed_query", return_value=[0.1, 0.2, 0.3]),
+            patch("bomba_sr.tools.builtin_pinecone._choose_pinecone_api_key", return_value="fake-key"),
+            patch("bomba_sr.tools.builtin_pinecone._resolve_index_host", return_value="host.pinecone.io"),
+            patch("bomba_sr.tools.builtin_pinecone._http_json", side_effect=fake_http),
+        ):
+            result = run(
+                {
+                    "query": "multi test",
+                    "indexes": [
+                        {"index_name": "idx-a"},
+                        {"index_name": "idx-b"},
+                    ],
+                },
+                context,
+            )
+        return result, captured_payloads
+
+    def test_tenant_filter_on_each_sub_query(self):
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        _, payloads = self._run_multi_query(ctx)
+        query_calls = [p for p in payloads if "/query" in p["url"]]
+        assert len(query_calls) == 2
+        for call in query_calls:
+            assert call["payload"]["filter"] == {"tenant_id": {"$eq": "tenant-acme"}}
+
+    def test_no_filter_when_tenant_empty(self):
+        ctx = _FakeContext(tenant_id="")
+        _, payloads = self._run_multi_query(ctx)
+        query_calls = [p for p in payloads if "/query" in p["url"]]
+        for call in query_calls:
+            assert "filter" not in call["payload"]

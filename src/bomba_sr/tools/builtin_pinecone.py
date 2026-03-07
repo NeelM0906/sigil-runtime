@@ -12,6 +12,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
+from bomba_sr.memory.hybrid import resolve_being_id
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
@@ -239,7 +240,6 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
 
 def _pinecone_query_factory(default_index: str, default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        _ = context
         query = str(arguments.get("query") or "").strip()
         if not query:
             raise ValueError("query is required")
@@ -263,6 +263,10 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         }
         if namespace_value:
             payload["namespace"] = namespace_value
+        # Scope query to calling tenant
+        tenant_id = context.tenant_id
+        if tenant_id:
+            payload["filter"] = {"tenant_id": {"$eq": tenant_id}}
         url = f"https://{host}/query"
         response = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
 
@@ -353,7 +357,6 @@ def _pinecone_list_indexes_factory(default_index: str, default_namespace: str | 
 
 def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        _ = context
         texts = arguments.get("texts")
         if not isinstance(texts, list) or not texts:
             raise ValueError("texts is required and must be a non-empty array of strings")
@@ -374,10 +377,18 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
         host = _resolve_index_host(index_name, api_key)
         vectors_data = _embed_batch(texts)
 
+        # Inject tenant/being scoping metadata
+        tenant_id = context.tenant_id
+        being_id = resolve_being_id(context.session_id, context.user_id)
+
         pinecone_vectors: list[dict[str, Any]] = []
         for text, embedding in zip(texts, vectors_data):
             vec_id = f"{id_prefix}-{uuid.uuid4().hex[:12]}"
             meta = {"text": text}
+            if tenant_id:
+                meta["tenant_id"] = tenant_id
+            if being_id:
+                meta["being_id"] = being_id
             meta.update(extra_metadata)
             pinecone_vectors.append({
                 "id": vec_id,
@@ -403,7 +414,6 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
 
 def _pinecone_multi_query_factory(default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        _ = context
         query = str(arguments.get("query") or "").strip()
         if not query:
             raise ValueError("query is required")
@@ -414,6 +424,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         score_threshold = float(arguments.get("score_threshold") or 0.4)
 
         vector = _embed_query(query)
+        # Capture tenant for sub-query scoping
+        tenant_id = context.tenant_id
 
         def _query_one(spec: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
             idx_name = _require_safe_index_name(str(spec.get("index_name") or ""))
@@ -432,6 +444,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
             }
             if ns_value:
                 payload["namespace"] = ns_value
+            if tenant_id:
+                payload["filter"] = {"tenant_id": {"$eq": tenant_id}}
             url = f"https://{host}/query"
             resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
             matches = resp.get("matches")
