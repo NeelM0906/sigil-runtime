@@ -106,6 +106,7 @@ class MemoryConsolidator:
         # Add being_id column to existing tables (migration)
         self._ensure_column("memories", "being_id", "TEXT")
         self._ensure_column("procedural_memories", "being_id", "TEXT")
+        self._ensure_column("memory_archive", "being_id", "TEXT")
 
     def _ensure_column(self, table: str, column: str, definition: str) -> None:
         rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
@@ -176,7 +177,7 @@ class MemoryConsolidator:
 
         # Contradiction/update path: archive older belief and promote new one.
         self.db.execute(
-            "INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason, being_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 str(uuid.uuid4()),
                 existing_id,
@@ -185,6 +186,7 @@ class MemoryConsolidator:
                 existing_content,
                 now,
                 "contradiction_or_update",
+                candidate.being_id or row["being_id"],
             ),
         )
         self.db.execute("UPDATE memories SET active = 0, updated_at = ? WHERE id = ?", (now, existing_id))

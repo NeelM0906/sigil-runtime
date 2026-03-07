@@ -62,7 +62,8 @@ def _make_dream_cycle(with_memories: int = 0, being_ids: list[str] | None = None
             memory_key TEXT NOT NULL,
             old_content TEXT NOT NULL,
             archived_at TEXT NOT NULL,
-            reason TEXT NOT NULL
+            reason TEXT NOT NULL,
+            being_id TEXT
         );
         CREATE TABLE IF NOT EXISTS procedural_memories (
             id TEXT PRIMARY KEY,
