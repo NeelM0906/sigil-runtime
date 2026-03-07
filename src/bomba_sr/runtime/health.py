@@ -1,3 +1,5 @@
+"""Health snapshot for agentic loop status reporting."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
