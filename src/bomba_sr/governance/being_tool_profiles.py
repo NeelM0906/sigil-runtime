@@ -106,17 +106,16 @@ def _expand_groups(*items: str) -> set[str]:
     return out
 
 
-# ── Per-tenant tool allow-lists ────────────────────────────────────────
-# None = full access (no filtering). frozenset = only these tools allowed.
-# Tenant IDs map to tool sets. If a tenant isn't listed, it gets full access.
+# ── Named tool profiles ────────────────────────────────────────────────
+# Profile name -> tool allow-list.  None = full access (no filtering).
+# Sisters reference profiles by name via "tool_profile" in sisters.json.
 
-TENANT_TOOL_PROFILES: dict[str, frozenset[str] | None] = {
-    # Prime (tenant-local / tenant-prime) — full access
-    "tenant-local": None,
-    "tenant-prime": None,
+TOOL_PROFILES: dict[str, frozenset[str] | None] = {
+    # Full access (Prime and any unrestricted being)
+    "full": None,
 
     # Forge — creative + code + production
-    "tenant-forge": frozenset(_expand_groups(
+    "creative": frozenset(_expand_groups(
         "group:fs",            # read, write, edit, apply_patch, glob, grep
         "group:memory",        # memory_search, memory_get, memory_store
         "group:web",           # web_search, web_fetch
@@ -130,7 +129,7 @@ TENANT_TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     )),
 
     # Scholar — research + retrieval
-    "tenant-scholar": frozenset(_expand_groups(
+    "research": frozenset(_expand_groups(
         "group:memory",        # memory_search, memory_get, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
@@ -139,7 +138,7 @@ TENANT_TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     )),
 
     # Recovery — CRM + outreach + voice + memory
-    "tenant-recovery": frozenset(_expand_groups(
+    "revenue": frozenset(_expand_groups(
         "group:memory",        # memory_search, memory_get, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
@@ -150,7 +149,7 @@ TENANT_TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     )),
 
     # Memory — memory specialist + Pinecone
-    "tenant-memory": frozenset(_expand_groups(
+    "memory_specialist": frozenset(_expand_groups(
         "group:memory",        # memory_search, memory_get, memory_store — core domain
         "group:pinecone",      # ALL pinecone tools — Memory's signature move
         "group:fs",            # read, write, edit, glob, grep (for memory files)
@@ -159,14 +158,37 @@ TENANT_TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     )),
 }
 
+# Legacy mapping: tenant_id -> profile name (for callers that don't have SisterConfig)
+_TENANT_PROFILE_MAP: dict[str, str] = {
+    "tenant-local": "full",
+    "tenant-prime": "full",
+    "tenant-forge": "creative",
+    "tenant-scholar": "research",
+    "tenant-recovery": "revenue",
+    "tenant-memory": "memory_specialist",
+}
 
-def get_denied_tools_for_tenant(tenant_id: str, all_tools: list[str]) -> frozenset[str]:
-    """Return the set of tool names that should be denied for a given tenant.
 
-    If the tenant has no profile (or profile is None/full), returns empty set.
-    Otherwise, returns all registered tools NOT in the tenant's allow-list.
+def get_denied_tools(
+    all_tools: list[str],
+    *,
+    profile_name: str | None = None,
+    tenant_id: str | None = None,
+) -> frozenset[str]:
+    """Return tool names that should be denied for a given profile or tenant.
+
+    Prefer passing profile_name directly (from SisterConfig.tool_profile).
+    Falls back to tenant_id lookup for backward compatibility.
+    Returns empty frozenset for unknown profiles or full-access profiles.
     """
-    allowed = TENANT_TOOL_PROFILES.get(tenant_id)
+    name = profile_name or _TENANT_PROFILE_MAP.get(tenant_id or "", "full")
+    allowed = TOOL_PROFILES.get(name)
     if allowed is None:
         return frozenset()
     return frozenset(t for t in all_tools if t not in allowed)
+
+
+# Backward-compatible alias
+def get_denied_tools_for_tenant(tenant_id: str, all_tools: list[str]) -> frozenset[str]:
+    """Legacy wrapper — prefer get_denied_tools(profile_name=...) directly."""
+    return get_denied_tools(all_tools, tenant_id=tenant_id)

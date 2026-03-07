@@ -24,6 +24,7 @@ class SisterConfig:
     workspace_root: Path
     model_id: str
     role: str
+    tool_profile: str
     auto_start: bool
     heartbeat_enabled: bool
     cron_tasks: tuple[Mapping[str, Any], ...]
@@ -57,6 +58,7 @@ class SisterRegistry:
                     "workspace_root": str(sister.workspace_root),
                     "model_id": sister.model_id,
                     "role": sister.role,
+                    "tool_profile": sister.tool_profile,
                     "auto_start": sister.auto_start,
                     "heartbeat_enabled": sister.heartbeat_enabled,
                     "cron_tasks": [dict(task) for task in sister.cron_tasks],
@@ -67,6 +69,12 @@ class SisterRegistry:
 
     def get_sister(self, sister_id: str) -> SisterConfig | None:
         return self._sisters.get(sister_id)
+
+    def get_sister_by_tenant(self, tenant_id: str) -> SisterConfig | None:
+        for sister in self._sisters.values():
+            if sister.tenant_id == tenant_id:
+                return sister
+        return None
 
     def spawn_sister(
         self,
@@ -215,6 +223,7 @@ class SisterRegistry:
                 workspace_root=workspace_root,
                 model_id=str(item.get("model_id") or ""),
                 role=str(item.get("role") or ""),
+                tool_profile=str(item.get("tool_profile") or ""),
                 auto_start=bool(item.get("auto_start", False)),
                 heartbeat_enabled=bool(item.get("heartbeat_enabled", False)),
                 cron_tasks=cron_tasks,
