@@ -12,6 +12,7 @@ Session ID patterns:
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -580,6 +581,11 @@ class OrchestrationEngine:
                 "task_id": task_id,
             })
 
+        # Persist subtask_ids to DB for crash recovery
+        with self._lock:
+            ids_snapshot = dict(self._active[task_id]["subtask_ids"])
+        self._db_update_subtask_ids(task_id, ids_snapshot)
+
         # Execute sub-tasks.  For "sequential" strategy, run one at a time
         # so later beings receive the output of earlier ones as context.
         # For other strategies, run in parallel.
@@ -1097,7 +1103,9 @@ class OrchestrationEngine:
         with self._lock:
             state = self._active.get(task_id)
             if state is not None:
-                return state
+                # Return a deep copy so callers cannot mutate the canonical
+                # state without going through lock-protected methods.
+                return copy.deepcopy(state)
         # Fallback: load from DB
         state = self._db_load_state(task_id)
         if state is None:
@@ -1105,7 +1113,7 @@ class OrchestrationEngine:
         with self._lock:
             # Use setdefault to avoid overwriting fresher state from a concurrent thread
             self._active.setdefault(task_id, state)
-            return self._active[task_id]
+            return copy.deepcopy(self._active[task_id])
 
     def _set_status(self, task_id: str, status: str) -> None:
         with self._lock:
@@ -1167,6 +1175,7 @@ class OrchestrationEngine:
                     sender            TEXT NOT NULL,
                     status            TEXT NOT NULL,
                     plan_json         TEXT,
+                    subtask_ids       TEXT NOT NULL DEFAULT '{}',
                     subtask_outputs   TEXT NOT NULL DEFAULT '{}',
                     subtask_reviews   TEXT NOT NULL DEFAULT '{}',
                     created_at        TEXT NOT NULL,
@@ -1174,6 +1183,15 @@ class OrchestrationEngine:
                 );
                 """
             )
+            # Migration for existing databases: add subtask_ids column if missing
+            try:
+                runtime.db.execute(
+                    "ALTER TABLE orchestration_state ADD COLUMN subtask_ids TEXT NOT NULL DEFAULT '{}'"
+                )
+                runtime.db.commit()
+            except Exception:
+                # Column already exists — expected on fresh databases
+                pass
         except Exception as exc:
             log.warning("Could not ensure orchestration_state schema: %s", exc)
 
@@ -1190,9 +1208,9 @@ class OrchestrationEngine:
                 """
                 INSERT OR REPLACE INTO orchestration_state
                     (task_id, goal, orch_session_id, requester_session,
-                     sender, status, plan_json, subtask_outputs,
+                     sender, status, plan_json, subtask_ids, subtask_outputs,
                      subtask_reviews, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
@@ -1202,6 +1220,7 @@ class OrchestrationEngine:
                     state["sender"],
                     state["status"],
                     None,
+                    json.dumps(state.get("subtask_ids", {})),
                     json.dumps({}),
                     json.dumps({}),
                     now,
@@ -1230,6 +1249,16 @@ class OrchestrationEngine:
             )
         except Exception as exc:
             log.warning("Failed to update orchestration plan for %s: %s", task_id[:8], exc)
+
+    def _db_update_subtask_ids(self, task_id: str, subtask_ids: dict[str, str]) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            runtime.db.execute_commit(
+                "UPDATE orchestration_state SET subtask_ids = ?, updated_at = ? WHERE task_id = ?",
+                (json.dumps(subtask_ids), datetime.now(timezone.utc).isoformat(), task_id),
+            )
+        except Exception as exc:
+            log.warning("Failed to update subtask_ids for %s: %s", task_id[:8], exc)
 
     def _db_merge_subtask_output(
         self, task_id: str, being_id: str, output: str,
@@ -1300,8 +1329,12 @@ class OrchestrationEngine:
                         ],
                         synthesis_strategy=plan_data.get("synthesis_strategy", "merge"),
                     )
-                except (json.JSONDecodeError, KeyError):
-                    pass
+                except (json.JSONDecodeError, KeyError) as exc:
+                    log.error(
+                        "Corrupt plan_json for task %s: %s",
+                        task_id, row["plan_json"],
+                    )
+                    return None
 
             return {
                 "task_id": task_id,
@@ -1311,7 +1344,7 @@ class OrchestrationEngine:
                 "sender": row["sender"],
                 "status": row["status"],
                 "plan": plan,
-                "subtask_ids": {},
+                "subtask_ids": json.loads(row["subtask_ids"] or "{}"),
                 "subtask_outputs": json.loads(row["subtask_outputs"] or "{}"),
                 "subtask_reviews": json.loads(row["subtask_reviews"] or "{}"),
                 "created_at": row["created_at"],
