@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import threading
 import time
@@ -14,6 +15,8 @@ from typing import Any
 
 from bomba_sr.memory.hybrid import resolve_being_id
 from bomba_sr.tools.base import ToolContext, ToolDefinition
+
+log = logging.getLogger(__name__)
 
 
 PINECONE_CONTROL_API = "https://api.pinecone.io/indexes"
@@ -238,6 +241,40 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
     return vectors
 
 
+def _parse_matches(
+    response: dict[str, Any],
+    score_threshold: float,
+    extra_fields: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Extract and filter matches from a Pinecone query response."""
+    matches = response.get("matches")
+    if not isinstance(matches, list):
+        matches = []
+    results: list[dict[str, Any]] = []
+    for item in matches:
+        if not isinstance(item, dict):
+            continue
+        score = float(item.get("score") or 0.0)
+        if score < score_threshold:
+            continue
+        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        text = (
+            str(metadata.get("text") or "")
+            or str(metadata.get("chunk") or "")
+            or str(metadata.get("content") or "")
+        )
+        entry: dict[str, Any] = {
+            "id": str(item.get("id") or ""),
+            "score": score,
+            "metadata": metadata,
+            "text": text,
+        }
+        if extra_fields:
+            entry.update(extra_fields)
+        results.append(entry)
+    return results
+
+
 def _pinecone_query_factory(default_index: str, default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         query = str(arguments.get("query") or "").strip()
@@ -279,31 +316,24 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         url = f"https://{host}/query"
         response = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
 
-        matches = response.get("matches")
-        if not isinstance(matches, list):
-            matches = []
-        results: list[dict[str, Any]] = []
-        for item in matches:
-            if not isinstance(item, dict):
-                continue
-            score = float(item.get("score") or 0.0)
-            if score < score_threshold:
-                continue
-            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-            text = (
-                str(metadata.get("text") or "")
-                or str(metadata.get("chunk") or "")
-                or str(metadata.get("content") or "")
-            )
-            results.append(
-                {
-                    "id": str(item.get("id") or ""),
-                    "score": score,
-                    "metadata": metadata,
-                    "text": text,
-                }
-            )
-        return {
+        results = _parse_matches(response, score_threshold)
+
+        # Fallback: if scoped query returned nothing, retry without tenant filter
+        legacy_fallback = False
+        if not results and tenant_id and "filter" in payload:
+            unscoped_payload = {k: v for k, v in payload.items() if k != "filter"}
+            if caller_filter:
+                unscoped_payload["filter"] = caller_filter
+            fallback_resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=unscoped_payload)
+            results = _parse_matches(fallback_resp, score_threshold)
+            if results:
+                legacy_fallback = True
+                log.warning(
+                    "Legacy unscoped vectors returned for index=%s namespace=%s — consider re-indexing",
+                    index_name, namespace_value,
+                )
+
+        out: dict[str, Any] = {
             "query": query,
             "index_name": index_name,
             "namespace": namespace_value,
@@ -311,6 +341,9 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
             "score_threshold": score_threshold,
             "results": results,
         }
+        if legacy_fallback:
+            out["legacy_fallback"] = True
+        return out
 
     return run
 
@@ -467,30 +500,21 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
                 payload["filter"] = per_index_filter
             url = f"https://{host}/query"
             resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
-            matches = resp.get("matches")
-            if not isinstance(matches, list):
-                matches = []
-            results: list[dict[str, Any]] = []
-            for item in matches:
-                if not isinstance(item, dict):
-                    continue
-                score = float(item.get("score") or 0.0)
-                if score < score_threshold:
-                    continue
-                metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-                text = (
-                    str(metadata.get("text") or "")
-                    or str(metadata.get("chunk") or "")
-                    or str(metadata.get("content") or "")
-                )
-                results.append({
-                    "id": str(item.get("id") or ""),
-                    "score": score,
-                    "metadata": metadata,
-                    "text": text,
-                    "source_index": idx_name,
-                    "source_namespace": ns_value,
-                })
+            extras = {"source_index": idx_name, "source_namespace": ns_value}
+            results = _parse_matches(resp, score_threshold, extra_fields=extras)
+
+            # Fallback for legacy unscoped vectors
+            if not results and tenant_id and "filter" in payload:
+                unscoped = {k: v for k, v in payload.items() if k != "filter"}
+                if per_index_filter:
+                    unscoped["filter"] = per_index_filter
+                fallback_resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=unscoped)
+                results = _parse_matches(fallback_resp, score_threshold, extra_fields=extras)
+                if results:
+                    log.warning(
+                        "Legacy unscoped vectors returned for index=%s namespace=%s — consider re-indexing",
+                        idx_name, ns_value,
+                    )
             return idx_name, results
 
         all_results: list[dict[str, Any]] = []
