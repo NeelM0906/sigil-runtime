@@ -595,6 +595,8 @@ class HybridMemoryStore:
             FROM memory_embeddings e
             JOIN markdown_notes n ON n.note_id = e.note_id
             WHERE n.being_id = ?
+            ORDER BY n.created_at DESC
+            LIMIT 300
             """,
             (being_id,),
         ).fetchall()
