@@ -57,7 +57,6 @@ def _ensure_orchestration_tables(db: RuntimeDB) -> None:
             status            TEXT NOT NULL,
             plan_json         TEXT,
             subtask_ids       TEXT NOT NULL DEFAULT '{}',
-            subtask_outputs   TEXT NOT NULL DEFAULT '{}',
             subtask_reviews   TEXT NOT NULL DEFAULT '{}',
             created_at        TEXT NOT NULL,
             updated_at        TEXT NOT NULL
@@ -154,11 +153,11 @@ def _insert_orchestration_state(db: RuntimeDB, task_id: str, status: str,
         """
         INSERT OR REPLACE INTO orchestration_state
             (task_id, goal, orch_session_id, requester_session, sender, status,
-             plan_json, subtask_ids, subtask_outputs, subtask_reviews, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             plan_json, subtask_ids, subtask_reviews, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (task_id, goal, f"orch-{task_id[:8]}", "req-sess-1", "user", status,
-         None, "{}", "{}", "{}", now, now),
+         None, "{}", "{}", now, now),
     )
 
 
@@ -214,18 +213,17 @@ class TestPhase1OrchestrationPersistence:
             "synthesis_strategy": "merge",
         }
         subtask_ids = {"analyst": "sub-1", "scholar": "sub-2"}
-        subtask_outputs = {"analyst": "Found 3 issues"}
         subtask_reviews = {"analyst": {"approved": True, "quality_score": 0.85}}
 
         db.execute_commit(
             """
             INSERT INTO orchestration_state
                 (task_id, goal, orch_session_id, requester_session, sender, status,
-                 plan_json, subtask_ids, subtask_outputs, subtask_reviews, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 plan_json, subtask_ids, subtask_reviews, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (task_id, goal, f"orch-{task_id[:8]}", "req-sess", "user", "executing",
-             json.dumps(plan_data), json.dumps(subtask_ids), json.dumps(subtask_outputs),
+             json.dumps(plan_data), json.dumps(subtask_ids),
              json.dumps(subtask_reviews), now, now),
         )
 
@@ -245,9 +243,6 @@ class TestPhase1OrchestrationPersistence:
 
         loaded_ids = json.loads(row["subtask_ids"])
         assert loaded_ids == subtask_ids
-
-        loaded_outputs = json.loads(row["subtask_outputs"])
-        assert loaded_outputs == subtask_outputs
 
         loaded_reviews = json.loads(row["subtask_reviews"])
         assert loaded_reviews["analyst"]["approved"] is True
@@ -273,48 +268,40 @@ class TestPhase1OrchestrationPersistence:
         ).fetchone()
         assert row["status"] == "executing"
 
-    def test_1_3_subtask_outputs_merge_correctly(self, tmp_path: Path) -> None:
-        """Incremental subtask output merging preserves all entries."""
+    def test_1_3_subtask_outputs_via_shared_memory(self, tmp_path: Path) -> None:
+        """Subtask outputs are now stored in shared_working_memory_writes, not orchestration_state."""
         db = _make_db(str(tmp_path))
         _ensure_orchestration_tables(db)
 
-        task_id = _uuid()
-        _insert_orchestration_state(db, task_id, "executing")
+        protocol = SubAgentProtocol(db)
+        ticket_id = _uuid()
 
-        # Merge output for being A
-        row = db.execute(
-            "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
-            (task_id,),
-        ).fetchone()
-        current = json.loads(row["subtask_outputs"])
-        current["analyst"] = "Found 3 issues"
-        db.execute_commit(
-            "UPDATE orchestration_state SET subtask_outputs = ? WHERE task_id = ?",
-            (json.dumps(current), task_id),
+        # Write output for being A
+        protocol.write_shared_memory(
+            run_id=None,
+            writer_agent_id="analyst",
+            ticket_id=ticket_id,
+            scope="committed",
+            confidence=0.9,
+            content="Found 3 issues",
+        )
+        # Write output for being B
+        protocol.write_shared_memory(
+            run_id=None,
+            writer_agent_id="scholar",
+            ticket_id=ticket_id,
+            scope="committed",
+            confidence=0.9,
+            content="Checked 150 deps, 2 CVEs",
         )
 
-        # Merge output for being B
-        row = db.execute(
-            "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
-            (task_id,),
-        ).fetchone()
-        current = json.loads(row["subtask_outputs"])
-        current["scholar"] = "Checked 150 deps, 2 CVEs"
-        db.execute_commit(
-            "UPDATE orchestration_state SET subtask_outputs = ? WHERE task_id = ?",
-            (json.dumps(current), task_id),
-        )
-
-        # Verify both present
-        row = db.execute(
-            "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
-            (task_id,),
-        ).fetchone()
-        final = json.loads(row["subtask_outputs"])
-        assert "analyst" in final
-        assert "scholar" in final
-        assert "3 issues" in final["analyst"]
-        assert "2 CVEs" in final["scholar"]
+        # Read back via shared memory
+        writes = protocol.read_shared_memory(ticket_id, scope="committed")
+        outputs = {w["writer_agent_id"]: w["content"] for w in writes}
+        assert "analyst" in outputs
+        assert "scholar" in outputs
+        assert "3 issues" in outputs["analyst"]
+        assert "2 CVEs" in outputs["scholar"]
 
     def test_1_4_subtask_reviews_merge_correctly(self, tmp_path: Path) -> None:
         """Incremental review merging keeps all being reviews."""
@@ -770,11 +757,11 @@ class TestNegativeDBSourceOfTruth:
             """
             INSERT INTO orchestration_state
                 (task_id, goal, orch_session_id, requester_session, sender, status,
-                 plan_json, subtask_ids, subtask_outputs, subtask_reviews, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 plan_json, subtask_ids, subtask_reviews, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (task_id, "Recover test", f"orch-{task_id[:8]}", "req", "user", "executing",
-             json.dumps(plan_data), "{}", "{}", "{}", now, now),
+             json.dumps(plan_data), "{}", "{}", now, now),
         )
 
         # Simulate _db_load_state
@@ -794,7 +781,7 @@ class TestNegativeDBSourceOfTruth:
             "status": row["status"],
             "plan": loaded_plan,
             "subtask_ids": json.loads(row["subtask_ids"] or "{}"),
-            "subtask_outputs": json.loads(row["subtask_outputs"] or "{}"),
+            "subtask_outputs": {},  # outputs now in shared_working_memory_writes
             "subtask_reviews": json.loads(row["subtask_reviews"] or "{}"),
             "created_at": row["created_at"],
         }

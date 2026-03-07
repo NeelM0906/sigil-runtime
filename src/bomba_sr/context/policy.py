@@ -15,7 +15,6 @@ class TurnProfile(StrEnum):
     TASK_EXECUTION = "task_execution"
     PLANNING = "planning"
     MEMORY_RECALL = "memory_recall"
-    SUBAGENT_ORCHESTRATION = "subagent_orchestration"
 
 
 @dataclass(frozen=True)
@@ -68,14 +67,6 @@ PROFILE_WEIGHTS: dict[TurnProfile, dict[str, float]] = {
         "recent_history": 0.26,
         "procedural": 0.06,
         "predictions": 0.06,
-    },
-    TurnProfile.SUBAGENT_ORCHESTRATION: {
-        "working_memory": 0.28,
-        "world_state": 0.10,
-        "semantic": 0.18,
-        "recent_history": 0.14,
-        "procedural": 0.12,
-        "predictions": 0.18,
     },
 }
 

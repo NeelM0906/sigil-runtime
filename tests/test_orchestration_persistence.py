@@ -26,7 +26,6 @@ from bomba_sr.orchestration.engine import (
     SubTaskPlan,
     STATUS_PLANNING,
     STATUS_DELEGATING,
-    STATUS_AWAITING,
     STATUS_COMPLETED,
     STATUS_FAILED,
 )
@@ -92,7 +91,7 @@ class TestStateRoundTrip:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -108,7 +107,6 @@ class TestStateRoundTrip:
         assert loaded["status"] == STATUS_PLANNING
         assert loaded["plan"] is None
         assert loaded["subtask_ids"] == {}
-        assert loaded["subtask_outputs"] == {}
         assert loaded["subtask_reviews"] == {}
 
     def test_insert_and_load_with_plan(self):
@@ -123,7 +121,7 @@ class TestStateRoundTrip:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -149,33 +147,32 @@ class TestStateRoundTrip:
         assert loaded["plan"].sub_tasks[1].being_id == "memory"
         assert loaded["plan"].synthesis_strategy == "merge"
 
-    def test_insert_and_load_with_outputs_and_reviews(self):
+    def test_insert_and_load_with_reviews(self):
         engine, db, _ = _make_engine()
         now = datetime.now(timezone.utc).isoformat()
         state = {
             "task_id": "task-rt-3",
-            "goal": "Output round-trip test",
+            "goal": "Review round-trip test",
             "orchestration_session": "orchestration:task-rt-3",
             "requester_session": "s1",
             "sender": "user",
-            "status": STATUS_AWAITING,
+            "status": STATUS_DELEGATING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
         engine._db_insert_state("task-rt-3", state, now)
 
-        # Merge outputs and reviews
-        engine._db_merge_subtask_output("task-rt-3", "forge", "Research results here")
+        # Merge reviews (outputs now live in shared_working_memory_writes)
         engine._db_merge_subtask_review("task-rt-3", "forge", {
             "approved": True, "feedback": "", "quality_score": 0.9, "notes": "Good",
         })
 
         loaded = engine._db_load_state("task-rt-3")
         assert loaded is not None
-        assert loaded["subtask_outputs"]["forge"] == "Research results here"
+        assert loaded["subtask_outputs"] == {}  # not persisted to DB
         assert loaded["subtask_reviews"]["forge"]["approved"] is True
         assert loaded["subtask_reviews"]["forge"]["quality_score"] == 0.9
 
@@ -205,7 +202,7 @@ class TestCorruptPlanJson:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -242,7 +239,7 @@ class TestCorruptPlanJson:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -265,7 +262,7 @@ class TestCorruptPlanJson:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -299,13 +296,13 @@ class TestCleanupOrphaned:
             """
             INSERT INTO orchestration_state
                 (task_id, goal, orch_session_id, requester_session,
-                 sender, status, plan_json, subtask_ids, subtask_outputs,
+                 sender, status, plan_json, subtask_ids,
                  subtask_reviews, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "task-stale-1", "Stale goal", "orchestration:task-stale-1",
-                "s1", "user", STATUS_AWAITING, None, "{}", "{}", "{}",
+                "s1", "user", STATUS_DELEGATING, None, "{}", "{}",
                 stale_time, stale_time,
             ),
         )
@@ -328,13 +325,13 @@ class TestCleanupOrphaned:
             """
             INSERT INTO orchestration_state
                 (task_id, goal, orch_session_id, requester_session,
-                 sender, status, plan_json, subtask_ids, subtask_outputs,
+                 sender, status, plan_json, subtask_ids,
                  subtask_reviews, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "task-done-1", "Completed goal", "orchestration:task-done-1",
-                "s1", "user", STATUS_COMPLETED, None, "{}", "{}", "{}",
+                "s1", "user", STATUS_COMPLETED, None, "{}", "{}",
                 stale_time, stale_time,
             ),
         )
@@ -350,13 +347,13 @@ class TestCleanupOrphaned:
             """
             INSERT INTO orchestration_state
                 (task_id, goal, orch_session_id, requester_session,
-                 sender, status, plan_json, subtask_ids, subtask_outputs,
+                 sender, status, plan_json, subtask_ids,
                  subtask_reviews, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "task-recent-1", "Recent goal", "orchestration:task-recent-1",
-                "s1", "user", STATUS_AWAITING, None, "{}", "{}", "{}",
+                "s1", "user", STATUS_DELEGATING, None, "{}", "{}",
                 recent_time, recent_time,
             ),
         )
@@ -390,7 +387,7 @@ class TestRestartSurvival:
             "status": STATUS_DELEGATING,
             "plan": None,
             "subtask_ids": {"forge": "task-restart-1"},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -403,9 +400,6 @@ class TestRestartSurvival:
             synthesis_strategy="merge",
         )
         engine1._db_update_plan("task-restart-1", plan)
-
-        # Merge a subtask output
-        engine1._db_merge_subtask_output("task-restart-1", "forge", "Forge output")
 
         # Update subtask_ids
         engine1._db_update_subtask_ids("task-restart-1", {"forge": "task-restart-1"})
@@ -425,7 +419,8 @@ class TestRestartSurvival:
         assert loaded["plan"].summary == "Restart test plan"
         assert loaded["plan"].sub_tasks[0].being_id == "forge"
         assert loaded["subtask_ids"] == {"forge": "task-restart-1"}
-        assert loaded["subtask_outputs"]["forge"] == "Forge output"
+        # subtask_outputs are no longer persisted to DB (live in shared_working_memory_writes)
+        assert loaded["subtask_outputs"] == {}
 
         db2.close()
 
@@ -449,7 +444,7 @@ class TestSubtaskIdsPersistence:
             "status": STATUS_DELEGATING,
             "plan": None,
             "subtask_ids": {"forge": "task-ids-1", "memory": "task-ids-1"},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -471,7 +466,7 @@ class TestSubtaskIdsPersistence:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -516,7 +511,7 @@ class TestGetStateDeepCopy:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }
@@ -529,13 +524,13 @@ class TestGetStateDeepCopy:
 
         # Mutate the snapshot
         snapshot["status"] = "MUTATED"
-        snapshot["subtask_outputs"]["forge"] = "injected"
+        snapshot["subtask_reviews"]["forge"] = {"approved": True}
 
         # Verify the canonical state is unchanged
         with engine._lock:
             canonical = engine._active["task-copy-1"]
         assert canonical["status"] == STATUS_PLANNING
-        assert "forge" not in canonical["subtask_outputs"]
+        assert "forge" not in canonical["subtask_reviews"]
 
     def test_get_state_two_calls_independent(self):
         engine, db, _ = _make_engine()
@@ -549,7 +544,7 @@ class TestGetStateDeepCopy:
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},
-            "subtask_outputs": {},
+            "subtask_outputs": {},  # in-memory only, not persisted
             "subtask_reviews": {},
             "created_at": now,
         }

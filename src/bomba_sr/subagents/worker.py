@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class SubAgentWorkerFactory:
-    def __init__(self, bridge) -> None:  # bridge is RuntimeBridge; avoid import cycle in hints
+    def __init__(self, bridge, dashboard_svc=None) -> None:  # bridge is RuntimeBridge; avoid import cycle in hints
         self.bridge = bridge
+        self.dashboard_svc = dashboard_svc
 
     def create_worker(self, max_iterations: int = 10) -> SubAgentWorker:
         def worker(run_id: str, task, protocol) -> dict:
@@ -28,6 +29,13 @@ class SubAgentWorkerFactory:
             user_id = f"{parent_agent_id}->{child_agent_id}"
 
             protocol.progress(run_id, 10, summary="Sub-agent initializing")
+
+            # Set being status to busy before execution
+            if self.dashboard_svc is not None:
+                try:
+                    self.dashboard_svc.update_being(child_agent_id, {"status": "busy"})
+                except Exception:
+                    logger.debug("Could not set being %s to busy", child_agent_id)
 
             try:
                 result = self.bridge.handle_turn(
@@ -45,6 +53,13 @@ class SubAgentWorkerFactory:
             except Exception:
                 logger.exception("Sub-agent worker failed for run %s", run_id)
                 raise
+            finally:
+                # Restore being status to online after execution (success or failure)
+                if self.dashboard_svc is not None:
+                    try:
+                        self.dashboard_svc.update_being(child_agent_id, {"status": "online"})
+                    except Exception:
+                        logger.debug("Could not set being %s to online", child_agent_id)
 
             output_text = result.get("assistant", {}).get("text", "")
 
