@@ -384,12 +384,12 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
         pinecone_vectors: list[dict[str, Any]] = []
         for text, embedding in zip(texts, vectors_data):
             vec_id = f"{id_prefix}-{uuid.uuid4().hex[:12]}"
-            meta = {"text": text}
-            if tenant_id:
-                meta["tenant_id"] = tenant_id
-            if being_id:
-                meta["being_id"] = being_id
-            meta.update(extra_metadata)
+            meta = {
+                "text": text,
+                "tenant_id": tenant_id or None,
+                "being_id": being_id,  # may be None
+                **extra_metadata,  # caller-supplied metadata can override if intentional
+            }
             pinecone_vectors.append({
                 "id": vec_id,
                 "values": embedding,

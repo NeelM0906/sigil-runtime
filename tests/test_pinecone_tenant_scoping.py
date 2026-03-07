@@ -100,7 +100,7 @@ class TestUpsertTenantScoping:
         _, payloads = self._run_upsert(ctx)
         upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
         vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
-        assert "being_id" not in vec_meta
+        assert vec_meta["being_id"] is None
         assert vec_meta["tenant_id"] == "tenant-acme"
 
     def test_extra_metadata_preserved(self):
@@ -119,12 +119,20 @@ class TestUpsertTenantScoping:
         vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
         assert vec_meta["text"] == "hello world"
 
-    def test_empty_tenant_id_not_injected(self):
+    def test_empty_tenant_id_stored_as_none(self):
         ctx = _FakeContext(tenant_id="")
         _, payloads = self._run_upsert(ctx)
         upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
         vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
-        assert "tenant_id" not in vec_meta
+        assert vec_meta["tenant_id"] is None
+
+    def test_extra_metadata_overrides_scoping(self):
+        """Caller can intentionally override tenant_id via extra_metadata."""
+        ctx = _FakeContext(tenant_id="tenant-acme")
+        _, payloads = self._run_upsert(ctx, extra_metadata={"tenant_id": "tenant-custom"})
+        upsert_call = [p for p in payloads if "upsert" in p["url"]][0]
+        vec_meta = upsert_call["payload"]["vectors"][0]["metadata"]
+        assert vec_meta["tenant_id"] == "tenant-custom"
 
 
 # ---------------------------------------------------------------------------
