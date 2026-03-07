@@ -182,8 +182,9 @@ class TestReviewParsing:
     def test_parse_review_fallback_on_garbage(self):
         engine = self._engine()
         review = engine._parse_review("not json")
-        assert review["approved"] is True  # auto-approve on parse failure
-        assert review["quality_score"] == 0.6
+        assert review["approved"] is False  # block on parse failure (not auto-approve)
+        assert review["quality_score"] == 0.0
+        assert "unparseable" in review["notes"].lower()
 
 
 # ---------------------------------------------------------------------------

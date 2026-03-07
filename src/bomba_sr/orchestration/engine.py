@@ -3,8 +3,8 @@
 SAI Prime acts as orchestrator: plans complex tasks, delegates sub-tasks
 to beings, reviews outputs, requests revisions, and synthesizes final results.
 
-All orchestration context lives in regular conversation_turns with
-special session ID patterns — no new database tables.
+Orchestration state is persisted to SQLite (orchestration_state table) so
+in-progress tasks survive server restarts.
 
 Session ID patterns:
   orchestration:{task_id}    — Prime's coordination context
@@ -17,7 +17,7 @@ import logging
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -255,11 +255,12 @@ class OrchestrationEngine:
         self.dashboard = dashboard_svc
         self.project_svc = project_svc
         self.prime_tenant_id = prime_tenant_id
-        self._active: dict[str, dict[str, Any]] = {}  # task_id -> state
+        self._active: dict[str, dict[str, Any]] = {}  # task_id -> in-memory cache
         self._lock = threading.Lock()
         self._completed_task_count: int = 0
         self._dream_trigger_every: int = int(os.environ.get("BOMBA_DREAM_TRIGGER_EVERY", "5"))
         self._ensure_task_results_schema()
+        self._ensure_orchestration_state_schema()
 
     # ------------------------------------------------------------------
     # Public API
@@ -290,6 +291,7 @@ class OrchestrationEngine:
         )
         actual_task_id = parent_task.get("id") or parent_task.get("task_id") or task_id
 
+        now = datetime.now(timezone.utc).isoformat()
         state = {
             "task_id": actual_task_id,
             "goal": goal,
@@ -301,10 +303,13 @@ class OrchestrationEngine:
             "subtask_ids": {},      # being_id -> subtask task_id
             "subtask_outputs": {},  # being_id -> output text
             "subtask_reviews": {},  # being_id -> review dict
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": now,
         }
         with self._lock:
             self._active[actual_task_id] = state
+
+        # Persist to SQLite — source of truth for crash recovery
+        self._db_insert_state(actual_task_id, state, now)
 
         # Log orchestration start
         self.dashboard._log_task_history(
@@ -335,22 +340,24 @@ class OrchestrationEngine:
     def get_status(self, task_id: str) -> dict[str, Any] | None:
         with self._lock:
             state = self._active.get(task_id)
-            if state is None:
-                return None
-            return {
-                "task_id": task_id,
-                "status": state["status"],
-                "plan": state["plan"].to_dict() if state["plan"] else None,
-                "subtask_ids": dict(state["subtask_ids"]),
-                "subtask_outputs": {k: v[:200] for k, v in state["subtask_outputs"].items()},
-                "subtask_reviews": dict(state["subtask_reviews"]),
-            }
+        if state is None:
+            state = self._db_load_state(task_id)
+        if state is None:
+            return None
+        return {
+            "task_id": task_id,
+            "status": state["status"],
+            "plan": state["plan"].to_dict() if state["plan"] else None,
+            "subtask_ids": dict(state.get("subtask_ids", {})),
+            "subtask_outputs": {k: v[:200] for k, v in state.get("subtask_outputs", {}).items()},
+            "subtask_reviews": dict(state.get("subtask_reviews", {})),
+        }
 
     def get_orchestration_log(self, task_id: str) -> list[dict[str, Any]]:
         """Read the orchestration session's conversation turns."""
-        with self._lock:
-            state = self._active.get(task_id)
-        if state is None:
+        try:
+            state = self._get_state(task_id)
+        except RuntimeError:
             return []
         session = state["orchestration_session"]
         try:
@@ -424,6 +431,12 @@ class OrchestrationEngine:
                 )
             except Exception:
                 pass
+        finally:
+            # Always restore Prime status — success or failure
+            try:
+                self.dashboard.update_being("prime", {"status": "online"})
+            except Exception:
+                log.warning("Failed to restore Prime status to online")
 
     def _phase_plan(self, task_id: str) -> None:
         """Use LLM to decompose the task into sub-tasks."""
@@ -512,6 +525,7 @@ class OrchestrationEngine:
 
         with self._lock:
             self._active[task_id]["plan"] = plan
+        self._db_update_plan(task_id, plan)
 
         self.dashboard._log_task_history(
             task_id, "plan_created",
@@ -680,6 +694,7 @@ class OrchestrationEngine:
 
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
+        self._db_merge_subtask_output(parent_task_id, sub.being_id, output)
 
         # Write a semantic memory into the being's tenant so it accumulates
         # domain knowledge across orchestration tasks.
@@ -729,12 +744,14 @@ class OrchestrationEngine:
         for sub in plan.sub_tasks:
             output = state["subtask_outputs"].get(sub.being_id, "")
             if not output or output.startswith("[Error"):
+                fail_review = {
+                    "approved": False,
+                    "feedback": "Sub-task failed or produced no output.",
+                    "quality_score": 0.0,
+                }
                 with self._lock:
-                    self._active[task_id]["subtask_reviews"][sub.being_id] = {
-                        "approved": False,
-                        "feedback": "Sub-task failed or produced no output.",
-                        "quality_score": 0.0,
-                    }
+                    self._active[task_id]["subtask_reviews"][sub.being_id] = fail_review
+                self._db_merge_subtask_review(task_id, sub.being_id, fail_review)
                 continue
 
             for revision_round in range(max_revisions + 1):
@@ -758,6 +775,7 @@ class OrchestrationEngine:
                 if review["approved"] or revision_round >= max_revisions:
                     with self._lock:
                         self._active[task_id]["subtask_reviews"][sub.being_id] = review
+                    self._db_merge_subtask_review(task_id, sub.being_id, review)
                     self.dashboard._log_task_history(
                         task_id, "review_completed",
                         {"being_id": sub.being_id, "approved": review["approved"], "quality_score": review.get("quality_score", 0)},
@@ -806,6 +824,7 @@ class OrchestrationEngine:
                     output = (rev_result.get("assistant") or {}).get("text", "")
                     with self._lock:
                         self._active[task_id]["subtask_outputs"][sub.being_id] = output
+                    self._db_merge_subtask_output(task_id, sub.being_id, output)
                 except Exception as exc:
                     log.warning("Revision failed for %s: %s", sub.being_id, exc)
                     output = state["subtask_outputs"].get(sub.being_id, "")
@@ -1065,14 +1084,21 @@ class OrchestrationEngine:
     def _get_state(self, task_id: str) -> dict[str, Any]:
         with self._lock:
             state = self._active.get(task_id)
+        if state is not None:
+            return state
+        # Fallback: load from DB
+        state = self._db_load_state(task_id)
         if state is None:
             raise RuntimeError(f"No active orchestration for task {task_id}")
+        with self._lock:
+            self._active[task_id] = state
         return state
 
     def _set_status(self, task_id: str, status: str) -> None:
         with self._lock:
             if task_id in self._active:
                 self._active[task_id]["status"] = status
+        self._db_update_status(task_id, status)
         self.dashboard._emit_event("orchestration_update", {
             "task_id": task_id, "status": status,
         })
@@ -1110,6 +1136,223 @@ class OrchestrationEngine:
             )
         except Exception as exc:
             log.warning("Could not ensure task_results schema: %s", exc)
+
+    def _ensure_orchestration_state_schema(self) -> None:
+        """Create the orchestration_state table in the prime tenant DB."""
+        try:
+            runtime = self.bridge._tenant_runtime(
+                self.prime_tenant_id,
+                self._prime_workspace(),
+            )
+            runtime.db.script(
+                """
+                CREATE TABLE IF NOT EXISTS orchestration_state (
+                    task_id           TEXT PRIMARY KEY,
+                    goal              TEXT NOT NULL,
+                    orch_session_id   TEXT NOT NULL,
+                    requester_session TEXT NOT NULL,
+                    sender            TEXT NOT NULL,
+                    status            TEXT NOT NULL,
+                    plan_json         TEXT,
+                    subtask_outputs   TEXT NOT NULL DEFAULT '{}',
+                    subtask_reviews   TEXT NOT NULL DEFAULT '{}',
+                    created_at        TEXT NOT NULL,
+                    updated_at        TEXT NOT NULL
+                );
+                """
+            )
+        except Exception as exc:
+            log.warning("Could not ensure orchestration_state schema: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Orchestration state DB helpers
+    # ------------------------------------------------------------------
+
+    def _db_insert_state(
+        self, task_id: str, state: dict[str, Any], now: str,
+    ) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            runtime.db.execute_commit(
+                """
+                INSERT OR REPLACE INTO orchestration_state
+                    (task_id, goal, orch_session_id, requester_session,
+                     sender, status, plan_json, subtask_outputs,
+                     subtask_reviews, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    task_id,
+                    state["goal"],
+                    state["orchestration_session"],
+                    state["requester_session"],
+                    state["sender"],
+                    state["status"],
+                    None,
+                    json.dumps({}),
+                    json.dumps({}),
+                    now,
+                    now,
+                ),
+            )
+        except Exception as exc:
+            log.warning("Failed to insert orchestration state for %s: %s", task_id[:8], exc)
+
+    def _db_update_status(self, task_id: str, status: str) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            runtime.db.execute_commit(
+                "UPDATE orchestration_state SET status = ?, updated_at = ? WHERE task_id = ?",
+                (status, datetime.now(timezone.utc).isoformat(), task_id),
+            )
+        except Exception as exc:
+            log.warning("Failed to update orchestration status for %s: %s", task_id[:8], exc)
+
+    def _db_update_plan(self, task_id: str, plan: OrchestrationPlan) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            runtime.db.execute_commit(
+                "UPDATE orchestration_state SET plan_json = ?, updated_at = ? WHERE task_id = ?",
+                (json.dumps(plan.to_dict()), datetime.now(timezone.utc).isoformat(), task_id),
+            )
+        except Exception as exc:
+            log.warning("Failed to update orchestration plan for %s: %s", task_id[:8], exc)
+
+    def _db_merge_subtask_output(
+        self, task_id: str, being_id: str, output: str,
+    ) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            row = runtime.db.execute(
+                "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            current = json.loads(row["subtask_outputs"]) if row else {}
+            current[being_id] = output
+            runtime.db.execute_commit(
+                "UPDATE orchestration_state SET subtask_outputs = ?, updated_at = ? WHERE task_id = ?",
+                (json.dumps(current), datetime.now(timezone.utc).isoformat(), task_id),
+            )
+        except Exception as exc:
+            log.warning("Failed to merge subtask output for %s/%s: %s", task_id[:8], being_id, exc)
+
+    def _db_merge_subtask_review(
+        self, task_id: str, being_id: str, review: dict[str, Any],
+    ) -> None:
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            row = runtime.db.execute(
+                "SELECT subtask_reviews FROM orchestration_state WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            current = json.loads(row["subtask_reviews"]) if row else {}
+            current[being_id] = review
+            runtime.db.execute_commit(
+                "UPDATE orchestration_state SET subtask_reviews = ?, updated_at = ? WHERE task_id = ?",
+                (json.dumps(current), datetime.now(timezone.utc).isoformat(), task_id),
+            )
+        except Exception as exc:
+            log.warning("Failed to merge subtask review for %s/%s: %s", task_id[:8], being_id, exc)
+
+    def _db_load_state(self, task_id: str) -> dict[str, Any] | None:
+        """Load orchestration state from DB, reconstruct in-memory dict."""
+        try:
+            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
+            row = runtime.db.execute(
+                "SELECT * FROM orchestration_state WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            if row is None:
+                return None
+
+            # Reconstruct plan from JSON
+            plan = None
+            if row["plan_json"]:
+                try:
+                    plan_data = json.loads(row["plan_json"])
+                    plan = OrchestrationPlan(
+                        summary=plan_data.get("summary", ""),
+                        sub_tasks=[
+                            SubTaskPlan(
+                                being_id=st["being_id"],
+                                title=st.get("title", ""),
+                                instructions=st.get("instructions", ""),
+                                done_when=st.get("done_when", ""),
+                            )
+                            for st in plan_data.get("sub_tasks", [])
+                        ],
+                        synthesis_strategy=plan_data.get("synthesis_strategy", "merge"),
+                    )
+                except (json.JSONDecodeError, KeyError):
+                    pass
+
+            return {
+                "task_id": task_id,
+                "goal": row["goal"],
+                "orchestration_session": row["orch_session_id"],
+                "requester_session": row["requester_session"],
+                "sender": row["sender"],
+                "status": row["status"],
+                "plan": plan,
+                "subtask_ids": {},
+                "subtask_outputs": json.loads(row["subtask_outputs"] or "{}"),
+                "subtask_reviews": json.loads(row["subtask_reviews"] or "{}"),
+                "created_at": row["created_at"],
+            }
+        except Exception as exc:
+            log.warning("Failed to load orchestration state for %s: %s", task_id[:8], exc)
+            return None
+
+    def cleanup_orphaned_orchestrations(self) -> int:
+        """Mark stale in-progress orchestrations as failed.
+
+        Should be called on startup to clean up orchestrations that were
+        running when the server last shut down.
+
+        Returns the number of orchestrations cleaned up.
+        """
+        cleaned = 0
+        try:
+            runtime = self.bridge._tenant_runtime(
+                self.prime_tenant_id,
+                self._prime_workspace(),
+            )
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+            terminal = (STATUS_COMPLETED, STATUS_FAILED)
+            rows = runtime.db.execute(
+                """
+                SELECT task_id, goal FROM orchestration_state
+                WHERE status NOT IN (?, ?)
+                  AND updated_at < ?
+                """,
+                (*terminal, cutoff),
+            ).fetchall()
+
+            for row in rows:
+                task_id = row["task_id"]
+                log.warning(
+                    "Cleaning up orphaned orchestration %s (goal: %s)",
+                    task_id[:8], (row["goal"] or "")[:80],
+                )
+                runtime.db.execute_commit(
+                    "UPDATE orchestration_state SET status = ?, updated_at = ? WHERE task_id = ?",
+                    (STATUS_FAILED, datetime.now(timezone.utc).isoformat(), task_id),
+                )
+                try:
+                    self.dashboard.update_task(self.project_svc, task_id, status="failed")
+                except Exception:
+                    pass
+                self.dashboard._log_task_history(
+                    task_id, "orchestration_cleanup",
+                    {"reason": "Server restart — orphaned orchestration marked failed"},
+                )
+                cleaned += 1
+
+            if cleaned:
+                log.info("Cleaned up %d orphaned orchestrations", cleaned)
+        except Exception as exc:
+            log.warning("Failed to clean up orphaned orchestrations: %s", exc)
+        return cleaned
 
     def _persist_task_result(
         self,
@@ -1379,11 +1622,15 @@ class OrchestrationEngine:
                 "notes": str(data.get("notes", "")),
             }
         except Exception:
+            log.warning(
+                "Review parse failed — blocking approval. Raw response: %s",
+                llm_reply[:500],
+            )
             return {
-                "approved": True,
-                "feedback": "",
-                "quality_score": 0.6,
-                "notes": "Review parsing failed — auto-approving",
+                "approved": False,
+                "feedback": "Review LLM returned unparseable response — revision required.",
+                "quality_score": 0.0,
+                "notes": "Review LLM returned unparseable response — blocking",
             }
 
     @staticmethod
