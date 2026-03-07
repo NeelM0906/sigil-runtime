@@ -425,8 +425,12 @@ class TestOrchestrationLifecycle:
         # Only 1 create_task call — parent task only, no child tasks
         assert dashboard.create_task.call_count == 1
 
-    def test_being_status_updates(self):
-        """Verify beings go busy then back to online."""
+    def test_being_status_managed_by_worker(self):
+        """Being status (busy/online) is managed by the worker, not the engine.
+
+        The engine should NOT call update_being with busy/online during delegation.
+        Only Prime's status is restored to online in the finally block.
+        """
         engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(goal="Test task", requester_session_id="mc-chat-prime")
 
@@ -437,17 +441,20 @@ class TestOrchestrationLifecycle:
                 break
             time.sleep(0.1)
 
-        # Beings should have been updated to busy then back to online
+        # Engine should NOT set beings to busy (worker handles that)
         busy_calls = [
             c for c in dashboard.update_being.call_args_list
-            if c[0][1].get("status") == "busy"
+            if len(c[0]) >= 2 and isinstance(c[0][1], dict)
+            and c[0][1].get("status") == "busy" and c[0][0] != "prime"
         ]
-        online_calls = [
+        assert len(busy_calls) == 0, "Engine should not set being status to busy"
+
+        # Prime should be restored to online in the finally block
+        prime_online = [
             c for c in dashboard.update_being.call_args_list
-            if c[0][1].get("status") == "online"
+            if c[0][0] == "prime" and c[0][1].get("status") == "online"
         ]
-        assert len(busy_calls) >= 2  # forge + memory
-        assert len(online_calls) >= 2
+        assert len(prime_online) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -1302,6 +1309,311 @@ class TestTaskBoardFiltering:
             deleted_ids = [c[0][1] for c in svc.delete_task.call_args_list]
             assert "t2" in deleted_ids
             assert "t3" in deleted_ids
+
+
+# ---------------------------------------------------------------------------
+# Revision routing tests (spawn_async path)
+# ---------------------------------------------------------------------------
+
+class TestRevisionRouting:
+    """Verify that revision requests route through SubAgentProtocol.spawn_async()
+    instead of calling bridge.handle_turn() directly, and that idempotency keys,
+    shared memory superseding, and status management behave correctly.
+    """
+
+    def _make_engine(self, *, review_responses=None):
+        """Build an engine where review responses are controllable.
+
+        Args:
+            review_responses: list of dicts for sequential review LLM replies.
+                Each must have approved, feedback, quality_score, notes keys.
+                The list is consumed in order; once exhausted, all reviews approve.
+        """
+        if review_responses is None:
+            review_responses = []
+
+        bridge = MagicMock()
+        dashboard = MagicMock()
+        project_svc = MagicMock()
+
+        dashboard.list_beings.return_value = [
+            {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Research",
+             "skills": "", "tenant_id": "t-forge", "workspace": "workspaces/forge"},
+        ]
+        dashboard.get_being.side_effect = lambda bid: {
+            "forge": {"id": "forge", "name": "SAI Forge", "tenant_id": "t-forge",
+                      "workspace": "workspaces/forge", "status": "online"},
+            "prime": {"id": "prime", "name": "SAI Prime", "tenant_id": "tenant-prime",
+                      "workspace": "workspaces/prime", "status": "online"},
+        }.get(bid, {})
+
+        task_counter = [0]
+        def mock_create_task(ps, **kwargs):
+            task_counter[0] += 1
+            tid = f"task-{task_counter[0]}"
+            return {"id": tid, "task_id": tid, "title": kwargs.get("title", ""), "status": "in_progress"}
+        dashboard.create_task.side_effect = mock_create_task
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        review_idx = [0]
+
+        def mock_handle_turn(req):
+            msg = req.user_message
+            if "ORCHESTRATION MODE" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "summary": "Revision routing test",
+                    "synthesis_strategy": "merge",
+                    "sub_tasks": [
+                        {"being_id": "forge", "title": "Do work",
+                         "instructions": "Execute the task", "done_when": "Done"},
+                    ],
+                })}}
+            if "[REVIEW]" in msg:
+                idx = review_idx[0]
+                review_idx[0] += 1
+                if idx < len(review_responses):
+                    return {"assistant": {"text": json.dumps(review_responses[idx])}}
+                # Default: approve
+                return {"assistant": {"text": json.dumps({
+                    "approved": True, "feedback": "", "quality_score": 0.85, "notes": "Good",
+                })}}
+            if "[SYNTHESIZE" in msg:
+                return {"assistant": {"text": "Final synthesized report."}}
+            return {"assistant": {"text": f"Sub-task output from {req.user_id}."}}
+
+        bridge.handle_turn.side_effect = mock_handle_turn
+
+        # Build subagent orchestrator mock that tracks spawn_async calls
+        # and supports revision shared memory writes
+        protocol = MagicMock()
+        orchestrator = MagicMock()
+        orchestrator.protocol = protocol
+
+        spawned_runs = {}
+        run_counter = [0]
+
+        def mock_spawn_async(task, parent_session_id, parent_turn_id,
+                             parent_agent_id, child_agent_id, **kwargs):
+            run_counter[0] += 1
+            run_id = f"run-{run_counter[0]}"
+            spawned_runs[run_id] = {
+                "run_id": run_id,
+                "child_agent_id": child_agent_id,
+                "ticket_id": task.ticket_id,
+                "task_id": task.task_id,
+                "idempotency_key": task.idempotency_key,
+                "status": "completed",
+                "error_detail": None,
+                "artifacts": {"output": f"Output from {child_agent_id} (run {run_counter[0]})."},
+            }
+            handle = MagicMock()
+            handle.run_id = run_id
+            return handle
+
+        orchestrator.spawn_async.side_effect = mock_spawn_async
+
+        def mock_get_run(run_id):
+            return spawned_runs.get(run_id)
+        protocol.get_run.side_effect = mock_get_run
+
+        def mock_read_shared_memory(ticket_id, scope=None):
+            # Return writes in DESC order by run (newest first) for all runs
+            writes = []
+            for run_id in sorted(spawned_runs.keys(), reverse=True):
+                run = spawned_runs[run_id]
+                agent_id = run["child_agent_id"]
+                writes.append({
+                    "writer_agent_id": agent_id,
+                    "content": run["artifacts"]["output"],
+                    "ticket_id": ticket_id,
+                    "scope": scope or "committed",
+                })
+            return writes
+        protocol.read_shared_memory.side_effect = mock_read_shared_memory
+        protocol.cascade_stop.return_value = []
+
+        engine = OrchestrationEngine(
+            bridge=bridge,
+            dashboard_svc=dashboard,
+            project_svc=project_svc,
+            subagent_orchestrator=orchestrator,
+        )
+        return engine, bridge, dashboard, orchestrator, protocol, spawned_runs
+
+    def _wait_for_completion(self, engine, task_id, max_iters=50):
+        import time
+        for _ in range(max_iters):
+            status = engine.get_status(task_id)
+            if status and status["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+                break
+            time.sleep(0.1)
+        return engine.get_status(task_id)
+
+    # ---------------------------------------------------------------
+    # Test 1: revision routes through spawn_async
+    # ---------------------------------------------------------------
+    def test_revision_routes_through_spawn_async(self):
+        """When review returns approved=False, revision goes through
+        subagent_orch.spawn_async() — NOT bridge.handle_turn for the
+        revision message itself."""
+        engine, bridge, dashboard, orchestrator, protocol, spawned_runs = self._make_engine(
+            review_responses=[
+                # First review: reject
+                {"approved": False, "feedback": "Missing detail", "quality_score": 0.3, "notes": "Incomplete"},
+                # Second review (after revision): approve
+                {"approved": True, "feedback": "", "quality_score": 0.85, "notes": "Good"},
+            ],
+        )
+        result = engine.start(goal="Revision routing test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+        status = self._wait_for_completion(engine, task_id)
+
+        assert status["status"] == STATUS_COMPLETED
+
+        # spawn_async should be called at least twice:
+        # 1 for initial delegation + 1 for revision
+        assert orchestrator.spawn_async.call_count >= 2
+
+        # Check that at least one spawn_async call is a revision
+        revision_calls = [
+            c for c in orchestrator.spawn_async.call_args_list
+            if "revision" in (c.kwargs.get("task") or c[0][0]).idempotency_key
+        ]
+        assert len(revision_calls) >= 1, "Expected at least one spawn_async call for revision"
+
+        # Verify bridge.handle_turn was NOT called with a revision message
+        # (review calls to Prime via handle_turn are fine, but the actual
+        # revision delegation should go through spawn_async)
+        for call in bridge.handle_turn.call_args_list:
+            req = call[0][0]
+            assert "REVISION REQUEST" not in req.user_message, (
+                "Revision should go through spawn_async, not bridge.handle_turn"
+            )
+
+    # ---------------------------------------------------------------
+    # Test 2: idempotency keys include round number
+    # ---------------------------------------------------------------
+    def test_revision_idempotency_key_includes_round(self):
+        """Trigger two revision rounds. Verify idempotency keys are different
+        and contain the round number."""
+        engine, bridge, dashboard, orchestrator, protocol, spawned_runs = self._make_engine(
+            review_responses=[
+                # Review 1: reject
+                {"approved": False, "feedback": "Missing detail", "quality_score": 0.3, "notes": "Incomplete"},
+                # Review 2: reject again
+                {"approved": False, "feedback": "Still incomplete", "quality_score": 0.4, "notes": "Needs more"},
+                # Review 3: approve (or hits max_revisions=2 so it stops)
+                {"approved": True, "feedback": "", "quality_score": 0.8, "notes": "OK"},
+            ],
+        )
+        result = engine.start(goal="Idempotency key test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+        status = self._wait_for_completion(engine, task_id)
+
+        assert status["status"] == STATUS_COMPLETED
+
+        # Extract idempotency keys from revision spawn_async calls
+        revision_keys = []
+        for call in orchestrator.spawn_async.call_args_list:
+            task_arg = call.kwargs.get("task") or call[0][0]
+            if "revision" in task_arg.idempotency_key:
+                revision_keys.append(task_arg.idempotency_key)
+
+        # Should have 2 revision rounds (max_revisions=2 and both first two reviews rejected)
+        assert len(revision_keys) == 2, f"Expected 2 revision calls, got {len(revision_keys)}: {revision_keys}"
+
+        # Keys must be different
+        assert revision_keys[0] != revision_keys[1], "Idempotency keys for different rounds must differ"
+
+        # Each key should contain its round number
+        assert ":revision:1" in revision_keys[0], f"Round 1 key missing ':revision:1': {revision_keys[0]}"
+        assert ":revision:2" in revision_keys[1], f"Round 2 key missing ':revision:2': {revision_keys[1]}"
+
+    # ---------------------------------------------------------------
+    # Test 3: revision output supersedes original in shared memory
+    # ---------------------------------------------------------------
+    def test_revision_output_supersedes_original_in_shared_memory(self):
+        """When _phase_synthesize reads shared memory, the newest write per
+        agent (the revision) supersedes the original delegation output."""
+        engine, bridge, dashboard, orchestrator, protocol, spawned_runs = self._make_engine(
+            review_responses=[
+                # Reject once to trigger a revision
+                {"approved": False, "feedback": "Needs revision", "quality_score": 0.3, "notes": "Redo"},
+                # Approve on second review
+                {"approved": True, "feedback": "", "quality_score": 0.9, "notes": "Great"},
+            ],
+        )
+        result = engine.start(goal="Supersede test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+        status = self._wait_for_completion(engine, task_id)
+
+        assert status["status"] == STATUS_COMPLETED
+
+        # Verify that protocol.read_shared_memory was called during synthesis
+        # (it's called during both review-revision and synthesis phases)
+        assert protocol.read_shared_memory.call_count >= 1
+
+        # The last read_shared_memory call returns writes in DESC order (newest first).
+        # When _phase_synthesize iterates, it picks the first write per agent
+        # (which is the revision), not the original.
+        # Verify by checking that the spawned_runs has at least 2 runs for forge:
+        forge_runs = [r for r in spawned_runs.values() if r["child_agent_id"] == "forge"]
+        assert len(forge_runs) >= 2, "Expected at least 2 runs for forge (original + revision)"
+
+        # The newest run (highest run number) should come first in shared memory reads
+        writes = protocol.read_shared_memory(ticket_id=task_id, scope="committed")
+        forge_writes = [w for w in writes if w["writer_agent_id"] == "forge"]
+        assert len(forge_writes) >= 2, "Expected at least 2 forge writes in shared memory"
+
+        # First forge write in the list should be the newest (revision)
+        # since mock returns in DESC order by run_id
+        newest_forge = forge_writes[0]
+        oldest_forge = forge_writes[-1]
+        assert newest_forge["content"] != oldest_forge["content"], (
+            "Revision output should differ from original"
+        )
+
+    # ---------------------------------------------------------------
+    # Test 4: no manual status management for subtask beings
+    # ---------------------------------------------------------------
+    def test_revision_no_manual_status_management(self):
+        """During revision via spawn_async path, the engine must NOT call
+        dashboard.update_being() with 'busy' or 'online' for the subtask
+        being. Prime's online restore in the finally block is acceptable."""
+        engine, bridge, dashboard, orchestrator, protocol, spawned_runs = self._make_engine(
+            review_responses=[
+                # Reject to trigger revision
+                {"approved": False, "feedback": "Redo this", "quality_score": 0.2, "notes": "Bad"},
+                # Approve after revision
+                {"approved": True, "feedback": "", "quality_score": 0.8, "notes": "OK"},
+            ],
+        )
+        result = engine.start(goal="Status management test", requester_session_id="s1", sender="user")
+        task_id = result["task_id"]
+        status = self._wait_for_completion(engine, task_id)
+
+        assert status["status"] == STATUS_COMPLETED
+
+        # Check all update_being calls — none should set forge to "busy" or "online"
+        for call in dashboard.update_being.call_args_list:
+            being_id = call[0][0]
+            updates = call[0][1] if len(call[0]) > 1 else {}
+            if being_id == "forge":
+                assert updates.get("status") not in ("busy", "online"), (
+                    f"Engine should not manage forge's status during revision, "
+                    f"but got update_being('forge', {updates})"
+                )
+
+        # Prime's online restore in finally block is OK — verify it exists
+        prime_online = [
+            c for c in dashboard.update_being.call_args_list
+            if c[0][0] == "prime" and len(c[0]) > 1 and c[0][1].get("status") == "online"
+        ]
+        assert len(prime_online) >= 1, "Prime should be restored to online in finally block"
 
 
 class TestDreamModelDefault:

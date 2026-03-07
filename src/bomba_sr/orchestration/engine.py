@@ -51,7 +51,6 @@ def subtask_session_id(parent_task_id: str, being_id: str) -> str:
 
 STATUS_PLANNING = "planning"
 STATUS_DELEGATING = "delegating"
-STATUS_AWAITING = "awaiting_completion"
 STATUS_REVIEWING = "reviewing"
 STATUS_REVISING = "revising"
 STATUS_SYNTHESIZING = "synthesizing"
@@ -290,6 +289,11 @@ class OrchestrationEngine:
         if subagent_orchestrator is not None:
             self.subagent_orch: SubAgentOrchestrator | None = subagent_orchestrator
             self.protocol: SubAgentProtocol | None = subagent_orchestrator.protocol
+            # Create a dashboard-aware worker for orchestration spawns
+            from bomba_sr.subagents.worker import SubAgentWorkerFactory
+            self._orchestration_worker = SubAgentWorkerFactory(
+                self.bridge, dashboard_svc=self.dashboard,
+            ).create_worker()
         else:
             try:
                 runtime = self.bridge._tenant_runtime(
@@ -300,13 +304,19 @@ class OrchestrationEngine:
                 if isinstance(orch, SubAgentOrchestrator) and isinstance(proto, SubAgentProtocol):
                     self.subagent_orch = orch
                     self.protocol = proto
+                    from bomba_sr.subagents.worker import SubAgentWorkerFactory
+                    self._orchestration_worker = SubAgentWorkerFactory(
+                        self.bridge, dashboard_svc=self.dashboard,
+                    ).create_worker()
                 else:
                     self.subagent_orch = None
                     self.protocol = None
+                    self._orchestration_worker = None
             except Exception:
                 log.debug("SubAgentOrchestrator not available — orchestration will use legacy path")
                 self.subagent_orch = None
                 self.protocol = None
+                self._orchestration_worker = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -451,6 +461,20 @@ class OrchestrationEngine:
         except Exception as exc:
             log.exception("Orchestration failed for task %s", task_id)
             self._set_status(task_id, STATUS_FAILED)
+
+            # Cascade-stop any still-running subagent runs for this orchestration
+            if self.protocol is not None:
+                try:
+                    orch_session = orchestration_session_id(task_id)
+                    stopped = self.protocol.cascade_stop_session(
+                        tenant_id=self.prime_tenant_id,
+                        session_id=orch_session,
+                        reason=f"orchestration failed: {exc}",
+                    )
+                    if stopped:
+                        log.info("Cascade-stopped %d subagent runs for task %s", len(stopped), task_id[:8])
+                except Exception as cs_exc:
+                    log.warning("cascade_stop_session failed for task %s: %s", task_id[:8], cs_exc)
 
             # Persist partial results even on failure
             try:
@@ -610,17 +634,6 @@ class OrchestrationEngine:
                 {"being_id": sub.being_id, "title": sub.title},
             )
 
-            # Update being status
-            self.dashboard.update_being(sub.being_id, {"status": "busy"})
-            self.dashboard._emit_event("being_status", {
-                "being_id": sub.being_id,
-                "status": "busy",
-                "task_name": sub.title,
-                "task_id": task_id,
-            })
-
-        self._set_status(task_id, STATUS_AWAITING)
-
         if plan.synthesis_strategy == "sequential":
             # Sequential: spawn one at a time, wait for completion, collect output
             for sub in plan.sub_tasks:
@@ -767,6 +780,7 @@ class OrchestrationEngine:
             parent_turn_id=f"orch-{parent_task_id}-{sub.being_id}",
             parent_agent_id="prime",
             child_agent_id=sub.being_id,
+            worker=self._orchestration_worker,
         )
 
         run_id = handle.run_id
@@ -804,16 +818,11 @@ class OrchestrationEngine:
         log.debug("[ORCH] Received from %s: status=%s, output_len=%d",
                   sub.being_id, run.get("status") if run else "none", len(output))
 
-        # Restore being status
-        self.dashboard.update_being(sub.being_id, {"status": "online"})
-        self.dashboard._emit_event("being_status", {
-            "being_id": sub.being_id, "status": "online",
-        })
+        # Being status (busy → online) is managed by the worker's finally block.
 
         # Populate state["subtask_outputs"] for _phase_review backward compat
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
-        self._db_merge_subtask_output(parent_task_id, sub.being_id, output)
 
         # Write semantic memory into the being's tenant
         if output and not output.startswith("[Error"):
@@ -913,8 +922,8 @@ class OrchestrationEngine:
                     "round": revision_round + 1,
                 })
 
-                # Send revision back to being in same subtask session
-                session = subtask_session_id(task_id, sub.being_id)
+                # Route revision through SubAgentProtocol for DB-backed state,
+                # crash detection, and idempotency.
                 being = self.dashboard.get_being(sub.being_id) or {}
                 tenant_id = being.get("tenant_id") or self.prime_tenant_id
                 ws = being.get("workspace")
@@ -929,24 +938,61 @@ class OrchestrationEngine:
                     f"Feedback:\n{review['feedback']}\n\n"
                     f"Please revise your output addressing the feedback above."
                 )
-                self.dashboard.update_being(sub.being_id, {"status": "busy"})
-                try:
-                    rev_result = self.bridge.handle_turn(TurnRequest(
+
+                if self.subagent_orch is not None:
+                    # Spawn revision as a tracked subagent run
+                    rev_task = SubAgentTask(
                         tenant_id=tenant_id,
-                        session_id=session,
-                        user_id=f"prime->{sub.being_id}",
-                        user_message=revision_msg,
+                        task_id=f"{sub.being_id}-revision-{revision_round + 1}",
+                        ticket_id=task_id,
+                        idempotency_key=f"{task_id}:{sub.being_id}:revision:{revision_round + 1}",
+                        goal=revision_msg,
+                        done_when=("Revised output addressing feedback",),
+                        input_context_refs=(),
+                        output_schema={},
+                        priority="high",
+                        run_timeout_seconds=300,
+                        cleanup="archive",
                         workspace_root=workspace,
-                    ))
-                    output = (rev_result.get("assistant") or {}).get("text", "")
+                    )
+                    orch_session = state["orchestration_session"]
+                    handle = self.subagent_orch.spawn_async(
+                        task=rev_task,
+                        parent_session_id=orch_session,
+                        parent_turn_id=f"orch-{task_id}-{sub.being_id}-rev{revision_round + 1}",
+                        parent_agent_id="prime",
+                        child_agent_id=sub.being_id,
+                        worker=self._orchestration_worker,
+                    )
+                    rev_run = self._await_run_completion(handle.run_id, timeout=300)
+                    # Read revised output from shared memory (worker writes it there)
+                    if rev_run and rev_run.get("status") == "completed" and self.protocol is not None:
+                        writes = self.protocol.read_shared_memory(
+                            ticket_id=task_id, scope="committed",
+                        )
+                        being_writes = [w for w in writes if w["writer_agent_id"] == sub.being_id]
+                        if being_writes:
+                            output = being_writes[0]["content"]
+                    elif rev_run:
+                        log.warning("Revision run for %s failed: %s", sub.being_id, rev_run.get("error_detail"))
                     with self._lock:
                         self._active[task_id]["subtask_outputs"][sub.being_id] = output
-                    self._db_merge_subtask_output(task_id, sub.being_id, output)
-                except Exception as exc:
-                    log.warning("Revision failed for %s: %s", sub.being_id, exc)
-                    output = state["subtask_outputs"].get(sub.being_id, "")
-                finally:
-                    self.dashboard.update_being(sub.being_id, {"status": "online"})
+                else:
+                    # Fallback: direct handle_turn (no SubAgentProtocol available)
+                    try:
+                        rev_result = self.bridge.handle_turn(TurnRequest(
+                            tenant_id=tenant_id,
+                            session_id=subtask_session_id(task_id, sub.being_id),
+                            user_id=f"prime->{sub.being_id}",
+                            user_message=revision_msg,
+                            workspace_root=workspace,
+                        ))
+                        output = (rev_result.get("assistant") or {}).get("text", "")
+                        with self._lock:
+                            self._active[task_id]["subtask_outputs"][sub.being_id] = output
+                    except Exception as exc:
+                        log.warning("Revision failed for %s: %s", sub.being_id, exc)
+                        output = state["subtask_outputs"].get(sub.being_id, "")
 
                 self._set_status(task_id, STATUS_REVIEWING)
 
@@ -967,7 +1013,12 @@ class OrchestrationEngine:
             writes = self.protocol.read_shared_memory(
                 ticket_id=task_id, scope="committed",
             )
-            raw_outputs = {w["writer_agent_id"]: w["content"] for w in writes}
+            # writes are DESC by created_at — keep the newest per agent
+            raw_outputs: dict[str, str] = {}
+            for w in writes:
+                agent = w["writer_agent_id"]
+                if agent not in raw_outputs:
+                    raw_outputs[agent] = w["content"]
         else:
             raw_outputs = dict(state["subtask_outputs"])
         truncated_outputs = _truncate_outputs_to_budget(raw_outputs)
@@ -1282,7 +1333,6 @@ class OrchestrationEngine:
                     status            TEXT NOT NULL,
                     plan_json         TEXT,
                     subtask_ids       TEXT NOT NULL DEFAULT '{}',
-                    subtask_outputs   TEXT NOT NULL DEFAULT '{}',
                     subtask_reviews   TEXT NOT NULL DEFAULT '{}',
                     created_at        TEXT NOT NULL,
                     updated_at        TEXT NOT NULL
@@ -1314,9 +1364,9 @@ class OrchestrationEngine:
                 """
                 INSERT OR REPLACE INTO orchestration_state
                     (task_id, goal, orch_session_id, requester_session,
-                     sender, status, plan_json, subtask_ids, subtask_outputs,
+                     sender, status, plan_json, subtask_ids,
                      subtask_reviews, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
@@ -1327,7 +1377,6 @@ class OrchestrationEngine:
                     state["status"],
                     None,
                     json.dumps(state.get("subtask_ids", {})),
-                    json.dumps({}),
                     json.dumps({}),
                     now,
                     now,
@@ -1365,26 +1414,6 @@ class OrchestrationEngine:
             )
         except Exception as exc:
             log.warning("Failed to update subtask_ids for %s: %s", task_id[:8], exc)
-
-    def _db_merge_subtask_output(
-        self, task_id: str, being_id: str, output: str,
-    ) -> None:
-        try:
-            runtime = self.bridge._tenant_runtime(self.prime_tenant_id)
-            now = datetime.now(timezone.utc).isoformat()
-            with runtime.db.transaction() as conn:
-                row = conn.execute(
-                    "SELECT subtask_outputs FROM orchestration_state WHERE task_id = ?",
-                    (task_id,),
-                ).fetchone()
-                current = json.loads(row["subtask_outputs"]) if row else {}
-                current[being_id] = output
-                conn.execute(
-                    "UPDATE orchestration_state SET subtask_outputs = ?, updated_at = ? WHERE task_id = ?",
-                    (json.dumps(current), now, task_id),
-                )
-        except Exception as exc:
-            log.warning("Failed to merge subtask output for %s/%s: %s", task_id[:8], being_id, exc)
 
     def _db_merge_subtask_review(
         self, task_id: str, being_id: str, review: dict[str, Any],
@@ -1451,7 +1480,7 @@ class OrchestrationEngine:
                 "status": row["status"],
                 "plan": plan,
                 "subtask_ids": json.loads(row["subtask_ids"] or "{}"),
-                "subtask_outputs": json.loads(row["subtask_outputs"] or "{}"),
+                "subtask_outputs": {},  # outputs now live in shared_working_memory_writes
                 "subtask_reviews": json.loads(row["subtask_reviews"] or "{}"),
                 "created_at": row["created_at"],
             }
@@ -1524,7 +1553,18 @@ class OrchestrationEngine:
                 [sub.being_id for sub in plan.sub_tasks] if plan else []
             )
             strategy = plan.synthesis_strategy if plan else "unknown"
-            outputs = dict(state.get("subtask_outputs", {}))
+            # Read outputs from shared memory (primary) or state fallback
+            if self.protocol is not None:
+                writes = self.protocol.read_shared_memory(
+                    ticket_id=task_id, scope="committed",
+                )
+                outputs: dict[str, str] = {}
+                for w in writes:
+                    agent = w["writer_agent_id"]
+                    if agent not in outputs:
+                        outputs[agent] = w["content"]
+            else:
+                outputs = dict(state.get("subtask_outputs", {}))
             runtime.db.execute_commit(
                 """
                 INSERT OR REPLACE INTO task_results

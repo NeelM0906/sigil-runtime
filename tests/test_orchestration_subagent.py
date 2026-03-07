@@ -9,10 +9,15 @@ Verifies:
   - Synthesis reads outputs from shared memory
   - Timeout triggers cascade stop
   - Failed subtask output is captured
+  - Being status managed by worker only (not engine)
+  - Cascade stop on orchestration failure
+  - STATUS_AWAITING removed
 """
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 import time
 import threading
 from typing import Any
@@ -27,7 +32,8 @@ from bomba_sr.orchestration.engine import (
     STATUS_COMPLETED,
     STATUS_FAILED,
 )
-from bomba_sr.subagents.protocol import SubAgentTask
+from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
+from bomba_sr.storage.db import RuntimeDB
 
 
 # ---------------------------------------------------------------------------
@@ -336,3 +342,414 @@ class TestSubAgentProtocolIntegration:
         for being_id, output_preview in outputs.items():
             # _on_subtask_completed stores error detail for failed runs
             assert "[Error" in output_preview or "Worker crashed" in output_preview or output_preview
+
+
+class TestCleanupVerification:
+    """Tests verifying the cleanup pass changes."""
+
+    def test_being_status_not_set_by_engine_during_delegation(self):
+        """Engine should NOT call update_being with busy/online during delegation.
+
+        Being status is now managed by the worker's busy/online lifecycle.
+        """
+        engine, orchestrator, protocol, _ = _make_engine()
+        result = engine.start(goal="Status test", requester_session_id="s1", sender="user")
+        _wait(engine, result["task_id"])
+
+        dashboard = engine.dashboard
+        busy_calls = [
+            c for c in dashboard.update_being.call_args_list
+            if len(c[0]) >= 2 and isinstance(c[0][1], dict)
+            and c[0][1].get("status") == "busy" and c[0][0] != "prime"
+        ]
+        assert len(busy_calls) == 0, (
+            "Engine should not set being status to busy — worker handles it"
+        )
+
+        # Engine should NOT set non-prime beings to online
+        online_calls = [
+            c for c in dashboard.update_being.call_args_list
+            if len(c[0]) >= 2 and isinstance(c[0][1], dict)
+            and c[0][1].get("status") == "online" and c[0][0] != "prime"
+        ]
+        assert len(online_calls) == 0, (
+            "Engine should not set being status to online — worker handles it"
+        )
+
+    def test_worker_sets_being_status(self):
+        """SubAgentWorkerFactory with dashboard_svc sets busy before and online after."""
+        from bomba_sr.subagents.worker import SubAgentWorkerFactory
+
+        bridge = MagicMock()
+        bridge.handle_turn.return_value = {
+            "assistant": {"text": "worker output", "usage": {}}
+        }
+        dashboard = MagicMock()
+
+        factory = SubAgentWorkerFactory(bridge, dashboard_svc=dashboard)
+        worker = factory.create_worker()
+
+        protocol = MagicMock()
+        protocol.get_run.return_value = {
+            "run_id": "r1",
+            "parent_agent_id": "prime",
+            "child_agent_id": "forge",
+        }
+
+        task = SubAgentTask(
+            tenant_id="t-forge",
+            task_id="task-1",
+            ticket_id="ticket-1",
+            idempotency_key="key-123456789012",
+            goal="Test goal",
+            done_when=("Done",),
+            input_context_refs=(),
+            output_schema={},
+            workspace_root="/tmp/test",
+        )
+
+        worker("r1", task, protocol)
+
+        # Verify busy was called before handle_turn
+        busy_calls = [
+            c for c in dashboard.update_being.call_args_list
+            if c[0] == ("forge", {"status": "busy"})
+        ]
+        assert len(busy_calls) == 1
+
+        # Verify online was called after handle_turn
+        online_calls = [
+            c for c in dashboard.update_being.call_args_list
+            if c[0] == ("forge", {"status": "online"})
+        ]
+        assert len(online_calls) == 1
+
+    def test_cascade_stop_on_orchestration_failure(self):
+        """When orchestration fails after delegation, cascade_stop_session is called."""
+        engine, orchestrator, protocol, _ = _make_engine()
+
+        # Make _phase_review raise to simulate orchestration failure after delegation
+        engine._phase_review = MagicMock(side_effect=RuntimeError("Synthesis crashed"))
+
+        result = engine.start(goal="Cascade test", requester_session_id="s1", sender="user")
+        status = _wait(engine, result["task_id"])
+
+        assert status["status"] == STATUS_FAILED
+
+        # Verify cascade_stop_session was called
+        assert protocol.cascade_stop_session.call_count >= 1
+        cs_call = protocol.cascade_stop_session.call_args
+        assert cs_call.kwargs.get("tenant_id") or cs_call[0][0]  # has tenant_id
+        assert "orchestration failed" in (cs_call.kwargs.get("reason") or cs_call[0][2] or "").lower() or \
+               "Synthesis crashed" in (cs_call.kwargs.get("reason") or cs_call[0][2] or "")
+
+    def test_awaiting_completion_state_removed(self):
+        """STATUS_AWAITING should not exist in engine status constants."""
+        import bomba_sr.orchestration.engine as engine_mod
+
+        assert not hasattr(engine_mod, "STATUS_AWAITING"), (
+            "STATUS_AWAITING should be removed — 'delegating' covers spawn+await"
+        )
+
+        # Verify no status transition ever sets awaiting_completion
+        engine, orchestrator, protocol, _ = _make_engine()
+        result = engine.start(goal="No awaiting test", requester_session_id="s1", sender="user")
+        _wait(engine, result["task_id"])
+
+        # Check all emitted status events
+        status_events = [
+            c for c in engine.dashboard._emit_event.call_args_list
+            if c[0][0] == "orchestration_update"
+        ]
+        for call_args in status_events:
+            event_data = call_args[0][1]
+            assert event_data.get("status") != "awaiting_completion", (
+                "No status transition should use awaiting_completion"
+            )
+
+    def test_subtask_outputs_column_not_in_schema(self):
+        """orchestration_state table should NOT have subtask_outputs column."""
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "runtime.db"))
+
+        tenant_runtime = MagicMock()
+        tenant_runtime.db = db
+
+        bridge = MagicMock()
+        bridge._tenant_runtime.return_value = tenant_runtime
+
+        dashboard = MagicMock()
+        dashboard.list_beings.return_value = []
+        dashboard.create_task.return_value = {"id": "t1"}
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        OrchestrationEngine(
+            bridge=bridge,
+            dashboard_svc=dashboard,
+            project_svc=MagicMock(),
+        )
+
+        cols = db.execute("PRAGMA table_info(orchestration_state)").fetchall()
+        col_names = [c["name"] for c in cols]
+        assert "subtask_outputs" not in col_names, (
+            "subtask_outputs column should be removed — outputs live in shared_working_memory_writes"
+        )
+
+    def test_full_orchestration_unified_pipeline(self):
+        """Comprehensive test: full plan → delegate → review → synthesize pipeline.
+
+        Uses real SubAgentProtocol (real DB) with mocked bridge.handle_turn.
+        Uses a synchronous orchestrator wrapper to avoid threading flakiness.
+        """
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "pipeline.db"))
+
+        tenant_runtime = MagicMock()
+        tenant_runtime.db = db
+        tenant_runtime.memory = MagicMock()
+
+        bridge = MagicMock()
+        bridge._tenant_runtime.return_value = tenant_runtime
+
+        beings = [
+            {"id": "forge", "name": "SAI Forge", "status": "online", "role": "Research",
+             "skills": "", "tenant_id": "t-forge", "workspace": "workspaces/forge"},
+            {"id": "scholar", "name": "SAI Scholar", "status": "online", "role": "Analysis",
+             "skills": "", "tenant_id": "t-scholar", "workspace": "workspaces/scholar"},
+        ]
+
+        dashboard = MagicMock()
+        dashboard.list_beings.return_value = beings
+        dashboard.get_being.side_effect = lambda bid: next(
+            (b for b in beings if b["id"] == bid), {}
+        )
+        dashboard.create_task.return_value = {"id": "pipeline-task-1"}
+        dashboard.update_task.return_value = {}
+        dashboard._log_task_history = MagicMock()
+        dashboard._emit_event = MagicMock()
+        dashboard.update_being = MagicMock()
+        dashboard.create_message = MagicMock()
+
+        sub_tasks = [
+            {"being_id": "forge", "title": "Research", "instructions": "Research topic",
+             "done_when": "Report ready"},
+            {"being_id": "scholar", "title": "Analyze", "instructions": "Analyze findings",
+             "done_when": "Analysis complete"},
+        ]
+
+        def mock_handle_turn(req):
+            msg = req.user_message
+            if "ORCHESTRATION MODE" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "summary": "Pipeline test plan",
+                    "synthesis_strategy": "merge",
+                    "sub_tasks": sub_tasks,
+                })}}
+            if "[REVIEW]" in msg:
+                return {"assistant": {"text": json.dumps({
+                    "approved": True, "feedback": "", "quality_score": 0.9, "notes": "Good",
+                })}}
+            if "[SYNTHESIZE" in msg:
+                return {"assistant": {"text": "Final synthesized output from pipeline."}}
+            # Worker-dispatched sub-task execution
+            if "sub-task by SAI Prime" in msg:
+                return {"assistant": {"text": "Worker completed subtask execution.", "usage": {}}}
+            return {"assistant": {"text": "default"}}
+
+        bridge.handle_turn.side_effect = mock_handle_turn
+
+        # Create real protocol with a synchronous orchestrator that
+        # runs workers inline (no ThreadPoolExecutor) to avoid
+        # SQLite cross-thread cursor races.
+        protocol = SubAgentProtocol(db)
+
+        from bomba_sr.subagents.orchestrator import SubAgentOrchestrator, SubAgentHandle
+        from concurrent.futures import Future
+
+        class _SyncOrchestrator(SubAgentOrchestrator):
+            """Runs worker synchronously so the test has no threading."""
+
+            def spawn_async(self, task, parent_session_id, parent_turn_id,
+                            parent_agent_id, child_agent_id, worker=None, parent_run_id=None):
+                active_worker = worker or self.default_worker
+                if active_worker is None:
+                    raise RuntimeError("no worker")
+                run = self.protocol.spawn(
+                    task=task, parent_session_id=parent_session_id,
+                    parent_turn_id=parent_turn_id, parent_agent_id=parent_agent_id,
+                    child_agent_id=child_agent_id, parent_run_id=parent_run_id,
+                )
+                run_id = str(run["run_id"])
+                # Run synchronously instead of in executor
+                result = self._run_worker(run_id, task, active_worker)
+                # Create a pre-resolved future
+                f: Future[dict] = Future()
+                f.set_result(result)
+                return SubAgentHandle(run_id=run_id, future=f)
+
+        orchestrator = _SyncOrchestrator(protocol)
+
+        engine = OrchestrationEngine(
+            bridge=bridge,
+            dashboard_svc=dashboard,
+            project_svc=MagicMock(),
+            subagent_orchestrator=orchestrator,
+        )
+
+        result = engine.start(
+            goal="Full pipeline integration test",
+            requester_session_id="s1",
+            sender="user",
+        )
+        status = _wait(engine, result["task_id"], timeout=15)
+
+        # Verify orchestration completed
+        assert status is not None
+        assert status["status"] == STATUS_COMPLETED, f"Expected completed, got {status['status']}"
+
+        task_id = result["task_id"]
+
+        # Verify subagent_runs were created in the DB
+        runs = db.execute("SELECT * FROM subagent_runs WHERE ticket_id = ?", (task_id,)).fetchall()
+        assert len(runs) == 2
+        for r in runs:
+            if r["status"] != "completed":
+                raise AssertionError(
+                    f"Run {r['child_agent_id']} has status={r['status']}, "
+                    f"error={r['error_detail']}"
+                )
+
+        # Verify shared_working_memory_writes has committed entries
+        writes = protocol.read_shared_memory(ticket_id=task_id, scope="committed")
+        assert len(writes) >= 2
+
+        # Verify subagent_events has status transitions
+        for run in runs:
+            events = protocol.stream_events(run["run_id"])
+            event_types = [e["event_type"] for e in events]
+            assert "accepted" in event_types
+            assert "completed" in event_types
+
+        # Verify Prime status is online at the end
+        prime_online = [
+            c for c in dashboard.update_being.call_args_list
+            if c[0] == ("prime", {"status": "online"})
+        ]
+        assert len(prime_online) >= 1
+
+    def test_cascade_stop_on_synthesis_failure(self):
+        """When _phase_synthesize raises, the _orchestrate except block calls cascade_stop_session."""
+        engine, orchestrator, protocol, _ = _make_engine()
+
+        # Patch _phase_synthesize to raise after delegation completes
+        engine._phase_synthesize = MagicMock(side_effect=RuntimeError("Synthesis exploded"))
+
+        result = engine.start(goal="Synth fail test", requester_session_id="s1", sender="user")
+        status = _wait(engine, result["task_id"])
+
+        assert status["status"] == STATUS_FAILED
+
+        # The _orchestrate except block calls protocol.cascade_stop_session
+        assert protocol.cascade_stop_session.call_count >= 1
+        cs_call = protocol.cascade_stop_session.call_args
+        # Verify tenant_id and reason are passed
+        tenant_arg = cs_call.kwargs.get("tenant_id") or cs_call[0][0]
+        assert tenant_arg  # non-empty tenant_id
+        reason_arg = cs_call.kwargs.get("reason") or (cs_call[0][2] if len(cs_call[0]) > 2 else "")
+        assert "Synthesis exploded" in reason_arg or "orchestration failed" in reason_arg.lower()
+
+    def test_cascade_stop_skips_completed_runs(self):
+        """cascade_stop_session is called even when all runs completed before the failure.
+
+        Already-completed runs are unaffected because cascade_stop_session only
+        stops non-terminal runs (its SQL filters out completed/failed/timed_out).
+        """
+        engine, orchestrator, protocol, _ = _make_engine(
+            run_status="completed",
+        )
+
+        # All runs complete successfully, then synthesis blows up
+        engine._phase_synthesize = MagicMock(side_effect=RuntimeError("Synthesis boom"))
+
+        result = engine.start(goal="Completed runs test", requester_session_id="s1", sender="user")
+        status = _wait(engine, result["task_id"])
+
+        assert status["status"] == STATUS_FAILED
+
+        # cascade_stop_session IS still called (it's session-scoped)
+        assert protocol.cascade_stop_session.call_count >= 1
+
+        # The already-completed runs remain completed — verify via get_run
+        # (which is backed by the spawned_runs dict in _make_engine)
+        for i in range(1, orchestrator.spawn_async.call_count + 1):
+            run_data = protocol.get_run(f"run-{i}")
+            assert run_data["status"] == "completed", (
+                f"Run run-{i} should remain completed, got {run_data['status']}"
+            )
+
+    def test_crash_storm_blocks_repeated_failures(self):
+        """After 3 crashes in the window, the 4th spawn raises RuntimeError."""
+        tmpdir = tempfile.mkdtemp()
+        db = RuntimeDB(os.path.join(tmpdir, "crash_storm.db"))
+        protocol = SubAgentProtocol(db)
+
+        from bomba_sr.subagents.orchestrator import (
+            SubAgentOrchestrator,
+            CrashStormConfig,
+        )
+
+        def failing_worker(run_id, task, proto):
+            raise RuntimeError("worker always fails")
+
+        config = CrashStormConfig(window_seconds=60, max_crashes=3, cooldown_seconds=120)
+        orchestrator = SubAgentOrchestrator(
+            protocol,
+            crash_storm_config=config,
+            default_worker=failing_worker,
+        )
+
+        def make_task(idx):
+            return SubAgentTask(
+                tenant_id="t-test",
+                task_id=f"task-crash-{idx}",
+                ticket_id="ticket-crash",
+                idempotency_key=f"crash-key-{idx:04d}-padding",
+                goal=f"Crash test {idx}",
+                done_when=("never",),
+                input_context_refs=(),
+                output_schema={},
+                workspace_root="/tmp/test",
+            )
+
+        # Spawn 3 times — each will fail (worker raises). We must wait for
+        # each future to finish so the crash is recorded before the next spawn.
+        for i in range(3):
+            handle = orchestrator.spawn_async(
+                task=make_task(i),
+                parent_session_id="sess-crash",
+                parent_turn_id=f"turn-{i}",
+                parent_agent_id="prime",
+                child_agent_id=f"child-{i}",
+            )
+            # Wait for the future to complete (it will raise, but we don't care)
+            try:
+                handle.future.result(timeout=5)
+            except RuntimeError:
+                pass  # expected — worker always fails
+
+        # The crash detector should now be in cooldown after 3 crashes
+        assert orchestrator.crash_detector.is_in_cooldown()
+
+        # 4th spawn should be blocked
+        with pytest.raises(RuntimeError, match="crash storm cooldown"):
+            orchestrator.spawn_async(
+                task=make_task(3),
+                parent_session_id="sess-crash",
+                parent_turn_id="turn-3",
+                parent_agent_id="prime",
+                child_agent_id="child-3",
+            )
