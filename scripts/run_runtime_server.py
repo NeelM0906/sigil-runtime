@@ -7,7 +7,6 @@ import logging
 import mimetypes
 import os
 import sys
-import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,6 +24,7 @@ logging.basicConfig(
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 from bomba_sr.subagents.protocol import SubAgentTask
+from bomba_sr.subagents.worker import SubAgentWorkerFactory
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -79,27 +79,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--port", type=int, default=8787)
     return parser.parse_args()
 
-
-def _default_subagent_worker(run_id: str, task: SubAgentTask, protocol) -> dict:
-    protocol.progress(run_id, 25, summary="Sub-agent booted")
-    time.sleep(0.02)
-    protocol.progress(run_id, 70, summary="Sub-agent processing")
-    write_id = protocol.write_shared_memory(
-        run_id=run_id,
-        writer_agent_id=str(uuid.uuid4()),
-        ticket_id=task.ticket_id,
-        scope="proposal",
-        confidence=0.82,
-        content=f"Sub-agent summary for goal: {task.goal}",
-        source_refs=[task.task_id],
-    )
-    protocol.promote_shared_write(write_id, merged_by_agent_id=str(uuid.uuid4()))
-    return {
-        "summary": "Sub-agent completed default worker",
-        "artifacts": {"note": "default-subagent-worker"},
-        "runtime_ms": 20,
-        "token_usage": {"input": 64, "output": 22, "total": 86},
-    }
 
 
 def _resolve_sisters_tenant(
@@ -890,7 +869,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 parent_turn_id=str(body["parent_turn_id"]),
                 parent_agent_id=str(body["parent_agent_id"]),
                 child_agent_id=str(body["child_agent_id"]),
-                worker=_default_subagent_worker,
+                worker=worker_factory.create_worker(),
                 workspace_root=(str(body["workspace_root"]) if body.get("workspace_root") else None),
                 parent_run_id=(str(body["parent_run_id"]) if body.get("parent_run_id") else None),
             )
@@ -1722,6 +1701,7 @@ def main() -> int:
     args = parse_args()
     _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     bridge = RuntimeBridge()
+    worker_factory = SubAgentWorkerFactory(bridge=bridge)
 
     # Bootstrap Mission Control dashboard service
     dashboard_svc = None

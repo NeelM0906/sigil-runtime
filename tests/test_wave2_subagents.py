@@ -256,6 +256,13 @@ class SubAgentProtocolTests(unittest.TestCase):
                 }
 
         class _ProtocolStub:
+            def get_run(self, run_id: str) -> dict | None:  # noqa: ANN001
+                return {
+                    "run_id": run_id,
+                    "parent_agent_id": "prime",
+                    "child_agent_id": "forge",
+                }
+
             def progress(self, run_id: str, pct: int, summary: str | None = None) -> None:  # noqa: ANN001
                 _ = (run_id, pct, summary)
 
@@ -269,6 +276,8 @@ class SubAgentProtocolTests(unittest.TestCase):
         worker("run-1", task, _ProtocolStub())
         assert bridge.request is not None
         self.assertEqual(bridge.request.max_loop_iterations, 7)
+        self.assertEqual(bridge.request.session_id, "subagent:run-1:forge")
+        self.assertEqual(bridge.request.user_id, "prime->forge")
 
 
 if __name__ == "__main__":
