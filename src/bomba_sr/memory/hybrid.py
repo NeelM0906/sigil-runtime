@@ -532,8 +532,14 @@ class HybridMemoryStore:
             return []
 
         scores: dict[str, float] = {}
+        embedding_scores = self._embedding_scores_by_being(being_id=being_id, query=query)
+        for note_id, score in embedding_scores.items():
+            scores[note_id] = score
+
         for row in rows:
             note_id = str(row["note_id"])
+            if note_id in scores:
+                continue
             text = self._read_note_body(str(row["relative_path"]))
             scores[note_id] = self._lexical_score(query, text)
 
@@ -563,6 +569,34 @@ class HybridMemoryStore:
         rows = self.db.execute(
             "SELECT note_id, vector_json FROM memory_embeddings WHERE user_id = ?",
             (user_id,),
+        ).fetchall()
+        if not rows:
+            return {}
+
+        query_vectors = self.embedding_provider.embed([query])
+        if not query_vectors:
+            return {}
+        query_vec = query_vectors[0]
+
+        scores: dict[str, float] = {}
+        for row in rows:
+            note_id = str(row["note_id"])
+            vec = json.loads(str(row["vector_json"]))
+            scores[note_id] = self._cosine(query_vec, [float(x) for x in vec])
+        return scores
+
+    def _embedding_scores_by_being(self, being_id: str, query: str) -> dict[str, float]:
+        """Compute embedding similarity scores for notes owned by a being."""
+        if self.embedding_provider is None:
+            return {}
+        rows = self.db.execute(
+            """
+            SELECT e.note_id, e.vector_json
+            FROM memory_embeddings e
+            JOIN markdown_notes n ON n.note_id = e.note_id
+            WHERE n.being_id = ?
+            """,
+            (being_id,),
         ).fetchall()
         if not rows:
             return {}
