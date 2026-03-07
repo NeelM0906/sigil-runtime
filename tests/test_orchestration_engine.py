@@ -29,6 +29,57 @@ from bomba_sr.orchestration.engine import (
 )
 
 
+def _make_mock_subagent_orch(being_outputs=None):
+    """Create a mock SubAgentOrchestrator that simulates spawn -> complete -> shared memory."""
+    if being_outputs is None:
+        being_outputs = {}
+
+    protocol = MagicMock()
+    orchestrator = MagicMock()
+    orchestrator.protocol = protocol
+
+    spawned_runs = {}
+    run_counter = [0]
+
+    def mock_spawn_async(task, parent_session_id, parent_turn_id, parent_agent_id, child_agent_id, **kwargs):
+        run_counter[0] += 1
+        run_id = f"run-{run_counter[0]}"
+        spawned_runs[run_id] = {
+            "run_id": run_id,
+            "child_agent_id": child_agent_id,
+            "ticket_id": task.ticket_id,
+            "status": "completed",
+            "error_detail": None,
+            "artifacts": {"output": being_outputs.get(child_agent_id, f"Sub-task completed by prime->{child_agent_id}.")},
+        }
+        handle = MagicMock()
+        handle.run_id = run_id
+        return handle
+
+    orchestrator.spawn_async.side_effect = mock_spawn_async
+
+    def mock_get_run(run_id):
+        return spawned_runs.get(run_id)
+    protocol.get_run.side_effect = mock_get_run
+
+    def mock_read_shared_memory(ticket_id, scope=None):
+        writes = []
+        for _run_id, run in spawned_runs.items():
+            agent_id = run["child_agent_id"]
+            output = being_outputs.get(agent_id, f"Sub-task completed by prime->{agent_id}.")
+            writes.append({
+                "writer_agent_id": agent_id,
+                "content": output,
+                "ticket_id": ticket_id,
+                "scope": scope or "committed",
+            })
+        return writes
+    protocol.read_shared_memory.side_effect = mock_read_shared_memory
+    protocol.cascade_stop.return_value = []
+
+    return orchestrator
+
+
 # ---------------------------------------------------------------------------
 # Session ID pattern tests
 # ---------------------------------------------------------------------------
@@ -252,15 +303,21 @@ class TestOrchestrationLifecycle:
 
         bridge.handle_turn.side_effect = mock_handle_turn
 
+        mock_orch = _make_mock_subagent_orch({
+            "forge": "Sub-task completed by prime->forge.",
+            "memory": "Sub-task completed by prime->memory.",
+        })
+
         engine = OrchestrationEngine(
             bridge=bridge,
             dashboard_svc=dashboard,
             project_svc=project_svc,
+            subagent_orchestrator=mock_orch,
         )
-        return engine, bridge, dashboard
+        return engine, bridge, dashboard, mock_orch
 
     def test_start_returns_immediately(self):
-        engine, bridge, dashboard = self._make_engine()
+        engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(
             goal="Research top 5 competitors",
             requester_session_id="mc-chat-prime",
@@ -270,7 +327,7 @@ class TestOrchestrationLifecycle:
         assert result["status"] == STATUS_PLANNING
 
     def test_full_lifecycle_completes(self):
-        engine, bridge, dashboard = self._make_engine()
+        engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(
             goal="Research top 5 competitors",
             requester_session_id="mc-chat-prime",
@@ -290,10 +347,11 @@ class TestOrchestrationLifecycle:
         assert status is not None
         assert status["status"] == STATUS_COMPLETED
 
-        # Verify bridge was called for: 1 plan + 2 delegations + 2 reviews + 1 synthesis = 6
-        assert bridge.handle_turn.call_count >= 6
+        # Verify bridge was called for: 1 plan + 2 reviews + 1 synthesis = 4
+        # (delegations now go through SubAgentProtocol, not bridge.handle_turn)
+        assert bridge.handle_turn.call_count >= 4
 
-        # Verify sub-task outputs were collected
+        # Verify sub-task outputs were collected (populated by _on_subtask_completed)
         assert "forge" in status["subtask_outputs"]
         assert "memory" in status["subtask_outputs"]
 
@@ -309,9 +367,12 @@ class TestOrchestrationLifecycle:
         ]
         assert len(synthesis_call) >= 1
 
+        # Verify SubAgentProtocol was used for delegation
+        assert mock_orch.spawn_async.call_count == 2  # forge + memory
+
     def test_session_isolation_in_calls(self):
-        """Verify each call uses the correct session ID pattern."""
-        engine, bridge, dashboard = self._make_engine()
+        """Verify orchestration uses correct session and delegations go via SubAgentProtocol."""
+        engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(
             goal="Test task",
             requester_session_id="mc-chat-prime",
@@ -325,7 +386,7 @@ class TestOrchestrationLifecycle:
                 break
             time.sleep(0.1)
 
-        # Check all handle_turn calls for session patterns
+        # Check handle_turn calls — only orchestration session (no subtask sessions)
         sessions_used = set()
         for call in bridge.handle_turn.call_args_list:
             req = call[0][0]
@@ -335,9 +396,14 @@ class TestOrchestrationLifecycle:
         orch_sessions = [s for s in sessions_used if s.startswith("orchestration:")]
         assert len(orch_sessions) == 1
 
-        # Must have subtask sessions
-        subtask_sessions = [s for s in sessions_used if s.startswith("subtask:")]
-        assert len(subtask_sessions) == 2  # forge + memory
+        # Subtask delegation now goes through SubAgentProtocol, not bridge.handle_turn
+        # Verify spawn_async was called with correct child_agent_ids
+        child_ids = [
+            call.kwargs.get("child_agent_id") or call[1].get("child_agent_id", "")
+            for call in mock_orch.spawn_async.call_args_list
+        ]
+        assert "forge" in child_ids
+        assert "memory" in child_ids
 
         # Must NOT have any chat sessions
         chat_sessions = [s for s in sessions_used if "mc-chat" in s or "sister-chat" in s]
@@ -345,7 +411,7 @@ class TestOrchestrationLifecycle:
 
     def test_single_parent_task_on_board(self):
         """Verify only one task card (parent) is created — no child tasks."""
-        engine, bridge, dashboard = self._make_engine()
+        engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(goal="Test task", requester_session_id="mc-chat-prime")
         task_id = result["task_id"]
 
@@ -361,7 +427,7 @@ class TestOrchestrationLifecycle:
 
     def test_being_status_updates(self):
         """Verify beings go busy then back to online."""
-        engine, bridge, dashboard = self._make_engine()
+        engine, bridge, dashboard, mock_orch = self._make_engine()
         result = engine.start(goal="Test task", requester_session_id="mc-chat-prime")
 
         import time
@@ -447,8 +513,12 @@ class TestTaskResultPersistence:
 
         bridge.handle_turn.side_effect = mock_handle_turn
 
+        mock_orch = _make_mock_subagent_orch({
+            "forge": "Sub-task output from forge.",
+        })
         engine = OrchestrationEngine(
             bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+            subagent_orchestrator=mock_orch,
         )
         return engine, db
 
@@ -731,8 +801,12 @@ class TestBeingRepresentations:
 
         bridge.handle_turn.side_effect = mock_handle_turn
 
+        mock_orch = _make_mock_subagent_orch({
+            "forge": "Sub-task output from forge.",
+        })
         engine = OrchestrationEngine(
             bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+            subagent_orchestrator=mock_orch,
         )
         engine._prime_workspace = lambda: str(ws_root / "prime")
 
@@ -998,8 +1072,12 @@ class TestSynthesisFallback:
 
         bridge.handle_turn.side_effect = mock_handle_turn
 
+        mock_orch = _make_mock_subagent_orch({
+            "forge": "Sub-task output from forge about testing.",
+        })
         engine = OrchestrationEngine(
             bridge=bridge, dashboard_svc=dashboard, project_svc=project_svc,
+            subagent_orchestrator=mock_orch,
         )
         return engine
 

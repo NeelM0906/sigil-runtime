@@ -17,12 +17,15 @@ import json
 import logging
 import os
 import threading
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 from bomba_sr.acti.loader import get_planning_context as get_acti_planning_context
+from bomba_sr.subagents.orchestrator import SubAgentOrchestrator
+from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 
 log = logging.getLogger(__name__)
 
@@ -255,6 +258,7 @@ class OrchestrationEngine:
         dashboard_svc: Any,
         project_svc: Any,
         prime_tenant_id: str = "tenant-prime",
+        subagent_orchestrator: SubAgentOrchestrator | None = None,
     ):
         self.bridge = bridge
         self.dashboard = dashboard_svc
@@ -281,6 +285,28 @@ class OrchestrationEngine:
         self._ensure_task_results_schema()
         self._ensure_orchestration_state_schema()
         self.cleanup_orphaned_orchestrations()
+
+        # SubAgent protocol integration — passed in or auto-resolved from bridge
+        if subagent_orchestrator is not None:
+            self.subagent_orch: SubAgentOrchestrator | None = subagent_orchestrator
+            self.protocol: SubAgentProtocol | None = subagent_orchestrator.protocol
+        else:
+            try:
+                runtime = self.bridge._tenant_runtime(
+                    self.prime_tenant_id, self._prime_workspace(),
+                )
+                orch = getattr(runtime, "orchestrator", None)
+                proto = getattr(runtime, "protocol", None)
+                if isinstance(orch, SubAgentOrchestrator) and isinstance(proto, SubAgentProtocol):
+                    self.subagent_orch = orch
+                    self.protocol = proto
+                else:
+                    self.subagent_orch = None
+                    self.protocol = None
+            except Exception:
+                log.debug("SubAgentOrchestrator not available — orchestration will use legacy path")
+                self.subagent_orch = None
+                self.protocol = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -570,25 +596,19 @@ class OrchestrationEngine:
         log.info("Orchestration plan for %s: %d sub-tasks", task_id[:8], len(plan.sub_tasks))
 
     def _phase_delegate(self, task_id: str) -> None:
-        """Send sub-tasks to beings and wait for all to complete."""
+        """Spawn sub-tasks via SubAgentProtocol and wait for all to complete."""
         self._set_status(task_id, STATUS_DELEGATING)
         state = self._get_state(task_id)
         plan = state["plan"]
         if plan is None:
             raise RuntimeError("No plan available for delegation")
 
-        from bomba_sr.runtime.bridge import TurnRequest
-
         for sub in plan.sub_tasks:
             # Track sub-tasks internally — no separate board entries.
-            # The parent task card is the only visible item.
             self.dashboard._log_task_history(
                 task_id, "subtask_created",
                 {"being_id": sub.being_id, "title": sub.title},
             )
-
-            with self._lock:
-                self._active[task_id]["subtask_ids"][sub.being_id] = task_id
 
             # Update being status
             self.dashboard.update_being(sub.being_id, {"status": "busy"})
@@ -599,51 +619,61 @@ class OrchestrationEngine:
                 "task_id": task_id,
             })
 
+        self._set_status(task_id, STATUS_AWAITING)
+
+        if plan.synthesis_strategy == "sequential":
+            # Sequential: spawn one at a time, wait for completion, collect output
+            for sub in plan.sub_tasks:
+                prior_outputs = self._collect_prior_outputs_from_shared_memory(
+                    task_id, plan, sub.being_id,
+                )
+                run_id = self._execute_subtask(task_id, sub, prior_outputs=prior_outputs)
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+        else:
+            # Parallel: spawn all, then await all
+            run_ids: list[tuple[SubTaskPlan, str]] = []
+            for sub in plan.sub_tasks:
+                run_id = self._execute_subtask(task_id, sub)
+                run_ids.append((sub, run_id))
+
+            for sub, run_id in run_ids:
+                run = self._await_run_completion(run_id, timeout=300)
+                self._on_subtask_completed(task_id, sub, run)
+
         # Persist subtask_ids to DB for crash recovery
         with self._lock:
             ids_snapshot = dict(self._active[task_id]["subtask_ids"])
         self._db_update_subtask_ids(task_id, ids_snapshot)
 
-        # Execute sub-tasks.  For "sequential" strategy, run one at a time
-        # so later beings receive the output of earlier ones as context.
-        # For other strategies, run in parallel.
-        self._set_status(task_id, STATUS_AWAITING)
+    def _await_run_completion(
+        self, run_id: str, timeout: int = 300,
+    ) -> dict[str, Any] | None:
+        """Poll subagent_runs until status is terminal or timeout."""
+        if self.protocol is None:
+            return None
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            run = self.protocol.get_run(run_id)
+            if run and run["status"] in ("completed", "failed", "timed_out"):
+                return run
+            time.sleep(2)
 
-        if plan.synthesis_strategy == "sequential":
-            for sub in plan.sub_tasks:
-                # Collect outputs from previously completed beings
-                prior_outputs = self._collect_prior_outputs(task_id, plan, sub.being_id)
-                self._execute_subtask(task_id, sub, prior_outputs=prior_outputs)
-        else:
-            threads: list[threading.Thread] = []
-            for sub in plan.sub_tasks:
-                t = threading.Thread(
-                    target=self._execute_subtask,
-                    args=(task_id, sub),
-                    daemon=True,
-                    name=f"subtask-{sub.being_id[:12]}",
-                )
-                threads.append(t)
-                t.start()
-            for t in threads:
-                t.join(timeout=300)  # 5 min per sub-task max
+        # Timeout — cascade stop the run
+        log.warning("Subagent run %s timed out after %ds", run_id, timeout)
+        try:
+            self.protocol.cascade_stop(run_id, reason="orchestration timeout")
+        except Exception as exc:
+            log.warning("Failed to cascade stop %s: %s", run_id, exc)
+        return self.protocol.get_run(run_id)
 
-    def _execute_subtask(
+    def _build_delegation_message(
         self,
-        parent_task_id: str,
         sub: SubTaskPlan,
         prior_outputs: dict[str, str] | None = None,
-    ) -> None:
-        """Execute a single sub-task by calling handle_turn for the being."""
-        session = subtask_session_id(parent_task_id, sub.being_id)
+    ) -> str:
+        """Build the delegation message for a subtask (ACT-I identity, context, instructions)."""
         being = self.dashboard.get_being(sub.being_id) or {}
-        tenant_id = being.get("tenant_id") or f"tenant-{sub.being_id}"
-
-        ws = being.get("workspace")
-        if ws and ws != ".":
-            workspace = str(_PROJECT_ROOT / ws)
-        else:
-            workspace = str(_PROJECT_ROOT)
 
         # Build ACT-I identity prefix for specialized beings
         acti_identity_prefix = ""
@@ -673,7 +703,7 @@ class OrchestrationEngine:
                 + "\n\n"
             )
 
-        delegation_message = (
+        return (
             acti_identity_prefix
             + f"You have been assigned a sub-task by SAI Prime.\n\n"
             f"TASK TITLE: {sub.title}\n\n"
@@ -686,53 +716,106 @@ class OrchestrationEngine:
             f"significant findings using the update_knowledge tool."
         )
 
+    def _execute_subtask(
+        self,
+        parent_task_id: str,
+        sub: SubTaskPlan,
+        prior_outputs: dict[str, str] | None = None,
+    ) -> str:
+        """Spawn a subtask via SubAgentProtocol. Returns run_id."""
+        if self.subagent_orch is None:
+            raise RuntimeError("SubAgentOrchestrator not available — cannot execute subtask")
+
+        state = self._get_state(parent_task_id)
+        being = self.dashboard.get_being(sub.being_id) or {}
+        tenant_id = being.get("tenant_id") or f"tenant-{sub.being_id}"
+
+        ws = being.get("workspace")
+        if ws and ws != ".":
+            workspace = str(_PROJECT_ROOT / ws)
+        else:
+            workspace = str(_PROJECT_ROOT)
+
+        delegation_message = self._build_delegation_message(sub, prior_outputs)
+
         # ── Log Point A: Prime sends delegation ──
-        log.debug(f"[ORCH] ── Log Point A: Delegating to {sub.being_id} ──")
-        log.debug(f"[ORCH] Tenant: {tenant_id}, Session: {session}")
-        log.debug(f"[ORCH] Workspace: {workspace}")
-        log.debug(f"[ORCH] Message (first 300 chars): {delegation_message[:300]}")
+        log.debug("[ORCH] ── Log Point A: Delegating to %s via SubAgentProtocol ──", sub.being_id)
+        log.debug("[ORCH] Tenant: %s, Workspace: %s", tenant_id, workspace)
+        log.debug("[ORCH] Message (first 300 chars): %s", delegation_message[:300])
 
-        try:
-            from bomba_sr.runtime.bridge import TurnRequest
-            result = self.bridge.handle_turn(TurnRequest(
-                tenant_id=tenant_id,
-                session_id=session,
-                user_id=f"prime->{sub.being_id}",
-                user_message=delegation_message,
-                workspace_root=workspace,
-                # Use the short task title as the search query so the bridge's
-                # context search uses a valid rg pattern instead of the full
-                # multi-line delegation message.
-                search_query=sub.title,
-            ))
-            output = (result.get("assistant") or {}).get("text", "")
+        task = SubAgentTask(
+            tenant_id=tenant_id,
+            task_id=sub.being_id,
+            ticket_id=parent_task_id,
+            idempotency_key=f"{parent_task_id}:{sub.being_id}",
+            goal=delegation_message,
+            done_when=tuple(
+                [sub.done_when] if sub.done_when else ["Complete the task as instructed"]
+            ),
+            input_context_refs=(),
+            output_schema={},
+            priority="high",
+            run_timeout_seconds=300,
+            cleanup="archive",
+            workspace_root=workspace,
+        )
 
-            # ── Log Point E: Result returns to orchestration engine ──
-            log.debug(f"[ORCH] ── Log Point E: Result from {sub.being_id} ──")
-            log.debug(f"[ORCH] Received from {sub.being_id}: length={len(output)}")
-            log.debug(f"[ORCH] Result preview: {output[:300]}")
-            if not output:
-                log.debug(f"[ORCH] EMPTY result from {sub.being_id} — full result dict keys: {list(result.keys())}")
-                assistant_block = result.get("assistant")
-                log.debug(f"[ORCH] assistant block: {assistant_block}")
-        except Exception as exc:
-            output = f"[Error: {exc}]"
-            log.debug(f"[ORCH] ── Log Point E: EXCEPTION from {sub.being_id} ──")
-            log.debug(f"[ORCH] Error: {exc}")
-            log.exception("Subtask execution failed for being %s", sub.being_id)
-        finally:
-            # Restore being status
-            self.dashboard.update_being(sub.being_id, {"status": "online"})
-            self.dashboard._emit_event("being_status", {
-                "being_id": sub.being_id, "status": "online",
-            })
+        orch_session = state["orchestration_session"]
+        handle = self.subagent_orch.spawn_async(
+            task=task,
+            parent_session_id=orch_session,
+            parent_turn_id=f"orch-{parent_task_id}-{sub.being_id}",
+            parent_agent_id="prime",
+            child_agent_id=sub.being_id,
+        )
 
+        run_id = handle.run_id
+        with self._lock:
+            self._active[parent_task_id]["subtask_ids"][sub.being_id] = run_id
+
+        return run_id
+
+    def _on_subtask_completed(
+        self,
+        parent_task_id: str,
+        sub: SubTaskPlan,
+        run: dict[str, Any] | None,
+    ) -> None:
+        """Handle post-completion for a subtask: restore status, populate state, write memory, log."""
+        being = self.dashboard.get_being(sub.being_id) or {}
+        tenant_id = being.get("tenant_id") or f"tenant-{sub.being_id}"
+
+        # Read output from shared working memory
+        output = ""
+        if run and run.get("status") == "completed" and self.protocol is not None:
+            writes = self.protocol.read_shared_memory(
+                ticket_id=parent_task_id, scope="committed",
+            )
+            being_writes = [w for w in writes if w["writer_agent_id"] == sub.being_id]
+            if being_writes:
+                output = being_writes[0]["content"]
+            elif run.get("artifacts") and isinstance(run["artifacts"], dict):
+                output = run["artifacts"].get("output", "")
+        elif run:
+            output = f"[Error: {run.get('error_detail', 'unknown error')}]"
+
+        # ── Log Point E: Result returns to orchestration engine ──
+        log.debug("[ORCH] ── Log Point E: Result from %s ──", sub.being_id)
+        log.debug("[ORCH] Received from %s: status=%s, output_len=%d",
+                  sub.being_id, run.get("status") if run else "none", len(output))
+
+        # Restore being status
+        self.dashboard.update_being(sub.being_id, {"status": "online"})
+        self.dashboard._emit_event("being_status", {
+            "being_id": sub.being_id, "status": "online",
+        })
+
+        # Populate state["subtask_outputs"] for _phase_review backward compat
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
         self._db_merge_subtask_output(parent_task_id, sub.being_id, output)
 
-        # Write a semantic memory into the being's tenant so it accumulates
-        # domain knowledge across orchestration tasks.
+        # Write semantic memory into the being's tenant
         if output and not output.startswith("[Error"):
             try:
                 being_runtime = self.bridge._tenant_runtime(tenant_id)
@@ -879,7 +962,14 @@ class OrchestrationEngine:
         self._persist_task_result(task_id, state, "")
 
         # ── Step 2: Truncate subtask outputs to fit within token budget ──
-        raw_outputs = dict(state["subtask_outputs"])
+        # Read outputs from shared working memory (primary) or state fallback
+        if self.protocol is not None:
+            writes = self.protocol.read_shared_memory(
+                ticket_id=task_id, scope="committed",
+            )
+            raw_outputs = {w["writer_agent_id"]: w["content"] for w in writes}
+        else:
+            raw_outputs = dict(state["subtask_outputs"])
         truncated_outputs = _truncate_outputs_to_budget(raw_outputs)
 
         # Build sub-task outputs section from truncated outputs
@@ -1594,16 +1684,21 @@ class OrchestrationEngine:
                     sub.being_id, exc,
                 )
 
-    def _collect_prior_outputs(
+    def _collect_prior_outputs_from_shared_memory(
         self, task_id: str, plan: OrchestrationPlan, current_being_id: str,
     ) -> dict[str, str]:
-        """Gather outputs from beings that have already completed, for context injection."""
-        state = self._get_state(task_id)
+        """Read committed outputs from shared_working_memory_writes for prior beings."""
+        if self.protocol is None:
+            return {}
         prior: dict[str, str] = {}
+        writes = self.protocol.read_shared_memory(
+            ticket_id=task_id, scope="committed",
+        )
+        writes_by_agent = {w["writer_agent_id"]: w["content"] for w in writes}
         for sub in plan.sub_tasks:
             if sub.being_id == current_being_id:
                 break  # only include beings that come before this one in the plan
-            output = state["subtask_outputs"].get(sub.being_id, "")
+            output = writes_by_agent.get(sub.being_id, "")
             if output and not output.startswith("[Error"):
                 prior[sub.being_id] = output
         return prior
