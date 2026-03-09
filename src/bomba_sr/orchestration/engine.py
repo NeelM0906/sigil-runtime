@@ -455,6 +455,7 @@ class OrchestrationEngine:
 
     def _orchestrate(self, task_id: str) -> None:
         """Full orchestration lifecycle — runs in background thread."""
+        current_phase = STATUS_PLANNING
         try:
             self._phase_plan(task_id)
 
@@ -463,6 +464,7 @@ class OrchestrationEngine:
             max_rounds = plan.max_rounds if plan else 1
 
             for round_number in range(1, max_rounds + 1):
+                current_phase = STATUS_DELEGATING
                 if round_number == 1:
                     self._phase_delegate(task_id)
                 else:
@@ -473,6 +475,7 @@ class OrchestrationEngine:
                 self._update_team_context_outcomes(task_id, state)
                 self._update_being_representations(task_id, state, "")
 
+                current_phase = STATUS_REVIEWING
                 self._phase_review(task_id)
 
                 # Early stop if all reviews approved and more rounds remain
@@ -489,67 +492,101 @@ class OrchestrationEngine:
                             round_number, round_number + 1,
                         )
 
+            current_phase = STATUS_SYNTHESIZING
             self._phase_synthesize(task_id)
         except Exception as exc:
-            log.exception("Orchestration failed for task %s", task_id)
-            self._set_status(task_id, STATUS_FAILED)
-
-            # Cascade-stop any still-running subagent runs for this orchestration
-            if self.protocol is not None:
-                try:
-                    orch_session = orchestration_session_id(task_id)
-                    stopped = self.protocol.cascade_stop_session(
-                        tenant_id=self.prime_tenant_id,
-                        session_id=orch_session,
-                        reason=f"orchestration failed: {exc}",
-                    )
-                    if stopped:
-                        log.info("Cascade-stopped %d subagent runs for task %s", len(stopped), task_id[:8])
-                except Exception as cs_exc:
-                    log.warning("cascade_stop_session failed for task %s: %s", task_id[:8], cs_exc)
-
-            # Persist partial results even on failure
-            try:
-                fail_state = self._get_state(task_id)
-                self._persist_task_result(task_id, fail_state, f"[FAILED: {exc}]")
-            except Exception:
-                pass
-
-            # Mark task as failed on the board
-            try:
-                self.dashboard.update_task(self.project_svc, task_id, status="failed")
-            except Exception:
-                pass
-
-            self.dashboard._log_task_history(
-                task_id, "orchestration_failed", {"error": str(exc)},
-            )
-            self.dashboard._emit_event("orchestration_update", {
-                "task_id": task_id, "status": STATUS_FAILED, "error": str(exc),
-            })
-
-            # Notify the user so they don't wait forever
-            try:
-                fail_state = self._get_state(task_id)
-                self.dashboard.create_message(
-                    sender="prime",
-                    content=(
-                        f"Orchestration failed for task: {fail_state.get('goal', task_id)[:100]}\n\n"
-                        f"Error: {str(exc)[:300]}\n\n"
-                        f"Sub-task outputs were saved. You can retry or review partial results."
-                    ),
-                    targets=[fail_state.get("sender", "user")],
-                    msg_type="direct",
-                    task_ref=task_id,
-                )
-            except Exception:
-                pass
+            log.exception("Orchestration failed for task %s at phase '%s'", task_id, current_phase)
+            self._fail_orchestration(task_id, exc, current_phase)
         finally:
             # Always restore Prime status — success or failure
             try:
                 self.dashboard.update_being("prime", {"status": "online"})
             except Exception:
                 log.warning("Failed to restore Prime status to online")
+
+    def _fail_orchestration(
+        self,
+        task_id: str,
+        exc: Exception,
+        failed_phase: str,
+    ) -> None:
+        """Mark an orchestration as failed, persist partial results, and notify user.
+
+        Guarantees:
+        - orchestration_state status is set to 'failed'
+        - project board task status is set to 'failed' (with retry on failure)
+        - partial sub-task outputs are persisted to task_results
+        - user receives a failure message with the phase that failed
+        """
+        self._set_status(task_id, STATUS_FAILED)
+
+        # Cascade-stop any still-running subagent runs for this orchestration
+        if self.protocol is not None:
+            try:
+                orch_session = orchestration_session_id(task_id)
+                stopped = self.protocol.cascade_stop_session(
+                    tenant_id=self.prime_tenant_id,
+                    session_id=orch_session,
+                    reason=f"orchestration failed at {failed_phase}: {exc}",
+                )
+                if stopped:
+                    log.info("Cascade-stopped %d subagent runs for task %s", len(stopped), task_id[:8])
+            except Exception as cs_exc:
+                log.warning("cascade_stop_session failed for task %s: %s", task_id[:8], cs_exc)
+
+        # Persist partial results even on failure
+        try:
+            fail_state = self._get_state(task_id)
+            self._persist_task_result(task_id, fail_state, f"[FAILED at {failed_phase}: {exc}]")
+        except Exception as pr_exc:
+            log.warning("Failed to persist partial results for task %s: %s", task_id[:8], pr_exc)
+
+        # Mark task as failed on the board — CRITICAL: must not silently fail
+        board_updated = False
+        for attempt in range(2):
+            try:
+                self.dashboard.update_task(self.project_svc, task_id, status="failed")
+                board_updated = True
+                break
+            except Exception as bu_exc:
+                log.warning(
+                    "Board update to 'failed' attempt %d failed for task %s: %s",
+                    attempt + 1, task_id[:8], bu_exc,
+                )
+        if not board_updated:
+            log.error(
+                "CRITICAL: Task %s stuck as 'in_progress' — board update failed after retries",
+                task_id[:8],
+            )
+
+        self.dashboard._log_task_history(
+            task_id, "orchestration_failed",
+            {"error": str(exc), "phase": failed_phase},
+        )
+        self.dashboard._emit_event("orchestration_update", {
+            "task_id": task_id,
+            "status": STATUS_FAILED,
+            "phase": failed_phase,
+            "error": str(exc),
+        })
+
+        # Notify the user so they don't wait forever
+        try:
+            fail_state = self._get_state(task_id)
+            self.dashboard.create_message(
+                sender="prime",
+                content=(
+                    f"Orchestration failed during **{failed_phase}** phase "
+                    f"for task: {fail_state.get('goal', task_id)[:100]}\n\n"
+                    f"Error: {str(exc)[:300]}\n\n"
+                    f"Sub-task outputs were saved. You can move the task back to backlog to retry."
+                ),
+                targets=[fail_state.get("sender", "user")],
+                msg_type="direct",
+                task_ref=task_id,
+            )
+        except Exception:
+            pass
 
     def _phase_plan(self, task_id: str) -> None:
         """Use LLM to decompose the task into sub-tasks."""
@@ -1747,8 +1784,10 @@ class OrchestrationEngine:
                     )
                     try:
                         self.dashboard.update_task(self.project_svc, task_id, status="failed")
-                    except Exception:
-                        pass
+                    except Exception as bu_exc:
+                        log.warning(
+                            "Failed to update board for stale task %s: %s", task_id[:8], bu_exc,
+                        )
                     self.dashboard._log_task_history(
                         task_id, "orchestration_cleanup",
                         {"reason": "Too stale to resume (>24h) — marked failed"},
@@ -1871,24 +1910,8 @@ class OrchestrationEngine:
                 return
 
         except Exception as exc:
-            log.exception("Resume failed for %s", task_id[:8])
-            self._set_status(task_id, STATUS_FAILED)
-
-            if self.protocol is not None:
-                try:
-                    orch_session = orchestration_session_id(task_id)
-                    self.protocol.cascade_stop_session(
-                        tenant_id=self.prime_tenant_id,
-                        session_id=orch_session,
-                        reason=f"resume failed: {exc}",
-                    )
-                except Exception:
-                    pass
-
-            try:
-                self.dashboard.update_task(self.project_svc, task_id, status="failed")
-            except Exception:
-                pass
+            log.exception("Resume failed for %s at phase '%s'", task_id[:8], state.get("status", "unknown"))
+            self._fail_orchestration(task_id, exc, state.get("status", "resume"))
         finally:
             try:
                 self.dashboard.update_being("prime", {"status": "online"})

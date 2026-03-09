@@ -789,7 +789,7 @@ class DashboardService:
             return
 
         tenant_id = being.get("tenant_id") or MC_TENANT
-        session_id = f"mc-chat-{being_id}"
+        session_id = f"mc-chat-{being_id}-{sender}"
 
         # Resolve workspace: being's workspace relative to project root
         ws = being.get("workspace")
@@ -1036,6 +1036,7 @@ class DashboardService:
     def _auto_update_task_status(self, task_id: str, new_status: str) -> None:
         """Update task status and emit events for real-time board updates."""
         if not self.project_service:
+            log.warning("Cannot update task %s to '%s': no project_service", task_id[:8], new_status)
             return
         try:
             self.update_task(
@@ -1043,8 +1044,8 @@ class DashboardService:
                 task_id=task_id,
                 status=new_status,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Failed to update task %s to '%s': %s", task_id[:8], new_status, exc)
 
     # ------------------------------------------------------------------
     # Task classification
@@ -1463,6 +1464,28 @@ class DashboardService:
         normalized = self._normalize_task(task)
         self._emit_event("task_update", {"action": "updated", "task": normalized})
         return normalized
+
+    def retry_task(self, project_service: Any, task_id: str) -> dict | None:
+        """Move a failed task back to 'backlog' for retry.
+
+        Returns the updated task dict, or None if the task cannot be retried.
+        Only tasks with status 'failed' can be retried.
+        """
+        try:
+            task = project_service.get_task(MC_TENANT, task_id)
+        except ValueError:
+            return None
+        status = task.get("status", "")
+        if status != "failed":
+            log.warning("Cannot retry task %s: status is '%s', not 'failed'", task_id[:8], status)
+            return None
+        updated = self.update_task(
+            project_service=project_service,
+            task_id=task_id,
+            status="backlog",
+        )
+        self._log_task_history(task_id, "retried", {"from_status": "failed"})
+        return updated
 
     def delete_task(self, project_service: Any, task_id: str) -> bool:
         try:
