@@ -49,13 +49,21 @@ You are a message classifier for a multi-agent command center.
 Given a user message sent to an AI being, classify it into exactly one category:
 
 - "not_task" — casual/conversational, greetings, questions about the being itself, \
-information requests with no concrete action required. Examples: "Hi", "How are you?", \
-"What's in your memory?", "Tell me about yourself."
-- "light_task" — needs a single action or lookup, no multi-step plan needed. \
-Examples: "Search Pinecone for X", "Summarize this document", "What's the status of Y."
+information requests with no concrete action required, status checks, \
+acknowledgments, emotional reactions, or short social messages. \
+Examples: "Hi", "How are you?", "What's in your memory?", "Tell me about yourself.", \
+"How's the project going?", "What are you working on?", "Nice work!", "Status update?", \
+"Cool", "Got it", "Awesome", "What's new?", "Any updates?", "How's it going?"
+- "light_task" — needs a single concrete action or lookup, no multi-step plan needed. \
+Must contain an explicit actionable request. \
+Examples: "Search Pinecone for X", "Summarize this document", "Send a message to Y."
 - "full_task" — needs multi-step execution that benefits from a tracked plan with sub-steps. \
 Examples: "Research X and write a report", "Audit all memory files and flag inconsistencies", \
 "Set up the integration for Recovery."
+
+When in doubt, classify as "not_task". Simple questions, status checks, and conversational \
+messages should always be "not_task" — only classify as "light_task" or "full_task" when \
+the user is clearly requesting a concrete action to be performed.
 
 Respond with ONLY a JSON object: {"classification": "not_task"|"light_task"|"full_task"}
 Nothing else."""
@@ -77,6 +85,8 @@ _NOT_TASK_PATTERNS = re.compile(
     r"|see ya"
     r"|how are you"
     r"|how'?s it going"
+    r"|how'?s the project"
+    r"|how'?s everything"
     r"|tell me about yourself"
     r"|who are you"
     r"|what are you"
@@ -87,11 +97,50 @@ _NOT_TASK_PATTERNS = re.compile(
     r"|list your tools"
     r"|what do you know"
     r"|what are your capabilities"
+    r"|what are you working on"
+    r"|what'?s happening"
+    r"|what'?s new"
+    r"|what'?s going on"
+    r"|any updates"
+    r"|status"
+    r"|update me"
     r"|gm"
     r"|gn"
     r"|sup"
+    # Emotional/social reactions
+    r"|nice"
+    r"|cool"
+    r"|awesome"
+    r"|amazing"
+    r"|great"
+    r"|perfect"
+    r"|wow"
+    r"|lol"
+    r"|lmao"
+    r"|haha"
+    r"|hah"
+    r"|ha"
+    r"|love it"
+    r"|nah"
+    r"|nope"
+    r"|yep"
+    r"|yup"
+    r"|yeah"
+    r"|yes"
+    r"|no"
+    r"|right"
+    # Acknowledgments
+    r"|got it"
+    r"|understood"
+    r"|roger"
+    r"|copy"
+    r"|noted"
+    r"|makes sense"
+    r"|fair enough"
+    r"|i see"
+    r"|interesting"
     r")"
-    r"(\s+\S+){0,4}"   # Allow up to 4 trailing words (e.g. "hey how are you doing")
+    r"(\s+\S+){0,6}"   # Allow up to 6 trailing words (e.g. "how's the project going so far")
     r"[\s?!.,]*$",
     re.IGNORECASE,
 )
@@ -1059,8 +1108,16 @@ class DashboardService:
         """
         stripped = content.strip()
 
-        # Fast-path: very short or matches greeting/casual patterns
-        if len(stripped) < 4 or _NOT_TASK_PATTERNS.match(stripped):
+        # Fast-path: very short messages are never real tasks
+        if len(stripped) < 8:
+            return "not_task"
+
+        # Fast-path: matches greeting/casual/social patterns
+        if _NOT_TASK_PATTERNS.match(stripped):
+            return "not_task"
+
+        # Fast-path: messages with 5 or fewer words are overwhelmingly not tasks
+        if len(stripped.split()) <= 5:
             return "not_task"
 
         # LLM classification
