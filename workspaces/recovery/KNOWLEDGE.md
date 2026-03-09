@@ -44,3 +44,22 @@
 7. **Integrity-based influence principles:** Agreement ≠ Closing. If it's not right for them, say so. Every question must be a real question. GHIC alignment in every word.
 
 ## Learned Patterns
+### Operational Assessment Methodology
+
+**Key Learning from Business Operations Assessment (2026-03-07):**
+
+1. **Infrastructure vs. Performance Gap** - Having comprehensive metrics frameworks doesn't equal having performance data. Both BD agents have detailed dashboards showing "—" for all actual metrics. Must activate data collection before optimization.
+
+2. **7 Levers Coverage Model** - Effective coverage assessment requires three layers:
+   - Framework readiness (documentation exists)
+   - Operational capability (agents/systems deployed) 
+   - Performance measurement (actual results tracked)
+   
+   Current state: Strong framework, partial deployment, zero measurement.
+
+3. **Client Service Infrastructure Priority** - Missing Case Tracker, Client Communicator, and Compliance Monitor creates operational bottleneck that limits scale readiness regardless of BD capability.
+
+4. **Assessment Precision Requirement** - Must distinguish between "what we can do" vs. "what we are doing" vs. "what results we're achieving." Conflating these creates false confidence in operational effectiveness.
+
+5. **Data-First Principle** - No meaningful operational effectiveness analysis possible without actual performance metrics. Framework quality doesn't substitute for execution measurement.
+

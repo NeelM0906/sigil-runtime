@@ -276,7 +276,7 @@ class DashboardService:
         path = Path(json_path)
         if not path.exists():
             return 0
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         beings = data.get("beings", data) if isinstance(data, dict) else data
 
         now = self._now()
@@ -320,7 +320,7 @@ class DashboardService:
         sisters_json = _PROJECT_ROOT / "workspaces" / "prime" / "sisters.json"
         if sisters_json.exists():
             try:
-                data = json.loads(sisters_json.read_text())
+                data = json.loads(sisters_json.read_text(encoding="utf-8"))
                 for s in data.get("sisters", []):
                     ws_path = _PROJECT_ROOT / s["workspace_root"]
                     soul = self._load_soul_safe(ws_path)
@@ -418,7 +418,7 @@ class DashboardService:
                 if not config_path.exists():
                     continue
                 try:
-                    bland_data = json.loads(config_path.read_text())
+                    bland_data = json.loads(config_path.read_text(encoding="utf-8"))
                     agent_block = bland_data.get("agent", bland_data)
                     agent_id = agent_block.get("agent_id", "")
                 except (json.JSONDecodeError, OSError):

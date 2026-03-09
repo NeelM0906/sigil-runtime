@@ -12,6 +12,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+# Windows: force UTF-8 on stdout/stderr so emoji and unicode don't crash
+if sys.platform == "win32":
+    for stream in ("stdout", "stderr"):
+        s = getattr(sys, stream, None)
+        if s and hasattr(s, "reconfigure"):
+            s.reconfigure(encoding="utf-8")
+
 # Configure logging early so all modules can emit to stderr.
 # Use DEBUG to enable [ORCH] orchestration diagnostics; WARNING for production.
 logging.basicConfig(
@@ -20,6 +27,26 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%H:%M:%S",
 )
+
+# Load .env BEFORE importing bomba_sr so RuntimeConfig picks up all vars.
+def _load_dotenv_early(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#"):
+            continue
+        if raw.startswith("export "):
+            raw = raw[len("export "):].strip()
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and (key not in os.environ or not os.environ.get(key)):
+            os.environ[key] = value
+
+_load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
 
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
@@ -1543,6 +1570,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
+                    # Auto-route broadcast (no targets) to prime
+                    if not targets:
+                        targets = ["prime"]
                     msg_type = "broadcast"
                     if len(targets) == 1:
                         msg_type = "direct"

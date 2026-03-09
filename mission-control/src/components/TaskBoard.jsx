@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { TASK_STATUSES, timeAgo } from '../store'
 import { useBeings } from '../context/BeingsContext'
-import { tasksApi, actiApi } from '../api'
+import { tasksApi } from '../api'
 import { useSSE } from '../hooks/useSSE'
 
 const STATUS_CONFIG = {
@@ -99,9 +99,6 @@ function FiltersBar({ filters, setFilters, onCreateClick, beings }) {
 function TaskModal({ task, onSave, onClose, beings }) {
   const isEdit = !!task?.id
   const [beingSearch, setBeingSearch] = useState('')
-  const [assignMode, setAssignMode] = useState('beings')
-  const [clusters, setClusters] = useState([])
-  const [clusterSearch, setClusterSearch] = useState('')
   const [form, setForm] = useState({
     title: task?.title || '',
     description: task?.description || '',
@@ -110,15 +107,6 @@ function TaskModal({ task, onSave, onClose, beings }) {
     assignees: task?.assignees || [],
   })
 
-  // Load clusters when switching to teams mode
-  useEffect(() => {
-    if (assignMode === 'teams' && clusters.length === 0) {
-      actiApi.architecture().then(data => {
-        if (data?.clusters) setClusters(data.clusters)
-      }).catch(() => {})
-    }
-  }, [assignMode, clusters.length])
-
   const toggleAssignee = (id) => {
     setForm(f => ({
       ...f,
@@ -126,14 +114,6 @@ function TaskModal({ task, onSave, onClose, beings }) {
         ? f.assignees.filter(a => a !== id)
         : [...f.assignees, id]
     }))
-  }
-
-  const assignFromCluster = (cluster) => {
-    // Find the being ID that owns this cluster (by name match)
-    const ownerBeing = beings.find(b => b.name === cluster.being)
-    if (ownerBeing && !form.assignees.includes(ownerBeing.id)) {
-      toggleAssignee(ownerBeing.id)
-    }
   }
 
   const handleSubmit = (e) => {
@@ -194,27 +174,9 @@ function TaskModal({ task, onSave, onClose, beings }) {
             </div>
           </div>
 
-          {/* Assignees — searchable multi-select with beings/teams toggle */}
+          {/* Assignees — searchable multi-select */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] uppercase tracking-wider text-text-muted">Assign</label>
-              <div className="flex items-center gap-0.5 bg-bg-card border border-border rounded p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setAssignMode('beings')}
-                  className={`px-2 py-0.5 text-[10px] rounded transition-colors ${assignMode === 'beings' ? 'bg-accent-blue/20 text-accent-blue font-medium' : 'text-text-muted hover:text-text-secondary'}`}
-                >
-                  Beings
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssignMode('teams')}
-                  className={`px-2 py-0.5 text-[10px] rounded transition-colors ${assignMode === 'teams' ? 'bg-accent-cyan/20 text-accent-cyan font-medium' : 'text-text-muted hover:text-text-secondary'}`}
-                >
-                  Teams
-                </button>
-              </div>
-            </div>
+            <label className="text-[10px] uppercase tracking-wider text-text-muted mb-1.5 block">Assign Beings</label>
             {/* Selected beings */}
             {form.assignees.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-1.5">
@@ -236,76 +198,37 @@ function TaskModal({ task, onSave, onClose, beings }) {
                 })}
               </div>
             )}
-
-            {assignMode === 'beings' && (
-              <>
-                {/* Search input */}
-                <input
-                  type="text"
-                  value={beingSearch}
-                  onChange={e => setBeingSearch(e.target.value)}
-                  placeholder="Search beings..."
-                  className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 mb-1.5"
-                />
-                {/* Filtered being list */}
-                <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
-                  {beings
-                    .filter(b => !form.assignees.includes(b.id))
-                    .filter(b => !beingSearch || b.name.toLowerCase().includes(beingSearch.toLowerCase()) || b.role.toLowerCase().includes(beingSearch.toLowerCase()))
-                    .map(being => (
-                      <button
-                        key={being.id}
-                        type="button"
-                        onClick={() => { toggleAssignee(being.id); setBeingSearch('') }}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors border border-border bg-bg-card text-text-secondary hover:bg-bg-hover"
-                      >
-                        <div
-                          className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold"
-                          style={{ backgroundColor: being.color + '22', color: being.color }}
-                        >
-                          {being.avatar}
-                        </div>
-                        {being.name}
-                        <span className="text-[9px] text-text-muted">{being.role}</span>
-                      </button>
-                    ))}
-                </div>
-              </>
-            )}
-
-            {assignMode === 'teams' && (
-              <>
-                <input
-                  type="text"
-                  value={clusterSearch}
-                  onChange={e => setClusterSearch(e.target.value)}
-                  placeholder="Search teams/clusters..."
-                  className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-accent-cyan/50 mb-1.5"
-                />
-                <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
-                  {clusters
-                    .filter(c => !clusterSearch || c.name.toLowerCase().includes(clusterSearch.toLowerCase()) || c.function.toLowerCase().includes(clusterSearch.toLowerCase()) || c.being.toLowerCase().includes(clusterSearch.toLowerCase()))
-                    .slice(0, 20)
-                    .map(c => (
-                      <button
-                        key={c.id + c.family}
-                        type="button"
-                        onClick={() => { assignFromCluster(c); setClusterSearch('') }}
-                        className="flex items-center justify-between px-2 py-1 rounded text-xs transition-colors border border-border bg-bg-card text-text-secondary hover:bg-bg-hover text-left"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="text-text-primary font-medium">{c.name}</span>
-                          <span className="text-text-muted ml-1.5">{c.function}</span>
-                        </div>
-                        <span className="text-[9px] text-accent-cyan shrink-0 ml-2">{c.being}</span>
-                      </button>
-                    ))}
-                  {clusters.length === 0 && (
-                    <span className="text-[10px] text-text-muted italic px-2 py-1">Loading teams...</span>
-                  )}
-                </div>
-              </>
-            )}
+            {/* Search input */}
+            <input
+              type="text"
+              value={beingSearch}
+              onChange={e => setBeingSearch(e.target.value)}
+              placeholder="Search beings..."
+              className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 mb-1.5"
+            />
+            {/* Filtered being list */}
+            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
+              {beings
+                .filter(b => !form.assignees.includes(b.id))
+                .filter(b => !beingSearch || b.name.toLowerCase().includes(beingSearch.toLowerCase()) || b.role.toLowerCase().includes(beingSearch.toLowerCase()))
+                .map(being => (
+                  <button
+                    key={being.id}
+                    type="button"
+                    onClick={() => { toggleAssignee(being.id); setBeingSearch('') }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors border border-border bg-bg-card text-text-secondary hover:bg-bg-hover"
+                  >
+                    <div
+                      className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold"
+                      style={{ backgroundColor: being.color + '22', color: being.color }}
+                    >
+                      {being.avatar}
+                    </div>
+                    {being.name}
+                    <span className="text-[9px] text-text-muted">{being.role}</span>
+                  </button>
+                ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-1">

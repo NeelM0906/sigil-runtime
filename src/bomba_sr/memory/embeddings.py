@@ -23,9 +23,12 @@ class OpenAIEmbeddingProvider:
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+        # OpenAI text-embedding-3-small has ~8191 token limit (~30K chars).
+        # Truncate oversized inputs to avoid 400 errors.
+        truncated = [t[:30000] if len(t) > 30000 else t for t in texts]
         payload = {
             "model": self.model,
-            "input": texts,
+            "input": truncated,
         }
         req = Request(
             url=f"{self.api_base.rstrip('/')}/embeddings",
