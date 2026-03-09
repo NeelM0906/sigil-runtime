@@ -172,6 +172,13 @@ Rules:
 - Beings with type "acti" are specialized ACT-I agents with domain expertise.
   Prefer assigning to the most specific ACT-I being when the task matches their domain.
   They run through their parent sister's runtime but have distinct capabilities.
+- IMPORTANT: Beings with type "sister" are SAI Sisters — core team members (Memory, Scholar, Forge, Recovery).
+  You MUST include at least one sister in every orchestration plan.
+  Sisters have broad capabilities and should be assigned coordination, research, memory, or synthesis tasks.
+  Typical sister roles: sai-memory (memory management, knowledge consolidation),
+  sai-scholar (research, analysis, learning), sai-forge (building, creating, tooling),
+  sai-recovery (business development, client work, operations).
+- Beings with type "subagent" (like bd-pip, bd-wc) are specialized sub-agents for specific domains.
 """
 
 REVIEW_SYSTEM_PROMPT = """\
@@ -443,6 +450,7 @@ class OrchestrationEngine:
                 "role": b.get("role", ""),
                 "status": b.get("status", "offline"),
                 "skills": b.get("skills", ""),
+                "type": b.get("type", "unknown"),
             }
             # Enrich ACT-I beings with domain + cluster info
             if b.get("type") == "acti":
@@ -459,7 +467,7 @@ class OrchestrationEngine:
             # Enrich with representation data (truncated to 800 chars)
             ws = b.get("workspace")
             if ws and ws != ".":
-                ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
                 rep_path = ws_path / "REPRESENTATION.md"
                 if rep_path.exists():
                     try:
@@ -523,6 +531,23 @@ class OrchestrationEngine:
             "plan": plan.to_dict(),
         })
         log.info("Orchestration plan for %s: %d sub-tasks", task_id[:8], len(plan.sub_tasks))
+
+        # Post plan summary to user chat so they can see delegation
+        being_lines = "\n".join(
+            f"  {i+1}. **{s.being_id}** — {s.title}"
+            for i, s in enumerate(plan.sub_tasks)
+        )
+        self.dashboard.create_message(
+            sender="prime",
+            content=(
+                f"**Orchestration Plan** ({len(plan.sub_tasks)} sub-tasks, {plan.synthesis_strategy} strategy)\n\n"
+                f"{being_lines}\n\n"
+                f"Delegating now..."
+            ),
+            targets=[state["sender"]],
+            msg_type="direct",
+            task_ref=task_id,
+        )
 
     def _phase_delegate(self, task_id: str) -> None:
         """Send sub-tasks to beings and wait for all to complete."""
@@ -592,23 +617,39 @@ class OrchestrationEngine:
         ws = being.get("workspace")
         if ws and ws != ".":
             from pathlib import Path
-            workspace = str(Path("/Users/zidane/Downloads/PROJEKT") / ws)
+            workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws)
         else:
-            workspace = "/Users/zidane/Downloads/PROJEKT"
+            workspace = os.environ.get("BOMBA_WORKSPACE", ".")
 
-        # Build ACT-I identity prefix for specialized beings
-        acti_identity_prefix = ""
+        # Build identity prefix for specialized beings
+        identity_prefix = ""
         if being.get("type") == "acti":
             try:
                 from bomba_sr.acti.loader import get_being_identity_text
                 identity_text = get_being_identity_text(sub.being_id)
                 if identity_text:
-                    acti_identity_prefix = (
+                    identity_prefix = (
                         f"[IDENTITY CONTEXT]\n"
                         f"You are operating as an ACT-I specialized being.\n"
                         f"{identity_text}\n"
                         f"[END IDENTITY CONTEXT]\n\n"
                     )
+            except Exception:
+                pass
+        elif being.get("type") == "sister":
+            # Load sister's SOUL.md for identity context
+            try:
+                ws_raw = being.get("workspace", "")
+                if ws_raw and ws_raw != ".":
+                    soul_path = Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws_raw / "SOUL.md"
+                    if soul_path.exists():
+                        soul_text = soul_path.read_text(encoding="utf-8")[:2000]
+                        identity_prefix = (
+                            f"[IDENTITY CONTEXT]\n"
+                            f"You are {being.get('name', sub.being_id)}, a SAI Sister.\n"
+                            f"{soul_text}\n"
+                            f"[END IDENTITY CONTEXT]\n\n"
+                        )
             except Exception:
                 pass
 
@@ -625,7 +666,7 @@ class OrchestrationEngine:
             )
 
         delegation_message = (
-            acti_identity_prefix
+            identity_prefix
             + f"You have been assigned a sub-task by SAI Prime.\n\n"
             f"TASK TITLE: {sub.title}\n\n"
             + (context_section if context_section else "")
@@ -643,12 +684,25 @@ class OrchestrationEngine:
         log.debug(f"[ORCH] Workspace: {workspace}")
         log.debug(f"[ORCH] Message (first 300 chars): {delegation_message[:300]}")
 
+        # Notify chat that this being is starting
+        try:
+            state = self._get_state(parent_task_id)
+            self.dashboard.create_message(
+                sender=sub.being_id,
+                content=f"Starting work on: **{sub.title}**",
+                targets=[state.get("sender", "user")],
+                msg_type="direct",
+                task_ref=parent_task_id,
+            )
+        except Exception:
+            pass
+
         try:
             from bomba_sr.runtime.bridge import TurnRequest
             result = self.bridge.handle_turn(TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session,
-                user_id=f"prime->{sub.being_id}",
+                user_id=f"prime_to_{sub.being_id}",
                 user_message=delegation_message,
                 workspace_root=workspace,
                 # Use the short task title as the search query so the bridge's
@@ -681,6 +735,29 @@ class OrchestrationEngine:
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
 
+        # Notify chat that this being finished (with output preview)
+        try:
+            state = self._get_state(parent_task_id)
+            if output and not output.startswith("[Error"):
+                preview = output[:300] + ("..." if len(output) > 300 else "")
+                self.dashboard.create_message(
+                    sender=sub.being_id,
+                    content=f"Completed: **{sub.title}**\n\n{preview}",
+                    targets=[state.get("sender", "user")],
+                    msg_type="direct",
+                    task_ref=parent_task_id,
+                )
+            else:
+                self.dashboard.create_message(
+                    sender=sub.being_id,
+                    content=f"Failed on: **{sub.title}**\n\n{output[:200] if output else 'No output'}",
+                    targets=[state.get("sender", "user")],
+                    msg_type="direct",
+                    task_ref=parent_task_id,
+                )
+        except Exception:
+            pass
+
         # Write a semantic memory into the being's tenant so it accumulates
         # domain knowledge across orchestration tasks.
         if output and not output.startswith("[Error"):
@@ -688,7 +765,7 @@ class OrchestrationEngine:
                 being_runtime = self.bridge._tenant_runtime(tenant_id)
                 being_runtime.memory.learn_semantic(
                     tenant_id=tenant_id,
-                    user_id=f"prime->{sub.being_id}",
+                    user_id=f"prime_to_{sub.being_id}",
                     memory_key=f"task_work::{parent_task_id}::{sub.being_id}",
                     content=(
                         f"Task: '{sub.title}'. "
@@ -719,6 +796,18 @@ class OrchestrationEngine:
         """Review each being's output. Request revisions if needed."""
         self._set_status(task_id, STATUS_REVIEWING)
         state = self._get_state(task_id)
+
+        # Notify chat that review phase is starting
+        try:
+            self.dashboard.create_message(
+                sender="prime",
+                content="**Review phase** — Reviewing each being's output for quality...",
+                targets=[state.get("sender", "user")],
+                msg_type="direct",
+                task_ref=task_id,
+            )
+        except Exception:
+            pass
         plan = state["plan"]
         if plan is None:
             return
@@ -784,9 +873,9 @@ class OrchestrationEngine:
                 ws = being.get("workspace")
                 if ws and ws != ".":
                     from pathlib import Path
-                    workspace = str(Path("/Users/zidane/Downloads/PROJEKT") / ws)
+                    workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws)
                 else:
-                    workspace = "/Users/zidane/Downloads/PROJEKT"
+                    workspace = os.environ.get("BOMBA_WORKSPACE", ".")
 
                 revision_msg = (
                     f"[REVISION REQUEST FROM SAI PRIME — Round {revision_round + 1}]\n\n"
@@ -799,7 +888,7 @@ class OrchestrationEngine:
                     rev_result = self.bridge.handle_turn(TurnRequest(
                         tenant_id=tenant_id,
                         session_id=session,
-                        user_id=f"prime->{sub.being_id}",
+                        user_id=f"prime_to_{sub.being_id}",
                         user_message=revision_msg,
                         workspace_root=workspace,
                     ))
@@ -821,6 +910,18 @@ class OrchestrationEngine:
         plan = state["plan"]
         if plan is None:
             return
+
+        # Notify chat that synthesis is starting
+        try:
+            self.dashboard.create_message(
+                sender="prime",
+                content="**Synthesis phase** — Combining all outputs into final deliverable...",
+                targets=[state.get("sender", "user")],
+                msg_type="direct",
+                task_ref=task_id,
+            )
+        except Exception:
+            pass
 
         # ── Step 1: Persist task_results BEFORE synthesis (with empty synthesis) ──
         self._persist_task_result(task_id, state, "")
@@ -1078,7 +1179,7 @@ class OrchestrationEngine:
         })
 
     def _prime_workspace(self) -> str:
-        return "/Users/zidane/Downloads/PROJEKT/workspaces/prime"
+        return str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / "workspaces" / "prime")
 
     # ------------------------------------------------------------------
     # Task result persistence
@@ -1241,9 +1342,9 @@ class OrchestrationEngine:
                 being = self.dashboard.get_being(sub.being_id) or {}
                 ws = being.get("workspace")
                 if ws and ws != ".":
-                    ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+                    ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
                 else:
-                    ws_path = Path("/Users/zidane/Downloads/PROJEKT")
+                    ws_path = Path(os.environ.get("BOMBA_WORKSPACE", "."))
 
                 rep_path = ws_path / "REPRESENTATION.md"
                 current_rep = ""

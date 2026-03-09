@@ -99,34 +99,3 @@ export const subagentsApi = {
     return request('/api/mc/subagents')
   },
 }
-
-// ── ACT-I Architecture API ──────────────────────────────────
-
-export const actiApi = {
-  architecture() {
-    return request('/api/mc/acti/architecture')
-  },
-  beings() {
-    return request('/api/mc/acti/beings')
-  },
-  being(id) {
-    return request(`/api/mc/acti/beings/${id}`)
-  },
-  clusters(filters = {}) {
-    const params = new URLSearchParams()
-    for (const [k, v] of Object.entries(filters)) {
-      if (v) params.set(k, v)
-    }
-    const qs = params.toString()
-    return request(`/api/mc/acti/clusters${qs ? `?${qs}` : ''}`)
-  },
-  skillFamilies() {
-    return request('/api/mc/acti/skill-families')
-  },
-  levers() {
-    return request('/api/mc/acti/levers')
-  },
-  sisterProfile(id) {
-    return request(`/api/mc/acti/sisters/${id}`)
-  },
-}

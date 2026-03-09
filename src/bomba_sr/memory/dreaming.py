@@ -330,7 +330,7 @@ class DreamCycle:
         # KNOWLEDGE.md and REPRESENTATION.md from workspace
         ws = being.get("workspace")
         if ws and ws != ".":
-            ws_path = Path(ws) if Path(ws).is_absolute() else Path("/Users/zidane/Downloads/PROJEKT") / ws
+            ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
             for fname in ("KNOWLEDGE.md", "REPRESENTATION.md"):
                 fpath = ws_path / fname
                 if fpath.exists():
@@ -638,12 +638,12 @@ class DreamCycle:
 
     def _write_dream_log(self, results: dict[str, Any]) -> Path | None:
         """Write a markdown report of the dream cycle to dream_logs/."""
-        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", os.environ.get("BOMBA_WORKSPACE", ".")))
         log_dir = project_root / DREAM_LOGS_DIR
         log_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now(timezone.utc)
-        filename = now.strftime("%Y-%m-%d-%H:%M") + ".md"
+        filename = now.strftime("%Y-%m-%d-%H-%M") + ".md"
         log_path = log_dir / filename
 
         lines = [f"# Dream Cycle Report — {now.strftime('%Y-%m-%d %H:%M UTC')}\n"]
@@ -680,7 +680,7 @@ class DreamCycle:
     @staticmethod
     def list_dream_logs(limit: int = 20) -> list[dict[str, Any]]:
         """Return recent dream log entries (newest first)."""
-        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", "/Users/zidane/Downloads/PROJEKT"))
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", os.environ.get("BOMBA_WORKSPACE", ".")))
         log_dir = project_root / DREAM_LOGS_DIR
         if not log_dir.is_dir():
             return []

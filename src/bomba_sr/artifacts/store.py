@@ -147,7 +147,8 @@ class ArtifactStore:
 
         artifact_id = str(uuid.uuid4())
         created_at = utc_now_iso()
-        folder = self.artifacts_root / session_id
+        safe_session = session_id.replace(":", "_")
+        folder = self.artifacts_root / safe_session
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / f"{turn_id}-{artifact_id[:8]}{ext}"
         path.write_text(content, encoding="utf-8")
@@ -178,7 +179,8 @@ class ArtifactStore:
 
         artifact_id = str(uuid.uuid4())
         created_at = utc_now_iso()
-        folder = self.artifacts_root / session_id
+        safe_session = session_id.replace(":", "_")
+        folder = self.artifacts_root / safe_session
         folder.mkdir(parents=True, exist_ok=True)
         fname = filename or f"{turn_id}-{artifact_id[:8]}{ext}"
         path = folder / fname

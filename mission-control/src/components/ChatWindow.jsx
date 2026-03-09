@@ -166,7 +166,7 @@ function HighlightedContent({ content, getBeingById }) {
 // ── Mention Dropdown ─────────────────────────────────────────
 
 // Chat-routable types — voice agents use Bland API, not chat
-const CHAT_ROUTABLE_TYPES = new Set(['runtime', 'sister', 'subagent'])
+const CHAT_ROUTABLE_TYPES = new Set(['runtime', 'sister', 'subagent', 'acti'])
 
 function MentionDropdown({ filter, onSelect, beings }) {
   const filtered = beings

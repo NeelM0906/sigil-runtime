@@ -32,13 +32,15 @@ _BEING_PATTERNS = [
 
 
 def resolve_being_id(session_id: str | None, user_id: str | None = None) -> str | None:
-    """Derive being_id from session_id patterns, or from user_id 'prime->X' pattern."""
+    """Derive being_id from session_id patterns, or from user_id 'prime_to_X' pattern."""
     if session_id:
         for pattern, group in _BEING_PATTERNS:
             m = pattern.match(session_id)
             if m:
                 return m.group(group)
     if user_id:
+        if user_id.startswith("prime_to_"):
+            return user_id[len("prime_to_"):]
         if user_id.startswith("prime->"):
             return user_id[len("prime->"):]
     return None
