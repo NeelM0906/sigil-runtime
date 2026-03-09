@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+
+log = logging.getLogger(__name__)
 
 
 class EmbeddingProvider(Protocol):
@@ -37,8 +41,20 @@ class OpenAIEmbeddingProvider:
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
-        with urlopen(req, timeout=30) as response:
-            body = json.loads(response.read().decode("utf-8"))
+        try:
+            with urlopen(req, timeout=30) as response:
+                body = json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            details = ""
+            try:
+                details = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                pass
+            log.warning("Embedding API error %d: %s", exc.code, details[:300] or exc.reason)
+            return [[] for _ in texts]
+        except Exception as exc:
+            log.warning("Embedding request failed: %s", exc)
+            return [[] for _ in texts]
 
         data = body.get("data")
         if not isinstance(data, list):

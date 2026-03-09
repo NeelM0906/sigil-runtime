@@ -236,8 +236,12 @@ class HybridMemoryStore:
         )
 
         if self.embedding_provider is not None:
-            vectors = self.embedding_provider.embed([content])
-            if vectors:
+            try:
+                vectors = self.embedding_provider.embed([content])
+            except Exception as exc:
+                log.warning("Embedding failed (non-fatal): %s", exc)
+                vectors = []
+            if vectors and vectors[0]:
                 self.db.execute(
                     """
                     INSERT INTO memory_embeddings (id, note_id, user_id, model, vector_json, created_at)
@@ -573,8 +577,12 @@ class HybridMemoryStore:
         if not rows:
             return {}
 
-        query_vectors = self.embedding_provider.embed([query])
-        if not query_vectors:
+        try:
+            query_vectors = self.embedding_provider.embed([query])
+        except Exception as exc:
+            log.warning("Embedding query failed (non-fatal): %s", exc)
+            return {}
+        if not query_vectors or not query_vectors[0]:
             return {}
         query_vec = query_vectors[0]
 
@@ -603,8 +611,12 @@ class HybridMemoryStore:
         if not rows:
             return {}
 
-        query_vectors = self.embedding_provider.embed([query])
-        if not query_vectors:
+        try:
+            query_vectors = self.embedding_provider.embed([query])
+        except Exception as exc:
+            log.warning("Embedding query failed (non-fatal): %s", exc)
+            return {}
+        if not query_vectors or not query_vectors[0]:
             return {}
         query_vec = query_vectors[0]
 
