@@ -115,7 +115,7 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
         </div>
 
         {/* Content */}
-        <div className={`text-sm leading-relaxed px-3 py-2 rounded-lg ${
+        <div className={`text-sm leading-relaxed px-3 py-2 rounded-lg text-left ${
           isUser
             ? 'bg-accent-blue/15 text-text-primary border border-accent-blue/20'
             : 'bg-bg-card text-text-primary border border-border'
@@ -385,14 +385,31 @@ export function ChatWindow() {
     if (!input.trim()) return
 
     const content = input.trim()
-    const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
+
+    // Resolve @mentions from content into targets (covers inline typing without dropdown selection)
+    const resolvedTargets = [...targets]
+    const mentionMatches = content.match(/@(\w+)/g) || []
+    for (const mention of mentionMatches) {
+      const name = mention.slice(1).toLowerCase()
+      const being = beings.find(b =>
+        CHAT_ROUTABLE_TYPES.has(b.type) && (
+          b.name.toLowerCase() === name ||
+          b.id.toLowerCase() === name
+        )
+      )
+      if (being && !resolvedTargets.includes(being.id)) {
+        resolvedTargets.push(being.id)
+      }
+    }
+
+    const mode = resolvedTargets.length > 1 ? execMode : (resolvedTargets.length === 1 ? null : null)
 
     // Optimistic: add user message immediately
     const tempMsg = {
       id: `temp-${Date.now()}`,
-      type: targets.length === 0 ? 'broadcast' : targets.length === 1 ? 'direct' : 'group',
+      type: resolvedTargets.length === 0 ? 'broadcast' : resolvedTargets.length === 1 ? 'direct' : 'group',
       sender: 'user',
-      targets: [...targets],
+      targets: [...resolvedTargets],
       content,
       timestamp: new Date().toISOString(),
       mode,
