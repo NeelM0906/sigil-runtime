@@ -1543,6 +1543,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
+
+                    # If no targets specified, default to SAI Prime
+                    if not targets:
+                        targets = ["prime"]
+
                     msg_type = "broadcast"
                     if len(targets) == 1:
                         msg_type = "direct"

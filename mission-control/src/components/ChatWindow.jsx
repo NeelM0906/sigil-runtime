@@ -346,12 +346,15 @@ export function ChatWindow() {
     const content = input.trim()
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
+    // If no targets specified, default to SAI Prime
+    const effectiveTargets = targets.length === 0 ? ['prime'] : [...targets]
+
     // Optimistic: add user message immediately
     const tempMsg = {
       id: `temp-${Date.now()}`,
-      type: targets.length === 0 ? 'broadcast' : targets.length === 1 ? 'direct' : 'group',
+      type: effectiveTargets.length === 1 ? 'direct' : 'group',
       sender: 'user',
-      targets: [...targets],
+      targets: effectiveTargets,
       content,
       timestamp: new Date().toISOString(),
       mode,
@@ -537,7 +540,7 @@ export function ChatWindow() {
           <span>@ mention beings</span>
           <span>|</span>
           <span>Enter to send</span>
-          {targets.length === 0 && <span className="ml-auto">Broadcasting to all</span>}
+          {targets.length === 0 && <span className="ml-auto">Talking to SAI Prime</span>}
         </div>
       </div>
     </div>
