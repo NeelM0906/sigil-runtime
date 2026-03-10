@@ -6,11 +6,13 @@ import { BeingDetail } from './components/BeingDetail'
 import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
 import { SubAgentTracker } from './components/SubAgentTracker'
+import { AgentTeams } from './components/AgentTeams'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Task Board' },
   { id: 'chat', label: 'Comms' },
+  { id: 'teams', label: 'Agent Teams' },
 ]
 
 export default function App() {
@@ -47,6 +49,9 @@ export default function App() {
                 <SubAgentTracker />
               </div>
             </div>
+          )}
+          {activeTab === 'teams' && (
+            <AgentTeams />
           )}
         </main>
 

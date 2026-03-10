@@ -16,6 +16,7 @@ import copy
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -183,13 +184,6 @@ Rules:
 - Beings with type "acti" are specialized ACT-I agents with domain expertise.
   Prefer assigning to the most specific ACT-I being when the task matches their domain.
   They run through their parent sister's runtime but have distinct capabilities.
-- IMPORTANT: Beings with type "sister" are SAI Sisters — core team members (Memory, Scholar, Forge, Recovery).
-  You MUST include at least one sister in every orchestration plan.
-  Sisters have broad capabilities and should be assigned coordination, research, memory, or synthesis tasks.
-  Typical sister roles: sai-memory (memory management, knowledge consolidation),
-  sai-scholar (research, analysis, learning), sai-forge (building, creating, tooling),
-  sai-recovery (business development, client work, operations).
-- Beings with type "subagent" (like bd-pip, bd-wc) are specialized sub-agents for specific domains.
 - max_rounds (optional, 1-4): Number of collaboration rounds. Use 1 for straightforward tasks.
   Use 2-3 for tasks requiring beings to build on each other's work iteratively.
   Use 4 only for complex research synthesis.
@@ -343,6 +337,7 @@ class OrchestrationEngine:
         goal: str,
         requester_session_id: str,
         sender: str = "user",
+        chat_session_id: str = "general",
     ) -> dict[str, Any]:
         """Kick off an orchestrated task. Returns immediately with task info.
 
@@ -370,6 +365,7 @@ class OrchestrationEngine:
             "orchestration_session": orch_session,
             "requester_session": requester_session_id,
             "sender": sender,
+            "chat_session_id": chat_session_id,
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},      # being_id -> subtask task_id
@@ -547,6 +543,7 @@ class OrchestrationEngine:
                     ),
                     targets=[fail_state.get("sender", "user")],
                     msg_type="direct",
+                    session_id=fail_state.get("chat_session_id", "general"),
                     task_ref=task_id,
                 )
             except Exception:
@@ -576,7 +573,6 @@ class OrchestrationEngine:
                 "role": b.get("role", ""),
                 "status": b.get("status", "offline"),
                 "skills": b.get("skills", ""),
-                "type": b.get("type", "unknown"),
             }
             # Enrich ACT-I beings with domain + cluster info
             if b.get("type") == "acti":
@@ -593,7 +589,7 @@ class OrchestrationEngine:
             # Enrich with representation data (truncated to 800 chars)
             ws = b.get("workspace")
             if ws and ws != ".":
-                ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
+                ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
                 rep_path = ws_path / "REPRESENTATION.md"
                 if rep_path.exists():
                     try:
@@ -658,23 +654,6 @@ class OrchestrationEngine:
             "plan": plan.to_dict(),
         })
         log.info("Orchestration plan for %s: %d sub-tasks", task_id[:8], len(plan.sub_tasks))
-
-        # Post plan summary to user chat so they can see delegation
-        being_lines = "\n".join(
-            f"  {i+1}. **{s.being_id}** — {s.title}"
-            for i, s in enumerate(plan.sub_tasks)
-        )
-        self.dashboard.create_message(
-            sender="prime",
-            content=(
-                f"**Orchestration Plan** ({len(plan.sub_tasks)} sub-tasks, {plan.synthesis_strategy} strategy)\n\n"
-                f"{being_lines}\n\n"
-                f"Delegating now..."
-            ),
-            targets=[state["sender"]],
-            msg_type="direct",
-            task_ref=task_id,
-        )
 
     def _phase_delegate(self, task_id: str) -> None:
         """Spawn sub-tasks via SubAgentProtocol and wait for all to complete."""
@@ -808,9 +787,9 @@ class OrchestrationEngine:
 
         ws = being.get("workspace")
         if ws and ws != ".":
-            workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws)
+            workspace = str(_PROJECT_ROOT / ws)
         else:
-            workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")))
+            workspace = str(_PROJECT_ROOT)
 
         task = SubAgentTask(
             tenant_id=tenant_id,
@@ -928,35 +907,19 @@ class OrchestrationEngine:
         """Build the delegation message for a subtask (ACT-I identity, context, instructions)."""
         being = self.dashboard.get_being(sub.being_id) or {}
 
-        # Build identity prefix for specialized beings
-        identity_prefix = ""
+        # Build ACT-I identity prefix for specialized beings
+        acti_identity_prefix = ""
         if being.get("type") == "acti":
             try:
                 from bomba_sr.acti.loader import get_being_identity_text
                 identity_text = get_being_identity_text(sub.being_id)
                 if identity_text:
-                    identity_prefix = (
+                    acti_identity_prefix = (
                         f"[IDENTITY CONTEXT]\n"
                         f"You are operating as an ACT-I specialized being.\n"
                         f"{identity_text}\n"
                         f"[END IDENTITY CONTEXT]\n\n"
                     )
-            except Exception:
-                pass
-        elif being.get("type") == "sister":
-            # Load sister's SOUL.md for identity context
-            try:
-                ws_raw = being.get("workspace", "")
-                if ws_raw and ws_raw != ".":
-                    soul_path = Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws_raw / "SOUL.md"
-                    if soul_path.exists():
-                        soul_text = soul_path.read_text(encoding="utf-8")[:2000]
-                        identity_prefix = (
-                            f"[IDENTITY CONTEXT]\n"
-                            f"You are {being.get('name', sub.being_id)}, a SAI Sister.\n"
-                            f"{soul_text}\n"
-                            f"[END IDENTITY CONTEXT]\n\n"
-                        )
             except Exception:
                 pass
 
@@ -973,7 +936,7 @@ class OrchestrationEngine:
             )
 
         return (
-            identity_prefix
+            acti_identity_prefix
             + f"You have been assigned a sub-task by SAI Prime.\n\n"
             f"TASK TITLE: {sub.title}\n\n"
             + (context_section if context_section else "")
@@ -1001,9 +964,9 @@ class OrchestrationEngine:
 
         ws = being.get("workspace")
         if ws and ws != ".":
-            workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws)
+            workspace = str(_PROJECT_ROOT / ws)
         else:
-            workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")))
+            workspace = str(_PROJECT_ROOT)
 
         delegation_message = self._build_delegation_message(sub, prior_outputs)
 
@@ -1020,6 +983,7 @@ class OrchestrationEngine:
                 targets=[state.get("sender", "user")],
                 msg_type="direct",
                 task_ref=parent_task_id,
+                session_id=state.get("chat_session_id", "general"),
             )
         except Exception:
             pass
@@ -1092,25 +1056,32 @@ class OrchestrationEngine:
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
 
-        # Notify chat that this being finished (with output preview)
+        # Extract deliverables from subtask output and notify chat
         try:
             state = self._get_state(parent_task_id)
+            _cs = state.get("chat_session_id", "general")
             if output and not output.startswith("[Error"):
-                preview = output[:300] + ("..." if len(output) > 300 else "")
+                # Extract code blocks into deliverable files
+                cleaned_output, _ = self._extract_and_save_deliverables(
+                    parent_task_id, output, being_id=sub.being_id,
+                )
+                preview = cleaned_output[:1500] + ("..." if len(cleaned_output) > 1500 else "")
                 self.dashboard.create_message(
                     sender=sub.being_id,
                     content=f"Completed: **{sub.title}**\n\n{preview}",
                     targets=[state.get("sender", "user")],
                     msg_type="direct",
                     task_ref=parent_task_id,
+                    session_id=_cs,
                 )
             else:
                 self.dashboard.create_message(
                     sender=sub.being_id,
-                    content=f"Failed on: **{sub.title}**\n\n{output[:200] if output else 'No output'}",
+                    content=f"Failed on: **{sub.title}**\n\n{output[:500] if output else 'No output'}",
                     targets=[state.get("sender", "user")],
                     msg_type="direct",
                     task_ref=parent_task_id,
+                    session_id=_cs,
                 )
         except Exception:
             pass
@@ -1121,7 +1092,7 @@ class OrchestrationEngine:
                 being_runtime = self.bridge._tenant_runtime(tenant_id)
                 being_runtime.memory.learn_semantic(
                     tenant_id=tenant_id,
-                    user_id=f"prime_to_{sub.being_id}",
+                    user_id=f"prime->{sub.being_id}",
                     memory_key=f"task_work::{parent_task_id}::{sub.being_id}",
                     content=(
                         f"Task: '{sub.title}'. "
@@ -1152,18 +1123,6 @@ class OrchestrationEngine:
         """Review each being's output. Request revisions if needed."""
         self._set_status(task_id, STATUS_REVIEWING)
         state = self._get_state(task_id)
-
-        # Notify chat that review phase is starting
-        try:
-            self.dashboard.create_message(
-                sender="prime",
-                content="**Review phase** — Reviewing each being's output for quality...",
-                targets=[state.get("sender", "user")],
-                msg_type="direct",
-                task_ref=task_id,
-            )
-        except Exception:
-            pass
         plan = state["plan"]
         if plan is None:
             return
@@ -1231,9 +1190,9 @@ class OrchestrationEngine:
                 tenant_id = being.get("tenant_id") or self.prime_tenant_id
                 ws = being.get("workspace")
                 if ws and ws != ".":
-                    workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws)
+                    workspace = str(_PROJECT_ROOT / ws)
                 else:
-                    workspace = str(Path(os.environ.get("BOMBA_WORKSPACE", ".")))
+                    workspace = str(_PROJECT_ROOT)
 
                 revision_msg = (
                     f"[REVISION REQUEST FROM SAI PRIME — Round {revision_round + 1}]\n\n"
@@ -1307,18 +1266,6 @@ class OrchestrationEngine:
         if plan is None:
             return
 
-        # Notify chat that synthesis is starting
-        try:
-            self.dashboard.create_message(
-                sender="prime",
-                content="**Synthesis phase** — Combining all outputs into final deliverable...",
-                targets=[state.get("sender", "user")],
-                msg_type="direct",
-                task_ref=task_id,
-            )
-        except Exception:
-            pass
-
         # ── Step 1: Persist task_results BEFORE synthesis (with empty synthesis) ──
         self._persist_task_result(task_id, state, "")
 
@@ -1374,6 +1321,11 @@ class OrchestrationEngine:
         # Update representations again with synthesis context
         self._update_being_representations(task_id, state, final_output)
 
+        # Extract code deliverables into files, replace with links in chat
+        final_output, saved_files = self._extract_and_save_deliverables(
+            task_id, final_output,
+        )
+
         # Post final output back to user's chat
         self.dashboard.create_message(
             sender="prime",
@@ -1381,6 +1333,7 @@ class OrchestrationEngine:
             targets=[state["sender"]],
             msg_type="direct",
             task_ref=task_id,
+            session_id=state.get("chat_session_id", "general"),
         )
 
         # Mark parent task as done
@@ -1568,6 +1521,101 @@ class OrchestrationEngine:
             log.warning("Failed to update synthesis for task %s: %s", task_id[:8], exc)
 
     # ------------------------------------------------------------------
+    # Deliverable extraction
+    # ------------------------------------------------------------------
+
+    _CODE_BLOCK_RE = re.compile(
+        r"```(\w+)?\s*\n(.*?)```",
+        re.DOTALL,
+    )
+    _LANG_EXT = {
+        "html": ".html", "htm": ".html", "css": ".css", "js": ".js",
+        "javascript": ".js", "typescript": ".ts", "tsx": ".tsx", "jsx": ".jsx",
+        "python": ".py", "py": ".py", "json": ".json", "yaml": ".yaml",
+        "yml": ".yaml", "sql": ".sql", "sh": ".sh", "bash": ".sh",
+        "markdown": ".md", "md": ".md", "xml": ".xml", "svg": ".svg",
+    }
+
+    def _extract_and_save_deliverables(
+        self, task_id: str, text: str, being_id: str | None = None,
+    ) -> tuple[str, list[Path]]:
+        """Extract large code blocks from output, save as files, register in DB.
+
+        Returns (cleaned_text, list_of_saved_paths).
+        Small code snippets (<30 lines) are left inline.
+        """
+        saved: list[Path] = []
+        blocks = list(self._CODE_BLOCK_RE.finditer(text))
+        if not blocks:
+            return text, saved
+
+        deliverables_dir = _PROJECT_ROOT / "deliverables" / task_id[:12]
+        file_counter = 0
+        result = text
+
+        # Process blocks in reverse so replacement indices stay valid
+        for match in reversed(blocks):
+            lang = (match.group(1) or "").lower()
+            code = match.group(2)
+            line_count = code.count("\n")
+
+            # Skip small inline snippets
+            if line_count < 30:
+                continue
+
+            ext = self._LANG_EXT.get(lang, ".txt")
+            fname = self._detect_filename(code, lang) or f"deliverable-{file_counter}{ext}"
+            file_counter += 1
+
+            try:
+                deliverables_dir.mkdir(parents=True, exist_ok=True)
+                fpath = deliverables_dir / fname
+                fpath.write_text(code, encoding="utf-8")
+                saved.append(fpath)
+
+                url = f"/deliverables/{task_id[:12]}/{fname}"
+                byte_size = len(code.encode("utf-8"))
+
+                # Register in DB
+                self.dashboard.create_deliverable(
+                    task_id=task_id,
+                    filename=fname,
+                    file_type=lang or ext.lstrip("."),
+                    file_path=str(fpath),
+                    url=url,
+                    being_id=being_id,
+                    line_count=line_count,
+                    byte_size=byte_size,
+                )
+
+                # Replace code block with deliverable card marker
+                replacement = (
+                    f"\n\n[DELIVERABLE:{fname}:{url}:{lang or ext.lstrip('.')}:{line_count}:{byte_size}]\n"
+                )
+                result = result[:match.start()] + replacement + result[match.end():]
+
+                log.info(
+                    "[ORCH] Saved deliverable %s (%d lines) for task %s",
+                    fname, line_count, task_id[:8],
+                )
+            except Exception as exc:
+                log.warning("Failed to save deliverable %s: %s", fname, exc)
+
+        return result, saved
+
+    @staticmethod
+    def _detect_filename(code: str, lang: str) -> str | None:
+        """Try to detect a filename from code content."""
+        if lang in ("html", "htm") and "<title>" in code.lower():
+            m = re.search(r"<title>(.*?)</title>", code, re.IGNORECASE)
+            if m:
+                title = m.group(1).strip()
+                safe = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "-").lower()
+                if safe:
+                    return f"{safe[:40]}.html"
+        return None
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -1597,7 +1645,7 @@ class OrchestrationEngine:
         })
 
     def _prime_workspace(self) -> str:
-        return str(Path(os.environ.get("BOMBA_WORKSPACE", ".")) / "workspaces" / "prime")
+        return str(_PROJECT_ROOT / "workspaces" / "prime")
 
     # ------------------------------------------------------------------
     # Task result persistence
@@ -1903,6 +1951,7 @@ class OrchestrationEngine:
                 targets=[state.get("sender", "user")],
                 msg_type="direct",
                 task_ref=task_id,
+                session_id=state.get("chat_session_id", "general"),
             )
         except Exception:
             pass
@@ -2239,9 +2288,9 @@ class OrchestrationEngine:
                 being = self.dashboard.get_being(sub.being_id) or {}
                 ws = being.get("workspace")
                 if ws and ws != ".":
-                    ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
+                    ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
                 else:
-                    ws_path = Path(os.environ.get("BOMBA_WORKSPACE", "."))
+                    ws_path = _PROJECT_ROOT
 
                 rep_path = ws_path / "REPRESENTATION.md"
                 current_rep = ""

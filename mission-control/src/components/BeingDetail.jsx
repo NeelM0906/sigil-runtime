@@ -17,6 +17,7 @@ const TYPE_BADGES = {
   sister: { label: 'SISTER', color: 'text-accent-purple bg-accent-purple/10 border-accent-purple/20' },
   voice: { label: 'VOICE', color: 'text-accent-pink bg-accent-pink/10 border-accent-pink/20' },
   subagent: { label: 'SUB-AGENT', color: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20' },
+  acti: { label: 'ACT-I', color: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/20' },
 }
 
 const PRIORITY_CONFIG = {
@@ -165,7 +166,7 @@ function FileTreeNode({ node, depth = 0, onFileClick }) {
 export function BeingDetail({ onOpenTask }) {
   const {
     selectedBeingId, closeBeingDetail, getBeingById, updateBeingStatus,
-    beingDetail, detailLoading, fetchBeingFile,
+    beingDetail, detailLoading, fetchBeingFile, openBeingDetail,
   } = useBeings()
 
   const [assignedTasks, setAssignedTasks] = useState([])
@@ -497,6 +498,150 @@ export function BeingDetail({ onOpenTask }) {
                   <div className="text-xs text-text-muted italic">No skills configured</div>
                 )}
               </Section>
+
+              {/* ── ACT-I Profile Section ──────────────────── */}
+              {detail?.acti && (
+                <Section title="ACT-I Profile" icon="⚡" accentColor="accent-cyan"
+                  count={`${detail.acti.positions_total}p`}>
+                  <div className="flex flex-col gap-2">
+                    {/* Summary */}
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.beings.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Beings</div>
+                      </div>
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.clusters.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Clusters</div>
+                      </div>
+                      <div className="px-2 py-1.5 rounded bg-bg-card border border-border">
+                        <div className="text-sm font-bold font-mono text-accent-cyan">{detail.acti.levers.length}</div>
+                        <div className="text-[9px] text-text-muted uppercase">Levers</div>
+                      </div>
+                    </div>
+
+                    {/* Beings operated */}
+                    <div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Beings Operated</div>
+                      <div className="flex flex-col gap-1">
+                        {detail.acti.beings.map(ab => (
+                          <div key={ab.id} className="flex items-center justify-between px-2 py-1 rounded bg-bg-card border border-border">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[11px] font-medium text-text-primary truncate">{ab.name}</span>
+                              <span className="text-[9px] text-text-muted truncate">{ab.domain}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-accent-cyan shrink-0">{ab.positions}p</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Lever coverage */}
+                    <div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Lever Coverage</div>
+                      <div className="flex flex-wrap gap-1">
+                        {detail.acti.levers.map(lv => (
+                          <span key={lv} className="px-1.5 py-0.5 text-[9px] bg-accent-blue/10 text-accent-blue rounded border border-accent-blue/20">
+                            L{lv}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Heart skills */}
+                    {detail.acti.shared_heart_skills && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Heart Skills</div>
+                        <div className="flex flex-wrap gap-1">
+                          {detail.acti.shared_heart_skills.map(s => (
+                            <span key={s} className="px-1.5 py-0.5 text-[9px] bg-accent-purple/10 text-accent-purple rounded border border-accent-purple/20">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* ── ACT-I Being Detail Section ─────────────── */}
+              {detail?.acti_being && (
+                <Section title="ACT-I Being" icon="🎯" accentColor="accent-cyan"
+                  count={`${detail.acti_being.positions}p`}>
+                  <div className="flex flex-col gap-2">
+                    {/* Domain */}
+                    {detail.acti_being.domain && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Domain</div>
+                        <p className="text-xs text-text-secondary leading-relaxed">{detail.acti_being.domain}</p>
+                      </div>
+                    )}
+
+                    {/* Clusters */}
+                    {detail.acti_being.clusters?.length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Clusters Owned ({detail.acti_being.clusters.length})</div>
+                        <div className="flex flex-col gap-0.5">
+                          {detail.acti_being.clusters.map((c, i) => (
+                            <div key={i} className="flex items-center justify-between text-[11px] px-2 py-0.5 rounded bg-bg-card border border-border">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-text-primary font-medium truncate">{c.name}</span>
+                                <span className="text-text-muted truncate">— {c.function}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[9px] text-text-muted">{c.family}</span>
+                                <span className="text-[10px] font-mono text-accent-cyan">{c.positions}p</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lever coverage */}
+                    {detail.acti_being.levers?.length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Lever Coverage</div>
+                        <div className="flex flex-wrap gap-1">
+                          {detail.acti_being.levers.map(lv => (
+                            <span key={lv} className="px-1.5 py-0.5 text-[9px] bg-accent-blue/10 text-accent-blue rounded border border-accent-blue/20">
+                              L{lv}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Heart skills */}
+                    {detail.acti_being.shared_heart_skills?.length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Heart Skills</div>
+                        <div className="flex flex-wrap gap-1">
+                          {detail.acti_being.shared_heart_skills.map(s => (
+                            <span key={s} className="px-1.5 py-0.5 text-[9px] bg-accent-purple/10 text-accent-purple rounded border border-accent-purple/20">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Parent sister */}
+                    {detail.acti_being.sister_id && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-text-muted">Parent Sister:</span>
+                        <button
+                          onClick={() => openBeingDetail(detail.acti_being.sister_id)}
+                          className="text-[10px] text-accent-blue hover:underline"
+                        >
+                          {detail.acti_being.sister_id}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
 
               {/* ── Workspace Section ─────────────────────── */}
               {fileTree.length > 0 && (

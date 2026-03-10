@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useBeings } from '../context/BeingsContext'
-import { chatApi, tasksApi } from '../api'
+import { chatApi, tasksApi, deliverablesApi } from '../api'
 import { useSSE } from '../hooks/useSSE'
 import { timeAgo } from '../store'
 
@@ -133,40 +133,136 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
   )
 }
 
-// ── Highlighted @mentions in content ─────────────────────────
+// ── Deliverable Card ─────────────────────────────────────────
+
+const FILE_ICONS = {
+  html: { icon: '🌐', label: 'Website', color: '#e44d26' },
+  css: { icon: '🎨', label: 'Stylesheet', color: '#264de4' },
+  js: { icon: '⚡', label: 'JavaScript', color: '#f7df1e' },
+  javascript: { icon: '⚡', label: 'JavaScript', color: '#f7df1e' },
+  py: { icon: '🐍', label: 'Python', color: '#3776ab' },
+  python: { icon: '🐍', label: 'Python', color: '#3776ab' },
+  json: { icon: '📋', label: 'JSON', color: '#6b7280' },
+  md: { icon: '📝', label: 'Markdown', color: '#6b7280' },
+  sql: { icon: '🗃️', label: 'SQL', color: '#336791' },
+  svg: { icon: '🖼️', label: 'SVG', color: '#ffb13b' },
+  default: { icon: '📄', label: 'File', color: '#6b7280' },
+}
+
+function DeliverableCard({ filename, url, fileType, lineCount, byteSize }) {
+  const info = FILE_ICONS[fileType] || FILE_ICONS.default
+  const isViewable = ['html', 'htm', 'svg'].includes(fileType)
+  const sizeLabel = byteSize > 1024
+    ? `${(byteSize / 1024).toFixed(1)} KB`
+    : `${byteSize} bytes`
+
+  return (
+    <div className="my-2 p-3 rounded-lg border border-border bg-bg-card/50 backdrop-blur">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg"
+          style={{ backgroundColor: info.color + '20' }}
+        >
+          {info.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-text-primary truncate">{filename}</div>
+          <div className="text-[10px] text-text-muted">
+            {info.label} &middot; {lineCount} lines &middot; {sizeLabel}
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          {isViewable && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-md text-[11px] font-medium bg-accent-blue/15 text-accent-blue hover:bg-accent-blue/25 transition-colors"
+            >
+              Open
+            </a>
+          )}
+          <a
+            href={url}
+            download={filename}
+            className="px-3 py-1.5 rounded-md text-[11px] font-medium bg-bg-hover text-text-secondary hover:text-text-primary transition-colors"
+          >
+            Download
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Highlighted @mentions + deliverable cards in content ─────
+
+const DELIVERABLE_RE = /\[DELIVERABLE:(.*?):(.*?):(.*?):(\d+):(\d+)\]/g
 
 function HighlightedContent({ content, getBeingById }) {
-  // Split on @mentions
-  const parts = content.split(/(@\w+)/g)
-  return (
-    <>
-      {parts.map((part, i) => {
+  // First split on deliverable markers
+  const segments = content.split(DELIVERABLE_RE)
+
+  // segments pattern: [text, fname, url, type, lines, bytes, text, fname, ...]
+  // Every 6th element starting from index 1 is a deliverable match group
+  const elements = []
+  let idx = 0
+  while (idx < segments.length) {
+    const text = segments[idx]
+    if (text) {
+      // Render text with @mention highlighting
+      const mentionParts = text.split(/(@\w+)/g)
+      mentionParts.forEach((part, mi) => {
         if (part.startsWith('@')) {
           const name = part.slice(1).toLowerCase()
-          // Find being by name (case-insensitive)
-          const being = getBeingById(name) ||
-            // Try matching by name instead of id
-            null
+          const being = getBeingById(name) || null
           if (being) {
-            return (
-              <span key={i} className="font-medium" style={{ color: being.color }}>
+            elements.push(
+              <span key={`${idx}-m${mi}`} className="font-medium" style={{ color: being.color }}>
                 {part}
               </span>
             )
+          } else {
+            elements.push(
+              <span key={`${idx}-m${mi}`} className="font-medium text-accent-blue">{part}</span>
+            )
           }
-          // Try to color by finding a being whose name matches
-          return <span key={i} className="font-medium text-accent-blue">{part}</span>
+        } else if (part) {
+          elements.push(<span key={`${idx}-m${mi}`}>{part}</span>)
         }
-        return <span key={i}>{part}</span>
-      })}
-    </>
-  )
+      })
+    }
+    idx++
+    // Check if next 5 items form a deliverable
+    if (idx + 4 < segments.length && segments[idx] !== undefined) {
+      const fname = segments[idx]
+      const url = segments[idx + 1]
+      const ftype = segments[idx + 2]
+      const lines = parseInt(segments[idx + 3], 10)
+      const bytes = parseInt(segments[idx + 4], 10)
+      if (fname && url) {
+        elements.push(
+          <DeliverableCard
+            key={`dlv-${idx}`}
+            filename={fname}
+            url={url}
+            fileType={ftype}
+            lineCount={lines}
+            byteSize={bytes}
+          />
+        )
+      }
+      idx += 5
+    }
+  }
+
+  return <>{elements}</>
 }
 
 // ── Mention Dropdown ─────────────────────────────────────────
 
 // Chat-routable types — voice agents use Bland API, not chat
-const CHAT_ROUTABLE_TYPES = new Set(['runtime', 'sister', 'subagent', 'acti'])
+const CHAT_ROUTABLE_TYPES = new Set(['runtime', 'sister', 'subagent'])
 
 function MentionDropdown({ filter, onSelect, beings }) {
   const filtered = beings
@@ -251,6 +347,113 @@ function ChatFilters({ filters, setFilters, beings, onClear }) {
   )
 }
 
+// ── Session Sidebar ──────────────────────────────────────────
+
+function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete }) {
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editName, setEditName] = useState('')
+
+  const handleCreate = () => {
+    if (!newName.trim()) return
+    onCreate(newName.trim())
+    setNewName('')
+    setCreating(false)
+  }
+
+  const handleRename = (id) => {
+    if (!editName.trim()) return
+    onRename(id, editName.trim())
+    setEditingId(null)
+  }
+
+  return (
+    <div className="w-48 border-r border-border flex flex-col shrink-0">
+      <div className="flex items-center justify-between px-2 py-2 border-b border-border/50">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Sessions</span>
+        <button
+          onClick={() => setCreating(!creating)}
+          className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-colors"
+          title="New session"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+
+      {creating && (
+        <div className="px-2 py-1.5 border-b border-border/30">
+          <input
+            autoFocus
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
+            placeholder="Session name..."
+            className="w-full bg-bg-card border border-border rounded px-2 py-1 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50"
+          />
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto">
+        {sessions.map(s => (
+          <div
+            key={s.id}
+            onClick={() => onSelect(s.id)}
+            className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition-colors ${
+              s.id === activeSessionId
+                ? 'bg-accent-blue/10 text-accent-blue border-l-2 border-accent-blue'
+                : 'text-text-secondary hover:bg-bg-hover border-l-2 border-transparent'
+            }`}
+          >
+            {editingId === s.id ? (
+              <input
+                autoFocus
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(s.id); if (e.key === 'Escape') setEditingId(null) }}
+                onBlur={() => handleRename(s.id)}
+                className="flex-1 bg-bg-card border border-border rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none"
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <>
+                <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <span className="flex-1 truncate">{s.name}</span>
+                <div className="hidden group-hover:flex items-center gap-0.5">
+                  <button
+                    onClick={e => { e.stopPropagation(); setEditingId(s.id); setEditName(s.name) }}
+                    className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-primary"
+                    title="Rename"
+                  >
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  {s.id !== 'general' && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onDelete(s.id) }}
+                      className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-red"
+                      title="Delete"
+                    >
+                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Chat Window ─────────────────────────────────────────
 
 export function ChatWindow() {
@@ -263,14 +466,27 @@ export function ChatWindow() {
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
-  const [typingBeings, setTypingBeings] = useState(new Map()) // Map<being_id, being_name>
+  const [typingBeings, setTypingBeings] = useState(new Map())
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
+  // Session state
+  const [sessions, setSessions] = useState([])
+  const [activeSessionId, setActiveSessionId] = useState('general')
+  const [showSessions, setShowSessions] = useState(true)
+  const activeSessionRef = useRef(activeSessionId)
+  activeSessionRef.current = activeSessionId
+
+  // Load sessions on mount
+  useEffect(() => {
+    chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
+  }, [])
+
   // Load messages from API
   const fetchMessages = useCallback(async () => {
+    setLoading(true)
     try {
-      const apiFilters = {}
+      const apiFilters = { session_id: activeSessionId }
       if (filters.search) apiFilters.search = filters.search
       if (filters.sender) apiFilters.sender = filters.sender
       if (filters.target) apiFilters.target = filters.target
@@ -281,22 +497,53 @@ export function ChatWindow() {
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filters, activeSessionId])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
+
+  // Session CRUD handlers
+  const handleCreateSession = async (name) => {
+    try {
+      const { session } = await chatApi.createSession(name)
+      setSessions(prev => [session, ...prev])
+      setActiveSessionId(session.id)
+    } catch (err) {
+      console.error('Failed to create session:', err)
+    }
+  }
+
+  const handleRenameSession = async (id, name) => {
+    try {
+      const { session } = await chatApi.renameSession(id, name)
+      setSessions(prev => prev.map(s => s.id === id ? session : s))
+    } catch (err) {
+      console.error('Failed to rename session:', err)
+    }
+  }
+
+  const handleDeleteSession = async (id) => {
+    try {
+      await chatApi.deleteSession(id)
+      setSessions(prev => prev.filter(s => s.id !== id))
+      if (activeSessionId === id) setActiveSessionId('general')
+    } catch (err) {
+      console.error('Failed to delete session:', err)
+    }
+  }
 
   // SSE: incoming LLM responses and system messages arrive here
   useSSE({
     chat_message(data) {
-      // Avoid duplicating the user message we already added optimistically
       if (data.sender === 'user') return
       setTypingBeings(prev => {
         const next = new Map(prev)
         next.delete(data.sender)
         return next
       })
+      // Only show messages for the active session (or if no session_id, show in general)
+      const msgSession = data.session_id || 'general'
+      if (msgSession !== activeSessionRef.current) return
       setMessages(prev => {
-        // De-duplicate by id
         if (prev.some(m => m.id === data.id)) return prev
         return [...prev, data]
       })
@@ -311,6 +558,15 @@ export function ChatWindow() {
         }
         return next
       })
+    },
+    chat_session(data) {
+      if (data.action === 'deleted') {
+        setSessions(prev => prev.filter(s => s.id !== data.session_id))
+        if (activeSessionRef.current === data.session_id) setActiveSessionId('general')
+      } else {
+        // Refresh sessions list on create/update
+        chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
+      }
     },
   })
 
@@ -368,6 +624,7 @@ export function ChatWindow() {
         targets: tempMsg.targets,
         content,
         mode,
+        session_id: activeSessionId,
       })
 
       // Replace temp message with the persisted one
@@ -389,12 +646,37 @@ export function ChatWindow() {
   }
 
   return (
-    <div className="bg-bg-secondary border border-border rounded-lg flex flex-col h-[calc(100vh-80px)]">
+    <div className="bg-bg-secondary border border-border rounded-lg flex h-[calc(100vh-80px)]">
+      {/* Session Sidebar */}
+      {showSessions && (
+        <SessionSidebar
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelect={setActiveSessionId}
+          onCreate={handleCreateSession}
+          onRename={handleRenameSession}
+          onDelete={handleDeleteSession}
+        />
+      )}
+
+      {/* Chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Panel Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSessions(!showSessions)}
+            className={`p-1 rounded transition-colors ${showSessions ? 'bg-accent-blue/10 text-accent-blue' : 'text-text-muted hover:text-text-secondary'}`}
+            title="Toggle sessions"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+          </button>
           <div className="w-1.5 h-1.5 rounded-full bg-accent-pink" />
-          <h2 className="text-xs font-semibold uppercase tracking-wider">Communications</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider">
+            {sessions.find(s => s.id === activeSessionId)?.name || 'Communications'}
+          </h2>
           <span className="text-[10px] text-text-muted font-mono">{messages.length} msgs</span>
         </div>
         <div className="flex items-center gap-2">
@@ -540,6 +822,7 @@ export function ChatWindow() {
           {targets.length === 0 && <span className="ml-auto">Broadcasting to all</span>}
         </div>
       </div>
+      </div>{/* end chat area */}
     </div>
   )
 }

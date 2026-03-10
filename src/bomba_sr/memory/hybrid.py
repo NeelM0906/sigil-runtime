@@ -32,15 +32,13 @@ _BEING_PATTERNS = [
 
 
 def resolve_being_id(session_id: str | None, user_id: str | None = None) -> str | None:
-    """Derive being_id from session_id patterns, or from user_id 'prime_to_X' pattern."""
+    """Derive being_id from session_id patterns, or from user_id 'prime->X' pattern."""
     if session_id:
         for pattern, group in _BEING_PATTERNS:
             m = pattern.match(session_id)
             if m:
                 return m.group(group)
     if user_id:
-        if user_id.startswith("prime_to_"):
-            return user_id[len("prime_to_"):]
         if user_id.startswith("prime->"):
             return user_id[len("prime->"):]
     return None
@@ -190,7 +188,8 @@ class HybridMemoryStore:
             raise ValueError("confidence must be in [0,1]")
 
         now = datetime.now(timezone.utc)
-        rel_dir = Path(user_id) / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
+        safe_user_id = user_id.replace("->", "_to_").replace(">", "_").replace("<", "_")
+        rel_dir = Path(safe_user_id) / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
         abs_dir = self.memory_root / rel_dir
         abs_dir.mkdir(parents=True, exist_ok=True)
 

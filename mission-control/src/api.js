@@ -90,6 +90,28 @@ export const chatApi = {
       body: JSON.stringify({ content, taskRef }),
     })
   },
+  // Sessions
+  sessions() {
+    return request('/api/mc/chat/sessions')
+  },
+  createSession(name) {
+    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name }) })
+  },
+  renameSession(id, name) {
+    return request(`/api/mc/chat/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) })
+  },
+  deleteSession(id) {
+    return request(`/api/mc/chat/sessions/${id}`, { method: 'DELETE' })
+  },
+}
+
+// ── Deliverables API ─────────────────────────────────────────
+
+export const deliverablesApi = {
+  list(taskId = null) {
+    const qs = taskId ? `?task_id=${taskId}` : ''
+    return request(`/api/mc/deliverables${qs}`)
+  },
 }
 
 // ── Sub-Agents API ───────────────────────────────────────────
@@ -97,5 +119,36 @@ export const chatApi = {
 export const subagentsApi = {
   list() {
     return request('/api/mc/subagents')
+  },
+}
+
+// ── ACT-I Architecture API ──────────────────────────────────
+
+export const actiApi = {
+  architecture() {
+    return request('/api/mc/acti/architecture')
+  },
+  beings() {
+    return request('/api/mc/acti/beings')
+  },
+  being(id) {
+    return request(`/api/mc/acti/beings/${id}`)
+  },
+  clusters(filters = {}) {
+    const params = new URLSearchParams()
+    for (const [k, v] of Object.entries(filters)) {
+      if (v) params.set(k, v)
+    }
+    const qs = params.toString()
+    return request(`/api/mc/acti/clusters${qs ? `?${qs}` : ''}`)
+  },
+  skillFamilies() {
+    return request('/api/mc/acti/skill-families')
+  },
+  levers() {
+    return request('/api/mc/acti/levers')
+  },
+  sisterProfile(id) {
+    return request(`/api/mc/acti/sisters/${id}`)
   },
 }

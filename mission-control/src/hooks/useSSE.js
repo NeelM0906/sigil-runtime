@@ -13,7 +13,7 @@ export function useSSE(handlers, url = '/api/mc/events') {
   useEffect(() => {
     const source = new EventSource(url)
 
-    const eventTypes = ['chat_message', 'being_status', 'task_update', 'task_steps_update', 'artifact_created', 'subagent_event', 'being_typing']
+    const eventTypes = ['chat_message', 'being_status', 'task_update', 'task_steps_update', 'artifact_created', 'subagent_event', 'being_typing', 'chat_session', 'deliverable_created']
 
     for (const type of eventTypes) {
       source.addEventListener(type, (event) => {
