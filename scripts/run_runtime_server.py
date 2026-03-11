@@ -12,6 +12,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+# Windows: force UTF-8 on stdout/stderr so emoji and unicode don't crash
+if sys.platform == "win32":
+    for stream in ("stdout", "stderr"):
+        s = getattr(sys, stream, None)
+        if s and hasattr(s, "reconfigure"):
+            s.reconfigure(encoding="utf-8")
+
 # Configure logging early so all modules can emit to stderr.
 # Use DEBUG to enable [ORCH] orchestration diagnostics; WARNING for production.
 logging.basicConfig(
@@ -20,6 +27,26 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     datefmt="%H:%M:%S",
 )
+
+# Load .env BEFORE importing bomba_sr so RuntimeConfig picks up all vars.
+def _load_dotenv_early(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#"):
+            continue
+        if raw.startswith("export "):
+            raw = raw[len("export "):].strip()
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and (key not in os.environ or not os.environ.get(key)):
+            os.environ[key] = value
+
+_load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
 
 from bomba_sr.context.policy import TurnProfile
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
@@ -278,6 +305,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self.send_response(302)
                 self.send_header("Location", "http://127.0.0.1:5173/")
                 self.end_headers()
+                return
+            # ── Deliverables static files ──
+            if parsed.path.startswith("/deliverables/"):
+                self._serve_deliverable(parsed.path)
                 return
             # ── Mission Control GET routes ──
             if parsed.path.startswith("/api/mc/"):
@@ -1401,16 +1432,33 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"sister_id": sid, "profile": profile})
                     return
 
+                # --- Chat Sessions ---
+                if path == "/api/mc/chat/sessions":
+                    sessions = dashboard_svc.list_sessions()
+                    self._write_cors(200, {"sessions": sessions})
+                    return
+
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
                     msgs = dashboard_svc.list_messages(
                         sender=query.get("sender", [None])[0],
                         target=query.get("target", [None])[0],
                         search=query.get("search", [None])[0],
-                        limit=int(query.get("limit", ["100"])[0]),
+                        session_id=query.get("session_id", [None])[0],
+                        limit=int(query.get("limit", ["500"])[0]),
                         offset=int(query.get("offset", ["0"])[0]),
                     )
                     self._write_cors(200, {"messages": msgs})
+                    return
+
+                # --- Deliverables ---
+                if path == "/api/mc/deliverables":
+                    task_id = query.get("task_id", [None])[0]
+                    if task_id:
+                        deliverables = dashboard_svc.list_deliverables(task_id)
+                    else:
+                        deliverables = dashboard_svc.list_all_deliverables()
+                    self._write_cors(200, {"deliverables": deliverables})
                     return
 
                 # --- Sub-agents ---
@@ -1536,6 +1584,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"dream_cycle": result})
                     return
 
+                # --- Chat Sessions ---
+                if path == "/api/mc/chat/sessions":
+                    name = body.get("name", "New Chat")
+                    session = dashboard_svc.create_session(name)
+                    self._write_cors(201, {"session": session})
+                    return
+
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
                     content = body.get("content", "")
@@ -1543,6 +1598,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
+                    session_id = body.get("session_id", "general")
+                    # Auto-route broadcast (no targets) to prime
+                    if not targets:
+                        targets = ["prime"]
                     msg_type = "broadcast"
                     if len(targets) == 1:
                         msg_type = "direct"
@@ -1553,11 +1612,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         sender=sender, content=content,
                         targets=targets, msg_type=msg_type,
                         mode=mode, task_ref=task_ref,
+                        session_id=session_id,
                     )
 
                     # Route to each targeted being in background
                     for tid in targets:
-                        dashboard_svc.route_to_being(tid, content, sender=sender)
+                        dashboard_svc.route_to_being(tid, content, sender=sender, chat_session_id=session_id)
 
                     self._write_cors(201, {"message": msg})
                     return
@@ -1602,6 +1662,16 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"being": being})
                     return
 
+                # PATCH /api/mc/chat/sessions/:id
+                if path.startswith("/api/mc/chat/sessions/"):
+                    sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
+                    session = dashboard_svc.rename_session(sid, body.get("name", ""))
+                    if not session:
+                        self._write_cors(404, {"error": "session not found"})
+                        return
+                    self._write_cors(200, {"session": session})
+                    return
+
                 # PATCH /api/mc/tasks/:id
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
@@ -1643,6 +1713,16 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"ok": True})
                     return
 
+                # DELETE /api/mc/chat/sessions/:id
+                if path.startswith("/api/mc/chat/sessions/"):
+                    sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
+                    ok = dashboard_svc.delete_session(sid)
+                    if not ok:
+                        self._write_cors(404, {"error": "session not found or is default"})
+                        return
+                    self._write_cors(200, {"ok": True})
+                    return
+
                 # DELETE /api/mc/chat/messages/:id
                 if path.startswith("/api/mc/chat/messages/"):
                     mid = path.split("/api/mc/chat/messages/", 1)[1].split("/")[0]
@@ -1656,6 +1736,32 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self._write_cors(404, {"error": "not_found"})
             except Exception as exc:
                 self._write_cors(500, {"error": str(exc)})
+
+        def _serve_deliverable(self, url_path: str) -> None:
+            """Serve files from the deliverables/ directory."""
+            # Sanitize: prevent path traversal
+            clean = url_path.replace("\\", "/").lstrip("/")
+            parts = clean.split("/")
+            if len(parts) < 3 or ".." in parts:
+                self._write_cors(404, {"error": "not found"})
+                return
+            fpath = PROJECT_ROOT / clean
+            if not fpath.is_file():
+                self._write_cors(404, {"error": "file not found"})
+                return
+            content_type, _ = mimetypes.guess_type(str(fpath))
+            content_type = content_type or "text/plain"
+            try:
+                data = fpath.read_bytes()
+            except Exception:
+                self._write_cors(500, {"error": "read error"})
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(data)
 
         def _mc_sse_stream(self) -> None:
             """SSE endpoint — holds connection open, pushes events."""

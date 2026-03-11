@@ -23,7 +23,29 @@
 - Viral coefficient K ≥ 0.3 significantly reduces CAC over time
 - Weekly enrollment velocity must average ≥38/week
 
-**Research document stored at:** /Users/zidane/Downloads/PROJEKT/workspaces/scholar/DIGITAL_MARKETING_SCALE_RESEARCH.md (~39KB)
+### AI Agent Platform Pricing Analysis (March 2026)
+
+**Top 3 Enterprise Platforms Analyzed:**
+- **UiPath:** Hybrid model, $3.6K-8K per robot annually, strongest in complex automation
+- **Microsoft Power Platform:** Per-user + credits, $15-200/month, best ecosystem integration
+- **Automation Anywhere:** Bot-based, $750-3K per bot monthly, balanced enterprise approach
+
+**Key Pricing Model Patterns:**
+- Subscription + Usage hybrid dominates enterprise segment
+- SMB accessibility gap: $15/month (Microsoft) vs $750/month (AA) minimum entry
+- No pure consumption-based or outcome-guarantee models exist
+- ROI payback typically 6-18 months with 300%+ returns
+
+**Market Opportunities Identified:**
+- True usage-based pricing (pay per successful automation)
+- Outcome-based models with ROI guarantees
+- Vertical-specific packages for industries
+- Freemium-to-enterprise upgrade paths
+
+**Cost Scaling Patterns:**
+- SMB (5-50 users): $75-15K/month range
+- Mid-Market (50-500): $750-150K/month range  
+- Enterprise (500+): $50K-2M+ annually with custom negotiation
 
 ### Competitive Landscape — Premium Coaching/Mastermind Market (March 2026)
 
@@ -36,4 +58,4 @@
 
 **Competitive snapshot stored at:** /Users/zidane/Downloads/PROJEKT/workspaces/scholar/COMPETITIVE_LANDSCAPE_SNAPSHOT.md
 
-## Learned Patterns
+### AI Agent Memory Architecture — Best Pract

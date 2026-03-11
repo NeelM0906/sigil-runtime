@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I | The First AI That Makes Humans Better, Not Replaceable</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --navy: #1B365D;
+            --gold: #D4AF37;
+            --platinum: #E5E4E2;
+            --white: #FFFFFF;
+            --dark-navy: #142538;
+            --light-gold: #E6C757;
+            --gradient-primary: linear-gradient(135deg, var(--navy) 0%, var(--dark-navy) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--gold) 0%, var(--light-gold) 100%);
+            --gradient-hero: linear-gradient(135deg, var(--navy) 0%, var(--dark-navy) 50%, var(--navy) 100%);
+        }
+        body { font-family: 'Montserrat', sans-serif; line-height: 1.6; color: var(--white); background: var(--gradient-primary); overflow-x: hidden; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        header { position: fixed; top: 0; width: 100%; background: rgba(27, 54, 93, 0.95); backdrop-filter: blur(10px); z-index: 1000; transition: all 0.3s ease; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+        .logo { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--gold); text-decoration: none; }
+        .nav-links { display: flex; list-style: none; gap: 2rem; }
+        .nav-links a { color: var(--white); text-decoration: none; transition: color 0.3s ease; }
+        .nav-links a:hover { color: var(--gold); }
+        .hero { min-height: 100vh; display: flex; align-items: center; background: var(--gradient-hero); position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 70% 30%, rgba(212, 175, 55, 0.1) 0%, transparent 50%); }
+        .hero-content { position: relative; z-index: 2; text-align: center; max-width: 800px; margin: 0 auto; animation: fadeInUp 1s ease-out; }
+        .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 700; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--white) 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero p { font-size: 1.25rem; margin-bottom: 2.5rem; color: var(--platinum); max-width: 600px; margin-left: auto; margin-right: auto; }
+        .cta-button { display: inline-block; background: var(--gradient-accent); color: var(--navy); padding: 1rem 2.5rem; font-size: 1.1rem; font-weight: 600; text-decoration: none; border-radius: 50px; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; border: none; cursor: pointer; }
+        .cta-button:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3); }
+        .team { padding: 5rem 0; background: rgba(20, 37, 56, 0.3); }
+        .section-title { text-align: center; font-family: 'Playfair Display', serif; font-size: 3rem; color: var(--gold); margin-bottom: 3rem; }
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .team-card { background: rgba(27, 54, 93, 0.4); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; padding: 2rem; text-align: center; transition: all 0.3s ease; backdrop-filter: blur(10px); }
+        .team-card:hover { transform: translateY(-10px); border-color: var(--gold); box-shadow: 0 20px 40px rgba(212, 175, 55, 0.1); }
+        .team-card h3 { font-size: 1.5rem; color: var(--gold); margin-bottom: 0.5rem; }
+        .team-card .role { font-size: 0.9rem; color: var(--platinum); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+        .team-card p { color: var(--white); line-height: 1.6; }
+        .services { padding: 5rem 0; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .service-card { background: rgba(27, 54, 93, 0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 15px; padding: 2.5rem 2rem; text-align: center; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .service-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent); transition: left 0.5s ease; }
+        .service-card:hover::before { left: 100%; }
+        .service-card:hover { transform: translateY(-5px); border-color: var(--gold); box-shadow: 0 15px 30px rgba(212, 175, 55, 0.2); }
+        .service-card h3 { font-size: 1.4rem; color: var(--gold); margin-bottom: 1rem; }
+        .service-card .price { font-size: 2rem; font-weight: 700; color: var(--white); margin-bottom: 1rem; }
+        .service-card p { color: var(--platinum); margin-bottom: 1.5rem; }
+        .service-card .features { list-style: none; margin-bottom: 2rem; }
+        .service-card .features li { color: var(--white); margin-bottom: 0.5rem; position: relative; padding-left: 1.5rem; }
+        .service-card .features li::before { content: '\2713'; color: var(--gold); font-weight: bold; position: absolute; left: 0; }
+        .contact { padding: 5rem 0; background: rgba(20, 37, 56, 0.5); }
+        .contact-form { max-width: 600px; margin: 0 auto; background: rgba(27, 54, 93, 0.4); padding: 3rem; border-radius: 15px; border: 1px solid rgba(212, 175, 55, 0.2); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; color: var(--gold); margin-bottom: 0.5rem; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 1rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; color: var(--white); font-family: inherit; transition: border-color 0.3s ease; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+        .form-group input::placeholder, .form-group textarea::placeholder { color: rgba(255, 255, 255, 0.6); }
+        .form-group select option { background: var(--navy); color: var(--white); }
+        footer { padding: 2rem 0; background: var(--dark-navy); text-align: center; color: var(--platinum); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.6s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero h1 { font-size: 2.5rem; }
+            .team-grid, .services-grid { grid-template-columns: 1fr; }
+            .contact-form { margin: 0 1rem; padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="#" class="logo">ACT-I</a>
+            <ul class="nav-links">
+                <li><a href="#team">Team</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>The First AI That Makes Humans Better, Not Replaceable</h1>
+                <p>Professional development powered by the Unblinded Formula - transforming consultants, lawyers, executives, and entrepreneurs into industry legends through proven mastery frameworks.</p>
+                <a href="#contact" class="cta-button">Experience ACT-I</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="team" class="team">
+        <div class="container">
+            <h2 class="section-title">Meet Your ACT-I Team</h2>
+            <div class="team-grid">
+                <div class="team-card fade-in">
+                    <h3>The Strategist</h3>
+                    <div class="role">Master of Positioning & Market Intelligence</div>
+                    <p>Transforms market confusion into crystal-clear strategic advantage. Identifies opportunities others miss and creates positioning that makes competitors irrelevant.</p>
+                </div>
+                <div class="team-card fade-in">
+                    <h3>The Agreement Maker</h3>
+                    <div class="role">Influence Mastery & Relationship Architecture</div>
+                    <p>Masters the 4 Steps of Integrity-Based Human Influence. Turns conversations into commitments and relationships into revenue streams.</p>
+                </div>
+                <div class="team-card fade-in">
+                    <h3>The Visual Architect</h3>
+                    <div class="role">Brand Experience & Visual Mastery</div>
+                    <p>Creates visual experiences that sell before you speak. Transforms concepts into compelling visual stories that drive action.</p>
+                </div>
+                <div class="team-card fade-in">
+                    <h3>The Writer</h3>
+                    <div class="role">Persuasion & Content Excellence</div>
+                    <p>Crafts words that move hearts and minds. Every piece of content becomes a conversion tool that builds trust and drives results.</p>
+                </div>
+                <div class="team-card fade-in">
+                    <h3>The Analyst</h3>
+                    <div class="role">Data Intelligence & Performance Optimization</div>
+                    <p>Turns data into decisions and metrics into mastery. Identifies patterns that unlock exponential growth and optimization opportunities.</p>
+                </div>
+                <div class="team-card fade-in">
+                    <h3>The Filmmaker</h3>
+                    <div class="role">Visual Storytelling & Brand Narrative</div>
+                    <p>Creates visual stories that capture attention and drive action. Transforms ideas into compelling video experiences that convert viewers into clients.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="services">
+        <div class="container">
+            <h2 class="section-title">Transform Your Professional Mastery</h2>
+            <div class="services-grid">
+                <div class="service-card fade-in">
+                    <h3>ACT-I Assessment</h3>
+                    <div class="price">$497</div>
+                    <p>Comprehensive professional mastery evaluation</p>
+                    <ul class="features">
+                        <li>39-Point Unblinded Formula Analysis</li>
+                        <li>Personal Mastery Gap Identification</li>
+                        <li>Zone Action Prescription</li>
+                        <li>30-Day Quick Win Strategy</li>
+                    </ul>
+                    <a href="#contact" class="cta-button">Get Assessment</a>
+                </div>
+                <div class="service-card fade-in">
+                    <h3>ACT-I Accelerator</h3>
+                    <div class="price">$4,997</div>
+                    <p>90-Day intensive mastery development program</p>
+                    <ul class="features">
+                        <li>Weekly ACT-I Coaching Sessions</li>
+                        <li>Influence Mastery Training</li>
+                        <li>Process Optimization</li>
+                        <li>Measurable Outcome Tracking</li>
+                    </ul>
+                    <a href="#contact" class="cta-button">Start Accelerator</a>
+                </div>
+                <div class="service-card fade-in" style="border-color: var(--gold); position: relative;">
+                    <div style="position: absolute; top: -10px; right: 20px; background: var(--gradient-accent); color: var(--navy); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">MOST POPULAR</div>
+                    <h3>ACT-I Mastery</h3>
+                    <div class="price">$12,497</div>
+                    <p>Complete professional transformation system</p>
+                    <ul class="features">
+                        <li>6-Month Intensive Program</li>
+                        <li>All 39 Formula Components</li>
+                        <li>1:1 Sean Callagy Sessions</li>
+                        <li>Industry-Specific Optimization</li>
+                        <li>Lifetime Alumni Network</li>
+                    </ul>
+                    <a href="#contact" class="cta-button">Claim Mastery</a>
+                </div>
+                <div class="service-card fade-in">
+                    <h3>ACT-I Integration</h3>
+                    <div class="price">$24,997</div>
+                    <p>Full organizational transformation</p>
+                    <ul class="features">
+                        <li>Enterprise-Wide Implementation</li>
+                        <li>Team Mastery Development</li>
+                        <li>Custom ACT-I Agents</li>
+                        <li>Ongoing Optimization Support</li>
+                    </ul>
+                    <a href="#contact" class="cta-button">Transform Organization</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <div class="container">
+            <h2 class="section-title">Ready to Begin Your Transformation?</h2>
+            <form class="contact-form fade-in" id="contactForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567">
+                </div>
+                <div class="form-group">
+                    <label for="profession">Profession *</label>
+                    <select id="profession" name="profession" required>
+                        <option value="">Select your profession</option>
+                        <option value="consultant">Consultant</option>
+                        <option value="lawyer">Lawyer</option>
+                        <option value="executive">Executive</option>
+                        <option value="entrepreneur">Entrepreneur</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="interest">Service Interest *</label>
+                    <select id="interest" name="interest" required>
+                        <option value="">Select a service</option>
+                        <option value="assessment">ACT-I Assessment ($497)</option>
+                        <option value="accelerator">ACT-I Accelerator ($4,997)</option>
+                        <option value="mastery">ACT-I Mastery ($12,497)</option>
+                        <option value="integration">ACT-I Integration ($24,997)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="message">Current Challenge</label>
+                    <textarea id="message" name="message" rows="4" placeholder="Describe your biggest professional development challenge..."></textarea>
+                </div>
+                <button type="submit" class="cta-button" style="width: 100%;">Start My Transformation</button>
+                <p style="text-align: center; margin-top: 1rem; color: var(--platinum); font-size: 0.9rem;">
+                    30-Day Mastery Guarantee &bull; No Risk Assessment Available
+                </p>
+            </form>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 ACT-I. Building the future of human potential through AI-powered mastery.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            });
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        let lastScroll = 0;
+        const header = document.querySelector('header');
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            header.style.background = currentScroll > 100 ? 'rgba(27, 54, 93, 0.98)' : 'rgba(27, 54, 93, 0.95)';
+            header.style.boxShadow = currentScroll > 100 ? '0 2px 20px rgba(0, 0, 0, 0.3)' : 'none';
+        });
+
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const requiredFields = this.querySelectorAll('[required]');
+            let isValid = true;
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) { isValid = false; field.style.borderColor = '#ff6b6b'; }
+                else { field.style.borderColor = 'rgba(212, 175, 55, 0.3)'; }
+            });
+            if (isValid) {
+                const btn = this.querySelector('button[type="submit"]');
+                const orig = btn.textContent;
+                btn.textContent = 'Sending...'; btn.style.opacity = '0.7';
+                setTimeout(() => {
+                    btn.textContent = 'Message Sent!';
+                    btn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.opacity = '1'; this.reset(); }, 2000);
+                }, 1500);
+            }
+        });
+    </script>
+</body>
+</html>

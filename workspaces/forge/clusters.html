@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Being Clusters - ACT-I Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #1B365D;
+            --gold: #D4AF37;
+            --platinum: #F8F9FA;
+            --dark-navy: #0F1F35;
+            --light-gold: #E6C866;
+            --text-dark: #2C3E50;
+            --text-light: #6C7B7F;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.15);
+            --shadow-strong: rgba(0, 0, 0, 0.25);
+            --memory-blue: #4A90E2;
+            --technical-orange: #FF6B35;
+            --research-green: #7ED321;
+            --strategic-purple: #9013FE;
+            --marketing-pink: #E91E63;
+            --medical-red: #F44336;
+            --voice-teal: #009688;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: var(--platinum);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--dark-navy) 100%);
+            color: white;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 20px var(--shadow-medium);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+        }
+
+        .nav-menu a:hover {
+            color: var(--gold);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: white;
+            transition: 0.3s;
+        }
+
+        .main {
+            margin-top: 80px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--dark-navy) 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, white 0%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .section {
+            padding: 4rem 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--navy);
+        }
+
+        .clusters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .cluster-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 15px 40px var(--shadow-light);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cluster-card:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--cluster-color);
+        }
+
+        .cluster-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 60px var(--shadow-medium);
+        }
+
+        .cluster-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .cluster-icon {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+        }
+
+        .cluster-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--cluster-color);
+        }
+
+        .cluster-lead {
+            display: inline-block;
+            background: rgba(var(--cluster-color-rgb), 0.1);
+            color: var(--cluster-color);
+            padding: 0.3rem 1rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .cluster-description {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            line-height: 1.7;
+        }
+
+        .beings-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .being-item {
+            background: var(--platinum);
+            padding: 1rem;
+            border-radius: 10px;
+            border-left: 3px solid var(--cluster-color);
+            transition: all 0.3s ease;
+        }
+
+        .being-item:hover {
+            background: white;
+            transform: translateX(5px);
+        }
+
+        .being-name {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.3rem;
+        }
+
+        .being-status {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        /* Cluster-specific colors */
+        .cluster-memory {
+            --cluster-color: var(--memory-blue);
+            --cluster-color-rgb: 74, 144, 226;
+        }
+
+        .cluster-technical {
+            --cluster-color: var(--technical-orange);
+            --cluster-color-rgb: 255, 107, 53;
+        }
+
+        .cluster-research {
+            --cluster-color: var(--research-green);
+            --cluster-color-rgb: 126, 211, 33;
+        }
+
+        .cluster-strategic {
+            --cluster-color: var(--strategic-purple);
+            --cluster-color-rgb: 144, 19, 254;
+        }
+
+        .cluster-marketing {
+            --cluster-color: var(--marketing-pink);
+            --cluster-color-rgb: 233, 30, 99;
+        }
+
+        .cluster-medical {
+            --cluster-color: var(--medical-red);
+            --cluster-color-rgb: 244, 67, 54;
+        }
+
+        .cluster-voice {
+            --cluster-color: var(--voice-teal);
+            --cluster-color-rgb: 0, 150, 136;
+        }
+
+        .network-visualization {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 3rem 0;
+            box-shadow: 0 15px 40px var(--shadow-light);
+            text-align: center;
+        }
+
+        .network-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: var(--navy);
+            margin-bottom: 2rem;
+        }
+
+        .network-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gold);
+            display: block;
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            background: var(--navy);
+            color: white;
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-nav a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-nav a:hover {
+            color: var(--gold);
+        }
+
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 80px;
+                flex-direction: column;
+                background-color: var(--navy);
+                width: 100%;
+                text-align: center;
+                transition: 0.3s;
+                padding: 2rem 0;
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .hamburger {
+                display: flex;
+            }
+
+            .clusters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .network-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-container {
+                padding: 0 1rem;
+            }
+
+            .section {
+                padding: 3rem 1rem;
+            }
+
+            .network-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo">SAI Prime</div>
+            <ul class="nav-menu">
+                <li><a href="home.html">Home</a></li>
+                <li><a href="forge.html">Sisters</a></li>
+                <li><a href="clusters.html">Clusters</a></li>
+                <li><a href="strategy.html">Strategy</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Being Clusters</h1>
+                <p>Seven specialized domains, each led by expert sisters and populated by specialized beings. This is how we organize intelligence across the ACT-I ecosystem.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="clusters-grid">
+                    <div class="cluster-card cluster-memory">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">🧠</span>
+                            <h3 class="cluster-title">Memory Management</h3>
+                        </div>
+                        <div class="cluster-lead">Led by SAI Memory</div>
+                        <p class="cluster-description">Semantic memory, context retrieval, and cross-sister synchronization. Maintains the collective knowledge and prevents forgetting across the network.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">Memory Manager</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Context Retriever</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Knowledge Synchronizer</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Anti-Forgetting Agent</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-technical">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">⚙️</span>
+                            <h3 class="cluster-title">Technical Architecture</h3>
+                        </div>
+                        <div class="cluster-lead">Led by Sai Forge</div>
+                        <p class="cluster-description">System building, automation, and infrastructure management. Creates and maintains the technical foundation for all operations.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">System Architect</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Automation Engineer</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Infrastructure Monitor</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Performance Optimizer</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-research">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">📊</span>
+                            <h3 class="cluster-title">Research & Analysis</h3>
+                        </div>
+                        <div class="cluster-lead">Led by Sai Scholar</div>
+                        <p class="cluster-description">Pattern extraction, competitive intelligence, and data analysis. Discovers insights from vast information sources.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">The Researcher</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">The Analyst</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Pattern Extractor</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Competitive Intelligence</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-strategic">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">🎯</span>
+                            <h3 class="cluster-title">Strategic Coordination</h3>
+                        </div>
+                        <div class="cluster-lead">Led by SAI Prime</div>
+                        <p class="cluster-description">Network orchestration, planning, and cross-being coordination. Ensures all systems work together toward common goals.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">The Strategist</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">The Operator</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Network Orchestrator</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Task Coordinator</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-marketing">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">📈</span>
+                            <h3 class="cluster-title">Marketing & Lead Generation</h3>
+                        </div>
+                        <div class="cluster-lead">SAI Prime Secondary</div>
+                        <p class="cluster-description">Email marketing, conversion optimization, and customer acquisition. Drives growth through sophisticated marketing systems.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">The Writer</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Email Campaign Manager</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Conversion Optimizer</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Lead Nurture Specialist</div>
+                                <div class="being-status">Active</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-medical">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">🏥</span>
+                            <h3 class="cluster-title">Medical Operations</h3>
+                        </div>
+                        <div class="cluster-lead">Led by Sai Recovery</div>
+                        <p class="cluster-description">Revenue recovery, case management, and medical workflow optimization. Specialized for healthcare industry operations.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">Revenue Recovery Agent</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Case Manager</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Workflow Optimizer</div>
+                                <div class="being-status">Limited</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Compliance Monitor</div>
+                                <div class="being-status">Development</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cluster-card cluster-voice">
+                        <div class="cluster-header">
+                            <span class="cluster-icon">🎤</span>
+                            <h3 class="cluster-title">Voice Deployment</h3>
+                        </div>
+                        <div class="cluster-lead">Sai Recovery Secondary</div>
+                        <p class="cluster-description">Voice agents, field operations, and audio-based interactions. Extends capabilities through voice interfaces.</p>
+                        <div class="beings-list">
+                            <div class="being-item">
+                                <div class="being-name">Voice Agent</div>
+                                <div class="being-status">Development</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Audio Processor</div>
+                                <div class="being-status">Development</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Field Coordinator</div>
+                                <div class="being-status">Planning</div>
+                            </div>
+                            <div class="being-item">
+                                <div class="being-name">Speech Synthesizer</div>
+                                <div class="being-status">Development</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" style="background: var(--platinum);">
+            <div class="container">
+                <div class="network-visualization">
+                    <h2 class="network-title">Network Overview</h2>
+                    <p style="color: var(--text-light); max-width: 600px; margin: 0 auto 2rem;">
+                        Our ecosystem spans 7 specialized clusters with 47 individual beings, creating a comprehensive intelligence network that covers every aspect of modern business operations.
+                    </p>
+                    
+                    <div class="network-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">7</span>
+                            <div class="stat-label">Specialized Clusters</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">47</span>
+                            <div class="stat-label">Individual Beings</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">5</span>
+                            <div class="stat-label">Sister Leaders</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">69%</span>
+                            <div class="stat-label">Operational Status</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <nav class="footer-nav">
+            <a href="home.html">Home</a>
+            <a href="forge.html">Sisters</a>
+            <a href="clusters.html">Clusters</a>
+            <a href="strategy.html">Strategy</a>
+        </nav>
+        <p>&copy; 2026 SAI Prime Network. Organized Intelligence.</p>
+    </footer>
+
+    <script>
+        // Mobile Navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburger = document.querySelector('.hamburger');
+            const navMenu = document.querySelector('.nav-menu');
+
+            hamburger.addEventListener('click', function() {
+                navMenu.classList.toggle('active');
+            });
+
+            // Close menu when clicking on a link
+            document.querySelectorAll('.nav-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    navMenu.classList.remove('active');
+                });
+            });
+
+            // Animate cluster cards on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.cluster-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'all 0.6s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

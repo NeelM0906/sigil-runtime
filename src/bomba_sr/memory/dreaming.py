@@ -26,10 +26,6 @@ from bomba_sr.llm.providers import ChatMessage, provider_from_env
 
 log = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(
-    os.environ.get("BOMBA_PROJECT_ROOT", str(Path(__file__).resolve().parents[3]))
-)
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -334,7 +330,7 @@ class DreamCycle:
         # KNOWLEDGE.md and REPRESENTATION.md from workspace
         ws = being.get("workspace")
         if ws and ws != ".":
-            ws_path = Path(ws) if Path(ws).is_absolute() else _PROJECT_ROOT / ws
+            ws_path = Path(ws) if Path(ws).is_absolute() else Path(os.environ.get("BOMBA_WORKSPACE", ".")) / ws
             for fname in ("KNOWLEDGE.md", "REPRESENTATION.md"):
                 fpath = ws_path / fname
                 if fpath.exists():
@@ -343,12 +339,9 @@ class DreamCycle:
                     except OSError:
                         pass
 
-        # Task results (recent participation) — lives in Prime's DB, not being's DB
+        # Task results (recent participation)
         try:
-            prime_being = self.dashboard.get_being("prime") if self.dashboard else None
-            prime_tenant = (prime_being.get("tenant_id") if prime_being else None) or "tenant-prime"
-            prime_runtime = self.bridge._tenant_runtime(prime_tenant)
-            rows = prime_runtime.db.execute(
+            rows = runtime.db.execute(
                 """
                 SELECT task_id, goal, strategy, beings_used, synthesis, created_at
                 FROM task_results
@@ -366,8 +359,7 @@ class DreamCycle:
                 }
                 for r in rows
             ]
-        except Exception as exc:
-            log.warning("Could not read task_results from Prime DB for %s: %s", being_id, exc)
+        except Exception:
             result["task_results"] = []
 
         # Mark as having data if any source has content
@@ -543,7 +535,7 @@ class DreamCycle:
             # (memories with fewer versions and older recency_ts are lower value)
             rows = runtime.db.execute(
                 """
-                SELECT id, memory_key, content, being_id
+                SELECT id, memory_key, content
                 FROM memories
                 WHERE (user_id = ? OR being_id = ?) AND active = 1 AND tier = 'semantic'
                 ORDER BY recency_ts ASC, version ASC
@@ -558,14 +550,13 @@ class DreamCycle:
                 memory_id = str(row["id"])
                 memory_key = str(row["memory_key"])
                 old_content = str(row["content"])
-                row_being_id = row["being_id"]
                 # Archive, don't delete
                 runtime.db.execute(
                     """
-                    INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason, being_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (str(uuid.uuid4()), memory_id, being_id, memory_key, old_content, now, "dream_prune", row_being_id),
+                    (str(uuid.uuid4()), memory_id, being_id, memory_key, old_content, now, "dream_prune"),
                 )
                 runtime.db.execute(
                     "UPDATE memories SET active = 0, updated_at = ? WHERE id = ?",
@@ -647,11 +638,12 @@ class DreamCycle:
 
     def _write_dream_log(self, results: dict[str, Any]) -> Path | None:
         """Write a markdown report of the dream cycle to dream_logs/."""
-        log_dir = _PROJECT_ROOT / DREAM_LOGS_DIR
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", os.environ.get("BOMBA_WORKSPACE", ".")))
+        log_dir = project_root / DREAM_LOGS_DIR
         log_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now(timezone.utc)
-        filename = now.strftime("%Y-%m-%d-%H:%M") + ".md"
+        filename = now.strftime("%Y-%m-%d-%H-%M") + ".md"
         log_path = log_dir / filename
 
         lines = [f"# Dream Cycle Report — {now.strftime('%Y-%m-%d %H:%M UTC')}\n"]
@@ -688,7 +680,8 @@ class DreamCycle:
     @staticmethod
     def list_dream_logs(limit: int = 20) -> list[dict[str, Any]]:
         """Return recent dream log entries (newest first)."""
-        log_dir = _PROJECT_ROOT / DREAM_LOGS_DIR
+        project_root = Path(os.environ.get("BOMBA_PROJECT_ROOT", os.environ.get("BOMBA_WORKSPACE", ".")))
+        log_dir = project_root / DREAM_LOGS_DIR
         if not log_dir.is_dir():
             return []
 
@@ -699,7 +692,7 @@ class DreamCycle:
             stat = fpath.stat()
             logs.append({
                 "filename": fpath.name,
-                "path": str(fpath.relative_to(_PROJECT_ROOT)),
+                "path": str(fpath.relative_to(project_root)),
                 "size": stat.st_size,
                 "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
             })
@@ -720,7 +713,7 @@ class DreamCycle:
         now = datetime.now(timezone.utc).isoformat()
         row = runtime.db.execute(
             """
-            SELECT id, content, being_id FROM memories
+            SELECT id, content FROM memories
             WHERE (user_id = ? OR being_id = ?) AND memory_key = ? AND active = 1
             ORDER BY version DESC LIMIT 1
             """,
@@ -731,13 +724,12 @@ class DreamCycle:
 
         memory_id = str(row["id"])
         old_content = str(row["content"])
-        being_id = row["being_id"]
         runtime.db.execute(
             """
-            INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason, being_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO memory_archive (id, memory_id, user_id, memory_key, old_content, archived_at, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (str(uuid.uuid4()), memory_id, user_id, memory_key, old_content, now, f"dream_{reason}", being_id),
+            (str(uuid.uuid4()), memory_id, user_id, memory_key, old_content, now, f"dream_{reason}"),
         )
         runtime.db.execute(
             "UPDATE memories SET active = 0, updated_at = ? WHERE id = ?",

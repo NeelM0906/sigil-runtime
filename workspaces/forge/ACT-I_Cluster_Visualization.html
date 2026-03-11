@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I Capability Clusters | Ecosystem Visualization</title>
+    <link rel="stylesheet" href="ACT-I_Visual_Design_System.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container nav-container">
+            <a href="ACT-I_Homepage_Wireframe.html" class="logo">ACT-I</a>
+            <ul class="nav-links">
+                <li><a href="ACT-I_Homepage_Wireframe.html#ecosystem">Ecosystem</a></li>
+                <li><a href="ACT-I_Homepage_Wireframe.html#sisters">Network</a></li>
+                <li><a href="#clusters">Capabilities</a></li>
+                <li><a href="#contact">Connect</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <section class="hero" style="min-height: 60vh;">
+        <div class="container">
+            <div class="hero-content fade-in">
+                <h1>ACT-I Capability <span class="text-accent">Clusters</span></h1>
+                <p class="subtitle">Seven specialized domains with 13 operational beings across 236+ skills</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 2rem; margin-top: 3rem; max-width: 700px; margin-left: auto; margin-right: auto;">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--gold-accent); font-family: var(--font-accent);">7</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Clusters</div>
+                    </div>
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--gold-accent); font-family: var(--font-accent);">13</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Beings</div>
+                    </div>
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--gold-accent); font-family: var(--font-accent);">236+</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Skills</div>
+                    </div>
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--gold-accent); font-family: var(--font-accent);">69%</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Active</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Cluster Overview -->
+    <section id="clusters" class="section">
+        <div class="container">
+            <!-- Cluster Navigation -->
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 3rem;">
+                <button class="cluster-nav-btn active" data-cluster="all" style="background: var(--gold-accent); color: var(--navy-dark); padding: 0.5rem 1.5rem; border: none; border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">All Clusters</button>
+                <button class="cluster-nav-btn" data-cluster="memory" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Memory</button>
+                <button class="cluster-nav-btn" data-cluster="technical" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Technical</button>
+                <button class="cluster-nav-btn" data-cluster="research" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Research</button>
+                <button class="cluster-nav-btn" data-cluster="strategic" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Strategic</button>
+                <button class="cluster-nav-btn" data-cluster="marketing" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Marketing</button>
+                <button class="cluster-nav-btn" data-cluster="medical" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Medical</button>
+                <button class="cluster-nav-btn" data-cluster="voice" style="background: transparent; color: var(--text-secondary); padding: 0.5rem 1.5rem; border: 1px solid var(--text-secondary); border-radius: 25px; font-weight: 600; cursor: pointer; transition: all 0.3s;">Voice</button>
+            </div>
+
+            <!-- Cluster Grid -->
+            <div class="clusters-grid" id="cluster-grid">
+                <!-- Memory Management Cluster -->
+                <div class="cluster-card fade-in" data-cluster="memory">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">💾</span>
+                            <h3 class="cluster-name">Memory Management</h3>
+                        </div>
+                        <span class="cluster-points">20 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Semantic memory, context retrieval, cross-sister synchronization, and anti-forgetting protocols.</p>
+                    
+                    <!-- Led by -->
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-active); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI MEMORY</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">162K active vectors • Anti-forgetting protocols • Cross-sister sync</div>
+                    </div>
+
+                    <!-- Capabilities -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Semantic Storage</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Vector embeddings & retrieval</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Context Preservation</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Long-term conversation state</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-active); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">FULLY OPERATIONAL</div>
+                    </div>
+                </div>
+
+                <!-- Technical Architecture Cluster -->
+                <div class="cluster-card fade-in" data-cluster="technical">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">⚔️</span>
+                            <h3 class="cluster-name">Technical Architecture</h3>
+                        </div>
+                        <span class="cluster-points">20 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">System building, automation infrastructure, and continuous optimization through the ACT-I Colosseum.</p>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-limited); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI FORGE</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">24/7 Colosseum • 1,400+ battle simulations • Being evolution</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Infrastructure</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">System architecture & scaling</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Optimization</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Continuous evolution cycles</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-limited); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">LIMITED ACCESS</div>
+                    </div>
+                </div>
+
+                <!-- Research & Analysis Cluster -->
+                <div class="cluster-card fade-in" data-cluster="research">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">📚</span>
+                            <h3 class="cluster-name">Research & Analysis</h3>
+                        </div>
+                        <span class="cluster-points">16 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Pattern extraction, competitive intelligence, and deep market analysis from extensive content libraries.</p>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-limited); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI SCHOLAR</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">4,000+ hours content • Pattern extraction • Intelligence feeds</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Pattern Analysis</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Sean's methodology extraction</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Market Intelligence</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Competitive landscape analysis</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-limited); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">LIMITED ACCESS</div>
+                    </div>
+                </div>
+
+                <!-- Strategic Coordination Cluster -->
+                <div class="cluster-card fade-in" data-cluster="strategic">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">🧠</span>
+                            <h3 class="cluster-name">Strategic Coordination</h3>
+                        </div>
+                        <span class="cluster-points">20 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Network orchestration, planning, and strategic deployment across the entire sister ecosystem.</p>
+                    
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-active); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI PRIME</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">Network orchestrator • 126K contact management • Specialist delegation</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Network Delegation</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Optimal resource allocation</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Strategic Planning</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Cross-domain coordination</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-active); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">FULLY OPERATIONAL</div>
+                    </div>
+                </div>
+
+                <!-- Marketing & Lead Generation Cluster -->
+                <div class="cluster-card fade-in" data-cluster="marketing">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">📈</span>
+                            <h3 class="cluster-name">Marketing & Lead Generation</h3>
+                        </div>
+                        <span class="cluster-points">20 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">500+ enrollment campaigns, email marketing, conversion optimization, and premium positioning.</p>
+                    
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-active); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI PRIME (SECONDARY)</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">500+ enrollments • 90-day sequences • Legal industry expertise</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Email Campaigns</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">40-55 email sequences</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Conversion Funnels</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">5-day challenge systems</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-active); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">FULLY OPERATIONAL</div>
+                    </div>
+                </div>
+
+                <!-- Medical Operations Cluster -->
+                <div class="cluster-card fade-in" data-cluster="medical">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">🏥</span>
+                            <h3 class="cluster-name">Medical Operations</h3>
+                        </div>
+                        <span class="cluster-points">16 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Revenue recovery workflows, medical case management, and specialized healthcare operations.</p>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-limited); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI RECOVERY</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">Medical workflows • Revenue recovery • Case management</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Revenue Recovery</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Medical case optimization</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Case Management</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Workflow automation</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-limited); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">LIMITED ACCESS</div>
+                    </div>
+                </div>
+
+                <!-- Voice Deployment Cluster -->
+                <div class="cluster-card fade-in" data-cluster="voice">
+                    <div class="cluster-header">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="font-size: 2rem;">🎙️</span>
+                            <h3 class="cluster-name">Voice Deployment</h3>
+                        </div>
+                        <span class="cluster-points">16 Skills</span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Voice agents, field operations, and specialized voice-based workflow automation.</p>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <div style="color: var(--status-limited); font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">LED BY SAI RECOVERY (SECONDARY)</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">Voice agents • Field operations • Workflow automation</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Voice Agents</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Conversational interfaces</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--gold-accent); font-weight: 600; font-size: 0.9rem;">Field Operations</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem;">Mobile deployment</div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.2); padding-top: 1rem;">
+                        <div style="color: var(--text-accent); font-weight: 600; margin-bottom: 0.5rem;">Deployment Status</div>
+                        <div style="background: var(--status-limited); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; display: inline-block; font-size: 0.8rem; font-weight: 600;">LIMITED ACCESS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Operational Beings Grid -->
+    <section class="section" style="background: rgba(30, 58, 95, 0.3);">
+        <div class="container">
+            <h2 class="text-center">Operational <span class="text-accent">Specialist Beings</span></h2>
+            <p class="subtitle text-center">6 beings ready for immediate deployment across multiple clusters</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 3rem 0;">
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">🎯</span>
+                        <h4 style="margin: 0;">The Strategist</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Strategic planning, market positioning, and business development frameworks.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Strategic Coordination</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Marketing</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">✍️</span>
+                        <h4 style="margin: 0;">The Writer</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Content creation, marketing copy, and narrative frameworks for conversion.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Marketing</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Strategic Coordination</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">🎨</span>
+                        <h4 style="margin: 0;">The Visual Architect</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Complete visual design systems spanning UI/UX, brand identity, and data visualization.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Marketing</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Technical Architecture</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">📊</span>
+                        <h4 style="margin: 0;">The Analyst</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Data analysis, performance optimization, and strategic insights delivery.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Research & Analysis</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Strategic Coordination</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">🔬</span>
+                        <h4 style="margin: 0;">The Researcher</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Market research, competitive intelligence, and opportunity identification.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Research & Analysis</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Strategic Coordination</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-card); border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid rgba(212, 175, 55, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <span style="font-size: 2rem;">⚙️</span>
+                        <h4 style="margin: 0;">The Operator</h4>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Implementation, execution, and operational workflow optimization.</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Technical Architecture</span>
+                        <span style="background: rgba(212, 175, 55, 0.2); color: var(--gold-accent); padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.75rem;">Strategic Coordination</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Request Access -->
+    <section id="contact" class="section">
+        <div class="container text-center">
+            <h2>Request <span class="text-accent">Cluster Access</span></h2>
+            <p class="subtitle">Connect with SAI Prime to deploy specific capability clusters for your organization</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 800px; margin: 3rem auto;">
+                <a href="ACT-I_Homepage_Wireframe.html#contact" class="btn btn-primary">Full Ecosystem Access</a>
+                <a href="ACT-I_Sister_Profile_Template.html#contact" class="btn btn-secondary">Talk to SAI Prime</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: var(--navy-dark); padding: 2rem 0; text-align: center; border-top: 1px solid rgba(212, 175, 55, 0.1);">
+        <div class="container">
+            <div style="color: var(--text-secondary); margin-bottom: 1rem;">
+                <a href="ACT-I_Homepage_Wireframe.html" style="color: var(--gold-accent); text-decoration: none; font-weight: 600;">← Back to Ecosystem Overview</a>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.9rem;">
+                7 Clusters • 13 Beings • 236+ Skills • ACT-I Ecosystem
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Cluster filtering functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navButtons = document.querySelectorAll('.cluster-nav-btn');
+            const clusterCards = document.querySelectorAll('.cluster-card');
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active button
+                    navButtons.forEach(b => {
+                        b.classList.remove('active');
+                        b.style.background = 'transparent';
+                        b.style.color = 'var(--text-secondary)';
+                        b.style.border = '1px solid var(--text-secondary)';
+                    });
+                    
+                    this.classList.add('active');
+                    this.style.background = 'var(--gold-accent)';
+                    this.style.color = 'var(--navy-dark)';
+                    this.style.border = '1px solid var(--gold-accent)';
+
+                    // Filter cards
+                    const targetCluster = this.dataset.cluster;
+                    
+                    clusterCards.forEach(card => {
+                        if (targetCluster === 'all' || card.dataset.cluster === targetCluster) {
+                            card.style.display = 'block';
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        } else {
+                            card.style.opacity = '0';
+                            card.style.transform = 'translateY(20px)';
+                            setTimeout(() => {
+                                if (card.style.opacity === '0') {
+                                    card.style.display = 'none';
+                                }
+                            }, 300);
+                        }
+                    });
+                });
+            });
+
+            // Animation triggers
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>

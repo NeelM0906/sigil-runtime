@@ -70,6 +70,12 @@ class OpenAICompatibleProvider:
             if exc.code in {401, 403}:
                 hint = " Check OPENROUTER_API_KEY / OPENAI_API_KEY and base URL."
             provider_label = self.provider_name
+            import logging as _log
+            _log.getLogger(__name__).error(
+                "%s %d: %s | model=%s msgs=%d tools=%d payload_bytes=%d",
+                provider_label, exc.code, details[:500], model,
+                len(messages), len(tools or []), len(json.dumps(payload)),
+            )
             raise RuntimeError(f"{provider_label} request failed ({exc.code}): {details or exc.reason}.{hint}") from exc
 
         choices = body.get("choices") or []

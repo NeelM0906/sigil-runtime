@@ -839,7 +839,11 @@ export function TaskBoard({ fullWidth = false }) {
       if (filters.assignee) apiFilters.assignee = filters.assignee
       if (filters.priority) apiFilters.priority = filters.priority
       if (filters.from) apiFilters.from = new Date(filters.from).toISOString()
-      if (filters.to) apiFilters.to = new Date(filters.to).toISOString()
+      if (filters.to) {
+        const end = new Date(filters.to)
+        end.setUTCHours(23, 59, 59, 999)
+        apiFilters.to = end.toISOString()
+      }
       const { tasks: fetched } = await tasksApi.list(apiFilters)
       setTasks(fetched)
       setError(null)

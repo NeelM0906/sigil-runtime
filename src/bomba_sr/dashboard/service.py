@@ -260,8 +260,45 @@ class DashboardService:
             );
             CREATE INDEX IF NOT EXISTS idx_mc_events_type
               ON mc_events(event_type, seq);
+
+            CREATE TABLE IF NOT EXISTS mc_chat_sessions (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS mc_deliverables (
+              id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              being_id TEXT,
+              filename TEXT NOT NULL,
+              file_type TEXT NOT NULL,
+              file_path TEXT NOT NULL,
+              url TEXT NOT NULL,
+              line_count INTEGER DEFAULT 0,
+              byte_size INTEGER DEFAULT 0,
+              created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_deliverables_task
+              ON mc_deliverables(task_id);
         """)
         self.db.commit()
+
+        # Migration: add session_id to mc_messages
+        try:
+            self.db.execute("ALTER TABLE mc_messages ADD COLUMN session_id TEXT DEFAULT 'general'")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
+        self.db.execute("CREATE INDEX IF NOT EXISTS idx_mc_messages_session ON mc_messages(session_id, timestamp DESC)")
+        self.db.execute("UPDATE mc_messages SET session_id = 'general' WHERE session_id IS NULL")
+        # Seed default General session
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT OR IGNORE INTO mc_chat_sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            ("general", "General", now, now),
+        )
 
     # ------------------------------------------------------------------
     # Beings
@@ -276,7 +313,7 @@ class DashboardService:
         path = Path(json_path)
         if not path.exists():
             return 0
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         beings = data.get("beings", data) if isinstance(data, dict) else data
 
         now = self._now()
@@ -320,7 +357,7 @@ class DashboardService:
         sisters_json = _PROJECT_ROOT / "workspaces" / "prime" / "sisters.json"
         if sisters_json.exists():
             try:
-                data = json.loads(sisters_json.read_text())
+                data = json.loads(sisters_json.read_text(encoding="utf-8"))
                 for s in data.get("sisters", []):
                     ws_path = _PROJECT_ROOT / s["workspace_root"]
                     soul = self._load_soul_safe(ws_path)
@@ -418,7 +455,7 @@ class DashboardService:
                 if not config_path.exists():
                     continue
                 try:
-                    bland_data = json.loads(config_path.read_text())
+                    bland_data = json.loads(config_path.read_text(encoding="utf-8"))
                     agent_block = bland_data.get("agent", bland_data)
                     agent_id = agent_block.get("agent_id", "")
                 except (json.JSONDecodeError, OSError):
@@ -665,6 +702,93 @@ class DashboardService:
                 )
 
     # ------------------------------------------------------------------
+    # Chat sessions
+    # ------------------------------------------------------------------
+
+    def list_sessions(self) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM mc_chat_sessions ORDER BY updated_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def create_session(self, name: str) -> dict:
+        sid = f"sess-{uuid.uuid4().hex[:8]}"
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT INTO mc_chat_sessions (id, name, created_at, updated_at) VALUES (?,?,?,?)",
+            (sid, name, now, now),
+        )
+        session = dict(self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE id = ?", (sid,)
+        ).fetchone())
+        self._emit_event("chat_session", {"action": "created", "session": session})
+        return session
+
+    def rename_session(self, session_id: str, name: str) -> dict:
+        now = self._now()
+        self.db.execute_commit(
+            "UPDATE mc_chat_sessions SET name = ?, updated_at = ? WHERE id = ?",
+            (name, now, session_id),
+        )
+        session = dict(self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE id = ?", (session_id,)
+        ).fetchone())
+        self._emit_event("chat_session", {"action": "updated", "session": session})
+        return session
+
+    def delete_session(self, session_id: str) -> bool:
+        if session_id == "general":
+            return False
+        self.db.execute_commit("DELETE FROM mc_messages WHERE session_id = ?", (session_id,))
+        cur = self.db.execute_commit("DELETE FROM mc_chat_sessions WHERE id = ?", (session_id,))
+        if cur.rowcount > 0:
+            self._emit_event("chat_session", {"action": "deleted", "session_id": session_id})
+            return True
+        return False
+
+    # ------------------------------------------------------------------
+    # Deliverables
+    # ------------------------------------------------------------------
+
+    def create_deliverable(
+        self,
+        task_id: str,
+        filename: str,
+        file_type: str,
+        file_path: str,
+        url: str,
+        being_id: str | None = None,
+        line_count: int = 0,
+        byte_size: int = 0,
+    ) -> dict:
+        did = f"dlv-{uuid.uuid4().hex[:8]}"
+        now = self._now()
+        self.db.execute_commit(
+            """INSERT INTO mc_deliverables
+               (id, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (did, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, now),
+        )
+        row = self.db.execute("SELECT * FROM mc_deliverables WHERE id = ?", (did,)).fetchone()
+        d = dict(row)
+        self._emit_event("deliverable_created", d)
+        return d
+
+    def list_deliverables(self, task_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM mc_deliverables WHERE task_id = ? ORDER BY created_at DESC",
+            (task_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def list_all_deliverables(self, limit: int = 50) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM mc_deliverables ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------
     # Chat messages
     # ------------------------------------------------------------------
 
@@ -673,11 +797,15 @@ class DashboardService:
         sender: str | None = None,
         target: str | None = None,
         search: str | None = None,
-        limit: int = 100,
+        session_id: str | None = None,
+        limit: int = 500,
         offset: int = 0,
     ) -> list[dict]:
         sql = "SELECT * FROM mc_messages WHERE 1=1"
         params: list[Any] = []
+        if session_id:
+            sql += " AND session_id = ?"
+            params.append(session_id)
         if sender:
             sql += " AND sender = ?"
             params.append(sender)
@@ -700,19 +828,25 @@ class DashboardService:
         msg_type: str = "broadcast",
         mode: str = "auto",
         task_ref: str | None = None,
+        session_id: str = "general",
     ) -> dict:
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
             conn.execute(
                 """INSERT INTO mc_messages
-                   (id,type,sender,targets,content,timestamp,mode,task_ref)
-                   VALUES (?,?,?,?,?,?,?,?)""",
+                   (id,type,sender,targets,content,timestamp,mode,task_ref,session_id)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
                 (
                     msg_id, msg_type, sender,
                     json.dumps(targets or []),
-                    content, now, mode, task_ref,
+                    content, now, mode, task_ref, session_id,
                 ),
+            )
+            # Update session timestamp
+            conn.execute(
+                "UPDATE mc_chat_sessions SET updated_at = ? WHERE id = ?",
+                (now, session_id),
             )
         msg = self._message_row(
             self.db.execute(
@@ -736,16 +870,16 @@ class DashboardService:
         )
         return cur.rowcount > 0
 
-    def route_to_being(self, being_id: str, content: str, sender: str = "user") -> None:
+    def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "general") -> None:
         """Route a message to a being via LLM in a background thread."""
         t = threading.Thread(
             target=self._route_to_being_sync,
-            args=(being_id, content, sender),
+            args=(being_id, content, sender, chat_session_id),
             daemon=True,
         )
         t.start()
 
-    def _route_to_being_sync(self, being_id: str, content: str, sender: str) -> None:
+    def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "general") -> None:
         """Call bridge.handle_turn for a being and store the response.
 
         Identity is loaded automatically by the bridge via SoulConfig from
@@ -766,6 +900,7 @@ class DashboardService:
                 content=f"[{being.get('name', being_id)} is a voice agent — use the Voice panel to trigger calls]",
                 targets=[sender],
                 msg_type="direct",
+                session_id=chat_session_id,
             )
             return
 
@@ -776,6 +911,7 @@ class DashboardService:
                 content=f"[{being.get('name', being_id)} is currently offline and cannot respond.]",
                 targets=[sender],
                 msg_type="direct",
+                session_id=chat_session_id,
             )
             return
 
@@ -785,6 +921,7 @@ class DashboardService:
                 content=f"[{being_id} is offline — no LLM bridge available]",
                 targets=[sender],
                 msg_type="direct",
+                session_id=chat_session_id,
             )
             return
 
@@ -813,7 +950,7 @@ class DashboardService:
             and self.orchestration_engine is not None
             and self.project_service is not None
         ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id)
+            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id)
             return
 
         task_id: str | None = None
@@ -906,6 +1043,7 @@ class DashboardService:
             targets=[sender],
             msg_type="direct",
             task_ref=task_id,
+            session_id=chat_session_id,
         )
 
     def init_orchestration(self, project_svc: Any) -> None:
@@ -934,6 +1072,7 @@ class DashboardService:
         content: str,
         sender: str,
         session_id: str,
+        chat_session_id: str = "general",
     ) -> None:
         """Route a full_task to Prime's orchestration engine instead of direct LLM."""
         # Acknowledge in chat immediately
@@ -945,6 +1084,7 @@ class DashboardService:
             ),
             targets=[sender],
             msg_type="direct",
+            session_id=chat_session_id,
         )
 
         # Update Prime status
@@ -960,6 +1100,7 @@ class DashboardService:
                 goal=content,
                 requester_session_id=session_id,
                 sender=sender,
+                chat_session_id=chat_session_id,
             )
             log.info(
                 "Orchestration started: task=%s status=%s",
@@ -973,6 +1114,7 @@ class DashboardService:
                 content=f"[Orchestration failed to start: {exc}]",
                 targets=[sender],
                 msg_type="direct",
+                session_id=chat_session_id,
             )
             self.update_being("prime", {"status": "online"})
 
