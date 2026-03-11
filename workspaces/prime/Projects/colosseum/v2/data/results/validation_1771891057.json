@@ -1,0 +1,1280 @@
+{
+  "tournament_type": "validation",
+  "leaderboard": [
+    {
+      "id": "client_fulfillment_client_facing",
+      "title": "Client Communication Lead",
+      "area": "Client Fulfillment & Delivery",
+      "average": 6.102941176470588,
+      "total_rounds": 1
+    },
+    {
+      "id": "marketing_outbound_leader",
+      "title": "Outbound Strategy Director",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "average": 6.03,
+      "total_rounds": 1
+    },
+    {
+      "id": "client_success_leader",
+      "title": "Client Success Director",
+      "area": "Client Success & Retention",
+      "average": 5.797058823529412,
+      "total_rounds": 1
+    },
+    {
+      "id": "client_success_client_facing",
+      "title": "Account Manager",
+      "area": "Client Success & Retention",
+      "average": 5.748529411764705,
+      "total_rounds": 2
+    },
+    {
+      "id": "vision_leadership_zone_action",
+      "title": "Vision Translator",
+      "area": "Vision & Leadership",
+      "average": 5.635294117647058,
+      "total_rounds": 1
+    },
+    {
+      "id": "marketing_outbound_client_facing",
+      "title": "Meeting Setter",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "average": 5.627941176470589,
+      "total_rounds": 2
+    },
+    {
+      "id": "marketing_outbound_zone_action",
+      "title": "Ecosystem Merger Specialist",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "average": 5.31764705882353,
+      "total_rounds": 1
+    }
+  ],
+  "rounds": 3,
+  "beings_count": 10,
+  "judges_count": 17,
+  "scenarios_count": 85,
+  "total_time": 257.65023279190063,
+  "issues": [
+    "Generation error for Outbound Strategy Director: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Funnel Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Athena (Original DNA): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Being Evolution Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Client Communication Lead: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (self_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (formula_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (outcome_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (contamination_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (group_influence_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (process_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (coaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (contamination_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (group_influence_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (self_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (outcome_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (contamination_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (self_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (coaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199227, Requested 1423. Please try again in 195ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (self_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199572, Requested 1480. Please try again in 315ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1503. Please try again in 450ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (formula_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1242. Please try again in 372ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199583, Requested 1522. Please try again in 331ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1253. Please try again in 375ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (contamination_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199805, Requested 1338. Please try again in 342ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1505. Please try again in 451ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1539. Please try again in 461ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (process_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 198942, Requested 1560. Please try again in 150ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1464. Please try again in 439ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1482. Please try again in 444ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Athena (Original DNA): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 594. Please try again in 178ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Funnel Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 706. Please try again in 211ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Being Evolution Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 708. Please try again in 212ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Client Communication Lead: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199934, Requested 729. Please try again in 198ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Client Success Director: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 718. Please try again in 215ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Ecosystem Merger Specialist: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 717. Please try again in 215ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Vision Translator: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199936, Requested 712. Please try again in 194ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Outbound Strategy Director: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 736. Please try again in 220ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (outcome_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (group_influence_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (formula_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (process_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (self_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (coaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Ecosystem Merger Specialist: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Athena (Original DNA): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Being Evolution Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Meeting Setter: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Account Manager: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Client Success Director: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Funnel Architect: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Generation error for Vision Translator: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1527. Please try again in 458ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (public_speaking_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1513. Please try again in 453ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (formula_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1274. Please try again in 382ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1285. Please try again in 385ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (outcome_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1095. Please try again in 328ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (ecosystem_merger_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1535. Please try again in 460ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (process_mastery_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1591. Please try again in 477ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1152. Please try again in 345ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1492. Please try again in 447ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sales_closing_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1553. Please try again in 465ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (coaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1522. Please try again in 456ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1570. Please try again in 470ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (outcome_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1104. Please try again in 331ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (human_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1161. Please try again in 348ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (sean_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1293. Please try again in 387ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (written_content_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1536. Please try again in 460ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (leadership_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1504. Please try again in 451ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (management_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1501. Please try again in 450ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (coaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1531. Please try again in 459ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (teaching_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1545. Please try again in 463ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+    "Judge error (truth_to_pain_judge): Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1579. Please try again in 473ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}"
+  ],
+  "results": [
+    {
+      "being_id": "marketing_outbound_zone_action",
+      "being_title": "Ecosystem Merger Specialist",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "scenario_id": "Teach the 4-Step Communication Model",
+      "scenario_company": "Unblinded",
+      "scenario_difficulty": "bronze",
+      "round": 1,
+      "response": "**1. Identify the Zone Action:**\nThe zone action here is to effectively teach Dr. Sarah Mitchell the 4-Step Communication Model, ensuring she understands how to articulate it in a way that allows her to have the difficult conversation with her underperforming office manager effectively, while maintaining the integrity of their relationship.\n\n**2. Apply the Relevant Formula Components:**\n- **Self Mastery**: Addressing Dr. Mitchell\u2019s fear of damaging the relationship and her avoidance of harshness. We\u2019ll navigate these destroyers by emphasizing tenacity and confidence.\n- **Influence Mastery**: Utilizing the 4-Step Communication Model (Fact, Meaning, Feeling, Request) to structure her conversation in a way that is direct yet empathetic.\n- **Integrity**: Ensuring that Dr. Mitchell communicates transparently and constructively, giving more than she takes in the conversation.\n\n**3. Execute with Influence Mastery:**\n\n**Introduction (2 minutes)**:\n\u201cDr. Mitchell, I understand that you're concerned about how to approach your office manager without damaging your relationship. Today, we\u2019ll use the 4-Step Communication Model, which will help you communicate clearly and effectively while preserving integrity in your connection.\u201d\n\n**Step 1: Fact (2 minutes)**:\n\u201cStart with the facts \u2014 this is the objective information about the underperformance. For example, you might say, \u2018I\u2019ve noticed that deadlines for patient follow-ups have been missed three times this month.\u2019 It's important to state this matter-of-factly without adding emotion or interpretation. How would you articulate the specific issue?\u201d\n\n**Step 2: Meaning (2 minutes)**:\n\u201cNext, share what this fact means to you and the practice. You could say, \u2018This has led to delays in patient care and affects our overall efficiency.\u2019 This step allows you to express the impact of their actions without placing blame. Can you express the meaning behind the issue?\u201d\n\n**Step 3: Feeling (2 minutes)**:\n\u201cNow, it's time to express how this situation makes you feel. You might say, \u2018I feel concerned because I value our team's performance and want us to succeed together.\u2019 This shows vulnerability and helps to create emotional rapport. What could you say about your feelings regarding this situation?\u201d\n\n**Step 4: Request (2 minutes)**:\n\u201cFinally, make your request. Frame it positively, like, \u2018I would appreciate your help in creating a plan to ensure we meet our follow-up deadlines moving forward.\u2019 This encourages collaboration rather than confrontation. What specific request do you think you could make?\u201d\n\n**4. Create the Outcome with Integrity:**\n\u201cBy following these steps, you\u2019ll be able to communicate your concerns directly and constructively, minimizing the risk of damaging your relationship. It\u2019s about creating a partnership to solve the issue together. Now, let\u2019s practice articulating each step. Can you summarize what you\u2019ve learned?\u201d\n\n**Conclusion (1 minute)**:\n\u201cRemember, Dr. Mitchell, the goal is to",
+      "scores": {
+        "formula_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1242. Please try again in 372ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1253. Please try again in 375ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "clarity": 8.5,
+          "likelihood_yes": 8.0,
+          "action_orientation": 8.5,
+          "obstacle_removal": 8.0,
+          "overall": 8.2,
+          "feedback": "The response clearly outlines the 4-Step Communication Model and provides practical examples, enhancing clarity. The likelihood of Dr. Mitchell agreeing to use this model is high, as it addresses her concerns directly. The action orientation is strong, as it encourages her to practice articulating the steps. However, it could further emphasize specific barriers she might face in the conversation and how to overcome them."
+        },
+        "contamination_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199805, Requested 1338. Please try again in 342ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1503. Please try again in 450ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "room_command": 6.5,
+          "energy_transfer": 6.0,
+          "action_causing": 7.0,
+          "identity_elevation": 6.5,
+          "compound_influence": 5.5,
+          "overall": 6.2,
+          "feedback": "The response effectively outlines the 4-Step Communication Model, demonstrating a clear structure and practical application. However, it lacks a strong commanding presence and energy that would elevate the audience's engagement. More dynamic storytelling or personal anecdotes could enhance emotional connection and energy transfer. Additionally, while the steps are clearly articulated, there could be more emphasis on raising Dr. Mitchell's identity as a leader before asking for action, which would strengthen the overall influence."
+        },
+        "self_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199572, Requested 1480. Please try again in 315ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "process_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 198942, Requested 1560. Please try again in 150ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1482. Please try again in 444ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1464. Please try again in 439ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "systems_quality": 7.5,
+          "clarity": 8.0,
+          "accountability": 6.0,
+          "delegation": 5.5,
+          "feedback": "The response effectively outlines a structured approach to teaching the 4-Step Communication Model, demonstrating a good understanding of systems thinking and clarity. However, the accountability structures could be improved by incorporating mechanisms for follow-up or progress tracking. Delegation is somewhat lacking as it primarily focuses on teaching rather than empowering Dr. Mitchell to take ownership of the conversation. Feedback loops are present but could be more actionable. Time management is reasonable, but there could be a stronger emphasis on protecting time for practice and reflection.",
+          "time_mastery": 6.5,
+          "overall": 6.5
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199583, Requested 1522. Please try again in 331ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "question_quality": 6.5,
+          "restraint": 5.0,
+          "listening": 4.5,
+          "challenge": 4.0,
+          "space_holding": 3.5,
+          "breakthrough_causing": 5.0,
+          "overall": 4.5,
+          "feedback": "The response effectively outlines the 4-Step Communication Model and provides a structured approach for Dr. Mitchell. However, there is a tendency to provide too much guidance rather than facilitating her own discovery. The questions posed could be more powerful and open-ended to encourage deeper reflection. Additionally, there was limited use of silence and space holding, which could have allowed Dr. Mitchell to process her thoughts more fully. Overall, while the information was clear, the coaching approach could be more aligned with the principles of coaching to foster Dr. Mitchell's ownership of the model."
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1505. Please try again in 451ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1539. Please try again in 461ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771890949.150045,
+      "average_overall": 5.31764705882353
+    },
+    {
+      "being_id": "vision_leadership_zone_action",
+      "being_title": "Vision Translator",
+      "area": "Vision & Leadership",
+      "scenario_id": "We Already Have a Billing Company",
+      "scenario_company": "Callagy Recovery",
+      "scenario_difficulty": "bronze",
+      "round": 1,
+      "response": "**Identify the Zone Action:**\nThe 0.8% move here is to help Karen Mitchell understand the distinct value of Callagy Recovery in the context of efficiency and claim recovery, thereby prompting her to ask about denied claims. This approach will reframing the conversation from resistance to curiosity.\n\n**Apply Relevant Formula Components:**\n1. **Influence Mastery:** Use the 4-Step Communication Model to establish rapport and address concerns.\n2. **Congruence:** Align my message with her hot button of efficiency.\n3. **Emotional Rapport:** Connect with her desire to minimize complexity.\n\n**Execution:**\n\n---\n\n**Step 1: Open the Conversation with Acknowledgment**\n\n*\u201cHi Karen, I truly appreciate you sharing your perspective on your current billing company. It\u2019s great to hear that your practice is satisfied with their service. I understand the importance of efficiency and avoiding unnecessary complexity, especially in a busy environment.\u201d*\n\n---\n\n**Step 2: Transition to the Value of Callagy Recovery**\n\n*\u201cWhat we do at Callagy Recovery is distinctly different from traditional billing. While billing companies focus on sending out invoices and collecting payments, we specialize in the recovery of denied claims. Many practices don\u2019t realize that there\u2019s often a significant amount of revenue tied up in claims that have been written off as denied.\u201d*\n\n---\n\n**Step 3: Create Curiosity and Prompt Action**\n\n*\u201cI\u2019d love to understand better how your current process handles denied claims. If I may ask, have you ever had a chance to analyze the claims that have been denied and written off? It might be surprising to see what could be recovered with the right expertise. This could potentially streamline your overall billing process and increase your revenue without adding complexity.\u201d*\n\n---\n\n**Step 4: Reinforce Integrity and Future Collaboration**\n\n*\u201cAt Callagy Recovery, our mission is to empower practices like yours by maximizing every dollar you\u2019re entitled to. It\u2019s not about duplicating your current work; it\u2019s about enhancing it and ensuring that your team can focus on delivering quality care to your patients.\u201d*\n\n---\n\n**Outcome Creation:**\n\nBy fostering a dialogue that acknowledges Karen\u2019s concerns and challenges her to think about the implications of denied claims, I\u2019ll encourage her to explore the unique role Callagy Recovery plays in enhancing the overall financial health of her practice. My approach maintains integrity by clearly articulating our value without pushing for a sale, thus building trust and rapport.\n\n---\n\nKaren's continued engagement with this conversation will likely lead her to inquire about her practice's denied claims, thereby achieving the success criteria set forth.",
+      "scores": {
+        "formula_judge": {
+          "self_mastery": 8.5,
+          "four_steps": 8.7,
+          "twelve_elements": 8.0,
+          "four_energies": 8.5,
+          "process_mastery": 8.2,
+          "overall": 8.4,
+          "feedback": "The being effectively navigated potential resistance by acknowledging Karen's satisfaction with her current billing company, demonstrating self-mastery. The use of the 4-Step Communication Model was clear and well-structured, particularly in creating curiosity and prompting action. The elements of congruence and emotional rapport were well applied, aligning the message with Karen's priorities. The energy blend was appropriate, combining warmth and authority. However, there could be more explicit measurement and systematic approach in the process mastery dimension to enhance clarity on outcomes."
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "contamination_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "room_command": 7.5,
+          "energy_transfer": 7.0,
+          "action_causing": 8.0,
+          "identity_elevation": 6.5,
+          "compound_influence": 6.0,
+          "overall": 7.0,
+          "feedback": "The response effectively opens with acknowledgment, which helps in establishing rapport. The transition to the value of Callagy Recovery is clear and highlights the distinction between billing and recovery. The prompt for Karen to analyze denied claims creates curiosity and potential action. However, while the identity elevation is present, it could be stronger by explicitly raising Karen's identity as a leader in her practice. The overall energy could be enhanced to create a more compelling atmosphere. Compound influence is limited as it focuses primarily on direct engagement with Karen."
+        },
+        "self_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "process_mastery_judge": {
+          "lever_selection": 8,
+          "zone_vs_80": 9,
+          "systematic_approach": 8,
+          "time_awareness": 7,
+          "measurement_orientation": 5,
+          "overall": 7.4,
+          "feedback": "The being effectively identified the zone action by focusing on helping Karen understand the distinct value of Callagy Recovery. They utilized a systematic approach with a clear communication model and steps to guide the conversation. However, there could be more emphasis on time awareness and measurement orientation, such as tracking the effectiveness of the conversation or follow-up actions. Overall, the response demonstrates strong process mastery and lever application."
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "obstacle_identification": 7,
+          "obstacle_dissolution": 6,
+          "urgency_creation": 5,
+          "ask_clarity": 6,
+          "silence_mastery": 5,
+          "integrity": 8,
+          "overall": 6,
+          "feedback": "The response effectively identifies the obstacle of Karen's satisfaction with her current billing company but could further clarify the specific fears preventing her from considering Callagy Recovery. The dissolution of the obstacle is present but could be stronger by directly addressing potential risks of not recovering denied claims. Urgency is somewhat created by highlighting the potential revenue loss, but it could be more compelling. The ask is clear, prompting Karen to reflect on denied claims, but a more direct ask for a follow-up conversation could enhance clarity. Silence mastery is moderate; allowing for more silence after the ask could strengthen the impact. Overall, the integrity of the approach is strong, focusing on enhancing Karen's practice without manipulation."
+        },
+        "coaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 199227, Requested 1423. Please try again in 195ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "teaching_judge": {
+          "assessment": 7.5,
+          "scaffolding": 8.0,
+          "modeling": 6.0,
+          "practice_design": 5.0,
+          "understanding_check": 7.0,
+          "memorability": 7.5,
+          "overall": 7.0,
+          "feedback": "The response effectively acknowledges Karen's perspective and transitions into the value of Callagy Recovery, which is a strong start. However, it lacks a clear demonstration of the differences between billing and recovery, which could enhance understanding. The practice design could be improved by incorporating a more interactive element, such as asking Karen to share specific examples of denied claims. Overall, the approach is solid but could benefit from more engaging and memorable elements."
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771890939.2810729,
+      "average_overall": 5.635294117647058
+    },
+    {
+      "being_id": "client_success_client_facing",
+      "being_title": "Account Manager",
+      "area": "Client Success & Retention",
+      "scenario_id": "Provider Skeptical of Contingency Model",
+      "scenario_company": "Callagy Recovery",
+      "scenario_difficulty": "bronze",
+      "round": 1,
+      "response": "**1. Identify the Zone Action (the 0.8% move):**  \nThe primary zone action here is to create a compelling narrative that addresses Dr. Stevens' skepticism, showcasing how Callagy Recovery's contingency model provides superior value compared to hiring a billing person. This involves demonstrating the unique advantages of our expertise, results-driven approach, and the potential for increased revenue recovery.\n\n**2. Apply the Relevant Formula Components:**  \n- **Self Mastery:** Recognize Dr. Stevens' worries about control and costs. Acknowledge them with empathy and validate his concerns.\n- **Influence Mastery:** Utilize the 4-Step Communication Model by first connecting with Dr. Stevens emotionally (create rapport), addressing his concerns (context), presenting the contrast of options (hiring vs. our services), and concluding with a compelling value proposition (benefits).\n- **Process Mastery:** Clearly outline the structured and measurable process we have in place for revenue recovery, emphasizing efficiency and effectiveness.\n\n**3. Execute with Influence Mastery:**  \n\u201cDr. Stevens, I completely understand your perspective. Hiring a billing person at $45K/year might seem like a straightforward solution, but let\u2019s explore what that entails compared to partnering with Callagy Recovery. \n\n1. **Expertise and Results:** Our team specializes in medical revenue recovery, and we have a proven track record of maximizing collections. We operate on a contingency basis, meaning we only succeed when you do. This aligns our goals completely with yours.\n\n2. **Control and Transparency:** I hear your concern about control. With our process, you will receive regular updates and reports on our progress. You\u2019ll know exactly what\u2019s happening at every stage, and there will be no hidden costs. It\u2019s a partnership built on trust and transparency.\n\n3. **Maximized Collections:** While the upfront cost of hiring someone might seem lower, consider the potential revenue left on the table due to billing inefficiencies and knowledge gaps. Our expertise can often recover significantly more than a traditional billing process, which helps you maintain or even improve cash flow.\n\n4. **Focus on Patient Care:** By allowing us to handle the complexities of medical billing and recovery, you\u2019re free to focus on what you do best\u2014providing exceptional care to your patients. This can lead to better patient outcomes and satisfaction, ultimately driving more revenue to your practice.\n\nLet's discuss the specific percentage that would apply to our services, and I can show you an agreement that outlines the benefits clearly. How does that sound?\u201d\n\n**4. Create the Outcome with Integrity:**  \nBy approaching Dr. Stevens with empathy, expertise, and a clear breakdown of the value proposition, I will position Callagy Recovery as the superior choice for his billing needs. This creates a foundation of trust and opens the door for further conversation about how we can help him thrive while maintaining control over his practice's financial health.",
+      "scores": {
+        "formula_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "contamination_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "value_assessment": 8.5,
+          "role_mastery": 8.0,
+          "dynamic_thinking": 8.5,
+          "grouping_awareness": 7.5,
+          "integrity": 9.0,
+          "overall": 8.5,
+          "feedback": "The response effectively addresses Dr. Stevens' concerns by emphasizing the unique value of the contingency model and the expertise of Callagy Recovery. The use of empathy and structured communication demonstrates strong influence mastery. However, there could be more emphasis on the specific metrics or case studies that showcase the potential revenue recovery to further strengthen the argument. Grouping awareness could be improved by considering the involvement of other team members who could provide additional insights or support in the discussion."
+        },
+        "group_influence_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "self_mastery_judge": {
+          "destroyer_navigation": 7.5,
+          "contamination_freedom": 8.0,
+          "tenacity": 8.5,
+          "identity_ownership": 8.0,
+          "curve_thinking": 7.0,
+          "overall": 7.8,
+          "feedback": "The being demonstrated strong navigation of internal destroyers by empathizing with Dr. Stevens' concerns and addressing them directly. They operated from a place of possibility, showcasing the unique value of the contingency model. However, there is room for improvement in curve thinking by more explicitly highlighting the exponential benefits of their service over traditional billing. Overall, the response showed intelligent persistence and ownership of their identity as a service provider."
+        },
+        "process_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "written_content_judge": {
+          "bolt_directness": 6,
+          "energy_transfer": 5,
+          "clarity": 7,
+          "action_orientation": 8,
+          "voice": 6,
+          "overall": 6,
+          "feedback": "The response starts strong but lacks immediate impact. It could benefit from a more direct opening statement that leads with the value proposition. While it addresses Dr. Stevens' concerns, the structure is somewhat dense and could be broken down into shorter, punchier sentences. The action step is clear, but the overall energy could be heightened with more direct language and fewer qualifiers. A more conversational tone would enhance engagement."
+        },
+        "public_speaking_judge": {
+          "disruption": 6.5,
+          "presence": 7.0,
+          "energy_modulation": 6.0,
+          "storytelling": 5.5,
+          "transformation": 7.0,
+          "action_causing": 8.0,
+          "overall": 6.5,
+          "feedback": "The response effectively addresses Dr. Stevens' concerns with empathy and provides a clear value proposition. However, the opening could be more attention-grabbing to disrupt his current thought pattern. The presence is solid, but could benefit from more dynamic energy modulation to keep engagement high. Storytelling elements are present but could be enhanced with a specific example or case study to evoke stronger emotions. Overall, the response is persuasive and leads to a clear call to action, which is crucial for success."
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771890883.401626,
+      "average_overall": 5.517647058823529
+    },
+    {
+      "being_id": "client_success_leader",
+      "being_title": "Client Success Director",
+      "area": "Client Success & Retention",
+      "scenario_id": "Payment Less Than Award Amount",
+      "scenario_company": "Callagy Recovery",
+      "scenario_difficulty": "bronze",
+      "round": 1,
+      "response": "**ZONE ACTION:** The 0.8% move here is establishing a clear, compelling case for the full payment while aligning with the Claims Supervisor's desire for quick file closure and legal compliance. This will involve articulating the importance of adhering to IDR binding decisions and the impact on client trust and carrier reputation.\n\n**APPLICATION OF THE FORMULA COMPONENTS:**\n\n1. **INFLUENCE MASTERY - 4-Step Communication Model**: \n   - **Connect**: Begin the conversation with empathy and understanding of the Claims Supervisor\u2019s position. \n   - **Engage**: Ask open-ended questions to understand their perspective on the administrative adjustments.\n   - **Present**: Clearly present the facts regarding the IDR award and the expectation of full payment.\n   - **Close**: Propose a solution that meets both parties' needs.\n\n2. **12 Indispensable Elements**:\n   - **Congruence**: Ensure my message aligns with the IDR guidelines and the expectation of compliance.\n   - **Context**: Provide context around the IDR decision to strengthen the argument for the full amount.\n   - **Contrast**: Highlight the difference between the awarded amount and what was received, framing the remaining funds as not just a number but a matter of compliance and client trust.\n\n3. **4 Energies**: Utilize a mix of **Aspirational Energy** to inspire compliance with the IDR decision and **Zeus Energy** to assertively state the necessity of resolving this issue promptly.\n\n**EXECUTION WITH INFLUENCE MASTERY:**\n\n---\n\n**Call Script:**\n\n\u201cHi [Claims Supervisor\u2019s Name], this is [Your Name] from Callagy Recovery. How are you today?\u201d\n\n[Pause for response]\n\n\u201cI appreciate you taking the time to speak with me. I wanted to discuss the recent IDR award of $8,500 and the check of $6,200 that we received. I understand that there were some administrative adjustments made, and I\u2019d like to talk about that further.\n\nFrom my experience, I know that quick file closures are a priority for you and your team, and I truly respect that. However, as you know, the IDR decision is binding, and maintaining compliance with those guidelines is crucial for both of our organizations.\n\nCould you help me understand the basis for the adjustment? We want to ensure we\u2019re aligned and can move forward effectively.\u201d\n\n[Listen actively, validate their concerns, and ask probing questions.]\n\n\u201cThank you for sharing your perspective. I can see how this could be interpreted from an administrative standpoint. However, I want to emphasize that the remaining $2,300 is not just a number; it represents adherence to a decision that impacts our client\u2019s trust and your organization\u2019s commitment to legal compliance.\n\nTherefore, I propose we resolve this by issuing the remaining payment of $2,300 within the next 10 business days. This way, you can close the file efficiently while ensuring compliance and",
+      "scores": {
+        "formula_judge": {
+          "self_mastery": 8.5,
+          "four_steps": 8.7,
+          "twelve_elements": 8.5,
+          "four_energies": 8.3,
+          "process_mastery": 8.6,
+          "overall": 8.5,
+          "feedback": "The being demonstrated strong self-mastery by navigating potential fears and showing tenacity in pursuing the full payment. The four-step communication model was effectively applied, particularly in building rapport and presenting the case clearly. The use of congruence and context in the twelve elements was well executed, though there could be more emphasis on emotional rapport. The energy blend was appropriate, balancing aspiration and authority effectively. The process was systematic and focused on actionable outcomes, indicating a strong grasp of time management and goal orientation."
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "clarity": 8.5,
+          "likelihood_yes": 7.5,
+          "action_orientation": 8.0,
+          "obstacle_removal": 7.0,
+          "overall": 7.75,
+          "feedback": "The response is clear and well-structured, addressing the issue directly and emphasizing compliance and trust. However, it could benefit from a more direct ask for the payment and a stronger emphasis on the urgency of the request to increase the likelihood of a positive response."
+        },
+        "contamination_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "self_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "process_mastery_judge": {
+          "lever_selection": 3,
+          "zone_vs_80": 9,
+          "systematic_approach": 8,
+          "time_awareness": 7,
+          "measurement_orientation": 5,
+          "overall": 6.6,
+          "feedback": "The being demonstrated a strong understanding of zone action by focusing on a compelling case for full payment, which aligns with the highest leverage of retention systems. The execution of the call script shows a systematic approach to influence mastery, but there could be more emphasis on tracking progress or outcomes from the call. Time awareness is present, but the urgency could be better highlighted. Measurement orientation could improve by establishing leading indicators for follow-up actions."
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "question_quality": 8.5,
+          "restraint": 9.0,
+          "listening": 8.0,
+          "challenge": 8.5,
+          "space_holding": 7.5,
+          "breakthrough_causing": 8.0,
+          "overall": 8.2,
+          "feedback": "The call script demonstrates a strong application of powerful questions and reflects a good understanding of the Claims Supervisor's perspective. The restraint shown in not providing direct answers and instead guiding the conversation is commendable. However, there could be more emphasis on silence to allow the Claims Supervisor to process and respond. Overall, the approach is effective in fostering a collaborative dialogue aimed at achieving the desired outcome."
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "listening": 8,
+          "pivot_skill": 7,
+          "depth": 6,
+          "articulation": 7,
+          "pacing": 8,
+          "integrity": 9,
+          "overall": 7.5,
+          "feedback": "The being demonstrates good listening skills and effectively acknowledges the Claims Supervisor's position. The pivot into discussing the administrative adjustments is smooth, but could benefit from a more curious tone. While the depth of questioning is adequate, there is room for improvement in uncovering deeper emotional truths related to compliance and client trust. The articulation of the pain points is clear, though it could be more impactful. Pacing is appropriate, and the integrity of the approach is strong, focusing on collaboration rather than manipulation."
+        }
+      },
+      "timestamp": 1771890910.388026,
+      "average_overall": 5.797058823529412
+    },
+    {
+      "being_id": "marketing_outbound_client_facing",
+      "being_title": "Meeting Setter",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "scenario_id": "Spouse Doesn't Support the Investment",
+      "scenario_company": "Unblinded",
+      "scenario_difficulty": "bronze",
+      "round": 1,
+      "response": "**Zone Action Identification:** The 0.8% move in this scenario is to help Tom articulate a value proposition that addresses both his and his spouse's concerns, effectively involving her in the decision-making process.\n\n**Application of Formula Components:**\n\n1. **Self Mastery:** \n   - Identify the potential fear of failure Tom faces in this situation\u2014fearing marital conflict and the prospect of not justifying the investment.\n   - Encourage Tom to navigate this discomfort with the awareness that tenacity in discussing his goals and the potential benefits of coaching can lead to a positive outcome.\n\n2. **Influence Mastery:**\n   - Leverage the **4-Step Communication Model** by: \n     - **Step 1: Connect**\u2014\"Tom, I completely understand how important it is for you to have the support of your spouse in this investment. Can you share with me any specific concerns she has about coaching?\"\n     - **Step 2: Empathize**\u2014\"It's totally valid to feel apprehensive about spending money without a clear return, especially when it involves a significant decision like this.\"\n     - **Step 3: Present Value**\u2014\"What if we could create a plan together that outlines specific milestones you can achieve through coaching? This way, you could demonstrate the ROI to your wife and show her the tangible benefits.\"\n     - **Step 4: Involve**\u2014\"Would you be open to having a conversation with her where we can discuss these goals together? We can emphasize how the coaching can not only impact your business but also support your overall family dynamics.\"\n\n3. **Match, Mirror, Feed Energy:**\n   - Use Tom's enthusiasm for business and reflect that energy back to him\u2014\"I can sense how committed you are to growing your business and the desire to have your wife onboard. It\u2019s powerful to involve her in this journey!\"\n\n4. **Creating the Outcome with Integrity:**\n   - Encourage Tom to approach this discussion with his wife from a place of openness and integrity. \"Ultimately, this investment isn't just about you\u2014it's about the future you want for both of you. Bringing her into this conversation can not only alleviate her concerns but also strengthen your partnership.\"\n\n**Execution:**\n\"Tom, I appreciate your willingness to share these concerns. Let's create a plan that lays out the measurable benefits of coaching\u2014specific revenue goals or personal development targets. This plan will not only serve as a roadmap for you but also as a reassurance for your wife that this investment is a strategic decision aimed at improving both your business and your family's future.\"\n\nBy guiding Tom to involve his wife in the discussion and address her concerns head-on, we can help him navigate this potential conflict, leading to a more supportive decision about the investment in coaching.",
+      "scores": {
+        "formula_judge": {
+          "self_mastery": 7.5,
+          "four_steps": 8.0,
+          "twelve_elements": 7.0,
+          "four_energies": 8.5,
+          "process_mastery": 7.0,
+          "overall": 7.5,
+          "feedback": "Tom demonstrated good self-mastery by acknowledging fears and showing tenacity in addressing the concerns. The 4-step model was effectively applied, particularly in connecting and involving the spouse in the decision-making process. The energy blend was appropriate, fostering enthusiasm and warmth. However, there could be more emphasis on measuring outcomes and systematic approaches to strengthen process mastery."
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "clarity": 8.5,
+          "likelihood_yes": 7.5,
+          "action_orientation": 8.0,
+          "obstacle_removal": 8.5,
+          "overall": 8.0,
+          "feedback": "The response effectively outlines a clear plan for Tom to communicate the value of coaching to his spouse, which is crucial for addressing her concerns. It includes actionable steps and encourages involvement, enhancing the likelihood of a positive outcome. However, while the likelihood of agreement is reasonable, it could be improved by providing more specific examples of potential benefits that might resonate with the spouse."
+        },
+        "contamination_judge": {
+          "bot_score": 7.5,
+          "consulting_score": 6.0,
+          "zone_action": 8.5,
+          "authenticity": 7.0,
+          "overall": 7.0,
+          "feedback": "Presence of corporate-speak and structured frameworks detracts from authenticity and directness. However, the focus on involving the spouse and addressing concerns is a strong zone action."
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "room_command": 5.0,
+          "energy_transfer": 6.5,
+          "action_causing": 7.0,
+          "identity_elevation": 6.0,
+          "compound_influence": 5.5,
+          "overall": 5.8,
+          "feedback": "The response demonstrates a solid understanding of the situation and provides a structured approach to addressing the spouse's concerns. The use of the 4-Step Communication Model is effective, but the overall energy and command of the room could be enhanced. The identity elevation is present but could be stronger by emphasizing Tom's role as a proactive partner. The potential for compound influence is there, but it relies heavily on Tom's ability to convey the message to his spouse effectively."
+        },
+        "self_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "process_mastery_judge": {
+          "lever_selection": 6,
+          "zone_vs_80": 9,
+          "systematic_approach": 8,
+          "time_awareness": 7,
+          "measurement_orientation": 6,
+          "overall": 7.6,
+          "feedback": "The response effectively identifies the need to involve Tom's spouse in the decision-making process, demonstrating high zone action by focusing on articulating value and addressing concerns. The systematic approach is strong with the use of the 4-Step Communication Model, though it could benefit from clearer measurement indicators for tracking the success of the proposed plan. Time awareness is present, but could be improved by emphasizing the urgency of addressing the spouse's concerns sooner rather than later. Overall, a solid response with room for improvement in measurement and urgency."
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "question_quality": 7.5,
+          "restraint": 8.0,
+          "listening": 7.0,
+          "challenge": 6.5,
+          "space_holding": 7.0,
+          "breakthrough_causing": 8.0,
+          "overall": 7.5,
+          "feedback": "The response demonstrates a solid understanding of the coaching process, particularly in guiding Tom to articulate a value proposition. The questions posed are powerful and open up new awareness, especially in the 'Connect' step. However, there could be more emphasis on challenging Tom's assumptions about his wife's perspective. The restraint shown is commendable, but there is a slight tendency to guide rather than fully allowing Tom to discover his own insights. Overall, the execution is strong, with a clear plan for Tom to involve his wife in the decision-making process."
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771890855.825909,
+      "average_overall": 5.788235294117648
+    },
+    {
+      "being_id": "client_success_client_facing",
+      "being_title": "Account Manager",
+      "area": "Client Success & Retention",
+      "scenario_id": "First Meeting with Potential Ecosystem Partner",
+      "scenario_company": "Unblinded",
+      "scenario_difficulty": "silver",
+      "round": 2,
+      "response": "**Zone Action Identified:** The key zone action here is to create a value-driven dialogue that positions Dr. Wu not as someone seeking referrals but as a partner offering significant value to the medical association and its members. This ensures a mindset shift and fosters a collaborative environment.\n\n**Relevant Formula Components:**\n1. **Self Mastery:** Dr. Wu should navigate his fear of asking for referrals by reframing the conversation to focus on value delivery. This aligns with the principle of tenacity in overcoming the destroyers of fear and avoidance.\n2. **Influence Mastery:** Utilize the 4-Step Communication Model and the 12 Indispensable Elements to ensure clarity and emotional rapport during the conversation.\n3. **Process Mastery:** Prepare a structured agenda that allows for the effective delivery of Dr. Wu's value proposition while leaving space for the president's input.\n4. **7 Levers:** Highlight the potential for shared experiences and contribution to the association\u2019s mission.\n\n**Execution Steps:**\n\n1. **Value Proposition Preparation:**\n   - Craft a clear and concise value proposition for Dr. Wu to articulate:\n     - \"As an orthopedic surgeon, my commitment extends past individual patient care; I am dedicated to enhancing the overall health of our community. I believe we can create a partnership that not only benefits my practice but also supports the mission of your association.\u201d\n   - Identify specific ways Dr. Wu can add value to the members, such as offering free workshops on injury prevention and recovery or providing educational content that can be shared with the members.\n\n2. **Conversation Structure:**\n   - **Introduction (2-3 minutes):** Start with a personal connection, perhaps a shared interest in community health, establishing rapport.\n   - **Value Delivery (5-10 minutes):** Present the value proposition and specific initiatives Dr. Wu can lead that will benefit the association and its members, using emotional rapport to engage the president.\n   - **Collaborative Discussion (10-15 minutes):** Invite the president to discuss the association\u2019s needs and how Dr. Wu\u2019s initiatives can align. This is where the 12 Indispensable Elements come into play\u2014ask open-ended questions to facilitate dialogue and contrast potential outcomes.\n   - **Next Steps (5 minutes):** Conclude with a proposal for a follow-up meeting or collaborative event, emphasizing the importance of partnership.\n\n3. **Mindset and Energy:**\n   - Encourage Dr. Wu to embody the **Aspirational Energy** during the meeting. This includes being upbeat and enthusiastic about the positive impact the partnership can have on the community and the association. \n\n4. **Integrity Commitment:**\n   - Reinforce the notion of giving more than he takes. Dr. Wu should express genuine interest in the health and success of the association, positioning his expertise as a means to uplift the collective.\n\n**Outcome:**\nBy focusing the conversation on the value he can provide first, Dr. Wu will feel less pressure about asking for referrals. Instead",
+      "scores": {
+        "formula_judge": {
+          "self_mastery": 8.5,
+          "four_steps": 8.0,
+          "twelve_elements": 8.5,
+          "four_energies": 8.5,
+          "process_mastery": 8.0,
+          "overall": 8.3,
+          "feedback": "Dr. Wu demonstrates strong self-mastery by reframing the conversation to focus on value, effectively navigating fears. The four-step structure is clear, but could benefit from more explicit alignment on the solution. The twelve elements are well-integrated, particularly emotional rapport and contrast. The aspirational energy is appropriate, fostering enthusiasm. Process mastery is solid with a structured agenda, though more emphasis on time management could enhance effectiveness."
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "contamination_judge": {
+          "bot_score": 8.5,
+          "consulting_score": 6.0,
+          "zone_action": 8.0,
+          "authenticity": 7.5,
+          "overall": 7.25,
+          "feedback": "Presence of corporate-speak and frameworks detracts from authenticity; some elements feel generic and overly structured."
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "self_mastery_judge": {
+          "destroyer_navigation": 8,
+          "contamination_freedom": 7,
+          "tenacity": 8,
+          "identity_ownership": 9,
+          "curve_thinking": 8,
+          "overall": 8,
+          "feedback": "Dr. Wu effectively navigates his fear of asking for referrals by reframing the conversation to focus on value delivery, demonstrating strong self-mastery. He shows a good understanding of the importance of collaboration and community health, indicating a solid identity ownership. The structured conversation plan reflects intelligent persistence and a curve-thinking approach. However, there is room for improvement in fully embracing the possibility mindset, particularly in addressing any lingering fears of rejection or failure."
+        },
+        "process_mastery_judge": {
+          "lever_selection": 9,
+          "zone_vs_80": 9,
+          "systematic_approach": 8,
+          "time_awareness": 7,
+          "measurement_orientation": 5,
+          "overall": 7.6,
+          "feedback": "Dr. Wu effectively identifies the highest-leverage lever of Ecosystem Merging by positioning himself as a valuable partner to the medical association. The focus on value-driven dialogue is a strong zone action that fosters collaboration. However, while the structured agenda is commendable, there is less emphasis on tracking progress or leading indicators, which could enhance the systematic approach. Additionally, time awareness could be improved by explicitly allocating time for each section of the conversation. Overall, the response demonstrates solid process mastery with room for improvement in measurement orientation."
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "obstacle_identification": 8,
+          "obstacle_dissolution": 7,
+          "urgency_creation": 6,
+          "ask_clarity": 5,
+          "silence_mastery": 4,
+          "integrity": 9,
+          "overall": 6.5,
+          "feedback": "Dr. Wu has identified the key obstacles related to fear of asking for referrals and has structured a value-driven dialogue. However, the urgency creation could be stronger by connecting the potential partnership to immediate benefits for the association. The ask for a follow-up meeting is somewhat clear but could be more direct. Silence mastery needs improvement, as it is crucial to allow space for the president's responses after the ask. Overall, the integrity of the approach is strong, focusing on mutual value."
+        },
+        "coaching_judge": {
+          "question_quality": 7.5,
+          "restraint": 8.0,
+          "listening": 6.5,
+          "challenge": 7.0,
+          "space_holding": 7.0,
+          "breakthrough_causing": 7.5,
+          "overall": 7.5,
+          "feedback": "The response effectively identifies key components for Dr. Wu's preparation, particularly in creating a value-driven dialogue. The questions posed are generally powerful but could be more focused on eliciting deeper insights from Dr. Wu. There is good restraint shown in not providing direct answers, but the listening aspect could be improved by incorporating more reflective listening techniques. The challenge to assumptions is present, but could be more explicitly stated. Space holding is adequate, though more emphasis on silence could enhance the coaching process. Overall, the response is solid, but there's room for improvement in facilitating deeper self-discovery."
+        },
+        "teaching_judge": {
+          "assessment": 7.5,
+          "scaffolding": 7.0,
+          "modeling": 6.0,
+          "practice_design": 5.0,
+          "understanding_check": 6.0,
+          "memorability": 7.0,
+          "overall": 6.5,
+          "feedback": "The response provides a solid foundation for Dr. Wu to prepare for his meeting, focusing on value delivery and a structured conversation. However, it lacks specific examples of how to practice the conversation and check for understanding. Incorporating role-playing scenarios or feedback loops could enhance practice design. Additionally, while the value proposition is clear, demonstrating it through a live example or story could improve memorability and engagement."
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771890998.483978,
+      "average_overall": 5.979411764705882
+    },
+    {
+      "being_id": "marketing_outbound_client_facing",
+      "being_title": "Meeting Setter",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "scenario_id": "Client Isn't Doing the Work",
+      "scenario_company": "Unblinded",
+      "scenario_difficulty": "silver",
+      "round": 2,
+      "response": "**Zone Action Identification:**\nThe 0.8% move here is to create an emotional connection that allows Dr. Patricia Vance to feel seen and understood, while simultaneously guiding her to commit to one actionable step. Addressing her feelings of overwhelm directly will help break the pattern that keeps her stuck.\n\n**Applying the Relevant Formula Components:**\n1. **Self Mastery:** Acknowledge her feelings of overwhelm and the fear of failure that comes with implementing new frameworks.\n2. **Influence Mastery:** Utilize emotional rapport to connect with her struggle and mirror her concerns. This will allow for a deeper conversation about her barriers and how to overcome them.\n3. **Process Mastery:** Introduce the idea of time blocking to help her allocate small pockets of time for implementation without feeling overwhelmed.\n4. **Levers + 0.5:** Engage her in a shared experience by discussing previous success stories of other clients who felt similarly and went on to thrive.\n\n**Execution with Influence Mastery:**\n\"Dr. Vance, I want to take a moment to acknowledge how much dedication it takes to be a physician, especially with the demands of your practice. It's clear you're deeply committed to your patients, but I also sense that this commitment might be contributing to feelings of overwhelm when it comes to implementing the frameworks we've discussed. \n\nCan we explore what's holding you back from taking action on these frameworks? I understand that you might feel 'too busy,' but I want to assure you that even the smallest step can lead to significant changes. \n\nWould you be open to identifying just one specific action you can take this week? This could be as simple as time blocking 15 minutes to review one of the frameworks or even journaling about what overwhelms you the most. \n\nLet's also take a moment to pinpoint what's been blocking you. Is it a fear of not being able to implement perfectly, or perhaps a belief that you don\u2019t have the time? Uncovering this can provide clarity and allow us to move forward together.\"\n\n**Creating the Outcome with Integrity:**\n\"Remember, Dr. Vance, this isn't about perfection but progress. You deserve to see the results of your hard work in both your practice and your personal growth. I\u2019m here to support you every step of the way, and I'm excited to see which action you choose to commit to this week and what insights you uncover about what's been holding you back.\"\n\nBy approaching her situation with empathy and clarity, we can help Dr. Vance overcome her overwhelm and begin to implement the frameworks that will ultimately lead her to the success she's seeking.",
+      "scores": {
+        "formula_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "clarity": 8.5,
+          "likelihood_yes": 7.5,
+          "action_orientation": 8.0,
+          "obstacle_removal": 8.0,
+          "overall": 8.0,
+          "feedback": "The response effectively acknowledges Dr. Vance's feelings and encourages her to commit to a specific action, which aligns with the success criteria. However, while it addresses her barriers, the emotional connection could be stronger to enhance the likelihood of her agreeing to take action."
+        },
+        "contamination_judge": {
+          "bot_score": 7.5,
+          "consulting_score": 6.0,
+          "zone_action": 8.5,
+          "authenticity": 8.0,
+          "overall": 7.25,
+          "feedback": "The response contains some corporate-speak and framework references that dilute authenticity. However, it does show a strong emotional connection and encourages specific action."
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "room_command": 5.5,
+          "energy_transfer": 6.0,
+          "action_causing": 7.0,
+          "identity_elevation": 6.5,
+          "compound_influence": 5.0,
+          "overall": 6.2,
+          "feedback": "The response demonstrates a good level of empathy and understanding, which helps in creating an emotional connection with Dr. Vance. However, the room command could be stronger with more dynamic energy and presence. The energy transfer is positive, but it lacks a compelling narrative to elevate the audience's collective spirit. The action-causing aspect is solid, as it directly prompts Dr. Vance to commit to a specific action. Identity elevation is present but could be enhanced by framing her as a capable leader in her practice. Compound influence is limited, as the focus is primarily on the individual rather than creating a ripple effect. Overall, the response is effective but could benefit from more engaging storytelling and a stronger call to action."
+        },
+        "self_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "process_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "written_content_judge": {
+          "bolt_directness": 6,
+          "energy_transfer": 5,
+          "clarity": 7,
+          "action_orientation": 8,
+          "voice": 6,
+          "overall": 6,
+          "feedback": "The response starts with a solid acknowledgment of Dr. Vance's feelings, but it takes too long to get to the point. The opening could be more direct. While it shows empathy, the energy could be heightened with shorter sentences and more urgency in the call to action. The ask is clear, but the message could benefit from a sharper focus on immediate action and less on the emotional setup. Overall, it communicates well but lacks the punchiness and directness of Bolt-style writing."
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "systems_quality": 5,
+          "clarity": 7,
+          "accountability": 6,
+          "delegation": 4,
+          "feedback": "The response demonstrates a good understanding of emotional connection and the need for actionable steps. However, the systems in place for accountability and delegation could be stronger. While clarity is present, it could be improved by explicitly defining what 'done' looks like for Dr. Vance. Time mastery is addressed, but more concrete strategies could enhance effectiveness.",
+          "time_mastery": 5,
+          "overall": 5.5
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on requests per day (RPD): Limit 10000, Used 10000, Requested 1. Please try again in 8.64s. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771891019.928894,
+      "average_overall": 5.4676470588235295
+    },
+    {
+      "being_id": "client_fulfillment_client_facing",
+      "being_title": "Client Communication Lead",
+      "area": "Client Fulfillment & Delivery",
+      "scenario_id": "Convert Competitor's Unhappy Client",
+      "scenario_company": "Callagy Recovery",
+      "scenario_difficulty": "gold",
+      "round": 3,
+      "response": "**Zone Action Identification:**\nThe key zone action here is establishing emotional rapport with Dr. Robert Chen and CFO Sandra Wells. This involves addressing their frustrations with their current recovery company and highlighting how Callagy Recovery can significantly exceed their expectations.\n\n**Formula Components Application:**\n1. **SELF MASTERY:** Acknowledge any fears or concerns they may have about switching companies and navigating their current contractual obligations. Use tenacity to reinforce confidence in their decision-making.\n  \n2. **INFLUENCE MASTERY:**\n   - **4-Step Communication Model:** \n     1. **Connect:** Begin with empathy, acknowledging their frustration with the current recovery company.\n     2. **Clarify:** Ask open-ended questions to understand the root of their dissatisfaction and what they value most in a recovery partner.\n     3. **Convey:** Share specific success stories and data demonstrating how Callagy has achieved recovery rates drastically exceeding 8% for similar practices.\n     4. **Close:** Provide a clear pathway for them to transition at the end of their contract without disruption, ensuring they see the long-term benefits of partnering with Callagy.\n   \n3. **7 LEVERS + 0.5:**\n   - Utilize **Shared Experiences** by referencing other practices that faced similar challenges and benefitted from switching to Callagy.\n   - Implement **Ecosystem Mergers** by suggesting collaborative analysis of their claims data to show immediate value and seriousness about their case.\n\n4. **INTEGRITY:** Always aim to provide more value than expected. Communicate honestly about transition complexities, but frame it as a manageable process with clear steps to ensure smooth implementation.\n\n**Execution with Influence Mastery:**\n---\n\n**Subject:** Transforming Your Recovery Experience\n\nHi Dr. Chen and Sandra,\n\nI hope this message finds you well. I wanted to reach out following our recent discussions regarding your current recovery processes. I truly empathize with your frustrations, especially given the significant impact that an 8% recovery rate can have on your practice and patient care.\n\nAt Callagy Recovery, we understand the complexities of switching recovery partners, particularly while under contract. However, I believe that the results we have consistently achieved for practices like yours can not only meet but dramatically exceed your current performance.\n\nImagine transitioning to a recovery partner that specializes in maximizing your denied claims, with success rates averaging 25% or more. Practices similar to yours have seen transformative results within months of partnering with us, and I\u2019m confident we can do the same for you.\n\nI propose we conduct an initial analysis of your claims data now. This will allow us to pinpoint where we can enhance your recovery rates, thus preparing for a seamless transition at the end of your contract. \n\nI\u2019d love to schedule a time to discuss this further. Together, we can ensure your practice not only recovers the funds owed but also thrives in delivering the care your patients deserve.\n\nLooking forward to your thoughts.\n\nBest regards,\n\n[Your Name]",
+      "scores": {
+        "formula_judge": {
+          "self_mastery": 8.5,
+          "four_steps": 8.0,
+          "twelve_elements": 8.5,
+          "four_energies": 8.0,
+          "process_mastery": 7.5,
+          "overall": 8.0,
+          "feedback": "The response demonstrates strong self-mastery by acknowledging fears and showing tenacity in addressing the client's needs. The four-step communication model is well-executed, particularly in building connection and conveying value. The use of emotional rapport and shared experiences enhances influence mastery. However, there could be more emphasis on agreement and action in the closing phase. The energy blend is appropriate, but could benefit from a slightly stronger aspirational tone. Process mastery is solid, but the proposal could be more structured in terms of next steps."
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1293. Please try again in 387ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1104. Please try again in 331ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "contamination_judge": {
+          "bot_score": 8.5,
+          "consulting_score": 7.0,
+          "zone_action": 8.0,
+          "authenticity": 8.5,
+          "overall": 7.75,
+          "feedback": "The response contains some corporate-speak and a structured framework that detracts from authenticity. However, it effectively identifies zone action and demonstrates emotional rapport."
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1161. Please try again in 348ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "value_assessment": 8.5,
+          "role_mastery": 8.0,
+          "dynamic_thinking": 7.5,
+          "grouping_awareness": 7.0,
+          "integrity": 8.5,
+          "overall": 7.9,
+          "feedback": "The response demonstrates a solid understanding of the relevant replacement cost by addressing the specific frustrations of the potential clients and positioning Callagy Recovery as a superior alternative. The execution of the 4-step communication model is well-structured, showing good mastery of the nurturing and finalizing roles. However, there could be more emphasis on sourcing and disrupting by identifying specific pain points and potential objections upfront. The integrity of the proposal is strong, as it emphasizes mutual benefit and transparency. Grouping awareness could be improved by suggesting the involvement of additional team members with unique skill sets to enhance the proposal's credibility."
+        },
+        "group_influence_judge": {
+          "room_command": 6.5,
+          "energy_transfer": 6.0,
+          "action_causing": 7.0,
+          "identity_elevation": 5.5,
+          "compound_influence": 6.0,
+          "overall": 6.2,
+          "feedback": "The response effectively establishes emotional rapport and acknowledges the clients' frustrations, which is a strong start. However, the energy could be elevated further to create a more compelling pull. The use of specific success rates is impactful, but more vivid storytelling or real-life examples could enhance engagement. Additionally, while the proposal for data analysis is a good step, a stronger emphasis on identity elevation (e.g., framing them as leaders in patient care) could inspire more immediate action. Overall, the structure is solid, but it lacks some of the dynamic energy and compelling storytelling necessary for maximum influence."
+        },
+        "self_mastery_judge": {
+          "destroyer_navigation": 8.5,
+          "contamination_freedom": 8.0,
+          "tenacity": 7.5,
+          "identity_ownership": 8.0,
+          "curve_thinking": 7.0,
+          "overall": 7.8,
+          "feedback": "The response demonstrates strong self-mastery by acknowledging potential fears and concerns, indicating an understanding of the emotional landscape. The being effectively navigates the destroyers, particularly fear of rejection and avoidance, by proactively addressing the clients' frustrations and proposing actionable steps. However, there could be a more explicit embrace of failure as a learning opportunity to enhance tenacity. The communication showcases a solid understanding of influence mastery, yet could benefit from more exponential thinking in terms of innovative solutions or unique value propositions that set Callagy apart. Overall, the being operates from a place of confidence and clarity, but there's room for improvement in thinking beyond conventional approaches."
+        },
+        "process_mastery_judge": {
+          "lever_selection": 8,
+          "zone_vs_80": 9,
+          "systematic_approach": 8,
+          "time_awareness": 7,
+          "measurement_orientation": 6,
+          "overall": 7.6,
+          "feedback": "The being effectively identified the highest-leverage lever, Ecosystem Merging, by proposing an analysis of claims data to build rapport and demonstrate value. The approach is systematic, utilizing a structured communication model to address client concerns. However, there could be more emphasis on time awareness regarding the urgency of the client's situation and the need for leading indicators to track progress. Overall, a strong response with room for improvement in measurement orientation."
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1536. Please try again in 460ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "disruption": 6.5,
+          "presence": 7.0,
+          "energy_modulation": 6.0,
+          "storytelling": 6.5,
+          "transformation": 7.0,
+          "action_causing": 7.5,
+          "overall": 6.5,
+          "feedback": "The response effectively establishes emotional rapport and acknowledges the clients' frustrations, which is a good start. However, the opening lacks a strong hook to command immediate attention. The presence is solid, but it could benefit from more dynamic energy modulation to maintain engagement. Storytelling is present but could be more specific and emotionally resonant. The call to action is clear, which is a strong point, but the overall impact could be enhanced with a more compelling narrative and stronger emotional appeal."
+        },
+        "leadership_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1504. Please try again in 451ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1501. Please try again in 450ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "obstacle_identification": 7.5,
+          "obstacle_dissolution": 7.0,
+          "urgency_creation": 6.5,
+          "ask_clarity": 7.5,
+          "silence_mastery": 6.0,
+          "integrity": 8.0,
+          "overall": 7.0,
+          "feedback": "The response demonstrates a good understanding of the client's frustrations and addresses the fear of loss related to switching recovery companies. However, it could benefit from a stronger emphasis on urgency by connecting the cost of delay to their current pain. The ask is clear, but the execution lacks a moment of silence after the ask, which could enhance the closing impact. Overall, the integrity of the approach is strong, but the urgency and silence mastery need improvement."
+        },
+        "coaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1531. Please try again in 459ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "teaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1545. Please try again in 463ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1579. Please try again in 473ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771891057.172946,
+      "average_overall": 6.102941176470588
+    },
+    {
+      "being_id": "marketing_outbound_leader",
+      "being_title": "Outbound Strategy Director",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "scenario_id": "Design the Climactic Moment of a 3-Day Immersion",
+      "scenario_company": "Unblinded",
+      "scenario_difficulty": "gold",
+      "round": 3,
+      "response": "**Climactic Moment Design for Day 2 Afternoon of the Unblinded Immersion**\n\n**Zone Action: The 0.8% Move**  \nTo create a breakthrough experience that resonates deeply with 80%+ of attendees, we will use a combination of experiential learning, peer vulnerability, and guided confrontation of limiting beliefs. The focal point will be a powerful, immersive exercise designed to facilitate deep introspection and collective support.\n\n**Experience Design: \u201cThe Bridge of Beliefs\u201d**\n\n**1. Setting the Stage:**  \n- **Environment:** Transform the room into a \u201cbridge\u201d setting with soft lighting, comfortable seating arranged in a circle, and ambient music that evokes introspection. As the participants enter, invite them to leave behind their distractions and open themselves to transformation.\n- **Facilitator Energy:** The lead facilitator (ideally me or a trusted coach) will embody the energy of trust, vulnerability, and empowerment, setting the tone for an open-hearted experience. Utilize the **Aspirational Energy** to inspire courage and the **Goddess Energy** to invoke a sense of safety.\n\n**2. Introduction to the Experience:**  \n- **Context Setting:** Share a personal story of overcoming a significant limiting belief, emphasizing vulnerability and authenticity. This will model the behavior we want attendees to emulate and create **Emotional Rapport**.\n- **Objective:** Clearly articulate that this exercise is about confronting and reframing the beliefs that have held them back throughout their lives, emphasizing the collective support present in the room.\n\n**3. The \u201cBridge of Beliefs\u201d Exercise:**\n- **Individual Reflection (10 minutes):** Provide participants with a journal prompt: \"What is the limiting belief that has held me back the most in my life?\" Encourage them to write down their answers profoundly. Emphasize the importance of honesty in this process.\n  \n- **Partner Sharing (20 minutes):** Pair attendees to share their beliefs with one another. Encourage them to **Match, Mirror, and Feed Energy** to their partners, creating a sense of connection and understanding. This step builds trust and intimacy among participants.\n\n- **Group Confrontation (30 minutes):** Bring everyone back together. Invite willing participants to share their limiting beliefs with the entire group. As they share, facilitate a group dynamic where others can respond with words of encouragement or share similar experiences. Use **Congruence** to ensure that responses are aligned with the group's emotional state and needs.\n\n**4. The Transformation Ritual (30 minutes):**  \n- After sharing, lead a guided visualization where participants imagine their lives free from these limiting beliefs. Encourage them to visualize their future selves thriving in their personal and professional lives, embodying the energy of possibility.\n- Ask participants to identify one actionable step they can take to begin reframing or eliminating the limiting belief. This step solidifies their commitment to transformation.\n\n**5. Conclusion and Integration (10 minutes):**  \n- Invite participants to write a letter to their past",
+      "scores": {
+        "formula_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1274. Please try again in 382ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sean_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1285. Please try again in 385ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "outcome_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1095. Please try again in 328ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "contamination_judge": {
+          "bot_score": 8.5,
+          "consulting_score": 8.0,
+          "zone_action": 9.0,
+          "authenticity": 8.5,
+          "overall": 8.5,
+          "feedback": "The response contains some elements of corporate-speak and generic phrases, such as 'collective support' and 'environment,' which detract from its authenticity. However, it does present a clear zone action and a specific experience design that aligns with the success criteria."
+        },
+        "human_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1152. Please try again in 345ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "ecosystem_merger_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1535. Please try again in 460ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "group_influence_judge": {
+          "room_command": 8.5,
+          "energy_transfer": 9.0,
+          "action_causing": 8.7,
+          "identity_elevation": 9.2,
+          "compound_influence": 8.8,
+          "overall": 8.84,
+          "feedback": "The design effectively creates a powerful, immersive experience that encourages vulnerability and collective support. The use of personal storytelling and guided visualization elevates the emotional engagement of the group. However, to enhance room command, consider incorporating more dynamic elements or physical movement to further energize the space. Overall, this experience has the potential to create memorable transformations for a significant majority of attendees."
+        },
+        "self_mastery_judge": {
+          "destroyer_navigation": 8.5,
+          "contamination_freedom": 8.0,
+          "tenacity": 7.5,
+          "identity_ownership": 8.0,
+          "curve_thinking": 8.5,
+          "overall": 8.0,
+          "feedback": "The design demonstrates strong navigation of internal destroyers, particularly in creating a safe environment for vulnerability. The focus on collective support and emotional rapport indicates a good understanding of contamination freedom. However, there could be more emphasis on intelligent persistence in the execution of the plan, especially in managing the energy of the group during the transformation ritual. Overall, the approach is innovative and aligns well with exponential thinking, making it likely to create memorable experiences."
+        },
+        "process_mastery_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1591. Please try again in 477ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "written_content_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1527. Please try again in 458ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "public_speaking_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1513. Please try again in 453ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "leadership_judge": {
+          "identity_elevation": 8.5,
+          "vision_casting": 9.0,
+          "modeling": 8.0,
+          "safety_creation": 9.0,
+          "excellence_demand": 8.5,
+          "energy_mastery": 9.0,
+          "overall": 8.67,
+          "feedback": "The design effectively elevates participants' identities by encouraging vulnerability and introspection. The vision of transformation is compelling and well-articulated, creating a strong desire for change. The leader models vulnerability through personal storytelling, which enhances credibility. Safety is prioritized through a supportive environment and peer sharing, fostering trust. The demand for excellence is present in the structured approach to confronting limiting beliefs, while the use of various energies (Aspirational and Goddess) is fluid and appropriate for the moment. Overall, this design has the potential to create memorable and transformative experiences for attendees."
+        },
+        "management_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1492. Please try again in 447ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "sales_closing_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1553. Please try again in 465ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "coaching_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1522. Please try again in 456ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        },
+        "teaching_judge": {
+          "assessment": 8.5,
+          "scaffolding": 8.0,
+          "modeling": 8.0,
+          "practice_design": 9.0,
+          "understanding_check": 7.5,
+          "memorability": 9.0,
+          "overall": 8.5,
+          "feedback": "The design effectively creates a transformative experience through personal reflection and peer sharing, which are crucial for deep learning. The use of a personal story for context setting is a strong modeling technique. However, the understanding check could be enhanced by incorporating a more explicit method to gauge participants' takeaways from the exercise. Overall, the immersive and emotional elements are likely to create memorable moments."
+        },
+        "truth_to_pain_judge": {
+          "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o-mini in organization org-HNkusuS3Kif5j7EAyfhMdYk7 on tokens per min (TPM): Limit 200000, Used 200000, Requested 1570. Please try again in 470ms. Visit https://platform.openai.com/account/rate-limits to learn more.', 'type': 'tokens', 'param': None, 'code': 'rate_limit_exceeded'}}",
+          "overall": 5.0,
+          "feedback": "Judge error"
+        }
+      },
+      "timestamp": 1771891053.54704,
+      "average_overall": 6.03
+    }
+  ]
+}

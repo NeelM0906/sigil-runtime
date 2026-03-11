@@ -70,6 +70,12 @@ class OpenAICompatibleProvider:
             if exc.code in {401, 403}:
                 hint = " Check OPENROUTER_API_KEY / OPENAI_API_KEY and base URL."
             provider_label = self.provider_name
+            import logging as _log
+            _log.getLogger(__name__).error(
+                "%s %d: %s | model=%s msgs=%d tools=%d payload_bytes=%d",
+                provider_label, exc.code, details[:500], model,
+                len(messages), len(tools or []), len(json.dumps(payload)),
+            )
             raise RuntimeError(f"{provider_label} request failed ({exc.code}): {details or exc.reason}.{hint}") from exc
 
         choices = body.get("choices") or []
@@ -228,12 +234,21 @@ class StaticEchoProvider:
 
 
 def provider_from_env() -> LLMProvider:
+    priority = os.getenv("BOMBA_LLM_PROVIDER_PRIORITY", "openrouter_first").strip().lower()
+
+    # OpenRouter first by default. This matches OpenClaw-style model IDs
+    # such as "anthropic/claude-opus-4.6" and still leaves an escape hatch:
+    # set BOMBA_LLM_PROVIDER_PRIORITY=anthropic_first to force direct Anthropic.
+    if priority in {"openrouter", "openrouter_first"} and os.getenv("OPENROUTER_API_KEY"):
+        return OpenAICompatibleProvider(
+            provider_name="openrouter",
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+        )
+
     if os.getenv("ANTHROPIC_API_KEY"):
         return AnthropicProvider(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    # OpenRouter before OpenAI — OPENAI_API_KEY may be set only for
-    # embeddings; routing LLM calls to api.openai.com with an
-    # OpenRouter model ID like "anthropic/claude-opus-4.6" would fail.
     if os.getenv("OPENROUTER_API_KEY"):
         return OpenAICompatibleProvider(
             provider_name="openrouter",

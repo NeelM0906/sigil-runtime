@@ -13,17 +13,11 @@ Usage:
 import argparse
 import os
 import sys
+from pathlib import Path
 
-# Ensure API key is loaded
-if not os.environ.get("OPENAI_API_KEY"):
-    env_path = os.path.expanduser("~/.openclaw/.env")
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    os.environ[key.strip()] = val.strip()
+from bomba_sr.openclaw.script_support import load_portable_env
+
+load_portable_env(Path(__file__))
 
 from colosseum.tournament import TournamentConfig, run_tournament
 from colosseum.scenarios import Difficulty, Category

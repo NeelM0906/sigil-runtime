@@ -1,0 +1,34 @@
+I have the vector context. Now I need to ask the highest-leverage gatekeeping question to extract the missing PGAS core before routing.
+
+The user has stated a **solution invitation** ("deliver the Absolute Binary Gate") and supplied **constraints** (absence of 12-point logic, no stakeholder/attorney approval needed). However, I'm missing critical PGAS foundations:
+
+**Analysis:**
+- **Prompting** (stated_vision): Implied = "launch" something (NJ split-test)
+- **Gap** (current_state): "absence of 12-point logic in custom Forge"
+- **Gap** (desired_state): Missing — what does "hit Send" actually mean? What success looks like?
+- **Acceptability**: Not tested — is staying blocked unacceptable?
+- **Solution permission**: EXPLICIT ("deliver the Absolute Binary Gate")
+
+**The critical missing piece** is: What is the actual outcome the NJ split-test is *designed to achieve*? The user is asking for technical sequencing (ZACS), but I cannot route to the right strata without understanding what "hit Send" unlocks in business terms.
+
+**Highest-leverage question:** One that clarifies the desired outcome (Gap → Acceptability → Solution routing).
+
+```json
+{
+  "type": "question",
+  "stage": "G",
+  "collected_patch": {
+    "constraints": [
+      "Custom Forge missing explicit 12-point logic",
+      "NJ split-test requires Compare/Contrast execution sequencing",
+      "Absolute Binary Gate required to launch"
+    ],
+    "solution_permission": {
+      "explicit_invite": true,
+      "requested_output": "12-point ZACS execution sequencing + Binary Gate"
+    }
+  },
+  "message_to_user": "You've pinpointed the blocking constraint—the 12-point logic gap in the Forge. Before I reverse-engineer the sequencing, I need one clarity: When you hit Send on this NJ split-test, what is the single outcome you're testing for—what metric or gate-pass tells you it worked (conversion lift, audience segment clarity, offer validation, something else)?",
+  "notes": "User is in hard constraint mode. Skip stakeholder/approval friction (not relevant). Focused on technical solution delivery. Missing: desired_state clarity (what does 'win' look like for the split-test). Once clarified, route to RTI + ZACS for reverse-engineered sequencing + binary gate logic."
+}
+```

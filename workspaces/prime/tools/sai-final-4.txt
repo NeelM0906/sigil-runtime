@@ -1,0 +1,4 @@
+graphic-design-and-visual-communication:Visual/Creative
+ux-design-and-user-research:Technology/Engineering
+video-production-and-editing:Visual/Creative
+webinar-production-and-virtual-events:Visual/Creative

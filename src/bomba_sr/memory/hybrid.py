@@ -188,7 +188,8 @@ class HybridMemoryStore:
             raise ValueError("confidence must be in [0,1]")
 
         now = datetime.now(timezone.utc)
-        rel_dir = Path(user_id) / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
+        safe_user_id = user_id.replace("->", "_to_").replace(">", "_").replace("<", "_")
+        rel_dir = Path(safe_user_id) / now.strftime("%Y") / now.strftime("%m") / now.strftime("%d")
         abs_dir = self.memory_root / rel_dir
         abs_dir.mkdir(parents=True, exist_ok=True)
 

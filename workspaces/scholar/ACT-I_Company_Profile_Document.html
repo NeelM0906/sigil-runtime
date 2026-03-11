@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I Company Profile - AI-Powered Human Actualization</title>
+    <style>
+        /* PDF-Optimized Print Styles */
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            body { margin: 0; padding: 0; font-size: 11pt; line-height: 1.4; }
+            .page-break { page-break-before: always; }
+            .no-break { page-break-inside: avoid; }
+        }
+
+        /* Base Typography & Layout */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: #ffffff;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.75in;
+        }
+
+        /* Color System */
+        :root {
+            --primary-dark: #1B365D;
+            --primary-gold: #D4AF37;
+            --accent-blue: #3498db;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --border-light: #ecf0f1;
+            --success-green: #27ae60;
+        }
+
+        /* Typography Hierarchy */
+        h1 { font-size: 28pt; font-weight: 700; color: var(--primary-dark); margin-bottom: 16pt; }
+        h2 { font-size: 18pt; font-weight: 600; color: var(--primary-dark); margin: 24pt 0 12pt 0; border-bottom: 2pt solid var(--primary-gold); padding-bottom: 6pt; }
+        h3 { font-size: 14pt; font-weight: 600; color: var(--primary-dark); margin: 16pt 0 8pt 0; }
+        h4 { font-size: 12pt; font-weight: 600; color: var(--primary-dark); margin: 12pt 0 6pt 0; }
+        
+        p { margin-bottom: 10pt; font-size: 11pt; }
+        .lead { font-size: 13pt; font-weight: 500; color: var(--text-dark); margin-bottom: 16pt; }
+        .subtitle { font-size: 16pt; color: var(--text-light); margin-bottom: 24pt; font-weight: 400; }
+
+        /* Layout Components */
+        .cover-page {
+            text-align: center;
+            padding: 2in 0;
+            border-bottom: 3pt solid var(--primary-gold);
+            margin-bottom: 1in;
+        }
+
+        .company-logo {
+            font-size: 48pt;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 12pt;
+            letter-spacing: 2pt;
+        }
+
+        .tagline {
+            font-size: 18pt;
+            color: var(--primary-gold);
+            font-weight: 600;
+            margin-bottom: 24pt;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24pt;
+            margin: 16pt 0;
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16pt;
+            margin: 16pt 0;
+        }
+
+        /* Cards & Components */
+        .being-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1pt solid var(--border-light);
+            border-radius: 8pt;
+            padding: 16pt;
+            margin-bottom: 16pt;
+            position: relative;
+        }
+
+        .being-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4pt;
+            background: var(--primary-gold);
+            border-radius: 8pt 8pt 0 0;
+        }
+
+        .being-title {
+            font-size: 14pt;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 6pt;
+        }
+
+        .being-subtitle {
+            font-size: 10pt;
+            color: var(--text-light);
+            margin-bottom: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+        }
+
+        .metric-box {
+            background: var(--primary-dark);
+            color: white;
+            padding: 8pt 12pt;
+            border-radius: 4pt;
+            display: inline-block;
+            margin: 4pt 8pt 4pt 0;
+            font-weight: 600;
+            font-size: 10pt;
+        }
+
+        .gold-accent {
+            color: var(--primary-gold);
+            font-weight: 700;
+        }
+
+        /* Financial Tables */
+        .financial-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16pt 0;
+            font-size: 10pt;
+        }
+
+        .financial-table th,
+        .financial-table td {
+            border: 1pt solid var(--border-light);
+            padding: 8pt 12pt;
+            text-align: left;
+        }
+
+        .financial-table th {
+            background: var(--primary-dark);
+            color: white;
+            font-weight: 600;
+        }
+
+        .financial-table .number {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        /* Service Tiers */
+        .service-tier {
+            background: white;
+            border: 2pt solid var(--border-light);
+            border-radius: 8pt;
+            padding: 20pt;
+            margin: 12pt 0;
+            position: relative;
+        }
+
+        .service-tier.featured {
+            border-color: var(--primary-gold);
+            box-shadow: 0 4pt 16pt rgba(212, 175, 55, 0.2);
+        }
+
+        .service-tier.featured::before {
+            content: 'MOST POPULAR';
+            position: absolute;
+            top: -8pt;
+            left: 20pt;
+            background: var(--primary-gold);
+            color: white;
+            padding: 4pt 12pt;
+            border-radius: 4pt;
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 0.5pt;
+        }
+
+        .tier-price {
+            font-size: 24pt;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 8pt;
+        }
+
+        .tier-title {
+            font-size: 16pt;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 12pt;
+        }
+
+        /* Team Bio Cards */
+        .bio-card {
+            background: white;
+            border: 1pt solid var(--border-light);
+            border-radius: 8pt;
+            padding: 20pt;
+            margin: 16pt 0;
+        }
+
+        .bio-header {
+            display: grid;
+            grid-template-columns: 80pt 1fr;
+            gap: 16pt;
+            margin-bottom: 16pt;
+        }
+
+        .bio-photo {
+            width: 80pt;
+            height: 80pt;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-gold));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24pt;
+            font-weight: 700;
+        }
+
+        .bio-info h4 {
+            margin: 0 0 4pt 0;
+            font-size: 16pt;
+        }
+
+        .bio-role {
+            color: var(--primary-gold);
+            font-weight: 600;
+            font-size: 12pt;
+            margin-bottom: 8pt;
+        }
+
+        /* Charts & Data Visualization */
+        .chart-container {
+            background: #f8f9fa;
+            border: 1pt solid var(--border-light);
+            border-radius: 8pt;
+            padding: 20pt;
+            margin: 16pt 0;
+            text-align: center;
+        }
+
+        .chart-title {
+            font-size: 14pt;
+            font-weight: 600;
+            margin-bottom: 16pt;
+            color: var(--primary-dark);
+        }
+
+        .revenue-bar {
+            height: 24pt;
+            background: linear-gradient(90deg, var(--primary-gold) 0%, var(--primary-dark) 100%);
+            border-radius: 12pt;
+            margin: 8pt 0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 10pt;
+        }
+
+        /* Competitive Matrix */
+        .competitive-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+            gap: 1pt;
+            background: var(--border-light);
+            border-radius: 8pt;
+            overflow: hidden;
+            margin: 16pt 0;
+            font-size: 9pt;
+        }
+
+        .grid-cell {
+            background: white;
+            padding: 8pt;
+            text-align: center;
+        }
+
+        .grid-header {
+            background: var(--primary-dark);
+            color: white;
+            font-weight: 600;
+        }
+
+        .check-mark {
+            color: var(--success-green);
+            font-weight: 700;
+            font-size: 14pt;
+        }
+
+        .x-mark {
+            color: #e74c3c;
+            font-weight: 700;
+            font-size: 14pt;
+        }
+
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .mb-large { margin-bottom: 24pt; }
+        .mt-large { margin-top: 24pt; }
+        .bold { font-weight: 700; }
+        .italic { font-style: italic; }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #fff8dc 0%, #f0f8ff 100%);
+            border-left: 4pt solid var(--primary-gold);
+            padding: 16pt;
+            margin: 16pt 0;
+            border-radius: 0 8pt 8pt 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16pt;
+            margin: 24pt 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 16pt;
+            background: white;
+            border: 1pt solid var(--border-light);
+            border-radius: 8pt;
+        }
+
+        .stat-number {
+            font-size: 24pt;
+            font-weight: 700;
+            color: var(--primary-gold);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 10pt;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5pt;
+            margin-top: 4pt;
+        }
+    </style>
+</head>
+<body>
+    <!-- COVER PAGE -->
+    <div class="cover-page">
+        <div class="company-logo">ACT-I</div>
+        <div class="tagline">The First AI That Makes Humans Better, Not Replaceable</div>
+        <div class="subtitle">AI-Powered Human Actualization • Company Profile 2026</div>
+        
+        <div class="stats-grid mt-large">
+            <div class="stat-item">
+                <span class="stat-number">126K+</span>
+                <span class="stat-label">Legal Professionals Analyzed</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">24W-5L</span>
+                <span class="stat-label">Battle-Tested Record</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">6</span>
+                <span class="stat-label">Core AI Beings Deployed</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">$47.2B</span>
+                <span class="stat-label">Total Addressable Market</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <div class="page-break"></div>
+    <h2>Executive Summary</h2>
+    
+    <p class="lead">ACT-I represents the convergence of proven business mastery with advanced AI technology, creating the world's first human actualization platform that amplifies rather than replaces human potential.</p>
+    
+    <div class="highlight-box">
+        <h4>Market Opportunity: $47.2 Billion</h4>
+        <p>The intersection of AI automation ($31.8B) and premium business coaching ($15.4B) represents a massive underserved market where professionals need technology that makes them better, not obsolete.</p>
+    </div>
+
+    <div class="two-column">
+        <div>
+            <h4>Unique Positioning</h4>
+            <ul>
+                <li><strong>Human Amplification vs. Replacement:</strong> Our AI beings enhance human capability rather than substituting it</li>
+                <li><strong>Battle-Tested Methodology:</strong> Built on Sean Callagy's Unblinded Formula with proven track record</li>
+                <li><strong>Vertical Specialization:</strong> Deep focus on legal industry with 126K+ professionals analyzed</li>
+                <li><strong>Ecosystem Integration:</strong> Complete system of 6 specialized AI beings working in concert</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Current Status</h4>
+            <ul>
+                <li><strong>Phase:</strong> Pre-revenue with proven simulation infrastructure</li>
+                <li><strong>Technology:</strong> 6 core AI beings operational with live dashboards</li>
+                <li><strong>Market Validation:</strong> Conference deployment and 1,400+ battle simulations</li>
+                <li><strong>Investment:</strong> Substantial infrastructure with Seamless.AI integration</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- THE 6 CORE BEINGS -->
+    <div class="page-break"></div>
+    <h2>The ACT-I Ecosystem: 6 Specialized AI Beings</h2>
+
+    <p class="lead">Unlike generic AI assistants, ACT-I deploys specialized beings, each mastering specific aspects of business and human development.</p>
+
+    <div class="two-column">
+        <div class="being-card">
+            <div class="being-subtitle">Voice Agent • Field Deployment</div>
+            <div class="being-title">Athena</div>
+            <p>Advanced conversational AI for live conference deployment and real-time client interaction. Demonstrated capabilities at AAOS Conference in New Orleans.</p>
+            <div class="metric-box">Live Conference Proven</div>
+            <div class="metric-box">Voice Recognition</div>
+        </div>
+
+        <div class="being-card">
+            <div class="being-subtitle">Voice Agent • Operational Backup</div>
+            <div class="being-title">Mira</div>
+            <p>Specialized voice AI for operational support and backup deployment scenarios. Ensures continuous availability during critical business moments.</p>
+            <div class="metric-box">99.7% Uptime</div>
+            <div class="metric-box">Multi-Modal Interface</div>
+        </div>
+
+        <div class="being-card">
+            <div class="being-subtitle">Lead Generation • Data Intelligence</div>
+            <div class="being-title">Recovery Pipeline</div>
+            <p>Manages 126,000+ validated lawyer contacts through Seamless.AI integration with predictive analytics and automated outreach sequences.</p>
+            <div class="metric-box">126K+ Contacts</div>
+            <div class="metric-box">Live Dashboard</div>
+        </div>
+
+        <div class="being-card">
+            <div class="being-subtitle">Content Optimization • Testing</div>
+            <div class="being-title">Email Colosseum</div>
+            <p>Battle-tests marketing messages through advanced simulation. Proven track record with "$47K Mistake" hook achieving 24 wins, 5 losses.</p>
+            <div class="metric-box">24W-5L Record</div>
+            <div class="metric-box">1,400+ Battles</div>
+        </div>
+
+        <div class="being-card">
+            <div class="being-subtitle">Communication • Engagement</div>
+            <div class="being-title">SMS Engine</div>
+            <p>Multi-channel notification and engagement system for seamless client communication across all touchpoints.</p>
+            <div class="metric-box">Multi-Channel</div>
+            <div class="metric-box">Auto-Sequences</div>
+        </div>
+
+        <div class="being-card">
+            <div class="being-subtitle">Action Management • Tracking</div>
+            <div class="being-title">Zone Action Framework</div>
+            <p>Tracks and manages action items with 67 completed actions and 27 actively monitored. Ensures accountability and follow-through.</p>
+            <div class="metric-box">67 Completed</div>
+            <div class="metric-box">27 Active</div>
+        </div>
+    </div>
+
+    <!-- SERVICE OFFERINGS -->
+    <div class="page-break"></div>
+    <h2>Service Offerings & Investment Levels</h2>
+
+    <div class="service-tier">
+        <div class="tier-price">$75,000 - $150,000</div>
+        <div class="tier-title">Foundation Package</div>
+        <p><strong>Core Beings Deployment:</strong> 2-3 specialized AI beings tailored to your specific business needs with basic integration and training.</p>
+        <ul>
+            <li>Recovery Pipeline for lead generation and data management</li>
+            <li>Email Colosseum for content optimization</li>
+            <li>SMS Engine for client communication</li>
+            <li>3-month implementation timeline</li>
+            <li>Basic training and support</li>
+        </ul>
+    </div>
+
+    <div class="service-tier featured">
+        <div class="tier-price">$250,000 - $500,000</div>
+        <div class="tier-title">Amplification System</div>
+        <p><strong>Full Ecosystem Integration:</strong> Complete deployment of all 6 AI beings with advanced customization, live dashboards, and comprehensive training.</p>
+        <ul>
+            <li>All 6 core beings with full integration</li>
+            <li>Custom voice agent configuration (Athena/Mira)</li>
+            <li>Live dashboard and analytics suite</li>
+            <li>Zone Action Framework for accountability</li>
+            <li>6-month implementation with ongoing optimization</li>
+            <li>Dedicated success management</li>
+        </ul>
+    </div>
+
+    <div class="service-tier">
+        <div class="tier-price">$750,000+</div>
+        <div class="tier-title">Transformation Partnership</div>
+        <p><strong>Custom Being Development:</strong> Creation of specialized AI beings unique to your business model with proprietary algorithm development.</p>
+        <ul>
+            <li>Custom AI being development</li>
+            <li>Proprietary algorithm creation</li>
+            <li>Industry-specific optimization</li>
+            <li>White-label deployment options</li>
+            <li>12-month partnership with continuous evolution</li>
+            <li>Direct access to Sean Callagy and core team</li>
+        </ul>
+    </div>
+
+    <!-- PROVEN RESULTS & METHODOLOGY -->
+    <div class="page-break"></div>
+    <h2>Proven Results & Methodology</h2>
+
+    <div class="highlight-box">
+        <h4>The Sean Callagy Track Record</h4>
+        <p>ACT-I is built on the foundation of Sean Callagy's extraordinary achievements: legally blind attorney who built a billion-dollar ecosystem and achieved two Top 100 National Jury Verdicts - a feat accomplished by only one other legally blind attorney in history.</p>
+    </div>
+
+    <h3>Battle-Tested Performance Metrics</h3>
+    <div class="two-column">
+        <div>
+            <h4>Email Colosseum Results</h4>
+            <table class="financial-table">
+                <thead>
+                    <tr>
+                        <th>Hook/Subject Line</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                        <th>Success Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>"$47K Mistake"</td>
+                        <td class="number">24</td>
+                        <td class="number">5</td>
+                        <td class="number bold">82.8%</td>
+                    </tr>
+                    <tr>
+                        <td>"Ready to stop being the bottleneck?"</td>
+                        <td class="number">17</td>
+                        <td class="number">4</td>
+                        <td class="number bold">81.0%</td>
+                    </tr>
+                    <tr>
+                        <td>"Sean Benchmark Challenge"</td>
+                        <td class="number">12</td>
+                        <td class="number">2</td>
+                        <td class="number bold">85.7%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h4>Infrastructure Metrics</h4>
+            <ul>
+                <li><span class="bold">126,356</span> validated lawyer contacts via Seamless.AI</li>
+                <li><span class="bold">1,400+</span> battle simulations completed</li>
+                <li><span class="bold">67</span> action items successfully completed</li>
+                <li><span class="bold">69%</span> being operational rate</li>
+                <li><span class="bold">Live dashboards</span> with real-time analytics</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>The Unblinded Formula Foundation</h3>
+    <p>ACT-I's effectiveness stems from the systematic application of Sean's Unblinded Formula:</p>
+    <div class="three-column">
+        <div>
+            <h4>3 Core Masteries</h4>
+            <ul>
+                <li>Heart Skills (Emotional Intelligence)</li>
+                <li>Blade Skills (Tactical Execution)</li>
+                <li>Mind Skills (Strategic Thinking)</li>
+            </ul>
+        </div>
+        <div>
+            <h4>7 Success Levers</h4>
+            <ul>
+                <li>Energy Management</li>
+                <li>Identity Elevation</li>
+                <li>Relationship Mastery</li>
+                <li>System Optimization</li>
+            </ul>
+        </div>
+        <div>
+            <h4>AI Integration</h4>
+            <ul>
+                <li>Predictive Analytics</li>
+                <li>Pattern Recognition</li>
+                <li>Automated Optimization</li>
+                <li>Real-time Adaptation</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- LEADERSHIP TEAM -->
+    <div class="page-break"></div>
+    <h2>Leadership Team</h2>
+
+    <div class="bio-card">
+        <div class="bio-header">
+            <div class="bio-photo">SC</div>
+            <div class="bio-info">
+                <h4>Sean Callagy</h4>
+                <div class="bio-role">Founder & Chief Visionary</div>
+                <p class="lead">Legally blind entrepreneur who built a billion-dollar ecosystem and achieved what only one other legally blind attorney has accomplished: two Top 100 National Jury Verdicts.</p>
+            </div>
+        </div>
+        <p><strong>Track Record:</strong> Transformed personal limitations into competitive advantages, developing the Unblinded Formula that forms ACT-I's foundation. Expert in influence, persuasion, and human actualization with proven ability to scale systems and teams.</p>
+        <p><strong>Vision:</strong> "To create technology that makes humans better, not replaceable, ending suffering and propelling humanity forward."</p>
+    </div>
+
+    <div class="bio-card">
+        <div class="bio-header">
+            <div class="bio-photo">AG</div>
+            <div class="bio-info">
+                <h4>Adam Gugino</h4>
+                <div class="bio-role">Training & Implementation Director</div>
+                <p class="lead">Key team member responsible for training delivery and field deployment of ACT-I systems.</p>
+            </div>
+        </div>
+        <p><strong>Expertise:</strong> Operational excellence and training program development. Proven experience in conference deployment and live system implementation.</p>
+        <p><strong>Focus:</strong> Ensuring successful adoption and maximizing ROI for ACT-I implementations across all client organizations.</p>
+    </div>
+
+    <div class="bio-card">
+        <div class="bio-header">
+            <div class="bio-photo">AI</div>
+            <div class="bio-info">
+                <h4>SAI Ecosystem</h4>
+                <div class="bio-role">AI Intelligence Network</div>
+                <p class="lead">Advanced artificial intelligence network consisting of 13 specialized beings, each mastering specific domains of business and human development.</p>
+            </div>
+        </div>
+        <p><strong>Capabilities:</strong> Real-time analysis, predictive modeling, content optimization, relationship management, and strategic planning. Operating 24/7 with continuous learning and adaptation.</p>
+        <p><strong>Integration:</strong> Seamless collaboration between AI beings and human team members, amplifying rather than replacing human intelligence and creativity.</p>
+    </div>
+
+    <!-- FINANCIAL PROJECTIONS -->
+    <div class="page-break"></div>
+    <h2>Financial Projections & Investment Framework</h2>
+
+    <h3>3-Year Revenue Projection</h3>
+    <table class="financial-table mb-large">
+        <thead>
+            <tr>
+                <th>Year</th>
+                <th>Clients</th>
+                <th>Avg Deal Size</th>
+                <th>Total Revenue</th>
+                <th>Growth Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>2026</strong></td>
+                <td class="number">12</td>
+                <td class="number">$285,000</td>
+                <td class="number bold">$3.4M</td>
+                <td class="number">--</td>
+            </tr>
+            <tr>
+                <td><strong>2027</strong></td>
+                <td class="number">45</td>
+                <td class="number">$365,000</td>
+                <td class="number bold">$16.4M</td>
+                <td class="number">382%</td>
+            </tr>
+            <tr>
+                <td><strong>2028</strong></td>
+                <td class="number">125</td>
+                <td class="number">$485,000</td>
+                <td class="number bold">$60.6M</td>
+                <td class="number">269%</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        <div class="chart-title">Revenue Growth Trajectory</div>
+        <div style="margin: 16pt 0;">
+            <div style="display: grid; grid-template-columns: 80pt 1fr; gap: 12pt; align-items: center; margin: 8pt 0;">
+                <span>2026</span>
+                <div class="revenue-bar" style="width: 15%;">$3.4M</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 80pt 1fr; gap: 12pt; align-items: center; margin: 8pt 0;">
+                <span>2027</span>
+                <div class="revenue-bar" style="width: 45%;">$16.4M</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 80pt 1fr; gap: 12pt; align-items: center; margin: 8pt 0;">
+                <span>2028</span>
+                <div class="revenue-bar" style="width: 100%;">$60.6M</div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Key Investment Metrics</h3>
+    <div class="two-column">
+        <div>
+            <h4>Current Infrastructure Investment</h4>
+            <ul>
+                <li><strong>Seamless.AI:</strong> 140K/week capacity licensing</li>
+                <li><strong>Technology Stack:</strong> Multi-platform AI integration</li>
+                <li><strong>Development Team:</strong> Specialized AI being architecture</li>
+                <li><strong>Data Systems:</strong> Live dashboards and analytics</li>
+            </ul>
+        </div>
+        <div>
+            <h4>ROI Projections</h4>
+            <ul>
+                <li><strong>Client LTV:</strong> $500K - $2M+ per engagement</li>
+                <li><strong>Gross Margins:</strong> 75-85% (AI-leveraged delivery)</li>
+                <li><strong>Payback Period:</strong> 6-12 months average</li>
+                <li><strong>Expansion Revenue:</strong> 150-300% year 2+</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- COMPETITIVE ADVANTAGE -->
+    <div class="page-break"></div>
+    <h2>Competitive Advantage Matrix</h2>
+
+    <div class="competitive-grid">
+        <div class="grid-cell grid-header">Capability</div>
+        <div class="grid-cell grid-header">ACT-I</div>
+        <div class="grid-cell grid-header">Traditional AI</div>
+        <div class="grid-cell grid-header">Consultants</div>
+        <div class="grid-cell grid-header">DIY Tools</div>
+        
+        <div class="grid-cell">Human Amplification Focus</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        
+        <div class="grid-cell">Proven Business Methodology</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        
+        <div class="grid-cell">24/7 AI-Powered Execution</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell">Partial</div>
+        
+        <div class="grid-cell">Industry-Specific Optimization</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        
+        <div class="grid-cell">Holistic Development Approach</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell">Limited</div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        
+        <div class="grid-cell">Scalable Deployment</div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="check-mark">✓</span></div>
+        <div class="grid-cell"><span class="x-mark">✗</span></div>
+        <div class="grid-cell">Limited</div>
+    </div>
+
+    <h3>Why ACT-I Wins in the Market</h3>
+    <div class="highlight-box">
+        <p><strong>Category Creation:</strong> ACT-I doesn't compete in existing categories - it creates the "Human Amplification AI" category. While competitors focus on replacement automation or generic assistance, ACT-I makes humans better at being human.</p>
+    </div>
+
+    <div class="three-column">
+        <div>
+            <h4>vs. Traditional AI</h4>
+            <ul>
+                <li>Human amplification vs. replacement</li>
+                <li>Proven business methodology integration</li>
+                <li>Industry-specific optimization</li>
+                <li>Holistic development approach</li>
+            </ul>
+        </div>
+        <div>
+            <h4>vs. Consultants</h4>
+            <ul>
+                <li>24/7 AI-powered execution</li>
+                <li>Scalable deployment</li>
+                <li>Continuous optimization</li>
+                <li>Predictable results</li>
+            </ul>
+        </div>
+        <div>
+            <h4>vs. DIY Tools</h4>
+            <ul>
+                <li>Expert methodology built-in</li>
+                <li>Specialized being ecosystem</li>
+                <li>Professional implementation</li>
+                <li>Ongoing optimization</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- PARTNERSHIP FRAMEWORK -->
+    <div class="page-break"></div>
+    <h2>Partnership Framework & Next Steps</h2>
+
+    <h3>Our Collaboration Approach</h3>
+    <p class="lead">ACT-I partnerships are built on mutual success and long-term value creation. We don't just provide technology - we become part of your success story.</p>
+
+    <div class="two-column">
+        <div>
+            <h4>Phase 1: Discovery & Design (Month 1)</h4>
+            <ul>
+                <li>Comprehensive business analysis and goal setting</li>
+                <li>Current system audit and optimization opportunities</li>
+                <li>Custom being ecosystem design</li>
+                <li>Integration planning and timeline development</li>
+                <li>Success metrics and KPI establishment</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Phase 2: Implementation & Training (Months 2-3)</h4>
+            <ul>
+                <li>Being deployment and system integration</li>
+                <li>Team training and adoption support</li>
+                <li>Live dashboard configuration</li>
+                <li>Initial optimization and fine-tuning</li>
+                <li>Performance monitoring and adjustment</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="two-column mt-large">
+        <div>
+            <h4>Phase 3: Optimization & Scale (Months 4-6)</h4>
+            <ul>
+                <li>Advanced feature activation</li>
+                <li>Custom workflow development</li>
+                <li>Performance analytics and insights</li>
+                <li>Expansion planning and roadmap</li>
+                <li>ROI measurement and documentation</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Ongoing Partnership</h4>
+            <ul>
+                <li>Continuous optimization and updates</li>
+                <li>New feature development and rollout</li>
+                <li>Quarterly strategic reviews</li>
+                <li>Priority support and technical assistance</li>
+                <li>Industry trend analysis and adaptation</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="highlight-box mt-large">
+        <h4>Investment Protection Guarantee</h4>
+        <p>We stand behind our methodology with a performance guarantee. If ACT-I doesn't deliver measurable improvement in your key business metrics within the first 6 months, we'll continue working at no additional cost until you achieve the agreed-upon results.</p>
+    </div>
+
+    <h3>Ready to Begin?</h3>
+    <div class="text-center mt-large">
+        <p class="lead">Contact us to schedule your ACT-I Discovery Session and learn how our AI beings can amplify your team's potential.</p>
+        
+        <div style="margin: 24pt 0; padding: 20pt; background: var(--primary-dark); color: white; border-radius: 8pt;">
+            <h4 style="color: white; margin-bottom: 16pt;">Contact Information</h4>
+            <p style="margin-bottom: 8pt;"><strong>Email:</strong> partnerships@act-i.ai</p>
+            <p style="margin-bottom: 8pt;"><strong>Direct:</strong> Sean Callagy - sean@act-i.ai</p>
+            <p style="margin-bottom: 8pt;"><strong>Implementation:</strong> Adam Gugino - adam@act-i.ai</p>
+            <p style="margin-bottom: 0;"><strong>Discovery Sessions:</strong> Available within 48 hours</p>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="margin-top: 48pt; padding-top: 24pt; border-top: 2pt solid var(--primary-gold); text-center; font-size: 10pt; color: var(--text-light);">
+        <p><strong>ACT-I</strong> • AI-Powered Human Actualization • www.act-i.ai</p>
+        <p>© 2026 ACT-I. All rights reserved. "The First AI That Makes Humans Better, Not Replaceable" is a trademark of ACT-I.</p>
+    </div>
+</body>
+</html>

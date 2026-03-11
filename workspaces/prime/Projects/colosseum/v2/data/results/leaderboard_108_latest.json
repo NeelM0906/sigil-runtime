@@ -1,0 +1,509 @@
+[
+  {
+    "id": "vision_leadership_client_facing",
+    "title": "Cross-Company Synergy Director",
+    "area": "Vision & Leadership",
+    "average": 6.986111111111111,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 7.172222222222222,
+      "silver": 0,
+      "gold": 6.800000000000001,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "marketing_outbound_zone_action",
+    "title": "Ecosystem Merger Specialist",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 6.772222222222222,
+    "total_rounds": 1,
+    "by_difficulty": {
+      "bronze": 6.772222222222222,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "sales_influence_zone_action",
+    "title": "Truth-to-Pain Navigator",
+    "area": "Sales & Influence",
+    "average": 6.663888888888889,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 6.58611111111111,
+      "silver": 7.083333333333333,
+      "gold": 0,
+      "platinum": 6.4
+    }
+  },
+  {
+    "id": "sales_influence_leader",
+    "title": "Sales Director",
+    "area": "Sales & Influence",
+    "average": 6.591666666666667,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 6.6,
+      "silver": 0,
+      "gold": 6.583333333333333,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "operations_client_facing",
+    "title": "Meeting Optimization Specialist",
+    "area": "Operations & Process Mastery",
+    "average": 6.591666666666667,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 6.591666666666667,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "marketing_inbound_leader",
+    "title": "Content Strategy Director",
+    "area": "Marketing \u2014 Inbound",
+    "average": 6.400925925925925,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 6.852777777777778,
+      "silver": 6.055555555555555,
+      "gold": 6.294444444444444,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "marketing_outbound_client_facing",
+    "title": "Meeting Setter",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 6.3597222222222225,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 6.3597222222222225,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "client_success_zone_action",
+    "title": "Churn Prevention Analyst",
+    "area": "Client Success & Retention",
+    "average": 6.352777777777778,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 7.422222222222222,
+      "silver": 0,
+      "gold": 5.283333333333333,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "sales_influence_client_facing",
+    "title": "Discovery Call Specialist",
+    "area": "Sales & Influence",
+    "average": 6.297222222222222,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 6.531481481481482,
+      "silver": 0,
+      "gold": 5.416666666666667,
+      "platinum": 6.386111111111111
+    }
+  },
+  {
+    "id": "marketing_inbound_zone_action",
+    "title": "Shared Experience Designer",
+    "area": "Marketing \u2014 Inbound",
+    "average": 6.286111111111111,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 7.311111111111111,
+      "silver": 6.050000000000001,
+      "gold": 5.411111111111111,
+      "platinum": 6.372222222222223
+    }
+  },
+  {
+    "id": "client_fulfillment_client_facing",
+    "title": "Client Communication Lead",
+    "area": "Client Fulfillment & Delivery",
+    "average": 6.278472222222222,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 7.161111111111111,
+      "silver": 0,
+      "gold": 6.466666666666667,
+      "platinum": 5.743055555555555
+    }
+  },
+  {
+    "id": "finance_leader",
+    "title": "CFO",
+    "area": "Finance & Revenue",
+    "average": 6.256481481481482,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 6.85,
+      "silver": 5.555555555555555,
+      "gold": 0,
+      "platinum": 6.363888888888889
+    }
+  },
+  {
+    "id": "marketing_inbound_client_facing",
+    "title": "Funnel Architect",
+    "area": "Marketing \u2014 Inbound",
+    "average": 6.214814814814815,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 7.522222222222222,
+      "silver": 5.655555555555555,
+      "gold": 5.466666666666667,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "vision_leadership_zone_action",
+    "title": "Vision Translator",
+    "area": "Vision & Leadership",
+    "average": 6.165277777777778,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 6.894444444444444,
+      "silver": 5.661111111111111,
+      "gold": 6.052777777777777,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "fun_magic_client_facing",
+    "title": "Client Journey Choreographer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 6.132407407407407,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 0,
+      "silver": 6.025,
+      "gold": 5.933333333333334,
+      "platinum": 6.27037037037037
+    }
+  },
+  {
+    "id": "vision_leadership_leader",
+    "title": "Chief Vision Officer",
+    "area": "Vision & Leadership",
+    "average": 6.124305555555556,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 7.48888888888889,
+      "silver": 5.722222222222222,
+      "gold": 0,
+      "platinum": 5.643055555555556
+    }
+  },
+  {
+    "id": "client_fulfillment_leader",
+    "title": "Fulfillment Director",
+    "area": "Client Fulfillment & Delivery",
+    "average": 6.113194444444444,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 7.158333333333333,
+      "silver": 0,
+      "gold": 5.641666666666667,
+      "platinum": 6.011111111111111
+    }
+  },
+  {
+    "id": "finance_zone_action",
+    "title": "Cash Flow Analyst",
+    "area": "Finance & Revenue",
+    "average": 6.035185185185185,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 5.980555555555556,
+      "silver": 6.144444444444444,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "marketing_outbound_leader",
+    "title": "Outbound Strategy Director",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 6.0159722222222225,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 6.247222222222222,
+      "silver": 5.784722222222222,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "innovation_rd_leader",
+    "title": "Chief Innovation Officer",
+    "area": "Innovation & R&D",
+    "average": 5.9944444444444445,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 6.4,
+      "silver": 0,
+      "gold": 5.919444444444444,
+      "platinum": 5.909259259259259
+    }
+  },
+  {
+    "id": "operations_zone_action",
+    "title": "Zone Action Tracker",
+    "area": "Operations & Process Mastery",
+    "average": 5.8929629629629625,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 6.1338888888888885,
+      "silver": 0,
+      "gold": 5.411111111111111,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "client_success_client_facing",
+    "title": "Account Manager",
+    "area": "Client Success & Retention",
+    "average": 5.891203703703703,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 6.586111111111112,
+      "silver": 5.54375,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "client_success_leader",
+    "title": "Client Success Director",
+    "area": "Client Success & Retention",
+    "average": 5.879861111111111,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 6.010185185185186,
+      "silver": 0,
+      "gold": 5.488888888888889,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "legal_compliance_zone_action",
+    "title": "Contract Drafter",
+    "area": "Legal & Compliance",
+    "average": 5.826851851851852,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 5.9944444444444445,
+      "silver": 5.772222222222222,
+      "gold": 5.713888888888889,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "people_talent_client_facing",
+    "title": "Onboarding Coordinator",
+    "area": "People & Talent",
+    "average": 5.823611111111111,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 0,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 5.823611111111111
+    }
+  },
+  {
+    "id": "fun_magic_leader",
+    "title": "Chief Experience Officer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 5.819907407407407,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 6.066666666666666,
+      "silver": 0,
+      "gold": 5.727777777777778,
+      "platinum": 5.495833333333334
+    }
+  },
+  {
+    "id": "finance_client_facing",
+    "title": "Collections Specialist",
+    "area": "Finance & Revenue",
+    "average": 5.79,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 6.738888888888889,
+      "silver": 5.166666666666667,
+      "gold": 6.171111111111111,
+      "platinum": 5.083333333333333
+    }
+  },
+  {
+    "id": "technology_client_facing",
+    "title": "CRM Administrator",
+    "area": "Technology & Infrastructure",
+    "average": 5.779166666666667,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 5.872222222222223,
+      "silver": 0,
+      "gold": 5.927777777777778,
+      "platinum": 5.388888888888889
+    }
+  },
+  {
+    "id": "innovation_rd_client_facing",
+    "title": "Scoring System Optimizer",
+    "area": "Innovation & R&D",
+    "average": 5.752777777777777,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 6.083333333333333,
+      "silver": 0,
+      "gold": 5.5875,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "client_fulfillment_zone_action",
+    "title": "Project Manager",
+    "area": "Client Fulfillment & Delivery",
+    "average": 5.731944444444444,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 7.311111111111111,
+      "silver": 5.0,
+      "gold": 5.616666666666666,
+      "platinum": 5.0
+    }
+  },
+  {
+    "id": "technology_zone_action",
+    "title": "AI/ML Engineer",
+    "area": "Technology & Infrastructure",
+    "average": 5.721111111111111,
+    "total_rounds": 5,
+    "by_difficulty": {
+      "bronze": 6.752777777777777,
+      "silver": 5.366666666666666,
+      "gold": 0,
+      "platinum": 5.49537037037037
+    }
+  },
+  {
+    "id": "fun_magic_zone_action",
+    "title": "Awe Engineer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 5.5814814814814815,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 5.361111111111111,
+      "silver": 0,
+      "gold": 5.691666666666666,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "operations_leader",
+    "title": "COO",
+    "area": "Operations & Process Mastery",
+    "average": 5.516666666666667,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 5.516666666666667,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 0
+    }
+  },
+  {
+    "id": "innovation_rd_zone_action",
+    "title": "Being Evolution Architect",
+    "area": "Innovation & R&D",
+    "average": 5.49537037037037,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 5.905555555555555,
+      "silver": 0,
+      "gold": 0,
+      "platinum": 5.290277777777778
+    }
+  },
+  {
+    "id": "people_talent_leader",
+    "title": "Chief People Officer",
+    "area": "People & Talent",
+    "average": 5.480555555555555,
+    "total_rounds": 2,
+    "by_difficulty": {
+      "bronze": 0,
+      "silver": 5.6,
+      "gold": 0,
+      "platinum": 5.361111111111111
+    }
+  },
+  {
+    "id": "legal_compliance_leader",
+    "title": "General Counsel",
+    "area": "Legal & Compliance",
+    "average": 5.471296296296296,
+    "total_rounds": 6,
+    "by_difficulty": {
+      "bronze": 5.394444444444444,
+      "silver": 5.6305555555555555,
+      "gold": 5.586111111111111,
+      "platinum": 5.0
+    }
+  },
+  {
+    "id": "technology_leader",
+    "title": "CTO",
+    "area": "Technology & Infrastructure",
+    "average": 5.4655555555555555,
+    "total_rounds": 5,
+    "by_difficulty": {
+      "bronze": 5.652777777777778,
+      "silver": 0,
+      "gold": 5.388888888888889,
+      "platinum": 5.2444444444444445
+    }
+  },
+  {
+    "id": "people_talent_zone_action",
+    "title": "Recruiter",
+    "area": "People & Talent",
+    "average": 5.427777777777778,
+    "total_rounds": 4,
+    "by_difficulty": {
+      "bronze": 0,
+      "silver": 0,
+      "gold": 5.622222222222223,
+      "platinum": 5.362962962962963
+    }
+  },
+  {
+    "id": "legal_compliance_client_facing",
+    "title": "Ethics Officer",
+    "area": "Legal & Compliance",
+    "average": 5.25,
+    "total_rounds": 3,
+    "by_difficulty": {
+      "bronze": 0,
+      "silver": 5.375,
+      "gold": 5.0,
+      "platinum": 0
+    }
+  }
+]

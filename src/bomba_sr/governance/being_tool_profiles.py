@@ -29,6 +29,10 @@ TOOL_GROUPS_EXT: dict[str, set[str]] = {
         "voice_make_call",
         "voice_list_pathways",
     },
+    "group:media": {
+        "fal_video_generate",
+        "fal_request_status",
+    },
     "group:colosseum": {
         "colosseum_run_round",
         "colosseum_leaderboard",
@@ -125,6 +129,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:skills",        # skill_create, skill_update, skill_install_*
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
+        "group:media",         # fal video generation + request tracking
         "group:colosseum",     # colosseum tools — Forge's core domain
     )),
 

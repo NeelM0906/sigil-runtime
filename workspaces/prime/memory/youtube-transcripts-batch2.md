@@ -9,7 +9,7 @@
 |-------|-----|------|------|
 | Sugar Ray Leonard: Belief, Influence, and Winning the Mental Fight | ABih7i1p1-U | `Sugar Ray Leonard： Belief, Influence, and Winning the Mental Fight [ABih7i1p1-U].en.vtt` | 394KB |
 
-**Location:** `/Users/samantha/Projects/youtube-transcripts/`
+**Location:** `./workspaces/prime/Projects/youtube-transcripts/`
 
 ### ❌ Failed - No Subtitles Available (4/5)
 

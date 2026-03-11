@@ -14,6 +14,8 @@ from bomba_sr.dashboard.service import (
     TYPE_SISTER, TYPE_RUNTIME, TYPE_VOICE_AGENT, TYPE_SUBAGENT,
     _extract_json, _NOT_TASK_PATTERNS, _REPRESENTATION_KEYWORDS,
 )
+from bomba_sr.artifacts.store import ArtifactStore
+from bomba_sr.openclaw.integration import ensure_portable_openclaw_layout, list_agent_workspaces, load_openclaw_config
 from bomba_sr.projects.service import ProjectService
 from bomba_sr.storage.db import RuntimeDB
 
@@ -23,6 +25,13 @@ def db():
     _db = RuntimeDB(":memory:")
     yield _db
     _db.close()
+
+
+@pytest.fixture(autouse=True)
+def isolate_openclaw_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("BOMBA_OPENCLAW_SOURCE_ROOT", str(tmp_path / "missing-openclaw"))
+    monkeypatch.setenv("BOMBA_OPENCLAW_SYNC_POLL_SECONDS", "0")
+    monkeypatch.setenv("BOMBA_ENABLE_BUNDLED_SYNC", "false")
 
 
 @pytest.fixture()
@@ -117,6 +126,45 @@ class TestBeings:
         assert b is not None
         assert b["name"] == "Prime"
         assert b["type"] == "runtime"
+
+    def test_sanitizes_stored_paths_in_messages_and_beings(self, svc, db):
+        now = svc._now()
+        db.execute(
+            "INSERT INTO mc_messages (id, type, sender, targets, content, timestamp, mode, task_ref, session_id) VALUES (?,?,?,?,?,?,?,?,?)",
+            (
+                "msg-path",
+                "direct",
+                "user",
+                json.dumps(["prime"]),
+                '[tool] read {"path": "/Users/tester/.openclaw/workspace-scholar/HEARTBEAT.md"}',
+                now,
+                "auto",
+                None,
+                "general",
+            ),
+        )
+        db.execute(
+            "INSERT INTO mc_beings (id,name,status,created_at,updated_at,workspace) VALUES (?,?,?,?,?,?)",
+            (
+                "portable-being",
+                "Portable Being",
+                "online",
+                now,
+                now,
+                "/Users/tester/.openclaw/sigil-runtime-chat-sessions-deliverables/workspaces/forge",
+            ),
+        )
+        db.commit()
+
+        svc._sanitize_stored_paths()
+
+        msg = next(m for m in svc.list_messages(session_id="general", limit=10) if m["id"] == "msg-path")
+        assert "/Users/tester/" not in msg["content"]
+        assert "~/.openclaw" in msg["content"]
+
+        being = svc.get_being("portable-being")
+        assert being is not None
+        assert being["workspace"] == "workspaces/forge"
 
     def test_get_being_not_found(self, svc):
         assert svc.get_being("nonexistent") is None
@@ -279,6 +327,16 @@ class TestChat:
         assert len(page2) == 3
         assert page[0]["id"] != page2[0]["id"]
 
+    def test_list_messages_does_not_force_openclaw_sync(self, svc):
+        sync = MagicMock()
+        svc.openclaw_sync = sync
+        svc.create_message(sender="user", content="no sync please")
+
+        msgs = svc.list_messages()
+
+        assert len(msgs) == 1
+        sync.sync_once.assert_not_called()
+
     def test_route_to_being_no_bridge(self, svc):
         """Without a bridge, should create an offline placeholder message."""
         svc.route_to_being("athena", "Hello")
@@ -298,6 +356,31 @@ class TestChat:
         assert len(msgs) == 1
         assert msgs[0]["content"] == "Hello from mock LLM"
 
+    def test_short_confirmation_anchors_latest_offer(self, db):
+        captured: dict[str, str] = {}
+        mock_bridge = MagicMock()
+
+        def _handle(req):
+            captured["user_message"] = req.user_message
+            return {"reply": "Queued"}
+
+        mock_bridge.handle_turn.side_effect = _handle
+        svc = DashboardService(db=db, bridge=mock_bridge, sisters=None)
+        svc.load_beings_from_configs()
+        svc.create_message(
+            sender="prime",
+            content="I can generate the mountain cycling sunrise video now. Say 'yes generate it' and I'll run that exact video prompt.",
+            targets=["user"],
+            msg_type="direct",
+            session_id="general",
+        )
+
+        svc._route_to_being_sync("prime", "yes generate it", "user", "general")
+
+        assert "confirmed_offer" in captured["user_message"]
+        assert "mountain cycling sunrise video" in captured["user_message"]
+        assert captured["user_message"].rstrip().endswith("User follow-up: yes generate it")
+
     def test_route_to_voice_agent_rejected(self, svc):
         """Voice agents should not be chat-routable."""
         svc.load_beings_from_configs()
@@ -306,6 +389,254 @@ class TestChat:
         msgs = svc.list_messages(sender="callie")
         assert len(msgs) == 1
         assert "voice agent" in msgs[0]["content"].lower()
+
+
+class TestOpenClawSync:
+    @staticmethod
+    def _write_jsonl(path: Path, rows: list[dict]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+
+    def test_imports_live_openclaw_session_into_dashboard(self, db, project_svc, monkeypatch, tmp_path):
+        openclaw_root = tmp_path / "openclaw"
+        workspace = openclaw_root / "workspace"
+        (workspace / "memory").mkdir(parents=True)
+        (workspace / "memory" / "2026-03-11.md").write_text("memory", encoding="utf-8")
+        (workspace / "AGENTS.md").write_text("# Prime", encoding="utf-8")
+
+        (openclaw_root / "openclaw.json").write_text(json.dumps({
+            "agents": {
+                "list": [
+                    {
+                        "id": "main",
+                        "workspace": str(workspace),
+                        "model": {"primary": "openrouter/anthropic/claude-opus-4.6"},
+                        "tools": {"alsoAllow": ["read", "exec"]},
+                    }
+                ]
+            }
+        }), encoding="utf-8")
+
+        session_id = "11111111-2222-3333-4444-555555555555"
+        updated_at_ms = int(time.time() * 1000)
+        sessions_dir = openclaw_root / "agents" / "main" / "sessions"
+        sessions_dir.mkdir(parents=True, exist_ok=True)
+        (sessions_dir / "sessions.json").write_text(json.dumps({
+            "agent:main:discord:channel:1477568016697790486": {
+                "sessionId": session_id,
+                "updatedAt": updated_at_ms,
+            }
+        }), encoding="utf-8")
+        self._write_jsonl(
+            sessions_dir / f"{session_id}.jsonl",
+            [
+                {
+                    "type": "session",
+                    "version": 3,
+                    "id": session_id,
+                    "timestamp": "2026-03-11T17:00:00Z",
+                    "cwd": str(workspace),
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-03-11T17:00:01Z",
+                    "message": {
+                        "role": "user",
+                        "content": [{"type": "text", "text": "Query Pinecone for Sean positioning notes"}],
+                    },
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-03-11T17:00:02Z",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "toolCall",
+                                "name": "pinecone_query",
+                                "arguments": {"index": "ublib2", "query": "Sean positioning notes"},
+                            }
+                        ],
+                    },
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-03-11T17:00:03Z",
+                    "message": {
+                        "role": "toolResult",
+                        "content": [{"type": "text", "text": "Found 3 relevant Pinecone matches"}],
+                    },
+                },
+                {
+                    "type": "message",
+                    "timestamp": "2026-03-11T17:00:04Z",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "I found 3 notes and summarized the overlap."}],
+                    },
+                },
+            ],
+        )
+
+        monkeypatch.setenv("BOMBA_OPENCLAW_SOURCE_ROOT", str(openclaw_root))
+        monkeypatch.setenv("BOMBA_OPENCLAW_SYNC_POLL_SECONDS", "0")
+
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.sync_openclaw_once()
+
+        sessions = svc.list_sessions()
+        imported = next((s for s in sessions if s["id"] == session_id), None)
+        assert imported is not None
+        assert imported["name"].startswith("Discord 1477568016697790486")
+
+        messages = svc.list_messages(session_id=session_id)
+        assert [m["sender"] for m in messages] == ["user", "prime", "prime", "prime"]
+        assert any("pinecone_query" in m["content"] for m in messages)
+        assert any("Found 3 relevant Pinecone matches" in m["content"] for m in messages)
+
+        tasks = svc.list_tasks(project_svc)
+        imported_task = next((t for t in tasks if t["id"].startswith("ocl-task-")), None)
+        assert imported_task is not None
+        assert imported_task["status"] == "in_progress"
+        assert imported_task["assignees"] == ["prime"]
+
+        prime = svc.get_being("prime")
+        assert prime is not None
+        assert prime["workspace"] == str(openclaw_root)
+        assert prime["status"] == "busy"
+        assert "read" in prime["tools"]
+
+        svc.sync_openclaw_once()
+        sessions_again = [s for s in svc.list_sessions() if s["id"] == session_id]
+        assert len(sessions_again) == 1
+
+    def test_being_detail_supports_external_workspace_paths(self, db, project_svc, monkeypatch, tmp_path):
+        openclaw_root = tmp_path / "openclaw"
+        workspace = openclaw_root / "workspace"
+        (workspace / "memory").mkdir(parents=True)
+        (workspace / "memory" / "today.md").write_text("hello", encoding="utf-8")
+        (openclaw_root / "AGENTS.md").write_text("# Prime Root", encoding="utf-8")
+        (openclaw_root / "openclaw.json").write_text(json.dumps({
+            "agents": {"list": [{"id": "main", "workspace": str(workspace), "model": {"primary": "x"}}]}
+        }), encoding="utf-8")
+        sessions_dir = openclaw_root / "agents" / "main" / "sessions"
+        session_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        (sessions_dir / "sessions.json").parent.mkdir(parents=True, exist_ok=True)
+        (sessions_dir / "sessions.json").write_text(json.dumps({
+            "agent:main:main": {"sessionId": session_id, "updatedAt": int(time.time() * 1000)}
+        }), encoding="utf-8")
+        self._write_jsonl(sessions_dir / f"{session_id}.jsonl", [
+            {"type": "session", "id": session_id, "timestamp": "2026-03-11T17:00:00Z", "cwd": str(workspace)},
+            {"type": "message", "timestamp": "2026-03-11T17:00:01Z", "message": {"role": "user", "content": [{"type": "text", "text": "hi"}]}},
+        ])
+
+        monkeypatch.setenv("BOMBA_OPENCLAW_SOURCE_ROOT", str(openclaw_root))
+        monkeypatch.setenv("BOMBA_OPENCLAW_SYNC_POLL_SECONDS", "0")
+
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+        svc.sync_openclaw_once()
+
+        detail = svc.get_being_detail("prime")
+        assert detail is not None
+        assert detail["identity"]["workspace_abs"] == str(openclaw_root.resolve())
+        assert any(file["name"] == "AGENTS.md" for file in detail["identity"]["files"])
+
+    def test_projects_catalog_lists_openclaw_projects(self, db, project_svc, monkeypatch, tmp_path):
+        openclaw_root = tmp_path / "openclaw"
+        main_workspace = openclaw_root / "workspace"
+        forge_workspace = openclaw_root / "workspace-forge"
+        (main_workspace / "Projects" / "colosseum" / "v2" / "data").mkdir(parents=True)
+        (main_workspace / "Projects" / "client-alpha").mkdir(parents=True)
+        (forge_workspace / "colosseum-dashboard").mkdir(parents=True)
+        for rel in (
+            "beings.json",
+            "judges.json",
+            "scenarios.json",
+        ):
+            (main_workspace / "Projects" / "colosseum" / "v2" / "data" / rel).write_text("{}", encoding="utf-8")
+        (main_workspace / "Projects" / "colosseum" / "README.md").write_text("Main tournament", encoding="utf-8")
+        (forge_workspace / "colosseum-dashboard" / "README.md").write_text("Forge arena", encoding="utf-8")
+        (openclaw_root / "openclaw.json").write_text(json.dumps({
+            "agents": {
+                "defaults": {"workspace": str(main_workspace)},
+                "list": [
+                    {"id": "main", "workspace": str(main_workspace)},
+                    {"id": "forge", "workspace": str(forge_workspace)},
+                ],
+            }
+        }), encoding="utf-8")
+
+        monkeypatch.setenv("BOMBA_OPENCLAW_SOURCE_ROOT", str(openclaw_root))
+        monkeypatch.setenv("BOMBA_OPENCLAW_SYNC_POLL_SECONDS", "0")
+
+        svc = DashboardService(db=db, bridge=None, sisters=None)
+        svc.ensure_mc_project(project_svc)
+
+        projects = svc.list_projects_catalog()
+        ids = {project["id"] for project in projects}
+        assert "workspace-main" in ids
+        assert "main-project-colosseum" in ids
+        assert "forge-colosseum-dashboard" in ids
+
+    def test_runtime_chat_session_id_isolated_per_dashboard_session(self, svc):
+        assert svc._runtime_chat_session_id("prime", "general") == "mc-chat-general-prime"
+        assert svc._runtime_chat_session_id("prime", "session 42 / alpha") == "mc-chat-session-42-alpha-prime"
+
+
+class TestPortableOpenClawBundle:
+    def test_load_openclaw_config_with_explicit_root_without_external_sync(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("BOMBA_OPENCLAW_SOURCE_ROOT", raising=False)
+        bundle_root = tmp_path / "portable-openclaw"
+        (bundle_root / "agents").mkdir(parents=True)
+        config_path = bundle_root / "openclaw.json"
+        config_path.write_text(json.dumps({
+            "agents": {
+                "defaults": {"workspace": "/tmp/old-workspace"},
+                "list": [{"id": "forge", "workspace": "/tmp/old-forge"}],
+            }
+        }), encoding="utf-8")
+
+        payload = load_openclaw_config(bundle_root)
+
+        assert payload["agents"]["defaults"]["workspace"] == "/tmp/old-workspace"
+
+    def test_ensure_portable_openclaw_layout_rewrites_workspace_paths(self, tmp_path):
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir(parents=True)
+        (repo_root / "pyproject.toml").write_text("[project]\nname='portable-test'\nversion='0.0.0'\n", encoding="utf-8")
+        (repo_root / "workspaces" / "prime" / "tools").mkdir(parents=True)
+        (repo_root / "workspaces" / "forge" / "tools").mkdir(parents=True)
+        (repo_root / "workspaces" / "scholar" / "tools").mkdir(parents=True)
+        (repo_root / "workspaces" / "sai-memory" / "tools").mkdir(parents=True)
+        (repo_root / "workspaces" / "recovery" / "tools").mkdir(parents=True)
+        (repo_root / ".venv" / "bin").mkdir(parents=True)
+        (repo_root / ".env").write_text("SUPABASE_URL=https://example.supabase.co\n", encoding="utf-8")
+        bundle_root = repo_root / "portable-openclaw"
+        bundle_root.mkdir(parents=True)
+        (bundle_root / "openclaw.json").write_text(json.dumps({
+            "agents": {
+                "defaults": {"workspace": "./workspace"},
+                "list": [
+                    {"id": "main", "workspace": "./workspace"},
+                    {"id": "forge", "workspace": "./workspace-forge"},
+                ],
+            }
+        }), encoding="utf-8")
+
+        portable_root = ensure_portable_openclaw_layout(repo_root)
+        workspaces = list_agent_workspaces(portable_root)
+        rewritten = json.loads((portable_root / "openclaw.json").read_text(encoding="utf-8"))
+
+        assert portable_root == bundle_root
+        assert (repo_root / ".portable-home" / ".openclaw").is_symlink()
+        assert (bundle_root / "workspace").is_symlink()
+        assert rewritten["agents"]["defaults"]["workspace"] == "./workspace"
+        assert rewritten["agents"]["list"][0]["workspace"] == "./workspace"
+        assert rewritten["agents"]["list"][1]["workspace"] == "./workspace-forge"
+        assert workspaces["main"] == (repo_root / "workspaces" / "prime").resolve()
+        assert workspaces["forge"] == (repo_root / "workspaces" / "forge").resolve()
 
 
 # ── Tasks ─────────────────────────────────────────────────────
@@ -496,6 +827,31 @@ class TestSSE:
         assert evt is not None
         assert evt["event"] == "chat_message"
         assert evt["data"]["content"] == "SSE test"
+        svc.unsubscribe_sse(cid)
+
+    def test_artifact_event_also_emits_output_payload(self, svc, tmp_path):
+        store = ArtifactStore(svc.db, tmp_path / "artifacts")
+        svc.set_artifact_store(store)
+        record = store.create_binary_artifact(
+            tenant_id=MC_TENANT,
+            session_id="general",
+            turn_id="turn-1",
+            project_id=None,
+            task_id=None,
+            artifact_type="video",
+            title="Fal video",
+            data=b"video",
+            filename="fal-video-1.mp4",
+            created_by="fal:test",
+        )
+        cid = svc.subscribe_sse()
+
+        svc.notify_artifact_created(record)
+
+        evt = svc.poll_sse(cid, timeout=1.0)
+        assert evt is not None
+        assert evt["event"] == "deliverable_created"
+        assert evt["data"]["filename"] == "fal-video-1.mp4"
         svc.unsubscribe_sse(cid)
 
     def test_being_status_emits_sse(self, svc):

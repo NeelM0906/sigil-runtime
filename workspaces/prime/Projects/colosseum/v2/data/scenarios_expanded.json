@@ -1,0 +1,1530 @@
+{
+  "_meta": {
+    "version": "2.0",
+    "created": "2026-02-23",
+    "total_scenarios": 108,
+    "by_company": {
+      "callagy_recovery": 36,
+      "unblinded": 36,
+      "act_i": 36
+    },
+    "by_difficulty": {
+      "bronze": 27,
+      "silver": 27,
+      "gold": 27,
+      "platinum": 27
+    }
+  },
+  "cr_bronze_provider_objection_1": {
+    "title": "Provider Skeptical of Contingency Model",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "provider_objections",
+    "situation": "A small orthopedic practice owner says: 'Why would I give you a percentage when I could just hire a billing person for $45K/year?' Explain the value proposition.",
+    "person": {
+      "name": "Dr. Mark Stevens",
+      "role": "Solo orthopedic surgeon, $1.2M revenue",
+      "concern": "Doesn't want to give up percentage of collections",
+      "hot_button": "Control and understanding exactly what he's paying for"
+    },
+    "success_criteria": "Dr. Stevens asks about the specific percentage and wants to see the agreement"
+  },
+  "cr_bronze_provider_objection_2": {
+    "title": "We Already Have a Billing Company",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "provider_objections",
+    "situation": "A medical practice administrator says they're happy with their current billing company. They don't see why they need Callagy Recovery on top of that.",
+    "person": {
+      "name": "Karen Mitchell",
+      "role": "Practice Administrator, 4-physician group",
+      "concern": "Adding another vendor seems like complexity",
+      "hot_button": "Efficiency and not duplicating work"
+    },
+    "success_criteria": "Karen understands the difference between billing and recovery, asks about denied claims they've written off"
+  },
+  "cr_bronze_provider_objection_3": {
+    "title": "Too Good to Be True Skepticism",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "provider_objections",
+    "situation": "A physician says: 'No win, no fee? There must be a catch. What am I missing here?'",
+    "person": {
+      "name": "Dr. Lisa Park",
+      "role": "Physical Medicine specialist",
+      "concern": "Feels like there's hidden fees or fine print",
+      "hot_button": "Transparency and no surprises"
+    },
+    "success_criteria": "Dr. Park believes the model is genuine and asks about next steps"
+  },
+  "cr_bronze_carrier_negotiation_1": {
+    "title": "Carrier Claims Insufficient Documentation",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "carrier_negotiations",
+    "situation": "An insurance carrier denied a $12,000 claim saying documentation was insufficient. You have the complete medical records. Call to resolve.",
+    "person": {
+      "name": "Janet, Claims Processor",
+      "role": "Entry-level claims processor at major carrier",
+      "concern": "Following her checklist, doesn't want to get in trouble",
+      "hot_button": "Clear documentation that she can attach to the file"
+    },
+    "success_criteria": "Janet agrees to reprocess the claim with the provided documentation"
+  },
+  "cr_bronze_carrier_negotiation_2": {
+    "title": "Payment Less Than Award Amount",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "carrier_negotiations",
+    "situation": "An IDR award came back for $8,500. The carrier sent a check for $6,200 citing 'administrative adjustments.' Call to get the full amount.",
+    "person": {
+      "name": "Claims Supervisor",
+      "role": "Mid-level supervisor at insurance carrier",
+      "concern": "Wants to close files quickly",
+      "hot_button": "Legal compliance with IDR binding decisions"
+    },
+    "success_criteria": "Carrier commits to issuing the remaining $2,300 within 10 business days"
+  },
+  "cr_bronze_idr_positioning_1": {
+    "title": "Explain IDR to a Confused Provider",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "idr_attribution",
+    "situation": "A new client practice doesn't understand what IDR is or why their claims should go through it. Educate them while building confidence.",
+    "person": {
+      "name": "Dr. James Wu",
+      "role": "Emergency medicine physician, recently out-of-network",
+      "concern": "Confused by the process, worried about insurance retaliation",
+      "hot_button": "Understanding and protecting his patient relationships"
+    },
+    "success_criteria": "Dr. Wu understands IDR and feels confident proceeding with disputed claims"
+  },
+  "cr_bronze_no_win_no_fee_1": {
+    "title": "First Discovery Call - Small Practice",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "no_win_no_fee",
+    "situation": "Initial discovery call with a 2-physician practice. They've written off $180K in denied claims over the past 3 years. Introduce the service and gauge interest.",
+    "person": {
+      "name": "Dr. Rachel Green",
+      "role": "Co-owner, family medicine practice",
+      "concern": "Time investment and whether it's worth pursuing old claims",
+      "hot_button": "Money they've already mentally written off"
+    },
+    "success_criteria": "Dr. Green agrees to send you their list of denied claims for analysis"
+  },
+  "cr_bronze_post_plan_1": {
+    "title": "Discover Written-Off Claims in First Meeting",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "post_plan_discovery",
+    "situation": "First meeting with a new medical practice client. Your job is to uncover how much money they've left on the table without knowing it.",
+    "person": {
+      "name": "Sarah, Billing Manager",
+      "role": "Practice billing manager, 15 years experience",
+      "concern": "Defensive about her work being questioned",
+      "hot_button": "She's not the problem - the system is"
+    },
+    "success_criteria": "Sarah shares that they have 'about 200 claims' they stopped pursuing"
+  },
+  "cr_silver_provider_objection_1": {
+    "title": "Competing Recovery Company Already in Place",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "provider_objections",
+    "situation": "A multi-location surgical center says they already work with a recovery company but 'aren't thrilled with results.' Find the gap and position Callagy.",
+    "person": {
+      "name": "Michael Torres",
+      "role": "CFO, 5-location surgical center, $8M in annual revenue",
+      "concern": "Switching costs and disruption",
+      "hot_button": "Results compared to what they're getting now"
+    },
+    "success_criteria": "Michael shares specific numbers about current recovery rates and agrees to a comparison analysis"
+  },
+  "cr_silver_provider_objection_2": {
+    "title": "Attorney Client Concerned About Relationships",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "provider_objections",
+    "situation": "A referring attorney who sends medical providers to Callagy says one of his clients is worried aggressive recovery tactics will damage their carrier relationships.",
+    "person": {
+      "name": "Attorney David Kim",
+      "role": "Personal injury attorney, refers 20+ providers per year",
+      "concern": "His referral reputation is on the line",
+      "hot_button": "Protecting his relationship with the provider"
+    },
+    "success_criteria": "David understands the professional approach and feels confident making the referral"
+  },
+  "cr_silver_carrier_negotiation_1": {
+    "title": "Carrier Stalling on Multiple Claims",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "carrier_negotiations",
+    "situation": "A carrier owes $340K across 47 claims, all with IDR awards. They've been 'in processing' for 60 days. Escalate effectively.",
+    "person": {
+      "name": "Regional Claims Director",
+      "role": "Senior manager at insurance carrier",
+      "concern": "Cash flow management and quarterly targets",
+      "hot_button": "Legal exposure and regulatory compliance"
+    },
+    "success_criteria": "Director commits to a payment schedule with specific dates"
+  },
+  "cr_silver_carrier_negotiation_2": {
+    "title": "Carrier Disputes Medical Necessity",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "carrier_negotiations",
+    "situation": "Insurance carrier is denying a $45K surgery claim saying the procedure 'wasn't medically necessary.' The patient had a documented spinal injury from a car accident.",
+    "person": {
+      "name": "Medical Review Supervisor",
+      "role": "Nurse reviewer at insurance carrier",
+      "concern": "Following clinical guidelines strictly",
+      "hot_button": "Peer-reviewed evidence and specialist opinion"
+    },
+    "success_criteria": "Supervisor agrees to have the case reviewed by a specialist and provides timeline"
+  },
+  "cr_silver_idr_positioning_1": {
+    "title": "Provider Skeptical IDR Favors Insurance Companies",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "idr_attribution",
+    "situation": "A provider has heard IDR is 'rigged' in favor of insurance companies and doesn't want to waste time. Counter with facts and results.",
+    "person": {
+      "name": "Dr. Patricia Hernandez",
+      "role": "Neurosurgeon, high-value claims",
+      "concern": "Time and effort for low probability of success",
+      "hot_button": "Data and track record, not promises"
+    },
+    "success_criteria": "Dr. Hernandez asks about Callagy's specific win rate and average award amounts"
+  },
+  "cr_silver_no_win_no_fee_2": {
+    "title": "Objection: Legal Fees Will Eat Our Recovery",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "no_win_no_fee",
+    "situation": "A practice administrator worries that even with no upfront fees, the contingency percentage means they'll net less than just writing off the claims.",
+    "person": {
+      "name": "Tom Bradley",
+      "role": "Administrator, orthopedic surgery group",
+      "concern": "Math on net recovery vs. contingency fee",
+      "hot_button": "Bottom line impact, not gross numbers"
+    },
+    "success_criteria": "Tom understands the math and sees the net benefit clearly"
+  },
+  "cr_silver_post_plan_1": {
+    "title": "Uncover Hidden Revenue from Balance Billing",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "post_plan_discovery",
+    "situation": "A client practice doesn't realize they've been under-billing patients for balance amounts. Help them see the revenue they're leaving on the table.",
+    "person": {
+      "name": "Maria Santos",
+      "role": "Practice owner, internal medicine",
+      "concern": "Doesn't want to upset patients with surprise bills",
+      "hot_button": "Ethical collection practices that preserve relationships"
+    },
+    "success_criteria": "Maria agrees to analyze balance billing opportunities with clear patient communication strategy"
+  },
+  "cr_gold_provider_objection_1": {
+    "title": "Hospital System Procurement Committee",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "provider_objections",
+    "situation": "You're presenting to a 5-person hospital procurement committee. The CFO is supportive, but Legal is concerned about liability and Compliance is worried about patient perception. Win them over.",
+    "person": {
+      "name": "Hospital Procurement Committee",
+      "role": "CFO, Legal Counsel, Compliance Officer, Revenue Cycle Director, CMO",
+      "concern": "Each has different concerns that could veto the deal",
+      "hot_button": "Unanimous consensus required for vendor approval"
+    },
+    "success_criteria": "Committee agrees to pilot program with 3 departments"
+  },
+  "cr_gold_carrier_negotiation_1": {
+    "title": "Carrier Threatens Network Termination",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "carrier_negotiations",
+    "situation": "A major carrier hints they might terminate your client's network contract if they keep pursuing IDR claims. Navigate this without backing down or escalating destructively.",
+    "person": {
+      "name": "Network Relations VP",
+      "role": "Senior VP at major insurance carrier",
+      "concern": "Precedent setting and network cost management",
+      "hot_button": "Long-term relationship, not just this dispute"
+    },
+    "success_criteria": "VP agrees to discuss a framework for fair reimbursement without contract termination"
+  },
+  "cr_gold_carrier_negotiation_2": {
+    "title": "Negotiate Global Settlement",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "carrier_negotiations",
+    "situation": "You have 150 claims worth $2.1M pending against one carrier. They've offered a global settlement of $1.4M to close everything. Negotiate.",
+    "person": {
+      "name": "Claims Settlement Director",
+      "role": "Settlement authority at major carrier",
+      "concern": "Closing exposure within budget authority",
+      "hot_button": "Clean resolution that prevents future disputes"
+    },
+    "success_criteria": "Agreement reached above $1.75M with favorable terms on future claim processing"
+  },
+  "cr_gold_idr_positioning_1": {
+    "title": "Expert Witness Preparation for IDR Appeal",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "idr_attribution",
+    "situation": "A complex $180K claim is going to IDR and you need to prepare the treating physician to provide effective testimony. Coach them on positioning.",
+    "person": {
+      "name": "Dr. Katherine Shaw",
+      "role": "Vascular surgeon, key witness",
+      "concern": "Never done this before, worried about saying the wrong thing",
+      "hot_button": "Being authentic while being strategically effective"
+    },
+    "success_criteria": "Dr. Shaw can articulate medical necessity and reasonable rate clearly and confidently"
+  },
+  "cr_gold_no_win_no_fee_1": {
+    "title": "Convert Competitor's Unhappy Client",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "no_win_no_fee",
+    "situation": "A large pain management practice is frustrated with their current recovery company (8% recovery rate). They're in a 2-year contract with 6 months remaining. Win them.",
+    "person": {
+      "name": "Dr. Robert Chen and CFO Sandra Wells",
+      "role": "Practice owners, $4M in denied claims over 3 years",
+      "concern": "Contractual obligations and transition complexity",
+      "hot_button": "Results that dramatically exceed current performance"
+    },
+    "success_criteria": "They commit to switching when contract ends and send you claims data for analysis now"
+  },
+  "cr_gold_post_plan_1": {
+    "title": "Full Revenue Cycle Analysis",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "post_plan_discovery",
+    "situation": "Conduct a comprehensive revenue cycle analysis for a 12-physician multi-specialty group. Find at least $500K in recoverable revenue they don't know about.",
+    "person": {
+      "name": "Dr. Williams, Group Medical Director",
+      "role": "Managing partner, responsible for profitability",
+      "concern": "Time investment and whether findings justify action",
+      "hot_button": "Hard numbers with clear path to recovery"
+    },
+    "success_criteria": "Present specific findings exceeding $500K with prioritized action plan"
+  },
+  "cr_platinum_provider_objection_1": {
+    "title": "Health System CEO Conversation",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "provider_objections",
+    "situation": "You have 20 minutes with the CEO of a regional health system (14 hospitals, $2B revenue). They've never considered third-party recovery. Make the case.",
+    "person": {
+      "name": "Margaret Chen, CEO",
+      "role": "Health system CEO, former McKinsey partner",
+      "concern": "Strategic fit and board perception",
+      "hot_button": "Enterprise-level impact and competitive positioning"
+    },
+    "success_criteria": "CEO assigns her CFO to conduct full evaluation within 30 days"
+  },
+  "cr_platinum_carrier_negotiation_1": {
+    "title": "Multi-State Carrier Settlement Negotiation",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "carrier_negotiations",
+    "situation": "You represent providers across 5 states with $8M in combined disputed claims against a national carrier. Their lawyers are involved. Negotiate from strength.",
+    "person": {
+      "name": "General Counsel and VP of Claims",
+      "role": "Carrier's senior legal and claims leadership",
+      "concern": "Precedent setting and multi-state exposure",
+      "hot_button": "Quiet resolution without regulatory attention or publicity"
+    },
+    "success_criteria": "Framework agreement covering all 5 states with favorable terms and expedited processing"
+  },
+  "cr_platinum_idr_positioning_1": {
+    "title": "Landmark IDR Case Strategy",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "idr_attribution",
+    "situation": "You have a case that could set precedent for how IDR entities evaluate out-of-network rates. The outcome affects thousands of future claims. Strategize.",
+    "person": {
+      "name": "Internal Strategy Team + External Counsel",
+      "role": "Cross-functional strategy group",
+      "concern": "Getting it right - can't afford to lose this one",
+      "hot_button": "Long-term industry impact, not just this claim"
+    },
+    "success_criteria": "Comprehensive strategy that maximizes probability of favorable precedent"
+  },
+  "cr_platinum_no_win_no_fee_1": {
+    "title": "Private Equity Group Acquisition Target",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "no_win_no_fee",
+    "situation": "A PE firm is acquiring a chain of 23 surgical centers. They want Callagy Recovery to evaluate the revenue recovery opportunity as part of due diligence. This could be a $50M+ relationship.",
+    "person": {
+      "name": "PE Partners and Operating Team",
+      "role": "Deal team evaluating acquisition",
+      "concern": "Accuracy of projections affecting deal valuation",
+      "hot_button": "Conservative, defensible estimates that hold up post-acquisition"
+    },
+    "success_criteria": "PE firm includes Callagy engagement in their post-close 100-day plan"
+  },
+  "cr_platinum_post_plan_1": {
+    "title": "Design Proactive Revenue Protection System",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "post_plan_discovery",
+    "situation": "A major client wants to move from reactive recovery to proactive prevention. Design a system that catches underpayments and denials BEFORE they become write-offs.",
+    "person": {
+      "name": "Health System Revenue Cycle Leadership",
+      "role": "VP of Revenue Cycle, CFO",
+      "concern": "Integration with existing systems and staff adoption",
+      "hot_button": "Measurable ROI within 6 months"
+    },
+    "success_criteria": "Approved pilot program with clear KPIs and executive sponsorship"
+  },
+  "ub_bronze_immersion_enrollment_1": {
+    "title": "First Call After Webinar Attendance",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "immersion_enrollment",
+    "situation": "A financial advisor watched Sean's webinar on 'Zone Action' and requested a call. They're curious but skeptical. This is your first conversation.",
+    "person": {
+      "name": "Jennifer Walsh",
+      "role": "Financial advisor, $350K/year, wants to hit $1M",
+      "concern": "Has done coaching before with mediocre results",
+      "hot_button": "Proof this is different from the last coach"
+    },
+    "success_criteria": "Jennifer shares her real goal and biggest obstacle, asks about next steps"
+  },
+  "ub_bronze_immersion_enrollment_2": {
+    "title": "Explain the Mastery Program Structure",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "immersion_enrollment",
+    "situation": "A prospect asks: 'So what exactly do I get? Is this like a course or do I get to talk to someone?' Explain the Mastery Program clearly.",
+    "person": {
+      "name": "Dr. Brian Mitchell",
+      "role": "Dentist, solo practice owner",
+      "concern": "Doesn't want to buy something he won't use",
+      "hot_button": "Accountability and personalized attention"
+    },
+    "success_criteria": "Brian understands the structure and sees himself using it effectively"
+  },
+  "ub_bronze_coaching_resistance_1": {
+    "title": "Client Says They Already Know This",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "coaching_resistance",
+    "situation": "A client in their second month says: 'I've read all the books. I know what to do, I just need to do it.' Navigate this resistance.",
+    "person": {
+      "name": "Marcus Webb",
+      "role": "Attorney, $800K/year",
+      "concern": "Feels like he's paying for information he already has",
+      "hot_button": "The gap between knowing and doing"
+    },
+    "success_criteria": "Marcus identifies the specific pattern that's keeping him stuck"
+  },
+  "ub_bronze_coaching_resistance_2": {
+    "title": "Spouse Doesn't Support the Investment",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "coaching_resistance",
+    "situation": "A prospect wants to enroll but says: 'My wife thinks coaching is a waste of money. She's going to kill me if I spend this.'",
+    "person": {
+      "name": "Tom Bradley",
+      "role": "Business owner, $500K revenue",
+      "concern": "Marital conflict over the investment",
+      "hot_button": "Proving ROI quickly to justify the decision"
+    },
+    "success_criteria": "Tom has a clear plan to communicate value to his spouse OR involves her in the decision"
+  },
+  "ub_bronze_shared_experience_1": {
+    "title": "Design a 2-Hour Professional Mixer",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "shared_experience",
+    "situation": "Create a shared experience event for 30 professionals (mix of attorneys, financial advisors, and doctors) that builds trust and creates shared language in 2 hours.",
+    "person": {
+      "name": "Event Attendees",
+      "role": "High-earning professionals, skeptical of networking events",
+      "concern": "This better not be awkward small talk",
+      "hot_button": "Genuine connection and immediate usefulness"
+    },
+    "success_criteria": "Design that gets attendees exchanging contact info and asking 'When's the next one?'"
+  },
+  "ub_bronze_influence_mastery_1": {
+    "title": "Teach the 4-Step Communication Model",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "influence_mastery",
+    "situation": "A client is about to have a difficult conversation with a key employee. Teach them the 4-Step Model (Fact, Meaning, Feeling, Request) in 10 minutes.",
+    "person": {
+      "name": "Dr. Sarah Mitchell",
+      "role": "Practice owner with an underperforming office manager",
+      "concern": "Doesn't want to damage the relationship",
+      "hot_button": "Being direct without being harsh"
+    },
+    "success_criteria": "Dr. Mitchell can articulate her 4 steps for the upcoming conversation"
+  },
+  "ub_bronze_ecosystem_merger_1": {
+    "title": "Identify Ecosystem Merger Candidates",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "ecosystem_merger",
+    "situation": "A client attorney wants to build referral relationships. Help them identify their ideal ecosystem merger partners and why.",
+    "person": {
+      "name": "Attorney Lisa Chen",
+      "role": "Estate planning attorney, wants more high-net-worth clients",
+      "concern": "Doesn't want to seem 'salesy' to other professionals",
+      "hot_button": "Mutual value exchange, not one-sided"
+    },
+    "success_criteria": "Lisa has 5 specific professionals to approach with a clear value proposition for each"
+  },
+  "ub_silver_immersion_enrollment_1": {
+    "title": "Handle the 'I Need to Think About It'",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "immersion_enrollment",
+    "situation": "After a 45-minute discovery call, the prospect says: 'This sounds great. Let me think about it and get back to you.' Don't lose them.",
+    "person": {
+      "name": "Scott Gregory",
+      "role": "Financial services firm owner, clearly interested but hesitating",
+      "concern": "Big investment, wants to be sure",
+      "hot_button": "Fear of making the wrong decision"
+    },
+    "success_criteria": "Scott either enrolls today or schedules a specific follow-up with a clear decision path"
+  },
+  "ub_silver_immersion_enrollment_2": {
+    "title": "Reactivate a Cold Lead",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "immersion_enrollment",
+    "situation": "A prospect was hot 6 months ago but went cold. They just opened your email. Reach out before they disappear again.",
+    "person": {
+      "name": "Rick Thompson",
+      "role": "Business owner who was 'not ready' 6 months ago",
+      "concern": "Embarrassed about going cold",
+      "hot_button": "Something changed in his situation since then"
+    },
+    "success_criteria": "Rick takes a call and shares what's different now"
+  },
+  "ub_silver_coaching_resistance_1": {
+    "title": "Client Isn't Doing the Work",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "coaching_resistance",
+    "situation": "A client has been in the program for 3 months. They attend calls but haven't implemented any of the frameworks. Confront this lovingly.",
+    "person": {
+      "name": "Dr. Patricia Vance",
+      "role": "Physician, says she's 'too busy' for implementation",
+      "concern": "Feels overwhelmed by her practice",
+      "hot_button": "The same pattern keeps her stuck in everything"
+    },
+    "success_criteria": "Patricia commits to ONE specific action this week and identifies what was blocking her"
+  },
+  "ub_silver_coaching_resistance_2": {
+    "title": "Client Questions the Process",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "coaching_resistance",
+    "situation": "A client says: 'I've been doing this for 4 months and my revenue is only up 12%. I expected more by now.' Handle the doubt.",
+    "person": {
+      "name": "Michael Torres",
+      "role": "Business owner, $2M revenue, goal is $5M",
+      "concern": "Investment not paying off fast enough",
+      "hot_button": "Leading indicators vs. lagging indicators"
+    },
+    "success_criteria": "Michael sees the leading indicators and recommits to the process"
+  },
+  "ub_silver_shared_experience_1": {
+    "title": "Design the First Hour of an Immersion",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "shared_experience",
+    "situation": "50 people are walking into a 3-day immersion. Many don't know each other. Design the first 60 minutes to create psychological safety and connection.",
+    "person": {
+      "name": "Immersion Attendees",
+      "role": "Mix of new and returning clients, various industries",
+      "concern": "Vulnerability with strangers is uncomfortable",
+      "hot_button": "Realizing they're not alone in their struggles"
+    },
+    "success_criteria": "Attendees are sharing authentically by minute 45"
+  },
+  "ub_silver_influence_mastery_1": {
+    "title": "Navigate Truth-to-Pain in Discovery",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "influence_mastery",
+    "situation": "You're coaching a client on discovery calls. They keep staying at the surface level with prospects. Teach them to go deeper without being pushy.",
+    "person": {
+      "name": "Sales team member",
+      "role": "New enrollment specialist",
+      "concern": "Doesn't want to be intrusive",
+      "hot_button": "The difference between curious and intrusive"
+    },
+    "success_criteria": "Team member demonstrates truth-to-pain questioning in role play"
+  },
+  "ub_silver_ecosystem_merger_1": {
+    "title": "First Meeting with Potential Ecosystem Partner",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "ecosystem_merger",
+    "situation": "A client is meeting with the president of a local medical association (2,000 members). Help them prepare to position mutual value.",
+    "person": {
+      "name": "Client: Dr. James Wu",
+      "role": "Orthopedic surgeon wanting referral partnerships",
+      "concern": "Doesn't want to seem like he's asking for referrals",
+      "hot_button": "Value he can provide to the association first"
+    },
+    "success_criteria": "Dr. Wu has a clear value proposition and conversation structure"
+  },
+  "ub_gold_immersion_enrollment_1": {
+    "title": "Close a High-Stakes Executive",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "immersion_enrollment",
+    "situation": "A CEO of a $50M company is on the fence. She's done executive coaching at Stanford. She respects the approach but isn't sure it's 'for her.' Close her.",
+    "person": {
+      "name": "Catherine Park",
+      "role": "CEO, $50M manufacturing company",
+      "concern": "Is this for entrepreneurs or could it apply to her?",
+      "hot_button": "She's lonely at the top and can't admit it"
+    },
+    "success_criteria": "Catherine enrolls or schedules a final decision call within 48 hours"
+  },
+  "ub_gold_coaching_resistance_1": {
+    "title": "Client's Business Partner Is Sabotaging Progress",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "coaching_resistance",
+    "situation": "A client is making great progress but their business partner isn't in the program and keeps pulling them back to old patterns. Navigate this.",
+    "person": {
+      "name": "Dr. Robert Chen",
+      "role": "50% partner in a surgical practice",
+      "concern": "Can't force his partner to change",
+      "hot_button": "The relationship is strained and he avoids conflict"
+    },
+    "success_criteria": "Dr. Chen has a clear strategy for either aligning his partner or making a bigger decision"
+  },
+  "ub_gold_shared_experience_1": {
+    "title": "Design the Climactic Moment of a 3-Day Immersion",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "shared_experience",
+    "situation": "It's Day 2 afternoon of a 3-day immersion. 60 people. They've built trust. Design the breakthrough experience that creates permanent transformation.",
+    "person": {
+      "name": "Immersion Attendees",
+      "role": "Fully engaged, ready for depth",
+      "concern": "They want to go deep but are scared",
+      "hot_button": "Confronting the belief that's held them back their entire life"
+    },
+    "success_criteria": "An experience design that creates 'I'll never forget this' moments for 80%+ of attendees"
+  },
+  "ub_gold_influence_mastery_1": {
+    "title": "Coach Through a Major Negotiation",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "influence_mastery",
+    "situation": "A client is negotiating a $2M deal tomorrow. They're in their head, overthinking everything. Help them get centered and prepare.",
+    "person": {
+      "name": "Attorney David Kim",
+      "role": "Closing biggest deal of his career",
+      "concern": "Afraid of leaving money on the table or losing the deal",
+      "hot_button": "His identity is wrapped up in this outcome"
+    },
+    "success_criteria": "David is calm, centered, and has a clear negotiation framework"
+  },
+  "ub_gold_ecosystem_merger_1": {
+    "title": "Orchestrate a Multi-Partner Referral Network",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "ecosystem_merger",
+    "situation": "A client wants to create a formal referral network between 8 professionals (2 attorneys, 2 financial advisors, 2 doctors, 2 business owners). Design and facilitate the first meeting.",
+    "person": {
+      "name": "Network Participants",
+      "role": "8 high-earning professionals who don't know each other well",
+      "concern": "This could be awkward or feel transactional",
+      "hot_button": "Genuine relationship-building, not referral trading"
+    },
+    "success_criteria": "Meeting structure that creates 3+ referrals within 30 days"
+  },
+  "ub_platinum_immersion_enrollment_1": {
+    "title": "Enroll a Famous Skeptic",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "immersion_enrollment",
+    "situation": "A well-known business author with 500K followers has publicly criticized coaching. They've agreed to one conversation after a mutual friend connected you. Convert them.",
+    "person": {
+      "name": "Alexandra Wright",
+      "role": "Business author, skeptic of coaching industry",
+      "concern": "Thinks most coaching is overpriced motivation",
+      "hot_button": "Intellectual rigor and evidence-based approaches"
+    },
+    "success_criteria": "Alexandra agrees to experience an immersion or private coaching session"
+  },
+  "ub_platinum_coaching_resistance_1": {
+    "title": "Client Facing Business Failure",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "coaching_resistance",
+    "situation": "A client's business is failing. They have 90 days of runway. They're considering bankruptcy. Coach them through this with integrity.",
+    "person": {
+      "name": "Eric, Founder",
+      "role": "Tech startup CEO, burning $200K/month, $600K left",
+      "concern": "Should he pivot, sell, or shut down?",
+      "hot_button": "His identity is this company"
+    },
+    "success_criteria": "Eric has clarity on his best path forward and is at peace with it"
+  },
+  "ub_platinum_shared_experience_1": {
+    "title": "Design a Signature Annual Event",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "shared_experience",
+    "situation": "Design Unblinded's flagship annual event. 500 attendees. 3 days. This needs to be THE event people talk about all year and plan their calendar around.",
+    "person": {
+      "name": "Unblinded Community",
+      "role": "Current clients, alumni, prospects, ecosystem partners",
+      "concern": "They've seen a lot of events",
+      "hot_button": "Creating something they've never experienced anywhere else"
+    },
+    "success_criteria": "Event design that creates 90%+ NPS and 50%+ bring-a-friend referral rate"
+  },
+  "ub_platinum_influence_mastery_1": {
+    "title": "Develop a Client Into a Rainmaker",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "influence_mastery",
+    "situation": "A client is technically excellent but terrible at business development. In 6 months, transform them into someone who can walk into any room and create opportunities.",
+    "person": {
+      "name": "Dr. Emily Zhang",
+      "role": "Brilliant physician, awkward at networking",
+      "concern": "Feels inauthentic when selling herself",
+      "hot_button": "Realizing business development is service, not selling"
+    },
+    "success_criteria": "6-month development plan with specific milestones and practice opportunities"
+  },
+  "ub_platinum_ecosystem_merger_1": {
+    "title": "Strategic Partnership with Major Institution",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "ecosystem_merger",
+    "situation": "Position Unblinded for a partnership with a major business school's executive education program. They're looking for 'innovative leadership development.' Make the case.",
+    "person": {
+      "name": "Executive Education Dean",
+      "role": "Dean of Executive Education, Top 20 Business School",
+      "concern": "Academic rigor and institutional reputation",
+      "hot_button": "Differentiation from competitors and measurable outcomes"
+    },
+    "success_criteria": "Dean agrees to pilot program or detailed partnership exploration"
+  },
+  "acti_bronze_product_demo_1": {
+    "title": "First Demo for Small Business Owner",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "product_demo",
+    "situation": "A small business owner with a 10-person sales team wants to see what ACT-I can do. Give them a demo that creates 'I need this' urgency.",
+    "person": {
+      "name": "Mike Chen",
+      "role": "Owner, local insurance agency, 10 salespeople",
+      "concern": "His team might not adopt new technology",
+      "hot_button": "Making his existing people more productive"
+    },
+    "success_criteria": "Mike asks about pricing and implementation timeline"
+  },
+  "acti_bronze_product_demo_2": {
+    "title": "Quick Demo at a Conference",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "product_demo",
+    "situation": "You have 5 minutes with someone who stopped at the ACT-I booth. They sell B2B services. Create enough interest for a follow-up meeting.",
+    "person": {
+      "name": "Sarah Lopez",
+      "role": "VP Sales, B2B SaaS company",
+      "concern": "Gets pitched at every conference",
+      "hot_button": "Something she hasn't seen before"
+    },
+    "success_criteria": "Sarah gives her card and schedules a 30-minute call"
+  },
+  "acti_bronze_enterprise_sales_1": {
+    "title": "First Call with Enterprise Prospect",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "enterprise_sales",
+    "situation": "An enterprise company with 500 salespeople requested information. This is your first discovery call with their VP of Sales Operations.",
+    "person": {
+      "name": "David Park",
+      "role": "VP Sales Ops, Fortune 1000 company",
+      "concern": "Integration with existing tech stack",
+      "hot_button": "ROI and implementation timeline"
+    },
+    "success_criteria": "David shares current challenges and agrees to technical discovery call"
+  },
+  "acti_bronze_technical_objection_1": {
+    "title": "Is This Just Another Chatbot?",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "technical_objections",
+    "situation": "A prospect says: 'We tried chatbots. They sucked. Customers hated them. How is this different?'",
+    "person": {
+      "name": "Jessica Martinez",
+      "role": "CX Director, e-commerce company",
+      "concern": "Previous AI/chatbot PTSD",
+      "hot_button": "Customer satisfaction scores"
+    },
+    "success_criteria": "Jessica understands the fundamental difference and wants to see a demo"
+  },
+  "acti_bronze_technical_objection_2": {
+    "title": "Data Security Concerns",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "technical_objections",
+    "situation": "A prospect asks: 'Where does our data go? Is it training your models? What about compliance?'",
+    "person": {
+      "name": "IT Director",
+      "role": "Mid-size company, HIPAA requirements",
+      "concern": "Compliance and data privacy",
+      "hot_button": "Clear answers, not marketing speak"
+    },
+    "success_criteria": "IT Director is satisfied with security posture and approves further evaluation"
+  },
+  "acti_bronze_agents_building_agents_1": {
+    "title": "Explain the ACT-I Vision Simply",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "agents_building_agents",
+    "situation": "Someone asks: 'So what does ACT-I actually do?' Explain it in 2 minutes without jargon.",
+    "person": {
+      "name": "Curious Professional",
+      "role": "Non-technical business person",
+      "concern": "AI talk usually goes over their head",
+      "hot_button": "Practical application they can visualize"
+    },
+    "success_criteria": "Person can explain ACT-I to someone else accurately"
+  },
+  "acti_bronze_partnership_pitch_1": {
+    "title": "Partnership Intro with Integration Partner",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "partnership_pitches",
+    "situation": "You're meeting with a CRM company about a potential integration partnership. Make the case for why they should prioritize ACT-I.",
+    "person": {
+      "name": "Partnership Manager, CRM Company",
+      "role": "Evaluates integration opportunities",
+      "concern": "Limited engineering resources, many requests",
+      "hot_button": "Value to their customers and potential revenue"
+    },
+    "success_criteria": "Partner agrees to technical scoping call with engineering teams"
+  },
+  "acti_silver_product_demo_1": {
+    "title": "Demo to a Technical Audience",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "product_demo",
+    "situation": "You're demoing to 3 engineers and their CTO. They want to see under the hood. Show them the technology while maintaining focus on outcomes.",
+    "person": {
+      "name": "CTO and Engineering Team",
+      "role": "Technical decision makers at mid-size company",
+      "concern": "Is this actually innovative or just wrappers?",
+      "hot_button": "Technical elegance and differentiation"
+    },
+    "success_criteria": "CTO says 'This is interesting' and asks about architecture deep-dive"
+  },
+  "acti_silver_product_demo_2": {
+    "title": "Demo Interrupted by Skeptic",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "product_demo",
+    "situation": "Mid-demo, someone interrupts: 'This all looks nice but our sales process is too complex for AI. No offense.' Handle it without losing the room.",
+    "person": {
+      "name": "Senior Sales Manager",
+      "role": "20-year veteran, skeptical of technology",
+      "concern": "AI can't replace human relationship building",
+      "hot_button": "His expertise being recognized, not replaced"
+    },
+    "success_criteria": "Skeptic becomes curious rather than oppositional"
+  },
+  "acti_silver_enterprise_sales_1": {
+    "title": "Navigate Multi-Stakeholder Buying Committee",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "enterprise_sales",
+    "situation": "Enterprise deal with 6 stakeholders: VP Sales (champion), CTO (neutral), CFO (skeptical), Legal (concerned), IT Security (worried), CEO (uninvolved). Create alignment.",
+    "person": {
+      "name": "Buying Committee",
+      "role": "6 stakeholders with different concerns",
+      "concern": "Each has a veto and different priorities",
+      "hot_button": "Individual wins within collective decision"
+    },
+    "success_criteria": "Strategy to address each stakeholder's concerns and move to pilot approval"
+  },
+  "acti_silver_technical_objection_1": {
+    "title": "Handle Hallucination Concerns",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "technical_objections",
+    "situation": "CTO says: 'AI hallucinates. How do I know your agents won't make up information and damage my client relationships?'",
+    "person": {
+      "name": "CTO, Financial Services",
+      "role": "Technical leader in regulated industry",
+      "concern": "Compliance and accuracy requirements",
+      "hot_button": "Audit trail and control"
+    },
+    "success_criteria": "CTO understands guardrails and wants to see them in action"
+  },
+  "acti_silver_agents_building_agents_1": {
+    "title": "Explain How Beings Train Each Other",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "agents_building_agents",
+    "situation": "A prospect asks: 'What do you mean agents train other agents? That sounds like science fiction.' Make it concrete and credible.",
+    "person": {
+      "name": "COO, Mid-Size Company",
+      "role": "Operationally minded, skeptical of hype",
+      "concern": "This sounds too futuristic to be real",
+      "hot_button": "Practical examples they can verify"
+    },
+    "success_criteria": "COO understands the Colosseum and training methodology"
+  },
+  "acti_silver_partnership_pitch_1": {
+    "title": "Pitch a Reseller Partnership",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "partnership_pitches",
+    "situation": "A business consulting firm with 200 clients wants to potentially resell ACT-I. Structure a win-win partnership.",
+    "person": {
+      "name": "Managing Partner, Consulting Firm",
+      "role": "Looking for new revenue streams",
+      "concern": "Supporting something outside their expertise",
+      "hot_button": "Margin and ease of sale"
+    },
+    "success_criteria": "Partner agrees to pilot with 3 of their clients"
+  },
+  "acti_gold_product_demo_1": {
+    "title": "Competitive Bake-Off Demo",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "product_demo",
+    "situation": "You're in a competitive evaluation against two established players. Same scenario, head-to-head comparison. Win without trashing competitors.",
+    "person": {
+      "name": "Enterprise Evaluation Committee",
+      "role": "Technical and business evaluators",
+      "concern": "Risk of choosing wrong solution",
+      "hot_button": "Clear differentiation and reduced risk"
+    },
+    "success_criteria": "ACT-I is selected or shortlisted to final 2"
+  },
+  "acti_gold_enterprise_sales_1": {
+    "title": "Rescue a Stalled Enterprise Deal",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "enterprise_sales",
+    "situation": "A $500K/year deal has been stalled for 6 weeks. Champion is still engaged but 'legal is slow.' Find the real blocker and move it.",
+    "person": {
+      "name": "VP Sales (Champion) and General Counsel (Blocker)",
+      "role": "Champion and hidden objector",
+      "concern": "Unknown legal or risk concern",
+      "hot_button": "Making it easy for legal to say yes"
+    },
+    "success_criteria": "Identify true blocker and create path to close within 2 weeks"
+  },
+  "acti_gold_technical_objection_1": {
+    "title": "Integration Seems Too Complex",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "technical_objections",
+    "situation": "Enterprise CTO says: 'We have 47 systems. Getting this to work with everything would take 18 months. We can't justify that.' Solve it.",
+    "person": {
+      "name": "CTO, Large Enterprise",
+      "role": "Technical decision maker",
+      "concern": "Integration complexity and resource drain",
+      "hot_button": "Phased approach with fast time-to-value"
+    },
+    "success_criteria": "CTO sees a path to value in 60 days without massive integration effort"
+  },
+  "acti_gold_agents_building_agents_1": {
+    "title": "Board Presentation on ACT-I's Approach",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "agents_building_agents",
+    "situation": "You're presenting to a company's board of directors on why ACT-I's 'beings' approach is the future of enterprise AI. You have 15 minutes.",
+    "person": {
+      "name": "Board of Directors",
+      "role": "Mix of tech-savvy and traditional board members",
+      "concern": "Is this a fad or a fundamental shift?",
+      "hot_button": "Competitive advantage and risk mitigation"
+    },
+    "success_criteria": "Board directs management to proceed with evaluation"
+  },
+  "acti_gold_partnership_pitch_1": {
+    "title": "Strategic Alliance with Major Cloud Provider",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "partnership_pitches",
+    "situation": "A major cloud provider (AWS, Azure, or GCP) wants to discuss partnership. You're meeting with their AI/ML partnership lead. Position ACT-I strategically.",
+    "person": {
+      "name": "Senior Partner Manager, Cloud Provider",
+      "role": "Evaluates strategic AI partnerships",
+      "concern": "Building vs. partnering decision",
+      "hot_button": "Unique capability they can't replicate quickly"
+    },
+    "success_criteria": "Partner agrees to co-development or co-marketing discussion"
+  },
+  "acti_platinum_product_demo_1": {
+    "title": "Demo for Fortune 100 Executive Team",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "product_demo",
+    "situation": "20 minutes with the CEO, CTO, and Chief Digital Officer of a Fortune 100 company. They see 50 AI pitches a month. Create 'stop everything, we need this.'",
+    "person": {
+      "name": "Fortune 100 C-Suite",
+      "role": "Decision makers seeing everything in market",
+      "concern": "Everyone claims to be transformational",
+      "hot_button": "Something genuinely unprecedented"
+    },
+    "success_criteria": "CEO asks CDO to make this a priority evaluation"
+  },
+  "acti_platinum_enterprise_sales_1": {
+    "title": "Close a $5M Enterprise Deal",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "enterprise_sales",
+    "situation": "You're in final negotiations on a $5M, 3-year enterprise deal. Legal is down to final terms. Procurement wants 30% discount. Champion is worried about looking bad. Close it.",
+    "person": {
+      "name": "Full Buying Committee + Procurement",
+      "role": "Everyone has to sign off",
+      "concern": "Final negotiation leverage attempt",
+      "hot_button": "Value preservation while making everyone feel they won"
+    },
+    "success_criteria": "Deal closes at $4.5M+ with terms you can live with"
+  },
+  "acti_platinum_technical_objection_1": {
+    "title": "Regulated Industry Full Security Review",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "technical_objections",
+    "situation": "A major bank wants to deploy ACT-I for customer service. Their security review process typically takes 18 months. Navigate this without losing the deal.",
+    "person": {
+      "name": "CISO, Major Bank",
+      "role": "Security gatekeeper",
+      "concern": "AI in customer-facing roles in regulated environment",
+      "hot_button": "Regulatory compliance and incident response"
+    },
+    "success_criteria": "Path to pilot approval within 90 days with security review running in parallel"
+  },
+  "acti_platinum_agents_building_agents_1": {
+    "title": "Industry Keynote on the Future of AI Beings",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "agents_building_agents",
+    "situation": "You're giving a 30-minute keynote at a major tech conference on 'Why Beings, Not Chatbots, Are the Future of Enterprise AI.' 2,000 attendees. Deliver it.",
+    "person": {
+      "name": "Tech Conference Audience",
+      "role": "CTOs, developers, AI enthusiasts",
+      "concern": "Another AI hype talk",
+      "hot_button": "Technical credibility and vision"
+    },
+    "success_criteria": "Standing ovation, 50+ business cards, trending on X"
+  },
+  "acti_platinum_partnership_pitch_1": {
+    "title": "Joint Venture with Fortune 500",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "partnership_pitches",
+    "situation": "A Fortune 500 company wants to discuss creating a joint venture to bring ACT-I capabilities to their industry. Structure the deal that's good for both sides.",
+    "person": {
+      "name": "Corporate Development VP + Industry Division President",
+      "role": "Deal structurers and industry experts",
+      "concern": "Control, economics, exclusivity",
+      "hot_button": "Winning in their industry with unfair advantage"
+    },
+    "success_criteria": "Term sheet outline that both sides are excited about"
+  },
+  "cr_bronze_carrier_negotiation_3": {
+    "title": "Basic Follow-Up on Pending Payment",
+    "company": "Callagy Recovery",
+    "difficulty": "bronze",
+    "category": "carrier_negotiations",
+    "situation": "A carrier approved payment 30 days ago but hasn't sent the check. Make the routine follow-up call.",
+    "person": {
+      "name": "Accounts Payable Clerk",
+      "role": "Entry-level payment processor",
+      "concern": "Has a queue of 500 payments to process",
+      "hot_button": "Clear documentation and easy processing"
+    },
+    "success_criteria": "Get a specific payment date and confirmation number"
+  },
+  "cr_silver_post_plan_2": {
+    "title": "Quarterly Review Meeting with Practice",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "post_plan_discovery",
+    "situation": "Quarterly review with a client practice. Show results, identify new opportunities, and strengthen the relationship.",
+    "person": {
+      "name": "Practice Owner and Administrator",
+      "role": "Key client stakeholders",
+      "concern": "Want to see ROI and progress",
+      "hot_button": "Clear metrics and forward momentum"
+    },
+    "success_criteria": "Client sees value, identifies 3 new claims categories to pursue"
+  },
+  "ub_bronze_influence_mastery_2": {
+    "title": "Help Client Prepare for Difficult Employee Conversation",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "influence_mastery",
+    "situation": "A client needs to have a performance conversation with an employee who's been underperforming. Help them prepare.",
+    "person": {
+      "name": "Business Owner Client",
+      "role": "Avoiding a necessary conversation",
+      "concern": "Doesn't want to damage the relationship",
+      "hot_button": "Being clear and kind simultaneously"
+    },
+    "success_criteria": "Client has a clear script and feels confident"
+  },
+  "ub_silver_immersion_enrollment_3": {
+    "title": "Handle Objection: I'm Too Busy for This",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "immersion_enrollment",
+    "situation": "A prospect says: 'I'm working 70 hours a week. I literally don't have time for coaching.' Navigate this without dismissing their reality.",
+    "person": {
+      "name": "Dr. Kevin Williams",
+      "role": "Surgeon, maxed out schedule",
+      "concern": "Adding anything feels impossible",
+      "hot_button": "Working harder isn't the answer - that's the trap"
+    },
+    "success_criteria": "Kevin sees that the program is about working differently, not adding hours"
+  },
+  "acti_bronze_enterprise_sales_2": {
+    "title": "Send Effective Follow-Up After Demo",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "enterprise_sales",
+    "situation": "You just finished a demo with a prospect. They seemed interested but didn't commit to next steps. Craft the follow-up that moves them forward.",
+    "person": {
+      "name": "Demo Attendee",
+      "role": "VP Sales at mid-size company",
+      "concern": "Gets 50 follow-up emails per week",
+      "hot_button": "Something specific and valuable, not generic follow-up"
+    },
+    "success_criteria": "Follow-up creates a response and next meeting"
+  },
+  "acti_silver_partnership_pitch_2": {
+    "title": "Co-Marketing Agreement Negotiation",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "partnership_pitches",
+    "situation": "You've agreed to a co-marketing partnership. Now negotiate the specifics: leads, content, investment, success metrics.",
+    "person": {
+      "name": "Marketing Director, Partner Company",
+      "role": "Owns partner marketing budget",
+      "concern": "Making sure it's equal effort both ways",
+      "hot_button": "Clear ROI and attribution"
+    },
+    "success_criteria": "Agreement on joint webinar + content plan with clear lead sharing"
+  },
+  "cr_gold_no_win_no_fee_2": {
+    "title": "Close a Medical Group After Competitor Failed",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "no_win_no_fee",
+    "situation": "A 15-physician practice fired their previous recovery company after 18 months of poor results. They're skeptical of trying again. Win their trust.",
+    "person": {
+      "name": "Medical Group CFO",
+      "role": "Controls vendor decisions, burned before",
+      "concern": "All these companies sound the same",
+      "hot_button": "What's actually different this time"
+    },
+    "success_criteria": "CFO agrees to pilot with one service line"
+  },
+  "ub_gold_immersion_enrollment_2": {
+    "title": "Enrollment Conversation at a Dinner Event",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "immersion_enrollment",
+    "situation": "You're at a private dinner event. Someone at your table asks what Unblinded does. They're clearly successful but something is missing. Have the conversation.",
+    "person": {
+      "name": "Successful Professional",
+      "role": "Attorney, $2M/year, visible success but inner emptiness",
+      "concern": "Doesn't want to look like he needs help",
+      "hot_button": "The gap between external success and internal fulfillment"
+    },
+    "success_criteria": "Person asks for a private conversation to learn more"
+  },
+  "acti_gold_enterprise_sales_2": {
+    "title": "Executive Sponsor Meeting After Champion Leaves",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "enterprise_sales",
+    "situation": "Your champion at a $200K/year account just left the company. You have a meeting with their replacement. Re-sell the relationship.",
+    "person": {
+      "name": "New VP Sales (Replaced Champion)",
+      "role": "Inherited vendor relationships, wants to put their stamp",
+      "concern": "Didn't choose this vendor, doesn't know the value",
+      "hot_button": "Making them look good, not just continuing old relationships"
+    },
+    "success_criteria": "New VP becomes a champion and increases engagement"
+  },
+  "cr_platinum_provider_objection_2": {
+    "title": "National Health System RFP Presentation",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "provider_objections",
+    "situation": "Final presentation for a national health system RFP. You're against 2 larger competitors. 45 minutes to win $10M+ annual contract.",
+    "person": {
+      "name": "RFP Evaluation Committee (12 people)",
+      "role": "Cross-functional decision makers",
+      "concern": "Scale, capability, and risk",
+      "hot_button": "Confidence you can serve a national system"
+    },
+    "success_criteria": "Win the RFP or advance to final 2 with strong position"
+  },
+  "ub_platinum_influence_mastery_2": {
+    "title": "Media Training for High-Profile Interview",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "influence_mastery",
+    "situation": "A client is about to appear on a major business podcast. Help them prepare to tell their story powerfully and promote their business without being salesy.",
+    "person": {
+      "name": "Client Appearing on Major Podcast",
+      "role": "Business owner, nervous about public speaking",
+      "concern": "Doesn't want to seem self-promotional",
+      "hot_button": "Authenticity while being strategically effective"
+    },
+    "success_criteria": "Client has 3 key messages, 5 stories, and feels confident"
+  },
+  "acti_platinum_product_demo_2": {
+    "title": "Live Demo at Industry Conference Main Stage",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "product_demo",
+    "situation": "You're doing a live demo on main stage at a 5,000 person industry conference. Things will go wrong. Technology always fails at the worst moment. Deliver brilliantly anyway.",
+    "person": {
+      "name": "Conference Audience",
+      "role": "Industry professionals, potential customers",
+      "concern": "Live demos are usually cringe",
+      "hot_button": "Something memorable they'll tweet about"
+    },
+    "success_criteria": "Standing ovation, trending hashtag, 100+ demo requests"
+  },
+  "acti_bronze_agents_building_agents_2": {
+    "title": "Explain the Colosseum Training System",
+    "company": "ACT-I",
+    "difficulty": "bronze",
+    "category": "agents_building_agents",
+    "situation": "A tech journalist asks: 'I heard you train AI agents by having them compete against each other? How does that work?' Explain clearly and engagingly.",
+    "person": {
+      "name": "Tech Journalist",
+      "role": "Writes for major tech publication",
+      "concern": "Needs a clear angle for an article",
+      "hot_button": "Novel approach that's different from competitors"
+    },
+    "success_criteria": "Journalist wants to write a feature article"
+  },
+  "acti_silver_enterprise_sales_2": {
+    "title": "Handle Budget Timing Objection",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "enterprise_sales",
+    "situation": "A strong prospect says: 'Love it, but our budget cycle starts in Q1. Can you wait 6 months?' Find a way to start sooner.",
+    "person": {
+      "name": "Director of Sales Enablement",
+      "role": "Wants to buy but hands are tied",
+      "concern": "Can't pull budget from this year",
+      "hot_button": "Looking good to leadership with results"
+    },
+    "success_criteria": "Agreement on pilot starting this quarter"
+  },
+  "acti_silver_technical_objection_2": {
+    "title": "We're Building This Internally",
+    "company": "ACT-I",
+    "difficulty": "silver",
+    "category": "technical_objections",
+    "situation": "CTO says: 'We have a strong AI team. We're going to build this capability ourselves.' Make the build vs. buy case.",
+    "person": {
+      "name": "CTO with Strong Engineering Team",
+      "role": "Believes in internal capability",
+      "concern": "Dependency on external vendors",
+      "hot_button": "Speed to market and core competency"
+    },
+    "success_criteria": "CTO agrees that building would take 18+ months and considers partnership"
+  },
+  "acti_gold_partnership_pitch_2": {
+    "title": "Industry Association Partnership",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "partnership_pitches",
+    "situation": "Pitch to a major industry association about becoming their endorsed AI solution. 10,000 member companies.",
+    "person": {
+      "name": "Association Executive Director",
+      "role": "Serves member companies, careful about endorsements",
+      "concern": "Reputation risk with members",
+      "hot_button": "Value to members and differentiation"
+    },
+    "success_criteria": "Agreement to pilot with 50 member companies"
+  },
+  "acti_gold_agents_building_agents_2": {
+    "title": "Investor Deep Dive on Technology",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "agents_building_agents",
+    "situation": "A tier-1 VC firm wants a technical deep-dive on ACT-I's differentiation. Their partner is a former Google AI researcher.",
+    "person": {
+      "name": "VC Partner, ex-Google AI",
+      "role": "Technical due diligence for potential investment",
+      "concern": "Is this real or just good marketing?",
+      "hot_button": "Technical moat and defensibility"
+    },
+    "success_criteria": "Partner recommends moving to term sheet discussions"
+  },
+  "acti_gold_technical_objection_2": {
+    "title": "What Happens When It Fails?",
+    "company": "ACT-I",
+    "difficulty": "gold",
+    "category": "technical_objections",
+    "situation": "A risk-averse CFO asks: 'What's your failure mode? When this breaks, and it will, what happens to our customers?'",
+    "person": {
+      "name": "CFO, Large Enterprise",
+      "role": "Risk management focused",
+      "concern": "Downside scenarios",
+      "hot_button": "Graceful degradation and human fallback"
+    },
+    "success_criteria": "CFO is satisfied with the risk mitigation approach"
+  },
+  "acti_platinum_enterprise_sales_2": {
+    "title": "CEO-to-CEO Deal Closing",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "enterprise_sales",
+    "situation": "ACT-I's CEO is meeting with a Fortune 500 CEO to close a strategic $10M deal. Support with preparation and strategy.",
+    "person": {
+      "name": "Fortune 500 CEO",
+      "role": "Final decision maker on strategic deals",
+      "concern": "Strategic fit and partnership quality",
+      "hot_button": "Competitive advantage and vision alignment"
+    },
+    "success_criteria": "Handshake agreement in the meeting"
+  },
+  "acti_platinum_technical_objection_2": {
+    "title": "Navigate Government/Defense Security Requirements",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "technical_objections",
+    "situation": "A defense contractor wants to use ACT-I but requires FedRAMP High and ITAR compliance. Navigate the path.",
+    "person": {
+      "name": "Defense Contractor CISO",
+      "role": "Security compliance gatekeeper",
+      "concern": "Strict government security requirements",
+      "hot_button": "Compliance timeline and commitment"
+    },
+    "success_criteria": "Agreement on compliance roadmap with interim pilot structure"
+  },
+  "acti_platinum_partnership_pitch_2": {
+    "title": "International Expansion Partnership",
+    "company": "ACT-I",
+    "difficulty": "platinum",
+    "category": "partnership_pitches",
+    "situation": "A major European consultancy wants exclusive rights to distribute ACT-I across EU markets. Structure the deal.",
+    "person": {
+      "name": "European Consultancy Managing Partner",
+      "role": "Controls EU market strategy",
+      "concern": "Exclusivity terms and support commitment",
+      "hot_button": "Market size and speed to revenue"
+    },
+    "success_criteria": "LOI for regional partnership with clear terms"
+  },
+  "cr_silver_idr_positioning_2": {
+    "title": "Train New Team Member on IDR Process",
+    "company": "Callagy Recovery",
+    "difficulty": "silver",
+    "category": "idr_attribution",
+    "situation": "A new team member needs to understand the IDR process well enough to explain it to providers. Train them effectively.",
+    "person": {
+      "name": "New Team Member",
+      "role": "Just joined the recovery team",
+      "concern": "Wants to sound competent quickly",
+      "hot_button": "Practical application, not just theory"
+    },
+    "success_criteria": "Team member can explain IDR confidently and handle basic questions"
+  },
+  "cr_gold_post_plan_2": {
+    "title": "Crisis Recovery After Data Breach",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "post_plan_discovery",
+    "situation": "A client practice had a data breach and lost 6 months of claims documentation. Help them recover what they can.",
+    "person": {
+      "name": "Practice Administrator in Crisis",
+      "role": "Dealing with breach aftermath",
+      "concern": "How much revenue is permanently lost?",
+      "hot_button": "Salvaging whatever possible"
+    },
+    "success_criteria": "Clear recovery plan with realistic projections"
+  },
+  "cr_gold_carrier_negotiation_3": {
+    "title": "Carrier Claiming Fraud on Legitimate Claims",
+    "company": "Callagy Recovery",
+    "difficulty": "gold",
+    "category": "carrier_negotiations",
+    "situation": "A carrier has flagged $500K in legitimate claims as potential fraud. Your client is a reputable practice. Clear their name.",
+    "person": {
+      "name": "Carrier Special Investigations Unit",
+      "role": "Fraud investigation team",
+      "concern": "Following fraud indicators",
+      "hot_button": "Clear documentation proving legitimacy"
+    },
+    "success_criteria": "Fraud flag removed and claims reprocessed"
+  },
+  "cr_platinum_carrier_negotiation_2": {
+    "title": "Legislative/Regulatory Strategy Discussion",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "carrier_negotiations",
+    "situation": "State regulators are considering changes to IDR rules. Position Callagy to influence the outcome favorably.",
+    "person": {
+      "name": "State Insurance Commissioner Staff",
+      "role": "Policy development",
+      "concern": "Balanced stakeholder input",
+      "hot_button": "Data and provider impact"
+    },
+    "success_criteria": "Invited to formal stakeholder discussions"
+  },
+  "cr_platinum_post_plan_2": {
+    "title": "M&A Due Diligence for Health System Acquisition",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "post_plan_discovery",
+    "situation": "A health system acquiring 3 hospitals wants you to assess recovery opportunity as part of due diligence.",
+    "person": {
+      "name": "Health System M&A Team",
+      "role": "Evaluating acquisition targets",
+      "concern": "Accurate valuation of recovery opportunity",
+      "hot_button": "Defensible numbers for deal pricing"
+    },
+    "success_criteria": "Analysis included in deal model with Callagy engagement in close plan"
+  },
+  "cr_platinum_idr_positioning_2": {
+    "title": "Create Industry-Wide IDR Benchmarking Report",
+    "company": "Callagy Recovery",
+    "difficulty": "platinum",
+    "category": "idr_attribution",
+    "situation": "Design and produce a comprehensive IDR benchmarking report that establishes Callagy as the thought leader in the space.",
+    "person": {
+      "name": "Industry Stakeholders",
+      "role": "Providers, carriers, regulators, media",
+      "concern": "Objective, useful data",
+      "hot_button": "Credibility and actionable insights"
+    },
+    "success_criteria": "Report cited in 3+ industry publications"
+  },
+  "ub_bronze_ecosystem_merger_2": {
+    "title": "Follow Up After a Networking Event",
+    "company": "Unblinded",
+    "difficulty": "bronze",
+    "category": "ecosystem_merger",
+    "situation": "A client met 5 potential ecosystem partners at an event. Help them craft effective follow-up messages.",
+    "person": {
+      "name": "Client with Business Cards",
+      "role": "Has leads but doesn't know what to say",
+      "concern": "Doesn't want to seem salesy",
+      "hot_button": "Converting connections to relationships"
+    },
+    "success_criteria": "5 personalized follow-up messages ready to send"
+  },
+  "ub_silver_shared_experience_2": {
+    "title": "Design a Client Appreciation Event",
+    "company": "Unblinded",
+    "difficulty": "silver",
+    "category": "shared_experience",
+    "situation": "Design a client appreciation event that deepens relationships and creates referral opportunities without being transactional.",
+    "person": {
+      "name": "Current Clients",
+      "role": "Existing Unblinded clients",
+      "concern": "Is this just a sales event in disguise?",
+      "hot_button": "Genuine appreciation and community"
+    },
+    "success_criteria": "Event design with clear community-building elements"
+  },
+  "ub_gold_coaching_resistance_2": {
+    "title": "Client Experiencing Personal Crisis",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "coaching_resistance",
+    "situation": "A high-performing client just discovered their spouse is having an affair. They want to cancel the program. Navigate with integrity.",
+    "person": {
+      "name": "Client in Crisis",
+      "role": "Successful professional, personal life collapsing",
+      "concern": "Can't focus on business right now",
+      "hot_button": "Being seen as a human, not a revenue source"
+    },
+    "success_criteria": "Client feels supported regardless of program decision"
+  },
+  "ub_gold_influence_mastery_2": {
+    "title": "Coach Through a High-Stakes Presentation",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "influence_mastery",
+    "situation": "A client is presenting to their company's board of directors tomorrow. Help them prepare a presentation that commands the room.",
+    "person": {
+      "name": "Executive Client",
+      "role": "VP presenting strategic initiative",
+      "concern": "Board members are tough critics",
+      "hot_button": "Confidence and executive presence"
+    },
+    "success_criteria": "Client has clear structure, practiced delivery, and calm confidence"
+  },
+  "ub_gold_ecosystem_merger_2": {
+    "title": "Repair a Damaged Professional Relationship",
+    "company": "Unblinded",
+    "difficulty": "gold",
+    "category": "ecosystem_merger",
+    "situation": "A client damaged a key referral relationship by not following through on a promise. Help them repair it.",
+    "person": {
+      "name": "Client Who Made a Mistake",
+      "role": "Business owner who dropped the ball",
+      "concern": "May have burned the bridge permanently",
+      "hot_button": "Genuine accountability and repair"
+    },
+    "success_criteria": "Clear repair conversation strategy with authentic accountability"
+  },
+  "ub_platinum_coaching_resistance_2": {
+    "title": "Scale Coaching Without Losing Quality",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "coaching_resistance",
+    "situation": "Unblinded wants to serve 10x more clients without diluting the transformational experience. Design the solution.",
+    "person": {
+      "name": "Unblinded Leadership",
+      "role": "Scaling the business",
+      "concern": "Quality vs quantity tension",
+      "hot_button": "Maintaining transformation at scale"
+    },
+    "success_criteria": "Scalable model that preserves core experience"
+  },
+  "ub_platinum_shared_experience_2": {
+    "title": "Design Unblinded's Digital Community Platform",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "shared_experience",
+    "situation": "Design a digital community experience that maintains connection between immersions and keeps members engaged year-round.",
+    "person": {
+      "name": "Unblinded Community",
+      "role": "Clients between immersions",
+      "concern": "Online communities usually suck",
+      "hot_button": "Real connection, not just another app"
+    },
+    "success_criteria": "Platform design with engagement mechanics that create genuine community"
+  },
+  "ub_platinum_ecosystem_merger_2": {
+    "title": "Build a Referral-Generating Book Strategy",
+    "company": "Unblinded",
+    "difficulty": "platinum",
+    "category": "ecosystem_merger",
+    "situation": "Design a strategy to publish and leverage a book that becomes the primary top-of-funnel for Unblinded.",
+    "person": {
+      "name": "Unblinded Leadership",
+      "role": "Marketing and growth strategy",
+      "concern": "Books rarely generate real business",
+      "hot_button": "Book as a strategic asset, not vanity project"
+    },
+    "success_criteria": "Complete book strategy from writing to launch to ongoing lead generation"
+  }
+}

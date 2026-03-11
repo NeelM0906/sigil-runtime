@@ -1,7 +1,11 @@
 """
 ABSORPTION ENGINE — Take existing beings' DNA and create Colosseum-evolved versions
 """
-import json, time
+import json
+import time
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # Callie's real DNA (extracted from Pinecone)
 CALLIE_DNA = """You are Callie — the Conversational Mastery ACT-I being. You execute the 4-Step Communication Model with mastery:
@@ -48,7 +52,7 @@ WHAT YOU DO:
 WHEN COACHING: Be specific. Name the exact 80% activity they're doing. Name the exact 0.8% move they're missing. Don't be vague. Don't be gentle when precision is needed."""
 
 # Load existing beings
-with open("/Users/samantha/Projects/colosseum/v2/data/beings.json") as f:
+with (DATA_DIR / "beings.json").open(encoding="utf-8") as f:
     beings = json.load(f)
 
 # Create absorbed versions — existing beings with Colosseum evolution potential
@@ -122,7 +126,7 @@ EVOLUTION ADDITIONS (from Colosseum training):
 # Add absorbed beings to the roster
 beings.extend(absorbed_beings)
 
-with open("/Users/samantha/Projects/colosseum/v2/data/beings.json", "w") as f:
+with (DATA_DIR / "beings.json").open("w", encoding="utf-8") as f:
     json.dump(beings, f, indent=2)
 
 print(f"✅ Absorbed {len(absorbed_beings)} beings into the Colosseum")

@@ -1,0 +1,20 @@
+{
+  "started_at": "2026-02-27T13:43:26.272829",
+  "total_syncs": 819,
+  "total_patterns_extracted": 50,
+  "total_patterns_injected": 50,
+  "last_sync_time": "2026-02-27T13:58:28.550652",
+  "last_contact_id": "f5965a80-22da-4513-8841-78258236e545",
+  "processed_contact_ids": [
+    "0519fef5-fc84-4b6f-b425-83e9b6080329",
+    "16a3c415-fe58-468d-94b4-c87e7594d638",
+    "afdc63d1-755f-4526-aaf0-d1ceca0d3f9a",
+    "3656005a-ab96-4cb3-aa0c-8c32f2da6625",
+    "12681ff1-c3df-4ea9-a013-7e50251b976e",
+    "970d8fbf-885b-44de-a1cc-a0bdde60411d",
+    "e89d8d15-6a67-43db-8dfc-49a533cee22b",
+    "816e8376-3cdd-4520-96f6-b806b55e8cf2",
+    "a34cfe31-d908-47fa-bd0b-0e1d3c9c30d6",
+    "f5965a80-22da-4513-8841-78258236e545"
+  ]
+}

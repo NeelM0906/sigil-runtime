@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from bomba_sr.openclaw.integration import discover_repo_root, list_project_inventory
 from bomba_sr.projects.service import ProjectService
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
@@ -26,7 +27,11 @@ def _project_create_factory(projects: ProjectService):
 
 def _project_list_factory(projects: ProjectService):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        return {"projects": projects.list_projects(context.tenant_id)}
+        tracked = projects.list_projects(context.tenant_id)
+        inventory = list_project_inventory(discover_repo_root(context.workspace_root))
+        if tracked:
+            return {"projects": tracked, "inventory": inventory}
+        return {"projects": inventory}
 
     return run
 

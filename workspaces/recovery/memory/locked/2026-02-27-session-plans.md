@@ -10,7 +10,7 @@ A simulated battle-testing arena that pre-tests email subject lines, ad copy, an
 
 ### Architecture
 - **Database:** SQLite with beings (content variants), personas (AI judges), battles (head-to-head matchups)
-- **Location:** `/Users/samantha/.openclaw/workspace/colosseum/email_ad_domain/`
+- **Location:** `~/.openclaw/workspace/colosseum/email_ad_domain/`
 - **Engine:** `battle_engine.py` — runs head-to-head matchups scored by persona-weighted judges
 - **Cron:** Every 30 minutes, 50 battles auto-run
 

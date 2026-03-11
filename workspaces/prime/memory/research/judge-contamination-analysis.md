@@ -251,7 +251,7 @@ The beings aren't the problem. The judge is. Fix the judge, break the ceiling.
 ---
 
 ## Files Referenced
-- `/Users/samantha/Projects/colosseum/colosseum.db` — 2,752 rounds analyzed
-- `/Users/samantha/Projects/colosseum/colosseum/judge.py` — Current judge implementation
-- `/Users/samantha/Projects/colosseum/v2/judges_v2.py` — V2 multi-judge panel
-- `/Users/samantha/Projects/colosseum/v2/judges_expanded.py` — Additional specialty judges
+- `./workspaces/prime/Projects/colosseum/colosseum.db` — 2,752 rounds analyzed
+- `./workspaces/prime/Projects/colosseum/colosseum/judge.py` — Current judge implementation
+- `./workspaces/prime/Projects/colosseum/v2/judges_v2.py` — V2 multi-judge panel
+- `./workspaces/prime/Projects/colosseum/v2/judges_expanded.py` — Additional specialty judges

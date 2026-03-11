@@ -9,7 +9,7 @@
 5. [x] Charlie Sheen (_becVUQpsAI) - 39KB transcript (6 chunks)
 
 ## Output Files
-All transcripts saved to `/Users/samantha/Projects/youtube-transcripts/`:
+All transcripts saved to `./workspaces/prime/Projects/youtube-transcripts/`:
 - michael-uslan-batman-transcript.txt (89KB)
 - kevin-mayer-ai-transcript.txt (41KB)  
 - chevy-chase-comedy-transcript.txt (26KB)

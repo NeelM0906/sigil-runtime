@@ -10,8 +10,8 @@ Successfully downloaded and transcribed the Mike Tyson YouTube video that was bl
 
 ## Files Created
 
-- **Audio:** `/Users/samantha/Projects/youtube-transcripts/tyson.mp3` (22MB)
-- **Transcript:** `/Users/samantha/Projects/youtube-transcripts/tyson-transcript.txt` (44,022 characters)
+- **Audio:** `./workspaces/prime/Projects/youtube-transcripts/tyson.mp3` (22MB)
+- **Transcript:** `./workspaces/prime/Projects/youtube-transcripts/tyson-transcript.txt` (44,022 characters)
 
 ## Process Notes
 

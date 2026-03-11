@@ -2,10 +2,17 @@
 CHDDIA² Colosseum v2 — 39 Beings × 5 Judge Panel
 Built by Sai, Feb 23 2026
 """
-import json, os, sqlite3, time, asyncio, random
+import json
+import os
+import sqlite3
+import time
+import asyncio
+import random
+from pathlib import Path
 from openai import OpenAI
 
 client = OpenAI()
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # The 13 areas with 3 positions each
 AREAS = {
@@ -172,8 +179,8 @@ for area_key, area_data in AREAS.items():
         beings.append(being)
 
 # Save beings
-os.makedirs("/Users/samantha/Projects/colosseum/v2/data", exist_ok=True)
-with open("/Users/samantha/Projects/colosseum/v2/data/beings.json", "w") as f:
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+with (DATA_DIR / "beings.json").open("w", encoding="utf-8") as f:
     json.dump(beings, f, indent=2)
 
 print(f"✅ Generated {len(beings)} beings across {len(AREAS)} areas")

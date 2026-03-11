@@ -753,3 +753,11 @@ class TestCleanupVerification:
                 parent_agent_id="prime",
                 child_agent_id="child-3",
             )
+
+        failed_rows = db.execute(
+            "SELECT error_detail FROM subagent_runs WHERE status = 'failed' ORDER BY accepted_at ASC LIMIT 1"
+        ).fetchall()
+        assert failed_rows
+        error_detail = str(failed_rows[0]["error_detail"] or "")
+        assert "Traceback" not in error_detail
+        assert "/Users/tester/" not in error_detail

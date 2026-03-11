@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+import os
 import threading
 import time
 import urllib.error
@@ -177,58 +178,36 @@ def _cache_key_for_api_key(api_key: str) -> str:
 
 
 def _embed_query(query: str) -> list[float]:
-    import os
-
-    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not openai_key:
-        raise ValueError("OPENAI_API_KEY is required for pinecone_query embeddings")
-    embed_model = (
-        os.getenv("BOMBA_PINECONE_EMBED_MODEL")
-        or os.getenv("OPENAI_EMBEDDING_MODEL")
-        or DEFAULT_EMBED_MODEL
-    ).strip()
-    if not embed_model:
-        raise ValueError("embedding model is required")
+    api_key, api_base, embed_model = _embedding_settings()
     payload = _http_json(
         "POST",
-        OPENAI_EMBEDDINGS_API,
-        headers={"Authorization": f"Bearer {openai_key}"},
+        api_base.rstrip("/") + "/embeddings",
+        headers={"Authorization": f"Bearer {api_key}"},
         payload={"model": embed_model, "input": query},
     )
     data = payload.get("data")
     if not isinstance(data, list) or not data:
-        raise ValueError("invalid OpenAI embeddings response")
+        raise ValueError("invalid embeddings response")
     first = data[0] if isinstance(data[0], dict) else {}
     vector = first.get("embedding")
     if not isinstance(vector, list):
-        raise ValueError("missing embedding vector in OpenAI response")
+        raise ValueError("missing embedding vector in embeddings response")
     return [float(x) for x in vector]
 
 
 def _embed_batch(texts: list[str]) -> list[list[float]]:
-    import os
-
     if not texts:
         return []
-    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not openai_key:
-        raise ValueError("OPENAI_API_KEY is required for Pinecone embeddings")
-    embed_model = (
-        os.getenv("BOMBA_PINECONE_EMBED_MODEL")
-        or os.getenv("OPENAI_EMBEDDING_MODEL")
-        or DEFAULT_EMBED_MODEL
-    ).strip()
-    if not embed_model:
-        raise ValueError("embedding model is required")
+    api_key, api_base, embed_model = _embedding_settings()
     payload = _http_json(
         "POST",
-        OPENAI_EMBEDDINGS_API,
-        headers={"Authorization": f"Bearer {openai_key}"},
+        api_base.rstrip("/") + "/embeddings",
+        headers={"Authorization": f"Bearer {api_key}"},
         payload={"model": embed_model, "input": texts},
     )
     data = payload.get("data")
     if not isinstance(data, list) or len(data) != len(texts):
-        raise ValueError("invalid OpenAI batch embeddings response")
+        raise ValueError("invalid batch embeddings response")
     sorted_data = sorted(data, key=lambda d: int(d.get("index", 0)) if isinstance(d, dict) else 0)
     vectors: list[list[float]] = []
     for item in sorted_data:
@@ -239,6 +218,29 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
             raise ValueError("missing embedding vector in batch response")
         vectors.append([float(x) for x in emb])
     return vectors
+
+
+def _embedding_settings() -> tuple[str, str, str]:
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    embed_model = (
+        os.getenv("BOMBA_PINECONE_EMBED_MODEL")
+        or os.getenv("OPENAI_EMBEDDING_MODEL")
+        or ("openai/text-embedding-3-small" if openrouter_key else DEFAULT_EMBED_MODEL)
+    ).strip()
+    if openrouter_key:
+        return (
+            openrouter_key,
+            os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+            embed_model,
+        )
+    if openai_key:
+        return (
+            openai_key,
+            os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            embed_model,
+        )
+    raise ValueError("OPENROUTER_API_KEY or OPENAI_API_KEY is required for Pinecone embeddings")
 
 
 def _parse_matches(

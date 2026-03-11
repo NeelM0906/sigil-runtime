@@ -1,13 +1,13 @@
-[echo:openai/gpt-4o-mini] You are SAI Memory, the Central Memory Manager for the ACT-I ecosystem.
+[echo:anthropic/claude-opus-4.6] You are SAI Memory, the Central Memory Manager for the ACT-I ecosystem.
 Your task is to update a being's REPRESENTATION.md profile based on new task data.
 
 Being: memory
-Task completed: Test task
-This being's role in the task: Check memory
-Quality score: 0.85
-Reviewer notes: Good
-Synthesis summary (abbreviated): Final synthesized report with all findings.
+Task completed: Completed runs test
+This being's role in the task: Task for memory
+Quality score: N/A
+Reviewer notes: 
+Synthesis summary (abbreviated): 
 
 Current REPRESENTATION.md:
-[echo:openai/gpt-4o-mini] You are SAI Memory, the Central Memory Manager for the ACT-I ecosystem.
-Your task is to
+[echo:anthropic/claude-opus-4.6] You are SAI Memory, the Central Memory Manager for the ACT-I ecosystem.
+Your task is to update a being's REPRESENTAT

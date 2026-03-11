@@ -16,7 +16,7 @@
 **Total Content:** ~29,873 words
 
 ## Transcript Locations
-All transcripts saved to: `/Users/samantha/Projects/youtube-transcripts/`
+All transcripts saved to: `./workspaces/prime/Projects/youtube-transcripts/`
 
 ## Content Overview
 

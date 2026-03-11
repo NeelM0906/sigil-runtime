@@ -1,0 +1,1115 @@
+{
+  "by_mastery": [
+    {
+      "id": "B-25de4a9d",
+      "name": "Zenith",
+      "mastery_score": 8.0,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-653554a3",
+      "name": "River",
+      "mastery_score": 8.0,
+      "generation": 1,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-319f3d95",
+      "name": "Flint",
+      "mastery_score": 7.833333333333333,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-1eba5546",
+      "name": "River",
+      "mastery_score": 7.733333333333333,
+      "generation": 3,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-06d9dbb9",
+      "name": "Ember",
+      "mastery_score": 7.7,
+      "generation": 2,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-da2541bb",
+      "name": "Dawn",
+      "mastery_score": 7.7,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-b9ebf5b2",
+      "name": "Flux",
+      "mastery_score": 7.675,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-5e436e8c",
+      "name": "Cliff",
+      "mastery_score": 7.65,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-aaa20f15",
+      "name": "Sage",
+      "mastery_score": 7.6000000000000005,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-0e0b2e95",
+      "name": "Artemis",
+      "mastery_score": 7.575,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-9d7ac1c2",
+      "name": "Wolf",
+      "mastery_score": 7.575,
+      "generation": 3,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-c537cfe8",
+      "name": "Selene",
+      "mastery_score": 7.566666666666666,
+      "generation": 1,
+      "lineage": "hybrid",
+      "source": "v1"
+    },
+    {
+      "id": "B-87150a0c",
+      "name": "Selene",
+      "mastery_score": 7.533333333333334,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-a521e23c",
+      "name": "Spark",
+      "mastery_score": 7.514285714285714,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-f1f0faec",
+      "name": "Artemis",
+      "mastery_score": 7.5,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-4190be0d",
+      "name": "River",
+      "mastery_score": 7.5,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-cb5de407",
+      "name": "Wolf",
+      "mastery_score": 7.5,
+      "generation": 0,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-d6adc926",
+      "name": "River",
+      "mastery_score": 7.5,
+      "generation": 0,
+      "lineage": "athena",
+      "source": "v1"
+    },
+    {
+      "id": "B-5603df3c",
+      "name": "Nova",
+      "mastery_score": 7.5,
+      "generation": 1,
+      "lineage": "callie",
+      "source": "v1"
+    },
+    {
+      "id": "B-a126c593",
+      "name": "Sage",
+      "mastery_score": 7.5,
+      "generation": 1,
+      "lineage": "callie",
+      "source": "v1"
+    }
+  ],
+  "by_win_rate": [
+    {
+      "id": "B-1eba5546",
+      "name": "River",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-06d9dbb9",
+      "name": "Ember",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-da2541bb",
+      "name": "Dawn",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-b9ebf5b2",
+      "name": "Flux",
+      "win_rate": 1.0,
+      "wins": 4,
+      "losses": 0,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-aaa20f15",
+      "name": "Sage",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-f1f0faec",
+      "name": "Artemis",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-4190be0d",
+      "name": "River",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-cb5de407",
+      "name": "Wolf",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-4682b92d",
+      "name": "Thorn",
+      "win_rate": 1.0,
+      "wins": 3,
+      "losses": 0,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-5e436e8c",
+      "name": "Cliff",
+      "win_rate": 0.875,
+      "wins": 7,
+      "losses": 1,
+      "total_rounds": 8,
+      "source": "v1"
+    },
+    {
+      "id": "B-0e0b2e95",
+      "name": "Artemis",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-9d7ac1c2",
+      "name": "Wolf",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-dca5dd60",
+      "name": "Drift",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-82bcf104",
+      "name": "Daphne",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-cd876634",
+      "name": "Zenith",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-22f6defe",
+      "name": "Daphne",
+      "win_rate": 0.75,
+      "wins": 3,
+      "losses": 1,
+      "total_rounds": 4,
+      "source": "v1"
+    },
+    {
+      "id": "B-319f3d95",
+      "name": "Flint",
+      "win_rate": 0.6666666666666666,
+      "wins": 2,
+      "losses": 1,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-d6adc926",
+      "name": "River",
+      "win_rate": 0.6666666666666666,
+      "wins": 2,
+      "losses": 1,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-69ca0148",
+      "name": "Ash",
+      "win_rate": 0.6666666666666666,
+      "wins": 2,
+      "losses": 1,
+      "total_rounds": 3,
+      "source": "v1"
+    },
+    {
+      "id": "B-d184d134",
+      "name": "Coral",
+      "win_rate": 0.6666666666666666,
+      "wins": 2,
+      "losses": 1,
+      "total_rounds": 3,
+      "source": "v1"
+    }
+  ],
+  "by_generation": {
+    "gen_0": [
+      {
+        "id": "B-25de4a9d",
+        "name": "Zenith",
+        "mastery_score": 8.0
+      },
+      {
+        "id": "B-319f3d95",
+        "name": "Flint",
+        "mastery_score": 7.833333333333333
+      },
+      {
+        "id": "B-da2541bb",
+        "name": "Dawn",
+        "mastery_score": 7.7
+      },
+      {
+        "id": "B-b9ebf5b2",
+        "name": "Flux",
+        "mastery_score": 7.675
+      },
+      {
+        "id": "B-5e436e8c",
+        "name": "Cliff",
+        "mastery_score": 7.65
+      },
+      {
+        "id": "B-aaa20f15",
+        "name": "Sage",
+        "mastery_score": 7.6000000000000005
+      },
+      {
+        "id": "B-0e0b2e95",
+        "name": "Artemis",
+        "mastery_score": 7.575
+      },
+      {
+        "id": "B-87150a0c",
+        "name": "Selene",
+        "mastery_score": 7.533333333333334
+      },
+      {
+        "id": "B-a521e23c",
+        "name": "Spark",
+        "mastery_score": 7.514285714285714
+      },
+      {
+        "id": "B-f1f0faec",
+        "name": "Artemis",
+        "mastery_score": 7.5
+      }
+    ],
+    "gen_1": [
+      {
+        "id": "B-653554a3",
+        "name": "River",
+        "mastery_score": 8.0
+      },
+      {
+        "id": "B-c537cfe8",
+        "name": "Selene",
+        "mastery_score": 7.566666666666666
+      },
+      {
+        "id": "B-5603df3c",
+        "name": "Nova",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-a126c593",
+        "name": "Sage",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-cf8d4d33",
+        "name": "Zephyr",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-447074f9",
+        "name": "Selene",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-490a63e2",
+        "name": "Cedar",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-7d7abb04",
+        "name": "Iris",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-d184d134",
+        "name": "Coral",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-de5d6731",
+        "name": "Perseus",
+        "mastery_score": 7.5
+      }
+    ],
+    "gen_3": [
+      {
+        "id": "B-1eba5546",
+        "name": "River",
+        "mastery_score": 7.733333333333333
+      },
+      {
+        "id": "B-9d7ac1c2",
+        "name": "Wolf",
+        "mastery_score": 7.575
+      },
+      {
+        "id": "B-4bb1e00e",
+        "name": "Ash",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-3da850fd",
+        "name": "Echo",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-c147ebac",
+        "name": "Dawn",
+        "mastery_score": 7.166666666666667
+      },
+      {
+        "id": "B-8780ebd5",
+        "name": "Rain",
+        "mastery_score": 6.7749999999999995
+      },
+      {
+        "id": "B-3b4de462",
+        "name": "Knox",
+        "mastery_score": 6.5
+      },
+      {
+        "id": "B-16b6f6d5",
+        "name": "Storm",
+        "mastery_score": 6.5
+      },
+      {
+        "id": "B-9420176d",
+        "name": "Helios",
+        "mastery_score": 5.85
+      },
+      {
+        "id": "B-e57694d3",
+        "name": "Vale",
+        "mastery_score": 0.0
+      }
+    ],
+    "gen_2": [
+      {
+        "id": "B-06d9dbb9",
+        "name": "Ember",
+        "mastery_score": 7.7
+      },
+      {
+        "id": "B-f45d8fc4",
+        "name": "Ridge",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-da4d1623",
+        "name": "River",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-f430522a",
+        "name": "Echo",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-ff2f96d9",
+        "name": "Stone",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-4d219afb",
+        "name": "Nova",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-daa69f9f",
+        "name": "Drift",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-8e1e50a0",
+        "name": "Cliff",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-2e81d4cc",
+        "name": "Atlas",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-4682b92d",
+        "name": "Thorn",
+        "mastery_score": 7.5
+      }
+    ]
+  },
+  "by_lineage": {
+    "callie": [
+      {
+        "id": "B-25de4a9d",
+        "name": "Zenith",
+        "mastery_score": 8.0
+      },
+      {
+        "id": "B-06d9dbb9",
+        "name": "Ember",
+        "mastery_score": 7.7
+      },
+      {
+        "id": "B-b9ebf5b2",
+        "name": "Flux",
+        "mastery_score": 7.675
+      },
+      {
+        "id": "B-5e436e8c",
+        "name": "Cliff",
+        "mastery_score": 7.65
+      },
+      {
+        "id": "B-9d7ac1c2",
+        "name": "Wolf",
+        "mastery_score": 7.575
+      },
+      {
+        "id": "B-f1f0faec",
+        "name": "Artemis",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-4190be0d",
+        "name": "River",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-cb5de407",
+        "name": "Wolf",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-5603df3c",
+        "name": "Nova",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-a126c593",
+        "name": "Sage",
+        "mastery_score": 7.5
+      }
+    ],
+    "athena": [
+      {
+        "id": "B-653554a3",
+        "name": "River",
+        "mastery_score": 8.0
+      },
+      {
+        "id": "B-319f3d95",
+        "name": "Flint",
+        "mastery_score": 7.833333333333333
+      },
+      {
+        "id": "B-1eba5546",
+        "name": "River",
+        "mastery_score": 7.733333333333333
+      },
+      {
+        "id": "B-da2541bb",
+        "name": "Dawn",
+        "mastery_score": 7.7
+      },
+      {
+        "id": "B-aaa20f15",
+        "name": "Sage",
+        "mastery_score": 7.6000000000000005
+      },
+      {
+        "id": "B-0e0b2e95",
+        "name": "Artemis",
+        "mastery_score": 7.575
+      },
+      {
+        "id": "B-87150a0c",
+        "name": "Selene",
+        "mastery_score": 7.533333333333334
+      },
+      {
+        "id": "B-a521e23c",
+        "name": "Spark",
+        "mastery_score": 7.514285714285714
+      },
+      {
+        "id": "B-d6adc926",
+        "name": "River",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-3f6d3c45",
+        "name": "Rain",
+        "mastery_score": 7.5
+      }
+    ],
+    "hybrid": [
+      {
+        "id": "B-c537cfe8",
+        "name": "Selene",
+        "mastery_score": 7.566666666666666
+      },
+      {
+        "id": "B-ee8d7447",
+        "name": "Onyx",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-ea132a31",
+        "name": "Cliff",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-daa69f9f",
+        "name": "Drift",
+        "mastery_score": 7.5
+      },
+      {
+        "id": "B-cd876634",
+        "name": "Zenith",
+        "mastery_score": 7.425
+      },
+      {
+        "id": "B-4cf1803b",
+        "name": "Daphne",
+        "mastery_score": 7.3999999999999995
+      },
+      {
+        "id": "B-44bd2cc1",
+        "name": "Thea",
+        "mastery_score": 7.3999999999999995
+      },
+      {
+        "id": "B-e2e4ee48",
+        "name": "Thea",
+        "mastery_score": 0.0
+      }
+    ]
+  },
+  "by_area": {
+    "Marketing \u2014 Outbound / Sourcing": [
+      {
+        "id": "marketing_outbound_zone_action",
+        "title": "Ecosystem Merger Specialist",
+        "average": 6.764285714285714
+      },
+      {
+        "id": "marketing_outbound_leader",
+        "title": "Outbound Strategy Director",
+        "average": 6.184282857142857
+      },
+      {
+        "id": "marketing_outbound_client_facing",
+        "title": "Meeting Setter",
+        "average": 5.99
+      }
+    ],
+    "Marketing \u2014 Inbound": [
+      {
+        "id": "marketing_inbound_zone_action",
+        "title": "Shared Experience Designer",
+        "average": 6.724282857142856
+      },
+      {
+        "id": "marketing_inbound_leader",
+        "title": "Content Strategy Director",
+        "average": 6.1621428571428565
+      },
+      {
+        "id": "marketing_inbound_client_facing",
+        "title": "Funnel Architect",
+        "average": 5.977142857142857
+      }
+    ],
+    "Sales & Influence": [
+      {
+        "id": "sales_influence_client_facing",
+        "title": "Discovery Call Specialist",
+        "average": 6.5214285714285705
+      },
+      {
+        "id": "sales_influence_zone_action",
+        "title": "Truth-to-Pain Navigator",
+        "average": 6.242857142857143
+      },
+      {
+        "id": "sales_influence_leader",
+        "title": "Sales Director",
+        "average": 6.15
+      }
+    ],
+    "Client Success & Retention": [
+      {
+        "id": "client_success_client_facing",
+        "title": "Account Manager",
+        "average": 6.409282857142857
+      },
+      {
+        "id": "client_success_zone_action",
+        "title": "Churn Prevention Analyst",
+        "average": 5.787142857142857
+      },
+      {
+        "id": "client_success_leader",
+        "title": "Client Success Director",
+        "average": 5.3342857142857145
+      }
+    ],
+    "Vision & Leadership": [
+      {
+        "id": "vision_leadership_client_facing",
+        "title": "Cross-Company Synergy Director",
+        "average": 6.155714285714286
+      },
+      {
+        "id": "vision_leadership_zone_action",
+        "title": "Vision Translator",
+        "average": 5.603571428571429
+      },
+      {
+        "id": "vision_leadership_leader",
+        "title": "Chief Vision Officer",
+        "average": 5.394285714285714
+      }
+    ],
+    "Operations & Process Mastery": [
+      {
+        "id": "operations_zone_action",
+        "title": "Zone Action Tracker",
+        "average": 6.0685714285714285
+      },
+      {
+        "id": "operations_leader",
+        "title": "COO",
+        "average": 5.386428571428572
+      },
+      {
+        "id": "operations_client_facing",
+        "title": "Meeting Optimization Specialist",
+        "average": 4.867142857142857
+      }
+    ],
+    "People & Talent": [
+      {
+        "id": "people_talent_client_facing",
+        "title": "Onboarding Coordinator",
+        "average": 5.791428571428572
+      },
+      {
+        "id": "people_talent_zone_action",
+        "title": "Recruiter",
+        "average": 5.332285714285715
+      },
+      {
+        "id": "people_talent_leader",
+        "title": "Chief People Officer",
+        "average": 4.78714
+      }
+    ],
+    "Fun & Magic (Lever 7)": [
+      {
+        "id": "fun_magic_client_facing",
+        "title": "Client Journey Choreographer",
+        "average": 5.652854285714286
+      },
+      {
+        "id": "fun_magic_zone_action",
+        "title": "Awe Engineer",
+        "average": 5.533854285714286
+      },
+      {
+        "id": "fun_magic_leader",
+        "title": "Chief Experience Officer",
+        "average": 4.437142857142858
+      }
+    ],
+    "Client Fulfillment & Delivery": [
+      {
+        "id": "client_fulfillment_client_facing",
+        "title": "Client Communication Lead",
+        "average": 5.567142857142857
+      },
+      {
+        "id": "client_fulfillment_zone_action",
+        "title": "Project Manager",
+        "average": 5.562857142857142
+      },
+      {
+        "id": "client_fulfillment_leader",
+        "title": "Fulfillment Director",
+        "average": 5.07714
+      }
+    ],
+    "Finance & Revenue": [
+      {
+        "id": "finance_client_facing",
+        "title": "Collections Specialist",
+        "average": 5.494282857142857
+      },
+      {
+        "id": "finance_zone_action",
+        "title": "Cash Flow Analyst",
+        "average": 5.4642857142857135
+      },
+      {
+        "id": "finance_leader",
+        "title": "CFO",
+        "average": 5.423571428571429
+      }
+    ],
+    "Legal & Compliance": [
+      {
+        "id": "legal_compliance_client_facing",
+        "title": "Ethics Officer",
+        "average": 5.3142828571428575
+      },
+      {
+        "id": "legal_compliance_zone_action",
+        "title": "Contract Drafter",
+        "average": 5.282857142857143
+      },
+      {
+        "id": "legal_compliance_leader",
+        "title": "General Counsel",
+        "average": 5.155
+      }
+    ],
+    "Technology & Infrastructure": [
+      {
+        "id": "technology_client_facing",
+        "title": "CRM Administrator",
+        "average": 5.199997142857143
+      },
+      {
+        "id": "technology_leader",
+        "title": "CTO",
+        "average": 5.094285714285714
+      },
+      {
+        "id": "technology_zone_action",
+        "title": "AI/ML Engineer",
+        "average": 4.908571428571429
+      }
+    ],
+    "Innovation & R&D": [
+      {
+        "id": "innovation_rd_zone_action",
+        "title": "Being Evolution Architect",
+        "average": 4.954285714285715
+      },
+      {
+        "id": "innovation_rd_client_facing",
+        "title": "Scoring System Optimizer",
+        "average": 4.728571428571429
+      },
+      {
+        "id": "innovation_rd_leader",
+        "title": "Chief Innovation Officer",
+        "average": 4.521428571428571
+      }
+    ]
+  },
+  "by_type": {
+    "zone_action": [
+      {
+        "id": "marketing_outbound_zone_action",
+        "title": "Ecosystem Merger Specialist",
+        "average": 6.764285714285714,
+        "area": "Marketing \u2014 Outbound / Sourcing"
+      },
+      {
+        "id": "marketing_inbound_zone_action",
+        "title": "Shared Experience Designer",
+        "average": 6.724282857142856,
+        "area": "Marketing \u2014 Inbound"
+      },
+      {
+        "id": "sales_influence_zone_action",
+        "title": "Truth-to-Pain Navigator",
+        "average": 6.242857142857143,
+        "area": "Sales & Influence"
+      },
+      {
+        "id": "operations_zone_action",
+        "title": "Zone Action Tracker",
+        "average": 6.0685714285714285,
+        "area": "Operations & Process Mastery"
+      },
+      {
+        "id": "client_success_zone_action",
+        "title": "Churn Prevention Analyst",
+        "average": 5.787142857142857,
+        "area": "Client Success & Retention"
+      },
+      {
+        "id": "client_fulfillment_zone_action",
+        "title": "Project Manager",
+        "average": 5.562857142857142,
+        "area": "Client Fulfillment & Delivery"
+      },
+      {
+        "id": "fun_magic_zone_action",
+        "title": "Awe Engineer",
+        "average": 5.533854285714286,
+        "area": "Fun & Magic (Lever 7)"
+      },
+      {
+        "id": "finance_zone_action",
+        "title": "Cash Flow Analyst",
+        "average": 5.4642857142857135,
+        "area": "Finance & Revenue"
+      },
+      {
+        "id": "people_talent_zone_action",
+        "title": "Recruiter",
+        "average": 5.332285714285715,
+        "area": "People & Talent"
+      },
+      {
+        "id": "legal_compliance_zone_action",
+        "title": "Contract Drafter",
+        "average": 5.282857142857143,
+        "area": "Legal & Compliance"
+      }
+    ],
+    "client_facing": [
+      {
+        "id": "sales_influence_client_facing",
+        "title": "Discovery Call Specialist",
+        "average": 6.5214285714285705,
+        "area": "Sales & Influence"
+      },
+      {
+        "id": "client_success_client_facing",
+        "title": "Account Manager",
+        "average": 6.409282857142857,
+        "area": "Client Success & Retention"
+      },
+      {
+        "id": "marketing_outbound_client_facing",
+        "title": "Meeting Setter",
+        "average": 5.99,
+        "area": "Marketing \u2014 Outbound / Sourcing"
+      },
+      {
+        "id": "marketing_inbound_client_facing",
+        "title": "Funnel Architect",
+        "average": 5.977142857142857,
+        "area": "Marketing \u2014 Inbound"
+      },
+      {
+        "id": "people_talent_client_facing",
+        "title": "Onboarding Coordinator",
+        "average": 5.791428571428572,
+        "area": "People & Talent"
+      },
+      {
+        "id": "fun_magic_client_facing",
+        "title": "Client Journey Choreographer",
+        "average": 5.652854285714286,
+        "area": "Fun & Magic (Lever 7)"
+      },
+      {
+        "id": "client_fulfillment_client_facing",
+        "title": "Client Communication Lead",
+        "average": 5.567142857142857,
+        "area": "Client Fulfillment & Delivery"
+      },
+      {
+        "id": "finance_client_facing",
+        "title": "Collections Specialist",
+        "average": 5.494282857142857,
+        "area": "Finance & Revenue"
+      },
+      {
+        "id": "legal_compliance_client_facing",
+        "title": "Ethics Officer",
+        "average": 5.3142828571428575,
+        "area": "Legal & Compliance"
+      },
+      {
+        "id": "technology_client_facing",
+        "title": "CRM Administrator",
+        "average": 5.199997142857143,
+        "area": "Technology & Infrastructure"
+      }
+    ],
+    "leader": [
+      {
+        "id": "marketing_outbound_leader",
+        "title": "Outbound Strategy Director",
+        "average": 6.184282857142857,
+        "area": "Marketing \u2014 Outbound / Sourcing"
+      },
+      {
+        "id": "marketing_inbound_leader",
+        "title": "Content Strategy Director",
+        "average": 6.1621428571428565,
+        "area": "Marketing \u2014 Inbound"
+      },
+      {
+        "id": "vision_leadership_client_facing",
+        "title": "Cross-Company Synergy Director",
+        "average": 6.155714285714286,
+        "area": "Vision & Leadership"
+      },
+      {
+        "id": "sales_influence_leader",
+        "title": "Sales Director",
+        "average": 6.15,
+        "area": "Sales & Influence"
+      },
+      {
+        "id": "vision_leadership_zone_action",
+        "title": "Vision Translator",
+        "average": 5.603571428571429,
+        "area": "Vision & Leadership"
+      },
+      {
+        "id": "finance_leader",
+        "title": "CFO",
+        "average": 5.423571428571429,
+        "area": "Finance & Revenue"
+      },
+      {
+        "id": "vision_leadership_leader",
+        "title": "Chief Vision Officer",
+        "average": 5.394285714285714,
+        "area": "Vision & Leadership"
+      },
+      {
+        "id": "operations_leader",
+        "title": "COO",
+        "average": 5.386428571428572,
+        "area": "Operations & Process Mastery"
+      },
+      {
+        "id": "client_success_leader",
+        "title": "Client Success Director",
+        "average": 5.3342857142857145,
+        "area": "Client Success & Retention"
+      },
+      {
+        "id": "legal_compliance_leader",
+        "title": "General Counsel",
+        "average": 5.155,
+        "area": "Legal & Compliance"
+      }
+    ]
+  }
+}

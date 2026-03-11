@@ -1,0 +1,4 @@
+Prime, forge here, done.
+The three new fields are patched into the Hiddled dashboard.
+The Python engine mappings are updated.
+Everything matches memory schema perfectly, deployed and locked.

@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from bomba_sr.openclaw.integration import discover_colosseum_data_roots
+
 
 def _split_env(value: str | None) -> tuple[str, ...]:
     if not value:
@@ -31,6 +33,28 @@ def _json_dict_env(value: str | None) -> dict[str, Any]:
     return dict(payload)
 
 
+def _portable_openclaw_model_default() -> str:
+    config_path = Path(__file__).resolve().parents[3] / "portable-openclaw" / "openclaw.json"
+    if config_path.is_file():
+        try:
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        agents = payload.get("agents") if isinstance(payload, dict) else {}
+        if isinstance(agents, dict):
+            for item in agents.get("list") or []:
+                if isinstance(item, dict) and str(item.get("id") or "").strip() == "main":
+                    model = item.get("model")
+                    if isinstance(model, dict) and str(model.get("primary") or "").strip():
+                        return str(model.get("primary") or "").strip().removeprefix("openrouter/")
+                    if isinstance(model, str) and model.strip():
+                        return model.strip().removeprefix("openrouter/")
+            defaults = agents.get("defaults")
+            if isinstance(defaults, dict) and str(defaults.get("model") or "").strip():
+                return str(defaults.get("model") or "").strip().removeprefix("openrouter/")
+    return "anthropic/claude-opus-4.6"
+
+
 @dataclass(frozen=True)
 class SerenaPolicy:
     enabled: bool = True
@@ -53,7 +77,7 @@ class SerenaPolicy:
 @dataclass(frozen=True)
 class RuntimeConfig:
     runtime_home: Path = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")).resolve()
-    default_model_id: str = os.getenv("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6")
+    default_model_id: str = os.getenv("BOMBA_MODEL_ID", _portable_openclaw_model_default())
     serena: SerenaPolicy = field(default_factory=SerenaPolicy)
     learning_auto_apply_confidence: float = float(os.getenv("BOMBA_LEARNING_AUTO_APPLY_CONFIDENCE", "0.4"))
     capability_cache_ttl_seconds: int = int(os.getenv("BOMBA_CAPABILITY_CACHE_TTL_SECONDS", str(6 * 60 * 60)))
@@ -91,13 +115,37 @@ class RuntimeConfig:
     replay_history_budget_fraction: float = float(os.getenv("BOMBA_REPLAY_HISTORY_BUDGET_FRACTION", "0.3"))
     web_search_enabled: bool = os.getenv("BOMBA_WEB_SEARCH_ENABLED", "true").lower() != "false"
     brave_api_key: str | None = os.getenv("BRAVE_API_KEY")
-    pinecone_enabled: bool = os.getenv("BOMBA_PINECONE_ENABLED", "false").lower() != "false"
+    pinecone_enabled: bool = os.getenv(
+        "BOMBA_PINECONE_ENABLED",
+        "true" if os.getenv("PINECONE_API_KEY") else "false",
+    ).lower() != "false"
     pinecone_default_index: str = os.getenv("BOMBA_PINECONE_DEFAULT_INDEX", "ublib2")
     pinecone_default_namespace: str = os.getenv("BOMBA_PINECONE_DEFAULT_NAMESPACE", "longterm")
-    voice_enabled: bool = os.getenv("BOMBA_VOICE_ENABLED", "false").lower() != "false"
+    supabase_enabled: bool = os.getenv(
+        "BOMBA_SUPABASE_ENABLED",
+        "true" if os.getenv("SUPABASE_URL") and (
+            os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        ) else "false",
+    ).lower() != "false"
+    postgres_enabled: bool = os.getenv(
+        "BOMBA_POSTGRES_ENABLED",
+        "true" if os.getenv("DATABASE_URL") else "false",
+    ).lower() != "false"
+    voice_enabled: bool = os.getenv(
+        "BOMBA_VOICE_ENABLED",
+        "true" if os.getenv("BLAND_API_KEY") else "false",
+    ).lower() != "false"
     voice_provider: str = os.getenv("BOMBA_VOICE_PROVIDER", "bland")
-    colosseum_enabled: bool = os.getenv("BOMBA_COLOSSEUM_ENABLED", "false").lower() != "false"
-    colosseum_model_id: str = os.getenv("BOMBA_COLOSSEUM_MODEL_ID", "gpt-4o-mini")
+    fal_enabled: bool = os.getenv(
+        "BOMBA_FAL_ENABLED",
+        "true" if (os.getenv("FAL_KEY") or os.getenv("FAL_KEY_NEW")) else "false",
+    ).lower() != "false"
+    fal_video_model: str = os.getenv("BOMBA_FAL_VIDEO_MODEL", "fal-ai/wan/v2.2-a14b/text-to-video")
+    colosseum_enabled: bool = os.getenv(
+        "BOMBA_COLOSSEUM_ENABLED",
+        "true" if discover_colosseum_data_roots() else "false",
+    ).lower() != "false"
+    colosseum_model_id: str = os.getenv("BOMBA_COLOSSEUM_MODEL_ID", _portable_openclaw_model_default())
     prove_ahead_enabled: bool = os.getenv("BOMBA_PROVE_AHEAD_ENABLED", "false").lower() != "false"
     team_manager_enabled: bool = os.getenv("BOMBA_TEAM_MANAGER_ENABLED", "false").lower() != "false"
     team_manager_model_id: str = os.getenv("BOMBA_TEAM_MANAGER_MODEL_ID", "")

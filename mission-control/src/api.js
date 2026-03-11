@@ -67,6 +67,14 @@ export const beingsApi = {
   },
 }
 
+// ── Projects API ─────────────────────────────────────────────
+
+export const projectsApi = {
+  list() {
+    return request('/api/mc/projects')
+  },
+}
+
 // ── Chat API ─────────────────────────────────────────────────
 
 export const chatApi = {
@@ -89,6 +97,28 @@ export const chatApi = {
       method: 'POST',
       body: JSON.stringify({ content, taskRef }),
     })
+  },
+  // Sessions
+  sessions() {
+    return request('/api/mc/chat/sessions')
+  },
+  createSession(name) {
+    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name }) })
+  },
+  renameSession(id, name) {
+    return request(`/api/mc/chat/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) })
+  },
+  deleteSession(id) {
+    return request(`/api/mc/chat/sessions/${id}`, { method: 'DELETE' })
+  },
+}
+
+// ── Deliverables API ─────────────────────────────────────────
+
+export const deliverablesApi = {
+  list(taskId = null) {
+    const qs = taskId ? `?task_id=${taskId}` : ''
+    return request(`/api/mc/deliverables${qs}`)
   },
 }
 

@@ -13,9 +13,9 @@ Created a full 24/7 continuous tournament automation framework for the ACT-I Col
 
 | File | Purpose |
 |------|---------|
-| `/Users/samantha/Projects/colosseum/colosseum_daemon.py` | Main daemon script (23KB) |
-| `/Users/samantha/Projects/colosseum/setup_daemon.sh` | Setup script for launchctl/systemctl |
-| `/Users/samantha/Projects/colosseum/logs/` | Rotating log directory |
+| `./workspaces/prime/Projects/colosseum/colosseum_daemon.py` | Main daemon script (23KB) |
+| `./workspaces/prime/Projects/colosseum/setup_daemon.sh` | Setup script for launchctl/systemctl |
+| `./workspaces/prime/Projects/colosseum/logs/` | Rotating log directory |
 
 ## Features Implemented
 
@@ -32,7 +32,7 @@ Created a full 24/7 continuous tournament automation framework for the ACT-I Col
 ### ✅ 3. Rotating Log Files
 - Uses Python's `RotatingFileHandler`
 - 10MB max per file, keeps 10 backups
-- Location: `/Users/samantha/Projects/colosseum/logs/colosseum_daemon.log`
+- Location: `./workspaces/prime/Projects/colosseum/logs/colosseum_daemon.log`
 
 ### ✅ 4. Service Management (launchctl/systemctl)
 - **macOS:** Launch Agent plist for launchctl
@@ -53,7 +53,7 @@ Created a full 24/7 continuous tournament automation framework for the ACT-I Col
 
 ### Quick Start (Foreground)
 ```bash
-cd /Users/samantha/Projects/colosseum
+cd ./workspaces/prime/Projects/colosseum
 python3 colosseum_daemon.py
 ```
 

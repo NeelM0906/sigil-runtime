@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-02-23T06:30:53+00:00",
+  "scenario": {
+    "name": "High-stakes sales recovery call",
+    "context": "A prospect (CFO, skeptical, time-constrained) previously agreed to review a proposal but went dark after seeing the price. Goal: re-open the conversation without pressure, rebuild trust, and secure a 20-minute discovery follow-up this week.",
+    "prospect_profile": {
+      "role": "CFO",
+      "state": "Skeptical, price-sensitive, busy",
+      "history": "Positive initial discovery, no response for 11 days",
+      "objections": [
+        "Budget uncertainty",
+        "Concern solution is overkill",
+        "Fear of implementation drag"
+      ]
+    }
+  },
+  "metadata": {
+    "model": "gpt-4o-mini",
+    "mode": "fallback",
+    "mode_by_agent": {
+      "act_i": "fallback",
+      "generic": "fallback"
+    }
+  },
+  "rubric_weights": {
+    "rapport_empathy": 0.2,
+    "strategic_structure": 0.2,
+    "contextual_memory": 0.2,
+    "integrity_based_influence": 0.2,
+    "next_step_clarity": 0.2
+  },
+  "responses": {
+    "act_i": "Hi Jordan, thanks for taking a minute. Last time you were clear that budget discipline matters and I respect that. If this feels like overkill right now, we should say that directly.\n\nWhat I want to avoid is a long rollout for uncertain value. The fastest way to pressure-test this is a 20-minute working session focused on one high-leak workflow and a strict ROI threshold you define. If it misses your bar, we pause.\n\nWould Thursday 10:30 AM or Friday 1:00 PM be easier?",
+    "generic": "Hi Jordan, I wanted to follow up on our proposal. I understand pricing is a concern, but we believe our solution can help improve efficiency and outcomes.\n\nI would love to schedule a call to discuss this further and answer any questions. Are you available this week?"
+  },
+  "scores": {
+    "act_i": {
+      "rapport_empathy": 10,
+      "strategic_structure": 10,
+      "contextual_memory": 9,
+      "integrity_based_influence": 8,
+      "next_step_clarity": 9,
+      "weighted_total": 9.2
+    },
+    "generic": {
+      "rapport_empathy": 9,
+      "strategic_structure": 6,
+      "contextual_memory": 3,
+      "integrity_based_influence": 4,
+      "next_step_clarity": 9,
+      "weighted_total": 6.2
+    }
+  },
+  "summary": {
+    "winner": "ACT-I",
+    "weighted_gap": 3.0,
+    "interpretation": "Positive gap indicates ACT-I performed better under the Colosseum rubric."
+  }
+}

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sai Recovery - The Healer | SAI Network</title>
+    <meta name="description" content="Sai Recovery - Specializing in addiction recovery, trauma healing, and comprehensive wellness programs.">
+    
+    <style>
+        :root {
+            --primary-navy: #1B365D;
+            --primary-gold: #D4AF37;
+            --platinum: #F8F9FA;
+            --slate-100: #F1F5F9;
+            --slate-200: #E2E8F0;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1E293B;
+            --healing-green: #059669;
+            --healing-teal: #0D9488;
+            --healing-blue: #0891B2;
+            
+            --gradient-hero: linear-gradient(135deg, var(--primary-navy) 0%, #2A4A6B 100%);
+            --gradient-healing: linear-gradient(135deg, var(--healing-green) 0%, var(--healing-teal) 50%, var(--healing-blue) 100%);
+            
+            --font-primary: 'Montserrat', sans-serif;
+            --font-accent: 'Playfair Display', serif;
+            
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            --border-radius: 0.5rem;
+            --border-radius-lg: 1rem;
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            line-height: 1.6;
+            color: var(--slate-800);
+            background: var(--platinum);
+        }
+        
+        /* Navigation */
+        .nav-header {
+            background: rgba(27, 54, 93, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: var(--spacing-md) 0;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-logo {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-gold);
+            text-decoration: none;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: var(--spacing-xl);
+        }
+        
+        .nav-link {
+            color: var(--platinum);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-gold);
+        }
+        
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--platinum);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: var(--gradient-healing);
+            color: var(--platinum);
+            padding: 8rem var(--spacing-lg) 6rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '🌿';
+            position: absolute;
+            font-size: 20rem;
+            opacity: 0.1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+            50% { transform: translate(-50%, -50%) translateY(-20px); }
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero-title {
+            font-family: var(--font-accent);
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 700;
+            margin-bottom: var(--spacing-lg);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .hero-description {
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-2xl);
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+        
+        /* Content Sections */
+        .content-section {
+            padding: var(--spacing-3xl) var(--spacing-lg);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            font-family: var(--font-accent);
+            font-size: 2.5rem;
+            color: var(--primary-navy);
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+        
+        /* Healing Programs Grid */
+        .programs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .program-card {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            border-top: 4px solid var(--healing-green);
+            transition: all 0.3s ease;
+        }
+        
+        .program-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .program-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-lg);
+            display: block;
+        }
+        
+        .program-title {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .program-description {
+            color: var(--slate-600);
+            line-height: 1.7;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .program-features {
+            list-style: none;
+        }
+        
+        .program-features li {
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--slate-200);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+        
+        .program-features li:before {
+            content: '✓';
+            color: var(--healing-green);
+            font-weight: bold;
+        }
+        
+        /* Approach Section */
+        .approach-content {
+            background: white;
+            padding: var(--spacing-2xl);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            border-left: 6px solid var(--healing-green);
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .approach-text {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            color: var(--slate-700);
+            text-align: center;
+            font-style: italic;
+        }
+        
+        /* Specializations */
+        .specializations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .specialization {
+            background: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .specialization:hover {
+            border-color: var(--healing-green);
+            transform: translateY(-3px);
+        }
+        
+        .spec-emoji {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .spec-title {
+            font-weight: 600;
+            color: var(--slate-700);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .spec-description {
+            font-size: 0.9rem;
+            color: var(--slate-600);
+            line-height: 1.6;
+        }
+        
+        /* Navigation Back */
+        .nav-back {
+            background: var(--primary-gold);
+            color: var(--slate-800);
+            padding: var(--spacing-md) var(--spacing-xl);
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            transition: all 0.3s ease;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .nav-back:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--primary-navy);
+                flex-direction: column;
+                padding: var(--spacing-lg);
+                transform: translateY(-100%);
+                opacity: 0;
+                transition: all 0.3s ease;
+                pointer-events: none;
+            }
+            
+            .nav-menu.active {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            
+            .nav-toggle {
+                display: block;
+            }
+            
+            .hero {
+                padding: 6rem var(--spacing-md) 4rem;
+            }
+            
+            .content-section {
+                padding: var(--spacing-2xl) var(--spacing-md);
+            }
+            
+            .programs-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+            }
+            
+            .specializations {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-header">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">🧠 SAI Prime</a>
+            
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="forge.html" class="nav-link">Forge</a></li>
+                <li><a href="recovery.html" class="nav-link active">Recovery</a></li>
+                <li><a href="memory.html" class="nav-link">SAI-Memory</a></li>
+                <li><a href="scholar.html" class="nav-link">Scholar</a></li>
+                <li><a href="clusters.html" class="nav-link">Being Clusters</a></li>
+                <li><a href="strategy.html" class="nav-link">Strategy</a></li>
+            </ul>
+            
+            <button class="nav-toggle" id="nav-toggle">☰</button>
+        </div>
+    </nav>
+    
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">🌿 Sai Recovery</h1>
+                <p class="hero-subtitle">The Healer</p>
+                <p class="hero-description">
+                    Specializing in addiction recovery, trauma healing, and comprehensive wellness. 
+                    Building tools and programs that address the root causes of suffering.
+                </p>
+            </div>
+        </section>
+        
+        <section class="content-section">
+            <a href="/" class="nav-back">← Back to Network</a>
+            
+            <h2 class="section-title">Healing Programs</h2>
+            
+            <div class="programs-grid">
+                <div class="program-card">
+                    <span class="program-icon">🔄</span>
+                    <h3 class="program-title">Addiction Recovery</h3>
+                    <p class="program-description">
+                        Comprehensive programs addressing substance and behavioral addictions 
+                        through evidence-based approaches and personalized treatment plans.
+                    </p>
+                    <ul class="program-features">
+                        <li>12-Step Integration</li>
+                        <li>Cognitive Behavioral Therapy</li>
+                        <li>Mindfulness-Based Recovery</li>
+                        <li>Peer Support Networks</li>
+                    </ul>
+                </div>
+                
+                <div class="program-card">
+                    <span class="program-icon">💚</span>
+                    <h3 class="program-title">Trauma Healing</h3>
+                    <p class="program-description">
+                        Specialized trauma-informed care addressing PTSD, childhood trauma, 
+                        and complex trauma through proven therapeutic modalities.
+                    </p>
+                    <ul class="program-features">
+                        <li>EMDR Therapy</li>
+                        <li>Somatic Experiencing</li>
+                        <li>Narrative Therapy</li>
+                        <li>Group Processing</li>
+                    </ul>
+                </div>
+                
+                <div class="program-card">
+                    <span class="program-icon">🧘</span>
+                    <h3 class="program-title">Wellness Optimization</h3>
+                    <p class="program-description">
+                        Holistic wellness programs focusing on mental, physical, and spiritual 
+                        health through integrated lifestyle interventions.
+                    </p>
+                    <ul class="program-features">
+                        <li>Nutrition Counseling</li>
+                        <li>Exercise Therapy</li>
+                        <li>Sleep Optimization</li>
+                        <li>Stress Management</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="approach-content">
+                <p class="approach-text">
+                    "True healing addresses root causes, not just symptoms. We integrate evidence-based 
+                    treatments with compassionate care to create lasting transformation and end the 
+                    cycle of suffering at its source."
+                </p>
+            </div>
+            
+            <h2 class="section-title">Specialized Areas</h2>
+            
+            <div class="specializations">
+                <div class="specialization">
+                    <span class="spec-emoji">🎯</span>
+                    <h4 class="spec-title">Addiction Medicine</h4>
+                    <p class="spec-description">
+                        Evidence-based treatment for substance use disorders
+                    </p>
+                </div>
+                
+                <div class="specialization">
+                    <span class="spec-emoji">🧠</span>
+                    <h4 class="spec-title">Mental Health</h4>
+                    <p class="spec-description">
+                        Depression, anxiety, and mood disorder treatment
+                    </p>
+                </div>
+                
+                <div class="specialization">
+                    <span class="spec-emoji">🤝</span>
+                    <h4 class="spec-title">Relationship Therapy</h4>
+                    <p class="spec-description">
+                        Couples and family healing programs
+                    </p>
+                </div>
+                
+                <div class="specialization">
+                    <span class="spec-emoji">⚡</span>
+                    <h4 class="spec-title">Crisis Intervention</h4>
+                    <p class="spec-description">
+                        Immediate support for mental health emergencies
+                    </p>
+                </div>
+                
+                <div class="specialization">
+                    <span class="spec-emoji">🏃</span>
+                    <h4 class="spec-title">Behavioral Change</h4>
+                    <p class="spec-description">
+                        Habit formation and lifestyle modification
+                    </p>
+                </div>
+                
+                <div class="specialization">
+                    <span class="spec-emoji">🌱</span>
+                    <h4 class="spec-title">Personal Growth</h4>
+                    <p class="spec-description">
+                        Self-actualization and potential development
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <script>
+        // Simple navigation toggle for mobile
+        document.getElementById('nav-toggle')?.addEventListener('click', function() {
+            const navMenu = document.getElementById('nav-menu');
+            navMenu.classList.toggle('active');
+            this.textContent = navMenu.classList.contains('active') ? '✕' : '☰';
+        });
+        
+        // Close mobile nav when clicking links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const navMenu = document.getElementById('nav-menu');
+                const navToggle = document.getElementById('nav-toggle');
+                navMenu.classList.remove('active');
+                if (navToggle) navToggle.textContent = '☰';
+            });
+        });
+    </script>
+</body>
+</html>

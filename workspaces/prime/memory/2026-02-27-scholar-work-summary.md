@@ -3,7 +3,7 @@
 ## 1. Email/Ad Colosseum (Built for Adam)
 - **What:** Live AI battle arena that pre-tests email subject lines, ad copy, and CTAs against simulated lawyer/medical provider personas BEFORE real sends
 - **Status:** LIVE — 202 battles completed, 7 judge personas (4 legal, 3 medical)
-- **Location:** /Users/samantha/.openclaw/workspace/colosseum/email_ad_domain/
+- **Location:** ~/.openclaw/workspace/colosseum/email_ad_domain/
 - **Top Performers:**
   - 🥇 "The 3-second mistake costing PI attorneys $47K per case" — 24W-5L (Score: 7.15)
   - 🥈 "Ready to stop being the bottleneck?" — 17W-4L (Score: 6.50)
@@ -20,7 +20,7 @@
 ## 3. 126K Lawyer Contacts
 - **Count:** 126,356 contacts from Seamless AI
 - **Columns:** Name, bio, title, company, LinkedIn, emails, phones, location
-- **Location:** /Users/samantha/.openclaw/workspace/sisters/sai-recovery/data/seamless_lawyers.csv
+- **Location:** ~/.openclaw/workspace/sisters/sai-recovery/data/seamless_lawyers.csv
 - **CRM Status:** NOT yet loaded into Supabase (only 170 contacts in CRM currently)
 
 ## 4. SMS/Text Quiz Engagement Plan

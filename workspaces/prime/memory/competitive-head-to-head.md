@@ -6,7 +6,7 @@
 
 ## What Was Built
 
-Created `/Users/samantha/Projects/prove-ahead/head_to_head.py` — a comprehensive competitive intelligence framework that:
+Created `./workspaces/prime/Projects/prove-ahead/head_to_head.py` — a comprehensive competitive intelligence framework that:
 
 ### 1. Captures Competitor AI Voice Agent Responses
 
@@ -37,7 +37,7 @@ Five battle-tested scenarios covering critical influence moments:
 
 ### 3. Runs Through Our 19 Colosseum Judges
 
-The framework integrates with all 19 judges from `/Users/samantha/Projects/colosseum/v2/data/judges_19.json`:
+The framework integrates with all 19 judges from `./workspaces/prime/Projects/colosseum/v2/data/judges_19.json`:
 
 **Core 5:**
 - Formula Judge (39 components)
@@ -82,13 +82,13 @@ The framework integrates with all 19 judges from `/Users/samantha/Projects/colos
 
 ### Setup (first time)
 ```bash
-cd /Users/samantha/Projects/prove-ahead
+cd ./workspaces/prime/Projects/prove-ahead
 source venv/bin/activate  # venv already created with deps
 ```
 
 ### Quick Test (1 scenario, 1 competitor, 5 judges)
 ```bash
-cd /Users/samantha/Projects/prove-ahead
+cd ./workspaces/prime/Projects/prove-ahead
 source venv/bin/activate
 python head_to_head.py --quick
 ```

@@ -1,0 +1,449 @@
+/* 
+=== ACT-I COMPETITIVE COMPARISON VISUAL DESIGN SYSTEM ===
+Visual Architect: Complete CSS specifications for competitive analysis one-pager
+Positioning: Human Actualization vs Task Automation
+*/
+
+/* === CORE COLOR PALETTE === */
+:root {
+  /* ACT-I Brand Colors */
+  --acti-navy: #1B365D;
+  --acti-gold: #D4AF37;
+  --acti-platinum: #E5E4E2;
+  
+  /* Competitive Hierarchy */
+  --winner-primary: #2E8B57;    /* Sea Green - Clear winner */
+  --winner-accent: #90EE90;     /* Light Green - Winner highlight */
+  --mid-tier: #4682B4;          /* Steel Blue - Decent competitor */
+  --low-tier: #708090;          /* Slate Gray - Weak competitor */
+  --poor-tier: #CD5C5C;         /* Indian Red - Poor performance */
+  
+  /* Status Indicators */
+  --excellent: #228B22;         /* Forest Green */
+  --good: #32CD32;              /* Lime Green */
+  --average: #FFD700;           /* Gold */
+  --weak: #FF8C00;              /* Dark Orange */
+  --poor: #DC143C;              /* Crimson */
+  
+  /* Background System */
+  --bg-primary: #0D1B2A;        /* Deep navy background */
+  --bg-secondary: #1B263B;      /* Card backgrounds */
+  --bg-tertiary: #263852;       /* Elevated elements */
+  --border-color: #415A77;      /* Subtle borders */
+  --text-primary: #FFFFFF;
+  --text-secondary: #B8C5D1;
+  --text-muted: #7A8B99;
+}
+
+/* === TYPOGRAPHY HIERARCHY === */
+.comparison-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--acti-gold);
+  text-align: center;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.comparison-subtitle {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 3rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-header {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--acti-platinum);
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--acti-gold);
+  padding-bottom: 0.5rem;
+}
+
+/* === COMPARISON TABLE LAYOUT === */
+.comparison-container {
+  background: var(--bg-primary);
+  padding: 4rem 2rem;
+  min-height: 100vh;
+}
+
+.comparison-table {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* === TABLE HEADERS === */
+.table-header {
+  background: linear-gradient(135deg, var(--acti-navy), #2C4A6B);
+  color: var(--text-primary);
+}
+
+.header-cell {
+  padding: 1.5rem 1rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.header-cell:first-child {
+  width: 200px;
+  background: var(--acti-gold);
+  color: var(--acti-navy);
+  font-weight: 700;
+}
+
+.acti-header {
+  background: linear-gradient(135deg, var(--acti-gold), #F4D03F);
+  color: var(--acti-navy);
+  position: relative;
+}
+
+.acti-header::before {
+  content: "👑";
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-size: 1.5rem;
+}
+
+/* === TABLE ROWS === */
+.comparison-row {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease;
+}
+
+.comparison-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.criteria-cell {
+  padding: 1.25rem 1rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--acti-platinum);
+  background: var(--bg-tertiary);
+  border-right: 2px solid var(--acti-gold);
+}
+
+.score-cell {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.acti-cell {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+  border-right: 2px solid var(--acti-gold);
+}
+
+/* === SCORING SYSTEM === */
+.score-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  min-width: 60px;
+  color: white;
+}
+
+.score-excellent { background: var(--excellent); }
+.score-good { background: var(--good); color: var(--acti-navy); }
+.score-average { background: var(--average); color: var(--acti-navy); }
+.score-weak { background: var(--weak); }
+.score-poor { background: var(--poor); }
+
+.score-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* === VISUAL INDICATORS === */
+.capability-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin: 0.25rem;
+}
+
+.has-capability {
+  background: var(--winner-accent);
+  color: var(--acti-navy);
+}
+
+.has-capability::before {
+  content: "✓";
+  font-weight: 700;
+}
+
+.no-capability {
+  background: rgba(220, 20, 60, 0.2);
+  color: var(--poor);
+}
+
+.no-capability::before {
+  content: "✗";
+  font-weight: 700;
+}
+
+.partial-capability {
+  background: rgba(255, 215, 0, 0.2);
+  color: var(--average);
+}
+
+.partial-capability::before {
+  content: "~";
+  font-weight: 700;
+}
+
+/* === SCORECARD SECTION === */
+.scorecard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 4rem auto;
+  max-width: 1200px;
+}
+
+.competitor-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.competitor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.acti-card {
+  border: 3px solid var(--acti-gold);
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+  position: relative;
+}
+
+.acti-card::before {
+  content: "CATEGORY LEADER";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--acti-gold);
+  color: var(--acti-navy);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.competitor-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.competitor-type {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.overall-score {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.score-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.score-circle.excellent { background: var(--excellent); }
+.score-circle.good { background: var(--good); color: var(--acti-navy); }
+.score-circle.average { background: var(--average); color: var(--acti-navy); }
+.score-circle.weak { background: var(--weak); }
+.score-circle.poor { background: var(--poor); }
+
+.criteria-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.criteria-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.criteria-name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.criteria-rating {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rating-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-color);
+}
+
+.rating-dot.filled { background: var(--acti-gold); }
+
+/* === ICONOGRAPHY === */
+.feature-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.advantage-callout {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.1));
+  border: 2px solid var(--acti-gold);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  position: relative;
+}
+
+.advantage-callout::before {
+  content: "🚀";
+  position: absolute;
+  top: -12px;
+  left: 1rem;
+  background: var(--bg-secondary);
+  padding: 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.advantage-title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--acti-gold);
+  margin-bottom: 0.5rem;
+}
+
+.advantage-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 1024px) {
+  .comparison-table {
+    font-size: 0.85rem;
+  }
+  
+  .header-cell, .score-cell, .criteria-cell {
+    padding: 1rem 0.75rem;
+  }
+  
+  .scorecard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .comparison-container {
+    padding: 2rem 1rem;
+  }
+  
+  .comparison-title {
+    font-size: 2rem;
+  }
+  
+  .comparison-table {
+    font-size: 0.8rem;
+  }
+  
+  .header-cell:first-child {
+    width: 150px;
+  }
+  
+  .scorecard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === PRINT STYLES === */
+@media print {
+  .comparison-container {
+    background: white;
+    color: black;
+  }
+  
+  .comparison-table {
+    box-shadow: none;
+    border: 2px solid #000;
+  }
+  
+  .acti-header, .acti-cell {
+    background: #f0f0f0 !important;
+  }
+}

@@ -1,15 +1,19 @@
+# Team Context
+*Maintained by SAI Prime. Read by all sisters.*
 
+## Active Priorities
 
 ## Recent Task Outcomes
-- [2026-03-06 23:34] Total failure test (by forge)
-- [2026-03-06 23:34] Fallback test (by forge)
-- [2026-03-06 23:34] Being memory test (by forge)
-- [2026-03-06 23:34] Cross-task recall test (by forge)
-- [2026-03-06 23:34] Persistence test goal (by forge)
-- [2026-03-06 23:34] Test task (by forge, memory)
-- [2026-03-06 23:34] Test task (by forge, memory)
-- [2026-03-06 23:34] Test task (by forge, memory)
-- [2026-03-06 23:34] Research top 5 competitors (by forge, memory)
-- [2026-03-06 04:26] @SAI can you delegate a demo task to one of the agent teams? (by the-strategist, the-researcher, the-writer, the-agreement-maker)
+
+- [2026-03-11 21:21] can you create a video of a boy cycling on a mountain during sunrise (by the-writer, the-filmmaker)
+- [2026-03-11 20:40] Completed runs test (by forge, memory)
+- [2026-03-11 20:40] Synth fail test (by forge, memory)
+- [2026-03-11 20:40] Full pipeline integration test (by forge, scholar)
+- [2026-03-11 20:40] No awaiting test (by forge, memory)
+- [2026-03-11 20:40] Cascade test (by forge, memory)
+- [2026-03-11 20:40] Status test (by forge, memory)
+- [2026-03-11 20:40] Fail capture test (by forge, memory)
+- [2026-03-11 20:40] Synthesis SM test (by forge, memory)
+- [2026-03-11 20:40] Prior output test (by a, b)
 
 ## Cross-Being Notes

@@ -20,5 +20,5 @@ Multiple worker threads trying to write to SQLite simultaneously. SQLite can onl
 - Daemon crashes ~30 min after restart
 
 ## For Codex
-File: /Users/samantha/Projects/colosseum/FULL_POWER_DAEMON.py
+File: ./workspaces/prime/Projects/colosseum/FULL_POWER_DAEMON.py
 Fix the `DomainWorker` class to add sqlite3 write retry with exponential backoff (max 5 retries, starting at 100ms).

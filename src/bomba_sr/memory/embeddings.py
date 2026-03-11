@@ -14,18 +14,41 @@ class EmbeddingProvider(Protocol):
         raise NotImplementedError
 
 
+def default_embedding_api_key() -> str | None:
+    return os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY") or None
+
+
+def default_embedding_model() -> str:
+    if os.getenv("OPENAI_EMBEDDING_MODEL"):
+        return os.environ["OPENAI_EMBEDDING_MODEL"]
+    if os.getenv("OPENROUTER_API_KEY"):
+        return "openai/text-embedding-3-small"
+    return "text-embedding-3-small"
+
+
+def default_embedding_api_base() -> str:
+    if os.getenv("OPENAI_BASE_URL"):
+        return os.environ["OPENAI_BASE_URL"]
+    if os.getenv("OPENROUTER_API_KEY"):
+        return os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    return "https://api.openai.com/v1"
+
+
 @dataclass
 class OpenAIEmbeddingProvider:
     api_key: str
-    model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    api_base: str = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model: str = default_embedding_model()
+    api_base: str = default_embedding_api_base()
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+        # OpenAI text-embedding-3-small has ~8191 token limit (~30K chars).
+        # Truncate oversized inputs to avoid 400 errors.
+        truncated = [t[:30000] if len(t) > 30000 else t for t in texts]
         payload = {
             "model": self.model,
-            "input": texts,
+            "input": truncated,
         }
         req = Request(
             url=f"{self.api_base.rstrip('/')}/embeddings",

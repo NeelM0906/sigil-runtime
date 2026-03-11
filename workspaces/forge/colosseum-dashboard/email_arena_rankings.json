@@ -1,0 +1,9 @@
+{
+  \"updated_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+  \"total_beings\": 29,
+  \"subject_lines\": 29,
+  \"sequences\": 0,
+  \"top_10\": [
+$(sqlite3 -header -column email_ad.db "SELECT id, type, content, wins, losses, score FROM beings ORDER BY score DESC LIMIT 10;" | awk 'NR>2 { gsub(/^[ \t]+|[ \t]+$/, \"\"); print "{\"id\":" $1 ", \"type\":\"" $2 "\", \"content\":\"" $3 "\", \"wins\":" $4 ", \"losses\":" $5 ", \"score\":" $6 "}," }')
+  ]
+}

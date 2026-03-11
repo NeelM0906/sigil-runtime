@@ -74,6 +74,29 @@ class AgenticSearchTests(unittest.TestCase):
             self.assertGreaterEqual(len(pack.results), 1)
             self.assertIn("python-fallback-search", pack.commands[0])
 
+    def test_fallback_when_query_is_multiline(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "src").mkdir()
+            (root / "src" / "agent.md").write_text(
+                "alpha line\nbeta line\ngamma line\n",
+                encoding="utf-8",
+            )
+
+            exe = AgenticSearchExecutor(root)
+            plan = SearchPlan(
+                query="alpha line\nbeta line",
+                intent="targeted_lookup",
+                scope=["src"],
+                file_types=["md"],
+                escalation_allowed=True,
+                escalation_mode="balanced",
+            )
+            pack = exe.execute(plan)
+            self.assertGreaterEqual(len(pack.results), 1)
+            self.assertIn("python-fallback-search", pack.commands[0])
+            self.assertIn("multiline-query", pack.commands[0])
+
 
 if __name__ == "__main__":
     unittest.main()

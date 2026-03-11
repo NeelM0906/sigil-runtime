@@ -1,0 +1,236 @@
+[
+  {
+    "id": "fun_magic_zone_action",
+    "title": "Awe Engineer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 8.442619047619047
+  },
+  {
+    "id": "people_talent_client_facing",
+    "title": "Onboarding Coordinator",
+    "area": "People & Talent",
+    "average": 8.236904761904762
+  },
+  {
+    "id": "fun_magic_leader",
+    "title": "Chief Experience Officer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 8.103571428571428
+  },
+  {
+    "id": "marketing_inbound_zone_action",
+    "title": "Shared Experience Designer",
+    "area": "Marketing \u2014 Inbound",
+    "average": 8.003571428571428
+  },
+  {
+    "id": "fun_magic_client_facing",
+    "title": "Client Journey Choreographer",
+    "area": "Fun & Magic (Lever 7)",
+    "average": 7.996428571428571
+  },
+  {
+    "id": "vision_leadership_zone_action",
+    "title": "Vision Translator",
+    "area": "Vision & Leadership",
+    "average": 7.858333333333333
+  },
+  {
+    "id": "sales_influence_zone_action",
+    "title": "Truth-to-Pain Navigator",
+    "area": "Sales & Influence",
+    "average": 7.847614285714285
+  },
+  {
+    "id": "marketing_inbound_client_facing",
+    "title": "Funnel Architect",
+    "area": "Marketing \u2014 Inbound",
+    "average": 7.816661904761904
+  },
+  {
+    "id": "sales_influence_leader",
+    "title": "Sales Director",
+    "area": "Sales & Influence",
+    "average": 7.792857142857142
+  },
+  {
+    "id": "people_talent_zone_action",
+    "title": "Recruiter",
+    "area": "People & Talent",
+    "average": 7.6866666666666665
+  },
+  {
+    "id": "client_success_leader",
+    "title": "Client Success Director",
+    "area": "Client Success & Retention",
+    "average": 7.627380952380952
+  },
+  {
+    "id": "people_talent_leader",
+    "title": "Chief People Officer",
+    "area": "People & Talent",
+    "average": 7.614285714285714
+  },
+  {
+    "id": "vision_leadership_leader",
+    "title": "Chief Vision Officer",
+    "area": "Vision & Leadership",
+    "average": 7.598809523809524
+  },
+  {
+    "id": "sales_influence_client_facing",
+    "title": "Discovery Call Specialist",
+    "area": "Sales & Influence",
+    "average": 7.597619047619048
+  },
+  {
+    "id": "legal_compliance_client_facing",
+    "title": "Ethics Officer",
+    "area": "Legal & Compliance",
+    "average": 7.561904761904761
+  },
+  {
+    "id": "marketing_inbound_leader",
+    "title": "Content Strategy Director",
+    "area": "Marketing \u2014 Inbound",
+    "average": 7.475476190476191
+  },
+  {
+    "id": "client_success_client_facing",
+    "title": "Account Manager",
+    "area": "Client Success & Retention",
+    "average": 7.438095238095237
+  },
+  {
+    "id": "vision_leadership_client_facing",
+    "title": "Cross-Company Synergy Director",
+    "area": "Vision & Leadership",
+    "average": 7.432142857142857
+  },
+  {
+    "id": "finance_client_facing",
+    "title": "Collections Specialist",
+    "area": "Finance & Revenue",
+    "average": 7.405952380952381
+  },
+  {
+    "id": "marketing_outbound_zone_action",
+    "title": "Ecosystem Merger Specialist",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.395238095238095
+  },
+  {
+    "id": "legal_compliance_zone_action",
+    "title": "Contract Drafter",
+    "area": "Legal & Compliance",
+    "average": 7.335714285714285
+  },
+  {
+    "id": "innovation_rd_leader",
+    "title": "Chief Innovation Officer",
+    "area": "Innovation & R&D",
+    "average": 7.304761904761905
+  },
+  {
+    "id": "marketing_outbound_leader",
+    "title": "Outbound Strategy Director",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.271428571428571
+  },
+  {
+    "id": "finance_leader",
+    "title": "CFO",
+    "area": "Finance & Revenue",
+    "average": 7.2595238095238095
+  },
+  {
+    "id": "legal_compliance_leader",
+    "title": "General Counsel",
+    "area": "Legal & Compliance",
+    "average": 7.2595238095238095
+  },
+  {
+    "id": "client_fulfillment_client_facing",
+    "title": "Client Communication Lead",
+    "area": "Client Fulfillment & Delivery",
+    "average": 7.230952380952381
+  },
+  {
+    "id": "client_success_zone_action",
+    "title": "Churn Prevention Analyst",
+    "area": "Client Success & Retention",
+    "average": 7.223804761904762
+  },
+  {
+    "id": "operations_leader",
+    "title": "COO",
+    "area": "Operations & Process Mastery",
+    "average": 7.204761904761905
+  },
+  {
+    "id": "technology_zone_action",
+    "title": "AI/ML Engineer",
+    "area": "Technology & Infrastructure",
+    "average": 7.197619047619047
+  },
+  {
+    "id": "innovation_rd_zone_action",
+    "title": "Being Evolution Architect",
+    "area": "Innovation & R&D",
+    "average": 7.179047619047619
+  },
+  {
+    "id": "client_fulfillment_leader",
+    "title": "Fulfillment Director",
+    "area": "Client Fulfillment & Delivery",
+    "average": 7.164285714285715
+  },
+  {
+    "id": "finance_zone_action",
+    "title": "Cash Flow Analyst",
+    "area": "Finance & Revenue",
+    "average": 7.133571428571429
+  },
+  {
+    "id": "client_fulfillment_zone_action",
+    "title": "Project Manager",
+    "area": "Client Fulfillment & Delivery",
+    "average": 7.1190476190476195
+  },
+  {
+    "id": "technology_leader",
+    "title": "CTO",
+    "area": "Technology & Infrastructure",
+    "average": 7.110714285714285
+  },
+  {
+    "id": "marketing_outbound_client_facing",
+    "title": "Meeting Setter",
+    "area": "Marketing \u2014 Outbound / Sourcing",
+    "average": 7.1000000000000005
+  },
+  {
+    "id": "operations_zone_action",
+    "title": "Zone Action Tracker",
+    "area": "Operations & Process Mastery",
+    "average": 7.095714285714286
+  },
+  {
+    "id": "technology_client_facing",
+    "title": "CRM Administrator",
+    "area": "Technology & Infrastructure",
+    "average": 6.9127
+  },
+  {
+    "id": "operations_client_facing",
+    "title": "Meeting Optimization Specialist",
+    "area": "Operations & Process Mastery",
+    "average": 6.8011904761904765
+  },
+  {
+    "id": "innovation_rd_client_facing",
+    "title": "Scoring System Optimizer",
+    "area": "Innovation & R&D",
+    "average": 6.796428571428571
+  }
+]

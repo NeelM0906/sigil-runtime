@@ -1,0 +1,494 @@
+/* =====================================================
+   ACT-I PDF DOCUMENT DESIGN SYSTEM
+   Professional Brand Identity for Company Profile
+   ===================================================== */
+
+/* ===== DOCUMENT COLOR PALETTE ===== */
+:root {
+  /* Primary Brand Colors - PDF Optimized */
+  --doc-navy-primary: #0A1628;      /* Deep navy for headers */
+  --doc-navy-secondary: #1B365D;    /* Mid navy for sections */
+  --doc-navy-light: #2C4A6B;       /* Light navy for accents */
+  
+  /* Gold System - Print Optimized */
+  --doc-gold-primary: #B8860B;      /* Rich gold for PDF (darker than web) */
+  --doc-gold-light: #DAA520;       /* Medium gold for highlights */
+  --doc-gold-accent: #FFD700;      /* Bright gold for small elements */
+  
+  /* Document Grays */
+  --doc-black: #000000;             /* Pure black for body text */
+  --doc-gray-dark: #333333;        /* Dark gray for secondary text */
+  --doc-gray-medium: #666666;      /* Medium gray for captions */
+  --doc-gray-light: #CCCCCC;       /* Light gray for borders/lines */
+  --doc-white: #FFFFFF;            /* Pure white backgrounds */
+  
+  /* Page Layout */
+  --doc-margin: 0.75in;            /* Standard document margins */
+  --doc-column-gap: 24pt;         /* Gap between columns */
+  --doc-line-height: 1.4;         /* Optimal reading line height */
+}
+
+/* ===== TYPOGRAPHY SYSTEM - PRINT OPTIMIZED ===== */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap');
+
+:root {
+  /* Font Families */
+  --doc-font-primary: 'Montserrat', Arial, sans-serif;
+  --doc-font-accent: 'Playfair Display', 'Times New Roman', serif;
+  
+  /* Font Sizes - Point System for PDF */
+  --doc-text-caption: 8pt;         /* Small captions, footnotes */
+  --doc-text-small: 9pt;          /* Supporting text */
+  --doc-text-body: 10pt;          /* Body text */
+  --doc-text-large: 12pt;         /* Important body text */
+  --doc-text-subhead: 14pt;       /* Subheadings */
+  --doc-text-heading: 18pt;       /* Section headings */
+  --doc-text-title: 24pt;         /* Page titles */
+  --doc-text-hero: 32pt;          /* Cover title */
+}
+
+/* Document Typography Classes */
+.doc-title-cover {
+  font-family: var(--doc-font-accent);
+  font-size: var(--doc-text-hero);
+  font-weight: 700;
+  color: var(--doc-navy-primary);
+  text-align: center;
+  margin-bottom: 24pt;
+  line-height: 1.2;
+}
+
+.doc-title-page {
+  font-family: var(--doc-font-accent);
+  font-size: var(--doc-text-title);
+  font-weight: 600;
+  color: var(--doc-navy-primary);
+  margin-bottom: 18pt;
+  border-bottom: 2pt solid var(--doc-gold-primary);
+  padding-bottom: 6pt;
+}
+
+.doc-heading-section {
+  font-family: var(--doc-font-primary);
+  font-size: var(--doc-text-heading);
+  font-weight: 700;
+  color: var(--doc-navy-secondary);
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+}
+
+.doc-heading-subsection {
+  font-family: var(--doc-font-primary);
+  font-size: var(--doc-text-subhead);
+  font-weight: 600;
+  color: var(--doc-navy-primary);
+  margin-top: 18pt;
+  margin-bottom: 9pt;
+}
+
+.doc-body-text {
+  font-family: var(--doc-font-primary);
+  font-size: var(--doc-text-body);
+  font-weight: 400;
+  color: var(--doc-black);
+  line-height: var(--doc-line-height);
+  margin-bottom: 12pt;
+  text-align: justify;
+}
+
+.doc-body-large {
+  font-family: var(--doc-font-primary);
+  font-size: var(--doc-text-large);
+  font-weight: 400;
+  color: var(--doc-black);
+  line-height: var(--doc-line-height);
+  margin-bottom: 12pt;
+}
+
+.doc-caption {
+  font-family: var(--doc-font-primary);
+  font-size: var(--doc-text-caption);
+  font-weight: 400;
+  color: var(--doc-gray-medium);
+  font-style: italic;
+  margin-top: 6pt;
+}
+
+.doc-accent-text {
+  color: var(--doc-gold-primary);
+  font-weight: 600;
+}
+
+.doc-highlight {
+  background-color: rgba(184, 134, 11, 0.1);
+  padding: 2pt 4pt;
+  border-left: 3pt solid var(--doc-gold-primary);
+}
+
+/* ===== PAGE LAYOUT SYSTEM ===== */
+
+/* Cover Page */
+.doc-cover {
+  text-align: center;
+  padding-top: 2in;
+  background: linear-gradient(135deg, var(--doc-white) 0%, #f8f9fa 100%);
+  min-height: 11in;
+  position: relative;
+}
+
+.doc-cover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4pt;
+  background: linear-gradient(90deg, var(--doc-navy-primary), var(--doc-gold-primary));
+}
+
+.doc-cover-logo {
+  width: 120pt;
+  height: 120pt;
+  margin: 0 auto 36pt auto;
+  background: var(--doc-navy-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--doc-gold-primary);
+  font-size: 48pt;
+  font-weight: bold;
+}
+
+.doc-cover-subtitle {
+  font-size: var(--doc-text-large);
+  color: var(--doc-gray-dark);
+  margin-bottom: 48pt;
+}
+
+.doc-cover-date {
+  position: absolute;
+  bottom: 1in;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--doc-gray-medium);
+}
+
+/* Standard Page Layout */
+.doc-page {
+  margin: var(--doc-margin);
+  min-height: calc(11in - 1.5in);
+  position: relative;
+}
+
+.doc-header {
+  border-bottom: 1pt solid var(--doc-gray-light);
+  padding-bottom: 12pt;
+  margin-bottom: 24pt;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.doc-header-logo {
+  height: 36pt;
+  color: var(--doc-navy-primary);
+  font-weight: bold;
+  font-size: 16pt;
+}
+
+.doc-header-title {
+  font-size: var(--doc-text-small);
+  color: var(--doc-gray-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+}
+
+.doc-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1pt solid var(--doc-gray-light);
+  padding-top: 6pt;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--doc-text-caption);
+  color: var(--doc-gray-medium);
+}
+
+/* ===== COMPONENT DESIGNS ===== */
+
+/* Executive Summary Box */
+.doc-exec-summary {
+  background: rgba(26, 54, 93, 0.05);
+  border: 1pt solid var(--doc-navy-secondary);
+  border-left: 4pt solid var(--doc-gold-primary);
+  padding: 18pt;
+  margin: 24pt 0;
+  border-radius: 3pt;
+}
+
+/* Being Profile Cards */
+.doc-being-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--doc-column-gap);
+  margin: 18pt 0;
+}
+
+.doc-being-card {
+  border: 1pt solid var(--doc-gray-light);
+  padding: 12pt;
+  border-radius: 3pt;
+  background: var(--doc-white);
+}
+
+.doc-being-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12pt;
+}
+
+.doc-being-icon {
+  width: 24pt;
+  height: 24pt;
+  background: var(--doc-gold-primary);
+  border-radius: 50%;
+  margin-right: 12pt;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--doc-white);
+  font-size: 10pt;
+  font-weight: bold;
+}
+
+.doc-being-name {
+  font-size: var(--doc-text-subhead);
+  font-weight: 600;
+  color: var(--doc-navy-primary);
+}
+
+.doc-being-stats {
+  background: rgba(184, 134, 11, 0.1);
+  padding: 9pt;
+  border-radius: 3pt;
+  margin-top: 12pt;
+}
+
+.doc-stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3pt;
+}
+
+.doc-stat-label {
+  font-size: var(--doc-text-small);
+  color: var(--doc-gray-dark);
+}
+
+.doc-stat-value {
+  font-weight: 600;
+  color: var(--doc-gold-primary);
+}
+
+/* Data Tables */
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18pt 0;
+  font-size: var(--doc-text-body);
+}
+
+.doc-table th {
+  background: var(--doc-navy-primary);
+  color: var(--doc-white);
+  padding: 9pt 12pt;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2pt solid var(--doc-gold-primary);
+}
+
+.doc-table td {
+  padding: 9pt 12pt;
+  border-bottom: 1pt solid var(--doc-gray-light);
+  vertical-align: top;
+}
+
+.doc-table tbody tr:nth-child(even) {
+  background: rgba(248, 249, 250, 0.5);
+}
+
+/* Charts and Infographics */
+.doc-chart-container {
+  text-align: center;
+  margin: 24pt 0;
+  padding: 18pt;
+  background: var(--doc-white);
+  border: 1pt solid var(--doc-gray-light);
+  border-radius: 3pt;
+}
+
+.doc-chart-title {
+  font-size: var(--doc-text-subhead);
+  font-weight: 600;
+  color: var(--doc-navy-primary);
+  margin-bottom: 12pt;
+}
+
+.doc-metric-large {
+  font-size: 36pt;
+  font-weight: 700;
+  color: var(--doc-gold-primary);
+  display: block;
+  margin: 12pt 0;
+}
+
+.doc-metric-label {
+  font-size: var(--doc-text-small);
+  color: var(--doc-gray-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+}
+
+/* Financial Overview */
+.doc-financial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18pt;
+  margin: 24pt 0;
+}
+
+.doc-financial-card {
+  text-align: center;
+  padding: 18pt;
+  border: 1pt solid var(--doc-navy-secondary);
+  border-radius: 3pt;
+  background: linear-gradient(135deg, var(--doc-white) 0%, rgba(26, 54, 93, 0.02) 100%);
+}
+
+.doc-financial-amount {
+  font-size: 24pt;
+  font-weight: 700;
+  color: var(--doc-navy-primary);
+  display: block;
+}
+
+.doc-financial-period {
+  font-size: var(--doc-text-small);
+  color: var(--doc-gray-medium);
+  margin-top: 6pt;
+}
+
+/* Timeline Elements */
+.doc-timeline {
+  position: relative;
+  padding-left: 36pt;
+  margin: 24pt 0;
+}
+
+.doc-timeline::before {
+  content: '';
+  position: absolute;
+  left: 12pt;
+  top: 0;
+  bottom: 0;
+  width: 2pt;
+  background: var(--doc-gold-primary);
+}
+
+.doc-timeline-item {
+  position: relative;
+  margin-bottom: 18pt;
+  padding-bottom: 18pt;
+}
+
+.doc-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -30pt;
+  top: 3pt;
+  width: 8pt;
+  height: 8pt;
+  background: var(--doc-gold-primary);
+  border-radius: 50%;
+}
+
+.doc-timeline-date {
+  font-size: var(--doc-text-small);
+  color: var(--doc-gold-primary);
+  font-weight: 600;
+  margin-bottom: 3pt;
+}
+
+/* Contact Information */
+.doc-contact-section {
+  background: rgba(26, 54, 93, 0.05);
+  border-radius: 3pt;
+  padding: 18pt;
+  margin-top: 36pt;
+}
+
+.doc-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--doc-column-gap);
+}
+
+.doc-contact-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 9pt;
+}
+
+.doc-contact-icon {
+  width: 18pt;
+  height: 18pt;
+  background: var(--doc-gold-primary);
+  border-radius: 50%;
+  margin-right: 9pt;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--doc-white);
+  font-size: 8pt;
+}
+
+/* ===== PRINT OPTIMIZATIONS ===== */
+@media print {
+  .doc-page {
+    margin: 0;
+    box-shadow: none;
+  }
+  
+  .doc-being-grid {
+    break-inside: avoid;
+  }
+  
+  .doc-chart-container {
+    break-inside: avoid;
+  }
+  
+  .doc-exec-summary {
+    break-inside: avoid;
+  }
+}
+
+/* ===== PDF GENERATION HELPERS ===== */
+.page-break {
+  page-break-after: always;
+}
+
+.no-break {
+  break-inside: avoid;
+}
+
+.doc-appendix {
+  border-top: 2pt solid var(--doc-navy-primary);
+  margin-top: 36pt;
+  padding-top: 24pt;
+}

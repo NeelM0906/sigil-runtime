@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-03-01T04:51:38.574384+00:00",
+  "type": "sequence",
+  "limit": 10,
+  "count": 0,
+  "summary": {
+    "total_sequences": 0,
+    "with_battles": 0,
+    "without_battles": 0,
+    "avg_win_rate": 0.0
+  },
+  "top": [],
+  "bottom": [],
+  "rankings": []
+}

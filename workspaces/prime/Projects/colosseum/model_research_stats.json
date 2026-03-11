@@ -1,0 +1,50 @@
+{
+  "openai/gpt-4o-mini": {
+    "rounds": 388,
+    "total_score": 3006.7000000000007,
+    "avg_score": 7.749226804123714,
+    "errors": 0
+  },
+  "openai/gpt-4o": {
+    "rounds": 397,
+    "total_score": 3047.100000000004,
+    "avg_score": 7.675314861460968,
+    "errors": 0
+  },
+  "anthropic/claude-3.5-sonnet": {
+    "rounds": 380,
+    "total_score": 3268.3000000000006,
+    "avg_score": 8.600789473684213,
+    "errors": 0
+  },
+  "anthropic/claude-3-haiku": {
+    "rounds": 380,
+    "total_score": 2587.4999999999995,
+    "avg_score": 8.400974025974024,
+    "errors": 72
+  },
+  "google/gemini-2.0-flash-001": {
+    "rounds": 384,
+    "total_score": 2706.400000000002,
+    "avg_score": 7.103412073490818,
+    "errors": 3
+  },
+  "deepseek/deepseek-chat": {
+    "rounds": 379,
+    "total_score": 3286.8000000000034,
+    "avg_score": 8.672295514511882,
+    "errors": 0
+  },
+  "meta-llama/llama-3.3-70b-instruct": {
+    "rounds": 378,
+    "total_score": 3175.3999999999965,
+    "avg_score": 8.400529100529091,
+    "errors": 0
+  },
+  "mistralai/mistral-large-2411": {
+    "rounds": 377,
+    "total_score": 3068.45,
+    "avg_score": 8.139124668435013,
+    "errors": 0
+  }
+}}
