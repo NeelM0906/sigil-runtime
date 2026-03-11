@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -237,6 +238,36 @@ class TestReviewParsing:
         assert review["quality_score"] == 0.0
         assert "unparseable" in review["notes"].lower()
 
+    def test_prime_workspace_prefers_existing_tenant_binding(self):
+        bridge = MagicMock()
+        bridge._tenants = {
+            "tenant-local": type(
+                "TenantRuntimeStub",
+                (),
+                {
+                    "context": type(
+                        "TenantContextStub",
+                        (),
+                        {"workspace_root": Path("/tmp/existing-prime-workspace")},
+                    )()
+                },
+            )()
+        }
+        dashboard = MagicMock()
+        dashboard.get_being.return_value = {
+            "id": "prime",
+            "tenant_id": "tenant-local",
+            "workspace": "portable-openclaw",
+        }
+        engine = OrchestrationEngine(
+            bridge=bridge,
+            dashboard_svc=dashboard,
+            project_svc=MagicMock(),
+        )
+        engine.prime_tenant_id = "tenant-local"
+
+        assert engine._prime_workspace() == "/tmp/existing-prime-workspace"
+
 
 # ---------------------------------------------------------------------------
 # Orchestration lifecycle tests (with mocked bridge)
@@ -369,6 +400,16 @@ class TestOrchestrationLifecycle:
 
         # Verify SubAgentProtocol was used for delegation
         assert mock_orch.spawn_async.call_count == 2  # forge + memory
+
+        completed_events = [
+            call.args[1]
+            for call in dashboard._emit_event.call_args_list
+            if call.args and call.args[0] == "orchestration_spawn"
+            and isinstance(call.args[1], dict)
+            and call.args[1].get("status") == "completed"
+        ]
+        assert any(evt.get("being_id") == "forge" for evt in completed_events)
+        assert any(evt.get("being_id") == "memory" for evt in completed_events)
 
     def test_session_isolation_in_calls(self):
         """Verify orchestration uses correct session and delegations go via SubAgentProtocol."""

@@ -91,6 +91,44 @@ class FSToolsTests(unittest.TestCase):
             self.assertEqual(escaped.status, "error")
             self.assertIn("path escapes workspace", escaped.output["error"])
 
+    def test_grep_handles_multiline_literal_patterns(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "ws"
+            root.mkdir(parents=True, exist_ok=True)
+            target = root / "notes.txt"
+            target.write_text("alpha line\nbeta line\ngamma line\n", encoding="utf-8")
+            db = RuntimeDB(Path(td) / "runtime.db")
+            governance = ToolGovernanceService(db)
+            governance.upsert_default_policy("tenant-fs")
+            pipeline = PolicyPipeline(governance)
+            executor = ToolExecutor(governance=governance, pipeline=pipeline)
+            executor.register_many(builtin_fs_tools())
+
+            policy = pipeline.resolve(
+                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-fs"),
+                available_tools=executor.known_tool_names(),
+            )
+            context = ToolContext(
+                tenant_id="tenant-fs",
+                session_id="s1",
+                turn_id="t1",
+                user_id="u1",
+                workspace_root=root,
+                db=db,
+                guard_path=_guard(root),
+            )
+
+            grep = executor.execute(
+                "grep",
+                {"pattern": "alpha line\nbeta line", "path": ".", "glob": "*.txt"},
+                context=context,
+                policy=policy,
+                confidence=1.0,
+            )
+            self.assertEqual(grep.status, "executed")
+            self.assertEqual(len(grep.output["matches"]), 1)
+            self.assertEqual(grep.output["matches"][0]["line"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

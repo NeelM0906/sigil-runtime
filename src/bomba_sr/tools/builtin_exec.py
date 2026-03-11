@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 import threading
 from pathlib import Path
 from typing import Any
 
+from bomba_sr.openclaw.integration import (
+    bundled_openclaw_root,
+    discover_repo_root,
+    ensure_portable_openclaw_layout,
+    portable_home_root,
+)
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
@@ -28,6 +35,18 @@ def _exec_tool(arguments: dict[str, Any], context: ToolContext, default_max_outp
     timeout = int(arguments.get("timeout") or 120)
     cwd_raw = str(arguments.get("cwd") or ".")
     cwd = context.guard_path(cwd_raw)
+    repo_root = discover_repo_root(context.workspace_root)
+    ensure_portable_openclaw_layout(repo_root)
+    env = os.environ.copy()
+    env.setdefault("SIGIL_REPO_ROOT", str(repo_root))
+    env.setdefault("SIGIL_WORKSPACES_ROOT", str(repo_root / "workspaces"))
+    env.setdefault("SIGIL_PORTABLE_HOME", str(portable_home_root(repo_root)))
+    env.setdefault("OPENCLAW_HOME", str(bundled_openclaw_root(repo_root)))
+    env.setdefault("OPENCLAW_ROOT", str(bundled_openclaw_root(repo_root)))
+    env.setdefault("OPENCLAW_ENV_FILE", str(repo_root / ".env"))
+    env["HOME"] = str(portable_home_root(repo_root))
+    if (repo_root / ".venv" / "bin").is_dir():
+        env["PATH"] = f"{repo_root / '.venv' / 'bin'}{os.pathsep}{env.get('PATH', '')}"
     proc = subprocess.run(
         command,
         shell=True,
@@ -36,6 +55,7 @@ def _exec_tool(arguments: dict[str, Any], context: ToolContext, default_max_outp
         capture_output=True,
         timeout=timeout,
         check=False,
+        env=env,
     )
     max_chars = int(arguments.get("max_output_chars") or default_max_output_chars)
     stdout = _truncate_text(proc.stdout, max_chars)

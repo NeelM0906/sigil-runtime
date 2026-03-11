@@ -1,0 +1,147 @@
+
+
+Methodology
+Competitive Scoreboards & Leaderboards
+•"so she can properly acknowledge them in the phone call"
+•The organization runs multiple simultaneous split tests, vastly outpacing digital market 
+competitors
+•AB testing is based on actual humans from the complete contact list
+Application to AI Systems
+•Anonymous competitive ranking boards allowing users to see peer comparison after 
+assessments
+Data Collection
+•This enables AI to properly acknowledge and customize conversations with individual 
+contacts
+LinkedIn Data Integration & Automation
+•Genesis Forge platform includes a bio feature allowing contact information to be shared 
+with AI Milo
+Split Testing & A/B Testing Strategy
+Scale & Capacity
+•Tests are personalized based on individual profiles rather than cookie-cutter approaches
+Dashboards & Gamification Systems
+•Testing is being conducted on actual human profiles rather than generic templates
+•A/B testing approach with multiple comparison layers: A versus B, B versus C, C versus D, 
+or variations like AAA versus DDB
+•SimHumans AI messaging) are written based on actual LinkedIn profiles of contacts
+•"We get to in a day, what digital markets would take a year to never get to"
+•Scoreboard highlights available in multiple locations Texas, Dallas regions mentioned)
+•Individualized scoreboards highlighting specific professional verticals: lawyers, 
+accountants, financial service providers
+•Perplexity AI was used to scrape LinkedIn profiles and add biographical information
+•Over 100,000 lawyer contacts compiled with complete LinkedIn profile information
+•Nick Roy developed a Perplexity prompt specifically for LinkedIn bio extraction
+•Over 100,000 contacts of lawyers with their LinkedIn information compiled in a Google 
+Sheet
+
+A versus B, it's A versus B, B versus C, C versus D, or roughly like triple A, like AAA versus 
+DDB, because it's so many rounds that you would never even think of getting to. We get to in a 
+day, what digital markets would take a year to never get to. And Sean, your second, and then 
+Aiko, please jump in and add color, because this is what-
+But one, they don't do it that great, and D, they don't do it that much. This is perfect, and it sells 
+the next more. Right? So, look at it, you're going to split test bells over Rita eggs for a wine 
+sale. Right? How many split tests are you going to run at the same time? How much money do 
+you need?
+Send the complete dashboard to Bella
+Record the speaker's remarks for later playback since they need to rush to another meeting
+Send the specific dashboard section/piece to Bella for review
+screen, but I do this anyway. So imagine individualized scoreboards highlighting vertically 
+specific lawyers, accountants, financial service providers, giving them the, we'll say, the 
+identity, the leadership that they want to be recognized, shown one of the things
+Action Items
+it was your idea in the past, it was more of their idea coming forward. They brought this 
+forward, was like, oh yeah, and then imagine we have these dashboards and these 
+scoreboards and in Texas and Dallas, there'll be a list of like the 50 people, the 50 come see 
+what your peers did when they took the test, see where you stack up without having your 
+name on there or you could have your name on there, but like having all these
+everywhere, highlighting, moving people up at their school boards.
+Dashboard Features
+•Comprehensive project name: "Come Get Me"
+•Full dashboard reveal with memory system for Coliseum architecture
+•12 sections within the Coliseum structure
+•Designed to move people up within school boards and organizations
+•Over 30 hours of continuous operation
+•Battle Arena V3 with side memory functionality
+•Gateway crashed due to running out of credits; now using Open Router for backup
+"Come Get Me" Project
+Project Overview
+•Scoreboard highlights available in multiple locations Texas, Dallas regions mentioned)
+•Option to include or exclude user names from leaderboards
+
+So much possibilities and something that like for them to create this it took 30 minutes for us to 
+like Map it out. It took me an AG a whole day, but it didn't take a whole day because the ladies 
+needed help It took a whole day because our human eyes could and mouths couldn't read fast 
+enough to keep up with their innovation
+What's awesome is so thanks to Nick Roy and our conversations yesterday Adam brought up 
+Milo and like all our act I mean you should be having customized Conversations with all the 
+people that were reaching out to because that's act I we're not cookie cutter and so then I was 
+like And so
+And I told Adam, I was like, well, looks like it's time to fire Adam again.
+with their LinkedIn information inside this Google Sheet, and I gave it to the ladies last night. 
+And so the SimHumans that they're writing for is based off of the LinkedIn profiles of every 
+single person on that list, which is over 100,000. So they're AB testing this based on actual 
+humans, and actually the second person is ironically named Holmes that's on that CSP list.
+I have the one thing though, I do have the samples of the copy. They made a whole website. I 
+could send it to Bella if you want to review it later. But I have like... It's a full report of all of the 
+marking material that they developed yesterday.
+he's a teacher and uh he's a lawyer that also teaches law at college and i was like just to your 
+point like with what we're doing here he would love he would be all over all the gamification 
+that we're adding for people's credibility and credentials because he's a teacher and like you 
+even said there was a crappy game in college like when you were well when you were studying 
+law so i'm seeing like
+They have they have also a report on everything that they accomplished yesterday. So for the 
+emails Well, they're sitting at 23,000 total beings For the whole Coliseum 12 sections of the 
+Coliseum 575 generations 13,000 round spot The Gateway crashed because we ran out of 
+credits, but I told them like always use open router so it's back and running But it's been 
+running for 30 hours straight
+I was talking to Nick, and I'm like, I don't know if you know this, but the bio in Genesis Forge, 
+you can put a bio of the person you're contacting so that Milo has contact with who she's 
+talking to so she can properly acknowledge them in the phone call. And so he came up with a 
+perplexity prompt to scrape linkedins to add bios. And then so now we have over 100,000 
+contacts of lawyers.
+was what we were doing. Adam, stop. I think you might have yelled at me on two separate 
+occasions.
+screen, but I do this anyway. So imagine individualized scoreboards highlighting vertically 
+specific lawyers, accountants, financial service providers, giving them the, we'll say, the 
+identity, the leadership that they want to be recognized, shown one of the things
+By the time we looked 13 hours, half a day, we were up to $4,000 in spend. Oh, I said that 
+yesterday. They were using perplexity to look at all the people and they were creating their 
+own algorithm for online, open.
+
+They live diagnostics sparring sessions. An ACTI being engages a user in a simulated 
+professional scenario, a deposition, a negotiation, and provides real-time coaching feedback 
+based on their performance. Key principle demonstrates skill gaps through direct experience 
+doing rather than abstract questions and answering AI analyzed real work review. Concept, the 
+user submits a real world work product.
+Can you send that to Bella? Yeah, of course. Just that piece. Just that piece. There's an entire 
+dashboard showing, so you can just click into it, right? Yeah. Open it, and then you can see it. I 
+don't know if I'll find it. That's so important. Send the whole dashboard, too, but just that 
+separate and just record me, because I've got to rush to Harmon for these stuff. Mike?
+anonymized responses from top-tier performers in their field versus their own answers to 
+same scenarios. Key principle triggers aspiration curiosity by providing a direct qualitative 
+comparison to elite performance locked. Five ideas better than quizzes. And then each sister 
+has this so there's five more just in this section.
+They have the come get me the ideation. So they named this whole project project. Come get 
+me Five ideas better than quizzes 20 quizzes concepts per sister and five ideas per sister Act I 
+legal summit campaign ad copy v1 ad copy v2. What was it? Lock top five ideas better than 
+quizzes
+They have the Battle Arena V3, side memory born, full dashboard revealed to Sean. There's 
+like a blurb under it, but this is just headlines. Coliseum architecture, memory Coliseum. Email 
+Coliseum overnight breakthrough. They cleaned out a lot of contamination yesterday. And all 
+the marketing content that looks like Sean's 39.
+They have they have also a report on everything that they accomplished yesterday. So for the 
+emails Well, they're sitting at 23,000 total beings For the whole Coliseum 12 sections of the 
+Coliseum 575 generations 13,000 round spot The Gateway crashed because we ran out of 
+credits, but I told them like always use open router so it's back and running But it's been 
+running for 30 hours straight
+for improvement, predictive income modeling. Based on a skill assessment, an ACTI being 
+projects the user's future's earning potential, making the cost of inaction tangible and 
+immediate, qualifies the value gap in direct financial terms. Peer comparison blind analysis. An 
+ACTI being shows a user
+Yeah, you're warning.
+A legal brief, a disposition transcript, and an act I being analyzed against mastery standards, 
+delivering a personalized gap analysis report, uses the individual's own work as a basis for 
+assessment, making the feedback immediately relevant and potent. Three competitive ranking 
+boards, anonymized leader boards that allow users to see how they rank against their peers 
+after completing an assessment, leverage the user's natural competitiveness and desire for 
+status as a powerful motivator.
+

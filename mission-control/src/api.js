@@ -67,6 +67,14 @@ export const beingsApi = {
   },
 }
 
+// ── Projects API ─────────────────────────────────────────────
+
+export const projectsApi = {
+  list() {
+    return request('/api/mc/projects')
+  },
+}
+
 // ── Chat API ─────────────────────────────────────────────────
 
 export const chatApi = {

@@ -5,10 +5,10 @@
 
 ## What Was Built
 
-Created `/Users/samantha/Projects/colosseum/export_dashboard_data.py` — a comprehensive Python script that extracts and exports all Colosseum data into JSON files ready for dashboard consumption.
+Created `./workspaces/prime/Projects/colosseum/export_dashboard_data.py` — a comprehensive Python script that extracts and exports all Colosseum data into JSON files ready for dashboard consumption.
 
 ### Exported Data Location
-`/Users/samantha/Projects/colosseum/dashboard_export/`
+`./workspaces/prime/Projects/colosseum/dashboard_export/`
 
 ### Files Created
 
@@ -67,7 +67,7 @@ Expanded from original 5 to 17+ covering:
 ## Usage
 
 ```bash
-cd /Users/samantha/Projects/colosseum
+cd ./workspaces/prime/Projects/colosseum
 python3 export_dashboard_data.py
 ```
 

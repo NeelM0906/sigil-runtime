@@ -8,10 +8,12 @@ import { ChatWindow } from './components/ChatWindow'
 import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
+import { ProjectsHub } from './components/ProjectsHub'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Task Board' },
+  { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
   { id: 'teams', label: 'Agent Teams' },
 ]
@@ -39,6 +41,9 @@ export default function App() {
           )}
           {activeTab === 'tasks' && (
             <TaskBoard fullWidth />
+          )}
+          {activeTab === 'projects' && (
+            <ProjectsHub />
           )}
           {activeTab === 'chat' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">

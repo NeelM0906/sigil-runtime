@@ -1,0 +1,690 @@
+{
+  "timestamp": "2026-02-25T12:30:47.915064",
+  "domains": {
+    "strategy": {
+      "name": "Strategy Colosseum",
+      "beings": 1006,
+      "rounds": 108,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Market Intelligence-III",
+          "avg_score": 9.1,
+          "wins": 1,
+          "losses": 0,
+          "generation": 4
+        },
+        {
+          "name": "Resource Allocator-II",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 4
+        },
+        {
+          "name": "Strategic Debt Auditor-Prime",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Competitive Dynamics Modeler",
+          "winner_score": 7.213210856523204,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:49"
+        },
+        {
+          "winner_name": "TestWinner",
+          "winner_score": 8.5,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 17:00:57"
+        },
+        {
+          "winner_name": "Market Intelligence",
+          "winner_score": 8.3,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:35:51"
+        },
+        {
+          "winner_name": "Complexity Reducer-Elite",
+          "winner_score": 8.0,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:35:28"
+        },
+        {
+          "winner_name": "Second-Order Thinker-Prime",
+          "winner_score": 8.7,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:04"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 19,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.914981"
+      }
+    },
+    "marketing": {
+      "name": "Marketing Colosseum",
+      "beings": 1010,
+      "rounds": 120,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Specificity Champion-Elite",
+          "avg_score": 9.3,
+          "wins": 1,
+          "losses": 0,
+          "generation": 3
+        },
+        {
+          "name": "HUI Articulator-III",
+          "avg_score": 9.1,
+          "wins": 0,
+          "losses": 1,
+          "generation": 3
+        },
+        {
+          "name": "Open Loop Creator",
+          "avg_score": 9.0,
+          "wins": 0,
+          "losses": 1,
+          "generation": 4
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Copywriter Supreme-Alpha",
+          "winner_score": 9.42631722603624,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:43"
+        },
+        {
+          "winner_name": "Story Architect-Prime",
+          "winner_score": 7.5,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:36:21"
+        },
+        {
+          "winner_name": "Brand Archaeologist-Omega",
+          "winner_score": 8.0,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:36:02"
+        },
+        {
+          "winner_name": "Launch Orchestrator-Omega",
+          "winner_score": 8.5,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:35:10"
+        },
+        {
+          "winner_name": "Pattern Interrupt Designer-III",
+          "winner_score": 8.0,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:34:44"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 7,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915128"
+      }
+    },
+    "sales": {
+      "name": "Agreement Making Colosseum",
+      "beings": 1010,
+      "rounds": 127,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Trust Accelerator-Nova",
+          "avg_score": 9.1,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        },
+        {
+          "name": "Trust Accelerator-II",
+          "avg_score": 9.1,
+          "wins": 0,
+          "losses": 1,
+          "generation": 2
+        },
+        {
+          "name": "Discovery-III",
+          "avg_score": 8.8,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Timeline Compressor-Omega",
+          "winner_score": 9.457905031416452,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:46"
+        },
+        {
+          "winner_name": "Competitor Differentiator",
+          "winner_score": 8.6,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:35:28"
+        },
+        {
+          "winner_name": "Contract Navigator",
+          "winner_score": 7.3,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:33"
+        },
+        {
+          "winner_name": "Demo-Nova",
+          "winner_score": 8.5,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:17"
+        },
+        {
+          "winner_name": "Lost Deal Analyst-X",
+          "winner_score": 8.0,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:33:27"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 26,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915275"
+      }
+    },
+    "tech": {
+      "name": "Technology Colosseum",
+      "beings": 1010,
+      "rounds": 112,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Queue Designer-Prime",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        },
+        {
+          "name": "API Designer-Omega",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 2
+        },
+        {
+          "name": "Security Architect-Nova",
+          "avg_score": 8.8,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Compliance Engineer-Omega",
+          "winner_score": 9.06326879529681,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:38"
+        },
+        {
+          "winner_name": "Test Strategist-III",
+          "winner_score": 8.5,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:35:58"
+        },
+        {
+          "winner_name": "DevOps Wizard-Omega",
+          "winner_score": 7.2,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:35:18"
+        },
+        {
+          "winner_name": "Performance Optimizer",
+          "winner_score": 8.5,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:34:57"
+        },
+        {
+          "winner_name": "Security Guardian-Prime",
+          "winner_score": 8.2,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:34:13"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 13,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915416"
+      }
+    },
+    "ops": {
+      "name": "Operations Colosseum",
+      "beings": 1010,
+      "rounds": 114,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Knowledge Transfer-Elite",
+          "avg_score": 8.9,
+          "wins": 0,
+          "losses": 1,
+          "generation": 4
+        },
+        {
+          "name": "Waste Eliminator-Nova",
+          "avg_score": 8.8,
+          "wins": 0,
+          "losses": 1,
+          "generation": 0
+        },
+        {
+          "name": "Quality Guardian-Nova",
+          "avg_score": 8.7,
+          "wins": 1,
+          "losses": 0,
+          "generation": 3
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Visualization",
+          "winner_score": 6.5,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:35:50"
+        },
+        {
+          "winner_name": "SLA Guardian-Omega",
+          "winner_score": 8.2,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:35:13"
+        },
+        {
+          "winner_name": "Continuous Improver-II",
+          "winner_score": 8.3,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:29"
+        },
+        {
+          "winner_name": "Bottleneck Hunter-X",
+          "winner_score": 7.8,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:33:57"
+        },
+        {
+          "winner_name": "Decision Process Designer",
+          "winner_score": 8.7,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:33:26"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 14,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915528"
+      }
+    },
+    "cs": {
+      "name": "Customer Success Colosseum",
+      "beings": 1010,
+      "rounds": 115,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Training Designer-II",
+          "avg_score": 9.5,
+          "wins": 1,
+          "losses": 0,
+          "generation": 0
+        },
+        {
+          "name": "Community Guardian",
+          "avg_score": 9.5,
+          "wins": 0,
+          "losses": 1,
+          "generation": 3
+        },
+        {
+          "name": "Training Designer-X",
+          "avg_score": 9.3,
+          "wins": 1,
+          "losses": 0,
+          "generation": 3
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Community Manager-Elite",
+          "winner_score": 8.751190512756523,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:33"
+        },
+        {
+          "winner_name": "Intervention",
+          "winner_score": 8.4,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:35:33"
+        },
+        {
+          "winner_name": "Milestone Celebrator-Elite",
+          "winner_score": 7.5,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:34:44"
+        },
+        {
+          "winner_name": "Renewal-III",
+          "winner_score": 7.3,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:34:07"
+        },
+        {
+          "winner_name": "Self-Service Architect-Prime",
+          "winner_score": 8.0,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:33:33"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 7,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915694"
+      }
+    },
+    "finance": {
+      "name": "Finance Colosseum",
+      "beings": 1012,
+      "rounds": 109,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Covenant Monitor-Elite",
+          "avg_score": 9.2,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        },
+        {
+          "name": "Integration Financial Planner-Alpha",
+          "avg_score": 9.2,
+          "wins": 0,
+          "losses": 1,
+          "generation": 3
+        },
+        {
+          "name": "M&A Financial Analyst-Prime",
+          "avg_score": 9.1,
+          "wins": 1,
+          "losses": 0,
+          "generation": 3
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "AI-CFO",
+          "winner_score": 8.547545544749191,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 17:01:46"
+        },
+        {
+          "winner_name": "Variance Investigator-Prime",
+          "winner_score": 9.1,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:36:02"
+        },
+        {
+          "winner_name": "Benchmark Analyst-Alpha",
+          "winner_score": 8.0,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:59"
+        },
+        {
+          "winner_name": "Tax",
+          "winner_score": 8.3,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:34:13"
+        },
+        {
+          "winner_name": "Due Diligence Lead-Prime",
+          "winner_score": 9.1,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:33:43"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 7,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.915815"
+      }
+    },
+    "hr": {
+      "name": "People Colosseum",
+      "beings": 1010,
+      "rounds": 121,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Career Path Designer-III",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 3
+        },
+        {
+          "name": "Equity Inclusion Lead-III",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 4
+        },
+        {
+          "name": "Culture Guardian-Elite",
+          "avg_score": 9.0,
+          "wins": 0,
+          "losses": 1,
+          "generation": 0
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Equity Inclusion Lead-Alpha",
+          "winner_score": 8.3,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:35:56"
+        },
+        {
+          "winner_name": "Employee Engagement Lead-Elite",
+          "winner_score": 8.0,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:35:16"
+        },
+        {
+          "winner_name": "Equity Inclusion Lead-Elite",
+          "winner_score": 8.4,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:36"
+        },
+        {
+          "winner_name": "Employee Engagement Lead-X",
+          "winner_score": 8.6,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:34:08"
+        },
+        {
+          "winner_name": "Conflict Resolution-Omega",
+          "winner_score": 8.7,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:33:21"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 22,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.916115"
+      }
+    },
+    "legal": {
+      "name": "Legal Colosseum",
+      "beings": 1008,
+      "rounds": 119,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Litigation Strategist-Prime",
+          "avg_score": 9.5,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        },
+        {
+          "name": "Corporate Governance Lead-Alpha",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 0
+        },
+        {
+          "name": "Corporate Governance Lead-Nova",
+          "avg_score": 9.0,
+          "wins": 1,
+          "losses": 0,
+          "generation": 4
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "Employment Counsel-Elite",
+          "winner_score": 8.8,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:36:21"
+        },
+        {
+          "winner_name": "Insurance Analyst-Elite",
+          "winner_score": 8.7,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:35:38"
+        },
+        {
+          "winner_name": "Partnership Lawyer",
+          "winner_score": 8.1,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:35:10"
+        },
+        {
+          "winner_name": "Litigation Strategist-Omega",
+          "winner_score": 9.0,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:34:38"
+        },
+        {
+          "winner_name": "Risk Navigator-Prime",
+          "winner_score": 8.6,
+          "scenario_tier": "bronze",
+          "created_at": "2026-02-25 16:33:45"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 8,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.916266"
+      }
+    },
+    "product": {
+      "name": "Product Colosseum",
+      "beings": 1010,
+      "rounds": 109,
+      "evolutions": 0,
+      "leaderboard": [
+        {
+          "name": "Mobile Experience Lead-Elite",
+          "avg_score": 9.4,
+          "wins": 1,
+          "losses": 0,
+          "generation": 0
+        },
+        {
+          "name": "Growth Product Lead-Prime",
+          "avg_score": 9.35,
+          "wins": 2,
+          "losses": 0,
+          "generation": 0
+        },
+        {
+          "name": "Mobile Experience Lead-II",
+          "avg_score": 9.1,
+          "wins": 1,
+          "losses": 0,
+          "generation": 1
+        }
+      ],
+      "recent_rounds": [
+        {
+          "winner_name": "User Researcher",
+          "winner_score": 9.3,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:36:18"
+        },
+        {
+          "winner_name": "Accessibility Champion-III",
+          "winner_score": 8.1,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:35:18"
+        },
+        {
+          "winner_name": "Competitive Intelligence Lead-III",
+          "winner_score": 9.0,
+          "scenario_tier": "silver",
+          "created_at": "2026-02-25 16:34:30"
+        },
+        {
+          "winner_name": "Jobs-to-be-Done Analyst-III",
+          "winner_score": 7.0,
+          "scenario_tier": "platinum",
+          "created_at": "2026-02-25 16:33:35"
+        },
+        {
+          "winner_name": "API Product Manager-Elite",
+          "winner_score": 7.5,
+          "scenario_tier": "gold",
+          "created_at": "2026-02-25 16:33:06"
+        }
+      ],
+      "daemon_stats": {
+        "rounds_completed": 0,
+        "evolutions": 15,
+        "best_score": 0.0,
+        "last_winner": null,
+        "started_at": "2026-02-25T12:02:44.916401"
+      }
+    }
+  },
+  "totals": {
+    "total_beings": 10096,
+    "total_rounds": 1154,
+    "total_evolutions": 0
+  }
+}

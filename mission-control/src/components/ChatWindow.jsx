@@ -166,7 +166,7 @@ function DeliverableCard({ filename, url, fileType, lineCount, byteSize }) {
           {info.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-text-primary truncate">{filename}</div>
+          <div className="text-sm font-medium text-text-primary break-words">{filename}</div>
           <div className="text-[10px] text-text-muted">
             {info.label} &middot; {lineCount} lines &middot; {sizeLabel}
           </div>
@@ -476,6 +476,7 @@ export function ChatWindow() {
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
+  const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
   // Load sessions on mount
   useEffect(() => {
@@ -492,14 +493,35 @@ export function ChatWindow() {
       if (filters.target) apiFilters.target = filters.target
       const { messages: fetched } = await chatApi.list(apiFilters)
       setMessages(fetched)
+      if (awaitingReplySince && fetched.some(msg => msg.sender !== 'user' && msg.timestamp > awaitingReplySince)) {
+        setAwaitingReplySince(null)
+      }
     } catch (err) {
       console.error('Failed to load messages:', err)
     } finally {
       setLoading(false)
     }
-  }, [filters, activeSessionId])
+  }, [filters, activeSessionId, awaitingReplySince])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
+
+  useEffect(() => {
+    if (!awaitingReplySince && typingBeings.size === 0) return undefined
+    const interval = window.setInterval(() => {
+      fetchMessages()
+    }, 2000)
+    return () => window.clearInterval(interval)
+  }, [awaitingReplySince, typingBeings, fetchMessages])
+
+  useEffect(() => {
+    const onFocus = () => { fetchMessages() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [fetchMessages])
 
   // Session CRUD handlers
   const handleCreateSession = async (name) => {
@@ -543,6 +565,7 @@ export function ChatWindow() {
       // Only show messages for the active session (or if no session_id, show in general)
       const msgSession = data.session_id || 'general'
       if (msgSession !== activeSessionRef.current) return
+      setAwaitingReplySince(null)
       setMessages(prev => {
         if (prev.some(m => m.id === data.id)) return prev
         return [...prev, data]
@@ -555,6 +578,9 @@ export function ChatWindow() {
           next.set(data.being_id, data.being_name)
         } else {
           next.delete(data.being_id)
+          window.setTimeout(() => {
+            fetchMessages()
+          }, 250)
         }
         return next
       })
@@ -614,6 +640,7 @@ export function ChatWindow() {
       taskRef: null,
     }
     setMessages(prev => [...prev, tempMsg])
+    setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
     setTargets([])
 
@@ -631,6 +658,7 @@ export function ChatWindow() {
       setMessages(prev => prev.map(m => m.id === tempMsg.id ? saved : m))
     } catch (err) {
       console.error('Failed to send message:', err)
+      setAwaitingReplySince(null)
     }
   }
 

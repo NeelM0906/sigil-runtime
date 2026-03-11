@@ -3,8 +3,8 @@ _Built: 2026-02-28 | Fully operational_
 
 ## Connection Details
 - **URL:** https://yncbtzqrherwyeybchet.supabase.co
-- **Service Key:** sb_secret_3D9S9VD7piYUkIMZdJBUfA_gWdTGnmN (full access)
-- **Anon Key:** sb_publishable_FeIG0ivOKE_JAUwymNGlpw_v0to8ijX (read-only, public)
+- **Service Key:** Set via `SUPABASE_SERVICE_KEY` in the repo `.env` (full access)
+- **Anon Key:** Set via `SUPABASE_ANON_KEY` in the repo `.env` (read-only, public)
 - **Dashboard:** https://supabase.com/dashboard/project/yncbtzqrherwyeybchet/sql
 
 ## How It Works

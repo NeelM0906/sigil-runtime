@@ -1,0 +1,4788 @@
+{
+  "exported_at": "2026-02-23T18:45:03.609186",
+  "tournaments": [
+    {
+      "id": "T-63d79a27",
+      "mode": "marathon",
+      "status": "running",
+      "total_rounds": 37,
+      "beings_count": 16,
+      "started_at": "2026-02-23 06:42:46",
+      "finished_at": null,
+      "config": {
+        "mode": "marathon",
+        "num_beings": 16,
+        "num_rounds": 50,
+        "model": "gpt-4o-mini",
+        "judge_model": "gpt-4o-mini"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "T-39885820",
+      "mode": "deep",
+      "status": "completed",
+      "total_rounds": 20,
+      "beings_count": 8,
+      "started_at": "2026-02-23 06:40:35",
+      "finished_at": "2026-02-23 06:51:06",
+      "config": {
+        "mode": "deep",
+        "num_beings": 8,
+        "num_rounds": 20,
+        "model": "gpt-4o",
+        "judge_model": "gpt-4o"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "T-da3f0051",
+      "mode": "blitz",
+      "status": "completed",
+      "total_rounds": 15,
+      "beings_count": 12,
+      "started_at": "2026-02-23 06:26:44",
+      "finished_at": "2026-02-23 06:34:09",
+      "config": {
+        "mode": "blitz",
+        "num_beings": 12,
+        "num_rounds": 15,
+        "model": "gpt-4o-mini",
+        "judge_model": "gpt-4o-mini"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "T-2e0f1c4b",
+      "mode": "blitz",
+      "status": "completed",
+      "total_rounds": 10,
+      "beings_count": 8,
+      "started_at": "2026-02-23 06:21:03",
+      "finished_at": "2026-02-23 06:26:21",
+      "config": {
+        "mode": "blitz",
+        "num_beings": 8,
+        "num_rounds": 10,
+        "model": "gpt-4o-mini",
+        "judge_model": "gpt-4o-mini"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "T-a67a265e",
+      "mode": "blitz",
+      "status": "completed",
+      "total_rounds": 3,
+      "beings_count": 4,
+      "started_at": "2026-02-23 06:17:32",
+      "finished_at": "2026-02-23 06:19:27",
+      "config": {
+        "mode": "blitz",
+        "num_beings": 4,
+        "num_rounds": 3,
+        "model": "gpt-4o-mini",
+        "judge_model": "gpt-4o-mini"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "T-863ae551",
+      "mode": "blitz",
+      "status": "running",
+      "total_rounds": 0,
+      "beings_count": 4,
+      "started_at": "2026-02-23 06:17:17",
+      "finished_at": null,
+      "config": {
+        "mode": "blitz",
+        "num_beings": 4,
+        "num_rounds": 3,
+        "model": "gpt-4o-mini",
+        "judge_model": "gpt-4o-mini"
+      },
+      "source": "v1_sqlite"
+    },
+    {
+      "id": "tournament_1771884716",
+      "source": "v2_results",
+      "file_size_kb": 958.22265625,
+      "has_leaderboard": true,
+      "has_round_results": false,
+      "top_3": [
+        {
+          "id": "fun_magic_zone_action",
+          "title": "Awe Engineer",
+          "area": "Fun & Magic (Lever 7)",
+          "average": 8.738080952380953
+        },
+        {
+          "id": "marketing_inbound_zone_action",
+          "title": "Shared Experience Designer",
+          "area": "Marketing \u2014 Inbound",
+          "average": 7.909761904761905
+        },
+        {
+          "id": "vision_leadership_leader",
+          "title": "Chief Vision Officer",
+          "area": "Vision & Leadership",
+          "average": 7.753571428571429
+        }
+      ]
+    },
+    {
+      "id": "tournament_1771850887",
+      "source": "v2_results",
+      "file_size_kb": 847.265625,
+      "has_leaderboard": true,
+      "has_round_results": false,
+      "top_3": [
+        {
+          "id": "people_talent_client_facing",
+          "title": "Onboarding Coordinator",
+          "area": "People & Talent",
+          "average": 8.534993333333334
+        },
+        {
+          "id": "fun_magic_zone_action",
+          "title": "Awe Engineer",
+          "area": "Fun & Magic (Lever 7)",
+          "average": 8.414993333333333
+        },
+        {
+          "id": "marketing_inbound_zone_action",
+          "title": "Shared Experience Designer",
+          "area": "Marketing \u2014 Inbound",
+          "average": 8.074666666666667
+        }
+      ]
+    },
+    {
+      "id": "tournament_1771886909",
+      "source": "v2_results",
+      "file_size_kb": 1297.9345703125,
+      "has_leaderboard": true,
+      "has_round_results": false,
+      "top_3": [
+        {
+          "id": "marketing_outbound_zone_action",
+          "title": "Ecosystem Merger Specialist",
+          "area": "Marketing \u2014 Outbound / Sourcing",
+          "average": 6.764285714285714
+        },
+        {
+          "id": "marketing_inbound_zone_action",
+          "title": "Shared Experience Designer",
+          "area": "Marketing \u2014 Inbound",
+          "average": 6.724282857142856
+        },
+        {
+          "id": "sales_influence_client_facing",
+          "title": "Discovery Call Specialist",
+          "area": "Sales & Influence",
+          "average": 6.5214285714285705
+        }
+      ]
+    }
+  ],
+  "recent_rounds": [
+    {
+      "id": 337,
+      "scenario_id": "S-73863",
+      "being_id": "B-16b6f6d5",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:12:39",
+      "being_name": "Storm",
+      "generation": 3
+    },
+    {
+      "id": 338,
+      "scenario_id": "S-73863",
+      "being_id": "B-366d2529",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:12:39",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 339,
+      "scenario_id": "S-73863",
+      "being_id": "B-9d7ac1c2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:12:39",
+      "being_name": "Wolf",
+      "generation": 3
+    },
+    {
+      "id": 340,
+      "scenario_id": "S-73863",
+      "being_id": "B-3da850fd",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:12:39",
+      "being_name": "Echo",
+      "generation": 3
+    },
+    {
+      "id": 333,
+      "scenario_id": "S-58809",
+      "being_id": "B-ac04c82f",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:56",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 334,
+      "scenario_id": "S-58809",
+      "being_id": "B-7c40173f",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:56",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 335,
+      "scenario_id": "S-58809",
+      "being_id": "B-44bd2cc1",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:56",
+      "being_name": "Thea",
+      "generation": 2
+    },
+    {
+      "id": 336,
+      "scenario_id": "S-58809",
+      "being_id": "B-9d7ac1c2",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:56",
+      "being_name": "Wolf",
+      "generation": 3
+    },
+    {
+      "id": 329,
+      "scenario_id": "S-93909",
+      "being_id": "B-3b4de462",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:06",
+      "being_name": "Knox",
+      "generation": 3
+    },
+    {
+      "id": 330,
+      "scenario_id": "S-93909",
+      "being_id": "B-ac04c82f",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:06",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 331,
+      "scenario_id": "S-93909",
+      "being_id": "B-366d2529",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:06",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 332,
+      "scenario_id": "S-93909",
+      "being_id": "B-9d7ac1c2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:11:06",
+      "being_name": "Wolf",
+      "generation": 3
+    },
+    {
+      "id": 325,
+      "scenario_id": "S-27555",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:10:17",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 326,
+      "scenario_id": "S-27555",
+      "being_id": "B-6c9d669e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:10:17",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 327,
+      "scenario_id": "S-27555",
+      "being_id": "B-7c40173f",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:10:17",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 328,
+      "scenario_id": "S-27555",
+      "being_id": "B-44bd2cc1",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:10:17",
+      "being_name": "Thea",
+      "generation": 2
+    },
+    {
+      "id": 321,
+      "scenario_id": "S-56984",
+      "being_id": "B-6c9d669e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:09:27",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 322,
+      "scenario_id": "S-56984",
+      "being_id": "B-ac04c82f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:09:27",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 323,
+      "scenario_id": "S-56984",
+      "being_id": "B-44bd2cc1",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:09:27",
+      "being_name": "Thea",
+      "generation": 2
+    },
+    {
+      "id": 324,
+      "scenario_id": "S-56984",
+      "being_id": "B-1eba5546",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:09:27",
+      "being_name": "River",
+      "generation": 3
+    },
+    {
+      "id": 317,
+      "scenario_id": "S-43179",
+      "being_id": "B-1eba5546",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:08:43",
+      "being_name": "River",
+      "generation": 3
+    },
+    {
+      "id": 318,
+      "scenario_id": "S-43179",
+      "being_id": "B-366d2529",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:08:43",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 319,
+      "scenario_id": "S-43179",
+      "being_id": "B-4bb1e00e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:08:43",
+      "being_name": "Ash",
+      "generation": 3
+    },
+    {
+      "id": 320,
+      "scenario_id": "S-43179",
+      "being_id": "B-7c40173f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:08:43",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 313,
+      "scenario_id": "S-28328",
+      "being_id": "B-127bf9a6",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:56",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 314,
+      "scenario_id": "S-28328",
+      "being_id": "B-9d7ac1c2",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:56",
+      "being_name": "Wolf",
+      "generation": 3
+    },
+    {
+      "id": 315,
+      "scenario_id": "S-28328",
+      "being_id": "B-87a95d62",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:56",
+      "being_name": "Ares",
+      "generation": 2
+    },
+    {
+      "id": 316,
+      "scenario_id": "S-28328",
+      "being_id": "B-1eba5546",
+      "mastery_score": 8.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:56",
+      "being_name": "River",
+      "generation": 3
+    },
+    {
+      "id": 309,
+      "scenario_id": "S-11965",
+      "being_id": "B-3411cfb0",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:08",
+      "being_name": "Knox",
+      "generation": 2
+    },
+    {
+      "id": 310,
+      "scenario_id": "S-11965",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:08",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 311,
+      "scenario_id": "S-11965",
+      "being_id": "B-a521e23c",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:08",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 312,
+      "scenario_id": "S-11965",
+      "being_id": "B-ecc8aef8",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:07:08",
+      "being_name": "Wren",
+      "generation": 2
+    },
+    {
+      "id": 305,
+      "scenario_id": "S-64103",
+      "being_id": "B-4682b92d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:06:20",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 306,
+      "scenario_id": "S-64103",
+      "being_id": "B-4cf1803b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:06:20",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 307,
+      "scenario_id": "S-64103",
+      "being_id": "B-f60b9e1e",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:06:20",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 308,
+      "scenario_id": "S-64103",
+      "being_id": "B-c537cfe8",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:06:20",
+      "being_name": "Selene",
+      "generation": 1
+    },
+    {
+      "id": 301,
+      "scenario_id": "S-31385",
+      "being_id": "B-a521e23c",
+      "mastery_score": 8.0,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:05:24",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 302,
+      "scenario_id": "S-31385",
+      "being_id": "B-366d2529",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:05:24",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 303,
+      "scenario_id": "S-31385",
+      "being_id": "B-2e81d4cc",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:05:24",
+      "being_name": "Atlas",
+      "generation": 2
+    },
+    {
+      "id": 304,
+      "scenario_id": "S-31385",
+      "being_id": "B-c537cfe8",
+      "mastery_score": 8.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:05:24",
+      "being_name": "Selene",
+      "generation": 1
+    },
+    {
+      "id": 297,
+      "scenario_id": "S-31835",
+      "being_id": "B-366d2529",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:04:32",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 298,
+      "scenario_id": "S-31835",
+      "being_id": "B-127bf9a6",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:04:32",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 299,
+      "scenario_id": "S-31835",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:04:32",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 300,
+      "scenario_id": "S-31835",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:04:32",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 293,
+      "scenario_id": "S-45716",
+      "being_id": "B-5c379551",
+      "mastery_score": 7.4,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:03:30",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 294,
+      "scenario_id": "S-45716",
+      "being_id": "B-4682b92d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:03:30",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 295,
+      "scenario_id": "S-45716",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:03:30",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 296,
+      "scenario_id": "S-45716",
+      "being_id": "B-8f40abb8",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:03:30",
+      "being_name": "Wren",
+      "generation": 2
+    },
+    {
+      "id": 289,
+      "scenario_id": "S-11213",
+      "being_id": "B-8e1e50a0",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:02:33",
+      "being_name": "Cliff",
+      "generation": 2
+    },
+    {
+      "id": 290,
+      "scenario_id": "S-11213",
+      "being_id": "B-ecc8aef8",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:02:33",
+      "being_name": "Wren",
+      "generation": 2
+    },
+    {
+      "id": 291,
+      "scenario_id": "S-11213",
+      "being_id": "B-c537cfe8",
+      "mastery_score": 7.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:02:33",
+      "being_name": "Selene",
+      "generation": 1
+    },
+    {
+      "id": 292,
+      "scenario_id": "S-11213",
+      "being_id": "B-4cf1803b",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:02:33",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 285,
+      "scenario_id": "S-55014",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:01:35",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 286,
+      "scenario_id": "S-55014",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:01:35",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 287,
+      "scenario_id": "S-55014",
+      "being_id": "B-a521e23c",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:01:35",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 288,
+      "scenario_id": "S-55014",
+      "being_id": "B-366d2529",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:01:35",
+      "being_name": "Aria",
+      "generation": 1
+    },
+    {
+      "id": 281,
+      "scenario_id": "S-77379",
+      "being_id": "B-a521e23c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:00:38",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 282,
+      "scenario_id": "S-77379",
+      "being_id": "B-127bf9a6",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:00:38",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 283,
+      "scenario_id": "S-77379",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:00:38",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 284,
+      "scenario_id": "S-77379",
+      "being_id": "B-4682b92d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 07:00:38",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 277,
+      "scenario_id": "S-82795",
+      "being_id": "B-8f40abb8",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:59:43",
+      "being_name": "Wren",
+      "generation": 2
+    },
+    {
+      "id": 278,
+      "scenario_id": "S-82795",
+      "being_id": "B-127bf9a6",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:59:43",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 279,
+      "scenario_id": "S-82795",
+      "being_id": "B-daa69f9f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:59:43",
+      "being_name": "Drift",
+      "generation": 2
+    },
+    {
+      "id": 280,
+      "scenario_id": "S-82795",
+      "being_id": "B-4cf1803b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:59:43",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 273,
+      "scenario_id": "S-56196",
+      "being_id": "B-daa69f9f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:58:43",
+      "being_name": "Drift",
+      "generation": 2
+    },
+    {
+      "id": 274,
+      "scenario_id": "S-56196",
+      "being_id": "B-5c379551",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:58:43",
+      "being_name": "Thorn",
+      "generation": 2
+    },
+    {
+      "id": 275,
+      "scenario_id": "S-56196",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:58:43",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 276,
+      "scenario_id": "S-56196",
+      "being_id": "B-127bf9a6",
+      "mastery_score": 7.4,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:58:43",
+      "being_name": "Hawk",
+      "generation": 2
+    },
+    {
+      "id": 269,
+      "scenario_id": "S-65755",
+      "being_id": "B-cd876634",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:57:48",
+      "being_name": "Zenith",
+      "generation": 1
+    },
+    {
+      "id": 270,
+      "scenario_id": "S-65755",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:57:48",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 271,
+      "scenario_id": "S-65755",
+      "being_id": "B-bd6b166e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:57:48",
+      "being_name": "Artemis",
+      "generation": 1
+    },
+    {
+      "id": 272,
+      "scenario_id": "S-65755",
+      "being_id": "B-a4ef3368",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:57:48",
+      "being_name": "Ash",
+      "generation": 1
+    },
+    {
+      "id": 265,
+      "scenario_id": "S-92593",
+      "being_id": "B-cd876634",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:54",
+      "being_name": "Zenith",
+      "generation": 1
+    },
+    {
+      "id": 266,
+      "scenario_id": "S-92593",
+      "being_id": "B-030847b2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:54",
+      "being_name": "Lyra",
+      "generation": 1
+    },
+    {
+      "id": 267,
+      "scenario_id": "S-92593",
+      "being_id": "B-3369f2c7",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:54",
+      "being_name": "River",
+      "generation": 1
+    },
+    {
+      "id": 268,
+      "scenario_id": "S-92593",
+      "being_id": "B-ea132a31",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:54",
+      "being_name": "Cliff",
+      "generation": 1
+    },
+    {
+      "id": 261,
+      "scenario_id": "S-76878",
+      "being_id": "B-fa092a78",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:05",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 262,
+      "scenario_id": "S-76878",
+      "being_id": "B-a4ef3368",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:05",
+      "being_name": "Ash",
+      "generation": 1
+    },
+    {
+      "id": 263,
+      "scenario_id": "S-76878",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 8.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:05",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 264,
+      "scenario_id": "S-76878",
+      "being_id": "B-bd6b166e",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:56:05",
+      "being_name": "Artemis",
+      "generation": 1
+    },
+    {
+      "id": 257,
+      "scenario_id": "S-12961",
+      "being_id": "B-f60b9e1e",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:55:15",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 258,
+      "scenario_id": "S-12961",
+      "being_id": "B-3369f2c7",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:55:15",
+      "being_name": "River",
+      "generation": 1
+    },
+    {
+      "id": 259,
+      "scenario_id": "S-12961",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:55:15",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 260,
+      "scenario_id": "S-12961",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:55:15",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 253,
+      "scenario_id": "S-64094",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:54:31",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 254,
+      "scenario_id": "S-64094",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:54:31",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 255,
+      "scenario_id": "S-64094",
+      "being_id": "B-ee8d7447",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:54:31",
+      "being_name": "Onyx",
+      "generation": 1
+    },
+    {
+      "id": 256,
+      "scenario_id": "S-64094",
+      "being_id": "B-653554a3",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:54:31",
+      "being_name": "River",
+      "generation": 1
+    },
+    {
+      "id": 249,
+      "scenario_id": "S-56354",
+      "being_id": "B-cd876634",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:53:39",
+      "being_name": "Zenith",
+      "generation": 1
+    },
+    {
+      "id": 250,
+      "scenario_id": "S-56354",
+      "being_id": "B-bd6b166e",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:53:39",
+      "being_name": "Artemis",
+      "generation": 1
+    },
+    {
+      "id": 251,
+      "scenario_id": "S-56354",
+      "being_id": "B-a4ef3368",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:53:39",
+      "being_name": "Ash",
+      "generation": 1
+    },
+    {
+      "id": 252,
+      "scenario_id": "S-56354",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:53:39",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 245,
+      "scenario_id": "S-18358",
+      "being_id": "B-cd876634",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:52:48",
+      "being_name": "Zenith",
+      "generation": 1
+    },
+    {
+      "id": 246,
+      "scenario_id": "S-18358",
+      "being_id": "B-f60b9e1e",
+      "mastery_score": 7.4,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:52:48",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 247,
+      "scenario_id": "S-18358",
+      "being_id": "B-de5d6731",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:52:48",
+      "being_name": "Perseus",
+      "generation": 1
+    },
+    {
+      "id": 248,
+      "scenario_id": "S-18358",
+      "being_id": "B-bb35f83e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:52:48",
+      "being_name": "Cliff",
+      "generation": 1
+    },
+    {
+      "id": 241,
+      "scenario_id": "S-29844",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 8.0,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:58",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 242,
+      "scenario_id": "S-29844",
+      "being_id": "B-a521e23c",
+      "mastery_score": 7.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:58",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 243,
+      "scenario_id": "S-29844",
+      "being_id": "B-f60b9e1e",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:58",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 244,
+      "scenario_id": "S-29844",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:58",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 237,
+      "scenario_id": "S-77754",
+      "being_id": "B-030847b2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:16",
+      "being_name": "Lyra",
+      "generation": 1
+    },
+    {
+      "id": 238,
+      "scenario_id": "S-77754",
+      "being_id": "B-bb35f83e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:16",
+      "being_name": "Cliff",
+      "generation": 1
+    },
+    {
+      "id": 239,
+      "scenario_id": "S-77754",
+      "being_id": "B-ea132a31",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:16",
+      "being_name": "Cliff",
+      "generation": 1
+    },
+    {
+      "id": 240,
+      "scenario_id": "S-77754",
+      "being_id": "B-f60b9e1e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:16",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 233,
+      "scenario_id": "S-13373",
+      "being_id": "B-8780ebd5",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:06",
+      "being_name": "Rain",
+      "generation": 3
+    },
+    {
+      "id": 234,
+      "scenario_id": "S-13373",
+      "being_id": "B-8b022be2",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:06",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 235,
+      "scenario_id": "S-13373",
+      "being_id": "B-ce162a63",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:06",
+      "being_name": "Cedar",
+      "generation": 2
+    },
+    {
+      "id": 236,
+      "scenario_id": "S-13373",
+      "being_id": "B-c147ebac",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:51:06",
+      "being_name": "Dawn",
+      "generation": 3
+    },
+    {
+      "id": 229,
+      "scenario_id": "S-40463",
+      "being_id": "B-c147ebac",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:37",
+      "being_name": "Dawn",
+      "generation": 3
+    },
+    {
+      "id": 230,
+      "scenario_id": "S-40463",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 7.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:37",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 231,
+      "scenario_id": "S-40463",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:37",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 232,
+      "scenario_id": "S-40463",
+      "being_id": "B-8780ebd5",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:37",
+      "being_name": "Rain",
+      "generation": 3
+    },
+    {
+      "id": 225,
+      "scenario_id": "S-17969",
+      "being_id": "B-bb35f83e",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:35",
+      "being_name": "Cliff",
+      "generation": 1
+    },
+    {
+      "id": 226,
+      "scenario_id": "S-17969",
+      "being_id": "B-a521e23c",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:35",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 227,
+      "scenario_id": "S-17969",
+      "being_id": "B-653554a3",
+      "mastery_score": 8.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:35",
+      "being_name": "River",
+      "generation": 1
+    },
+    {
+      "id": 228,
+      "scenario_id": "S-17969",
+      "being_id": "B-ee8d7447",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:35",
+      "being_name": "Onyx",
+      "generation": 1
+    },
+    {
+      "id": 221,
+      "scenario_id": "S-33368",
+      "being_id": "B-9420176d",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:08",
+      "being_name": "Helios",
+      "generation": 3
+    },
+    {
+      "id": 222,
+      "scenario_id": "S-33368",
+      "being_id": "B-8780ebd5",
+      "mastery_score": 6.3,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:08",
+      "being_name": "Rain",
+      "generation": 3
+    },
+    {
+      "id": 223,
+      "scenario_id": "S-33368",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:08",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 224,
+      "scenario_id": "S-33368",
+      "being_id": "B-8b022be2",
+      "mastery_score": 5.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:50:08",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 217,
+      "scenario_id": "S-78609",
+      "being_id": "B-dca5dd60",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:48",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 218,
+      "scenario_id": "S-78609",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:48",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 219,
+      "scenario_id": "S-78609",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:48",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 220,
+      "scenario_id": "S-78609",
+      "being_id": "B-96677446",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:48",
+      "being_name": "Stone",
+      "generation": 0
+    },
+    {
+      "id": 213,
+      "scenario_id": "S-76097",
+      "being_id": "B-8b022be2",
+      "mastery_score": 5.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:44",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 214,
+      "scenario_id": "S-76097",
+      "being_id": "B-9420176d",
+      "mastery_score": 5.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:44",
+      "being_name": "Helios",
+      "generation": 3
+    },
+    {
+      "id": 215,
+      "scenario_id": "S-76097",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 5.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:44",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 216,
+      "scenario_id": "S-76097",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 5.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:44",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 209,
+      "scenario_id": "S-11442",
+      "being_id": "B-ce162a63",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:17",
+      "being_name": "Cedar",
+      "generation": 2
+    },
+    {
+      "id": 210,
+      "scenario_id": "S-11442",
+      "being_id": "B-c147ebac",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:17",
+      "being_name": "Dawn",
+      "generation": 3
+    },
+    {
+      "id": 211,
+      "scenario_id": "S-11442",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:17",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 212,
+      "scenario_id": "S-11442",
+      "being_id": "B-8780ebd5",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:17",
+      "being_name": "Rain",
+      "generation": 3
+    },
+    {
+      "id": 205,
+      "scenario_id": "S-78908",
+      "being_id": "B-dca5dd60",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:03",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 206,
+      "scenario_id": "S-78908",
+      "being_id": "B-da2541bb",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:03",
+      "being_name": "Dawn",
+      "generation": 0
+    },
+    {
+      "id": 207,
+      "scenario_id": "S-78908",
+      "being_id": "B-aaa20f15",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:03",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 208,
+      "scenario_id": "S-78908",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.4,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:49:03",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 201,
+      "scenario_id": "S-60739",
+      "being_id": "B-cacfeee5",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:45",
+      "being_name": "Drift",
+      "generation": 2
+    },
+    {
+      "id": 202,
+      "scenario_id": "S-60739",
+      "being_id": "B-620d244a",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:45",
+      "being_name": "Ridge",
+      "generation": 2
+    },
+    {
+      "id": 203,
+      "scenario_id": "S-60739",
+      "being_id": "B-b2a89b5a",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:45",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 204,
+      "scenario_id": "S-60739",
+      "being_id": "B-364150d9",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:45",
+      "being_name": "Flint",
+      "generation": 1
+    },
+    {
+      "id": 197,
+      "scenario_id": "S-21537",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 7.4,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:19",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 198,
+      "scenario_id": "S-21537",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:19",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 199,
+      "scenario_id": "S-21537",
+      "being_id": "B-4ca29805",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:19",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 200,
+      "scenario_id": "S-21537",
+      "being_id": "B-b2a89b5a",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:19",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 193,
+      "scenario_id": "S-21004",
+      "being_id": "B-0e0b2e95",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:15",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 194,
+      "scenario_id": "S-21004",
+      "being_id": "B-934e75e9",
+      "mastery_score": 7.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:15",
+      "being_name": "Onyx",
+      "generation": 0
+    },
+    {
+      "id": 195,
+      "scenario_id": "S-21004",
+      "being_id": "B-486d12ea",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:15",
+      "being_name": "Ridge",
+      "generation": 0
+    },
+    {
+      "id": 196,
+      "scenario_id": "S-21004",
+      "being_id": "B-aece2461",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:48:15",
+      "being_name": "Aria",
+      "generation": 0
+    },
+    {
+      "id": 189,
+      "scenario_id": "S-16248",
+      "being_id": "B-b2a89b5a",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:43",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 190,
+      "scenario_id": "S-16248",
+      "being_id": "B-620d244a",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:43",
+      "being_name": "Ridge",
+      "generation": 2
+    },
+    {
+      "id": 191,
+      "scenario_id": "S-16248",
+      "being_id": "B-364150d9",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:43",
+      "being_name": "Flint",
+      "generation": 1
+    },
+    {
+      "id": 192,
+      "scenario_id": "S-16248",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:43",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 185,
+      "scenario_id": "S-65072",
+      "being_id": "B-5a2aa670",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:21",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 186,
+      "scenario_id": "S-65072",
+      "being_id": "B-aaa20f15",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:21",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 187,
+      "scenario_id": "S-65072",
+      "being_id": "B-641b36b6",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:21",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 188,
+      "scenario_id": "S-65072",
+      "being_id": "B-0e0b2e95",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:21",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 181,
+      "scenario_id": "S-17993",
+      "being_id": "B-b2a89b5a",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:17",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 182,
+      "scenario_id": "S-17993",
+      "being_id": "B-4ca29805",
+      "mastery_score": 6.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:17",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 183,
+      "scenario_id": "S-17993",
+      "being_id": "B-33ecdfe3",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:17",
+      "being_name": "Vale",
+      "generation": 2
+    },
+    {
+      "id": 184,
+      "scenario_id": "S-17993",
+      "being_id": "B-cacfeee5",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:47:17",
+      "being_name": "Drift",
+      "generation": 2
+    },
+    {
+      "id": 177,
+      "scenario_id": "S-73601",
+      "being_id": "B-b2a89b5a",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:41",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 178,
+      "scenario_id": "S-73601",
+      "being_id": "B-364150d9",
+      "mastery_score": 5.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:41",
+      "being_name": "Flint",
+      "generation": 1
+    },
+    {
+      "id": 179,
+      "scenario_id": "S-73601",
+      "being_id": "B-620d244a",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:41",
+      "being_name": "Ridge",
+      "generation": 2
+    },
+    {
+      "id": 180,
+      "scenario_id": "S-73601",
+      "being_id": "B-4ca29805",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:41",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 173,
+      "scenario_id": "S-13566",
+      "being_id": "B-641b36b6",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:39",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 174,
+      "scenario_id": "S-13566",
+      "being_id": "B-0e0b2e95",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:39",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 175,
+      "scenario_id": "S-13566",
+      "being_id": "B-aaa20f15",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:39",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 176,
+      "scenario_id": "S-13566",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:39",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 169,
+      "scenario_id": "S-47747",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:10",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 170,
+      "scenario_id": "S-47747",
+      "being_id": "B-2cf0482d",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:10",
+      "being_name": "Vale",
+      "generation": 1
+    },
+    {
+      "id": 171,
+      "scenario_id": "S-47747",
+      "being_id": "B-dc92cfd2",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:10",
+      "being_name": "Ares",
+      "generation": 1
+    },
+    {
+      "id": 172,
+      "scenario_id": "S-47747",
+      "being_id": "B-94fe998f",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:10",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 165,
+      "scenario_id": "S-50976",
+      "being_id": "B-934e75e9",
+      "mastery_score": 7.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:00",
+      "being_name": "Onyx",
+      "generation": 0
+    },
+    {
+      "id": 166,
+      "scenario_id": "S-50976",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:00",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 167,
+      "scenario_id": "S-50976",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:00",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 168,
+      "scenario_id": "S-50976",
+      "being_id": "B-96677446",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:46:00",
+      "being_name": "Stone",
+      "generation": 0
+    },
+    {
+      "id": 161,
+      "scenario_id": "S-58538",
+      "being_id": "B-a5dc82e3",
+      "mastery_score": 7.6,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:41",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 162,
+      "scenario_id": "S-58538",
+      "being_id": "B-68bf9e0d",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:41",
+      "being_name": "Wolf",
+      "generation": 1
+    },
+    {
+      "id": 163,
+      "scenario_id": "S-58538",
+      "being_id": "B-01f8cb12",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:41",
+      "being_name": "Blaze",
+      "generation": 1
+    },
+    {
+      "id": 164,
+      "scenario_id": "S-58538",
+      "being_id": "B-94fe998f",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:41",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 157,
+      "scenario_id": "S-36046",
+      "being_id": "B-16ab2d81",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:21",
+      "being_name": "Knox",
+      "generation": 0
+    },
+    {
+      "id": 158,
+      "scenario_id": "S-36046",
+      "being_id": "B-486d12ea",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:21",
+      "being_name": "Ridge",
+      "generation": 0
+    },
+    {
+      "id": 159,
+      "scenario_id": "S-36046",
+      "being_id": "B-5e436e8c",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:21",
+      "being_name": "Cliff",
+      "generation": 0
+    },
+    {
+      "id": 160,
+      "scenario_id": "S-36046",
+      "being_id": "B-da2541bb",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:21",
+      "being_name": "Dawn",
+      "generation": 0
+    },
+    {
+      "id": 153,
+      "scenario_id": "S-98838",
+      "being_id": "B-01f8cb12",
+      "mastery_score": 5.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:10",
+      "being_name": "Blaze",
+      "generation": 1
+    },
+    {
+      "id": 154,
+      "scenario_id": "S-98838",
+      "being_id": "B-dc92cfd2",
+      "mastery_score": 6.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:10",
+      "being_name": "Ares",
+      "generation": 1
+    },
+    {
+      "id": 155,
+      "scenario_id": "S-98838",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 5.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:10",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 156,
+      "scenario_id": "S-98838",
+      "being_id": "B-94fe998f",
+      "mastery_score": 6.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:45:10",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 149,
+      "scenario_id": "S-10809",
+      "being_id": "B-01f8cb12",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:41",
+      "being_name": "Blaze",
+      "generation": 1
+    },
+    {
+      "id": 150,
+      "scenario_id": "S-10809",
+      "being_id": "B-dc92cfd2",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:41",
+      "being_name": "Ares",
+      "generation": 1
+    },
+    {
+      "id": 151,
+      "scenario_id": "S-10809",
+      "being_id": "B-a5dc82e3",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:41",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 152,
+      "scenario_id": "S-10809",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 6.7,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:41",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 145,
+      "scenario_id": "S-37824",
+      "being_id": "B-aacb9388",
+      "mastery_score": 7.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:40",
+      "being_name": "Ares",
+      "generation": 0
+    },
+    {
+      "id": 146,
+      "scenario_id": "S-37824",
+      "being_id": "B-486d12ea",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:40",
+      "being_name": "Ridge",
+      "generation": 0
+    },
+    {
+      "id": 147,
+      "scenario_id": "S-37824",
+      "being_id": "B-641b36b6",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:40",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 148,
+      "scenario_id": "S-37824",
+      "being_id": "B-4100ea1b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:40",
+      "being_name": "Thea",
+      "generation": 0
+    },
+    {
+      "id": 141,
+      "scenario_id": "S-14382",
+      "being_id": "B-a521e23c",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:03",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 142,
+      "scenario_id": "S-14382",
+      "being_id": "B-dca5dd60",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:03",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 143,
+      "scenario_id": "S-14382",
+      "being_id": "B-da2541bb",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:03",
+      "being_name": "Dawn",
+      "generation": 0
+    },
+    {
+      "id": 144,
+      "scenario_id": "S-14382",
+      "being_id": "B-0e0b2e95",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:03",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 137,
+      "scenario_id": "S-55195",
+      "being_id": "B-a5dc82e3",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:01",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 138,
+      "scenario_id": "S-55195",
+      "being_id": "B-68bf9e0d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:01",
+      "being_name": "Wolf",
+      "generation": 1
+    },
+    {
+      "id": 139,
+      "scenario_id": "S-55195",
+      "being_id": "B-c52e48b5",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:01",
+      "being_name": "Thea",
+      "generation": 1
+    },
+    {
+      "id": 140,
+      "scenario_id": "S-55195",
+      "being_id": "B-2cf0482d",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:44:01",
+      "being_name": "Vale",
+      "generation": 1
+    },
+    {
+      "id": 133,
+      "scenario_id": "S-43168",
+      "being_id": "B-dca5dd60",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:25",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 134,
+      "scenario_id": "S-43168",
+      "being_id": "B-3f10da56",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:25",
+      "being_name": "Briar",
+      "generation": 0
+    },
+    {
+      "id": 135,
+      "scenario_id": "S-43168",
+      "being_id": "B-aece2461",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:25",
+      "being_name": "Aria",
+      "generation": 0
+    },
+    {
+      "id": 136,
+      "scenario_id": "S-43168",
+      "being_id": "B-5a2aa670",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:25",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 129,
+      "scenario_id": "S-41837",
+      "being_id": "B-37d77138",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:24",
+      "being_name": "Rain",
+      "generation": 0
+    },
+    {
+      "id": 130,
+      "scenario_id": "S-41837",
+      "being_id": "B-94fe998f",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:24",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 131,
+      "scenario_id": "S-41837",
+      "being_id": "B-a01d91b7",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:24",
+      "being_name": "Vale",
+      "generation": 0
+    },
+    {
+      "id": 132,
+      "scenario_id": "S-41837",
+      "being_id": "B-dbfa93c8",
+      "mastery_score": 5.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:43:24",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 125,
+      "scenario_id": "S-87526",
+      "being_id": "B-dbfa93c8",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:45",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 126,
+      "scenario_id": "S-87526",
+      "being_id": "B-a5dc82e3",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:45",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 127,
+      "scenario_id": "S-87526",
+      "being_id": "B-4037b165",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:45",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 128,
+      "scenario_id": "S-87526",
+      "being_id": "B-45eec783",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:45",
+      "being_name": "Flux",
+      "generation": 0
+    },
+    {
+      "id": 121,
+      "scenario_id": "S-64407",
+      "being_id": "B-a5dc82e3",
+      "mastery_score": 7.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:14",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 122,
+      "scenario_id": "S-64407",
+      "being_id": "B-6a3638b4",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:14",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 123,
+      "scenario_id": "S-64407",
+      "being_id": "B-4037b165",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:14",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 124,
+      "scenario_id": "S-64407",
+      "being_id": "B-dbfa93c8",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:42:14",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 117,
+      "scenario_id": "S-79862",
+      "being_id": "B-4037b165",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:39",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 118,
+      "scenario_id": "S-79862",
+      "being_id": "B-37d77138",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:39",
+      "being_name": "Rain",
+      "generation": 0
+    },
+    {
+      "id": 119,
+      "scenario_id": "S-79862",
+      "being_id": "B-6a3638b4",
+      "mastery_score": 6.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:39",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 120,
+      "scenario_id": "S-79862",
+      "being_id": "B-dbfa93c8",
+      "mastery_score": 6.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:39",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 113,
+      "scenario_id": "S-79382",
+      "being_id": "B-4037b165",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:08",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 114,
+      "scenario_id": "S-79382",
+      "being_id": "B-6a3638b4",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:08",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 115,
+      "scenario_id": "S-79382",
+      "being_id": "B-37d77138",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:08",
+      "being_name": "Rain",
+      "generation": 0
+    },
+    {
+      "id": 116,
+      "scenario_id": "S-79382",
+      "being_id": "B-dbfa93c8",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:41:08",
+      "being_name": "Sage",
+      "generation": 0
+    },
+    {
+      "id": 109,
+      "scenario_id": "S-76552",
+      "being_id": "B-06d9dbb9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:34:09",
+      "being_name": "Ember",
+      "generation": 2
+    },
+    {
+      "id": 110,
+      "scenario_id": "S-76552",
+      "being_id": "B-e43b602f",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:34:09",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 111,
+      "scenario_id": "S-76552",
+      "being_id": "B-ff2f96d9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:34:09",
+      "being_name": "Stone",
+      "generation": 2
+    },
+    {
+      "id": 112,
+      "scenario_id": "S-76552",
+      "being_id": "B-4d219afb",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:34:09",
+      "being_name": "Nova",
+      "generation": 2
+    },
+    {
+      "id": 105,
+      "scenario_id": "S-63728",
+      "being_id": "B-c2d53b17",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:33",
+      "being_name": "Wren",
+      "generation": 1
+    },
+    {
+      "id": 106,
+      "scenario_id": "S-63728",
+      "being_id": "B-d184d134",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:33",
+      "being_name": "Coral",
+      "generation": 1
+    },
+    {
+      "id": 107,
+      "scenario_id": "S-63728",
+      "being_id": "B-e43b602f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:33",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 108,
+      "scenario_id": "S-63728",
+      "being_id": "B-f430522a",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:33",
+      "being_name": "Echo",
+      "generation": 2
+    },
+    {
+      "id": 101,
+      "scenario_id": "S-19153",
+      "being_id": "B-06d9dbb9",
+      "mastery_score": 8.1,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:00",
+      "being_name": "Ember",
+      "generation": 2
+    },
+    {
+      "id": 102,
+      "scenario_id": "S-19153",
+      "being_id": "B-d184d134",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:00",
+      "being_name": "Coral",
+      "generation": 1
+    },
+    {
+      "id": 103,
+      "scenario_id": "S-19153",
+      "being_id": "B-4d219afb",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:00",
+      "being_name": "Nova",
+      "generation": 2
+    },
+    {
+      "id": 104,
+      "scenario_id": "S-19153",
+      "being_id": "B-f430522a",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:33:00",
+      "being_name": "Echo",
+      "generation": 2
+    },
+    {
+      "id": 97,
+      "scenario_id": "S-84322",
+      "being_id": "B-ff2f96d9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:32:23",
+      "being_name": "Stone",
+      "generation": 2
+    },
+    {
+      "id": 98,
+      "scenario_id": "S-84322",
+      "being_id": "B-e43b602f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:32:23",
+      "being_name": "Jade",
+      "generation": 1
+    },
+    {
+      "id": 99,
+      "scenario_id": "S-84322",
+      "being_id": "B-4d219afb",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:32:23",
+      "being_name": "Nova",
+      "generation": 2
+    },
+    {
+      "id": 100,
+      "scenario_id": "S-84322",
+      "being_id": "B-da4d1623",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:32:23",
+      "being_name": "River",
+      "generation": 2
+    },
+    {
+      "id": 93,
+      "scenario_id": "S-94292",
+      "being_id": "B-06d9dbb9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:52",
+      "being_name": "Ember",
+      "generation": 2
+    },
+    {
+      "id": 94,
+      "scenario_id": "S-94292",
+      "being_id": "B-f45d8fc4",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:52",
+      "being_name": "Ridge",
+      "generation": 2
+    },
+    {
+      "id": 95,
+      "scenario_id": "S-94292",
+      "being_id": "B-ae90b520",
+      "mastery_score": 7.4,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:52",
+      "being_name": "Blaze",
+      "generation": 2
+    },
+    {
+      "id": 96,
+      "scenario_id": "S-94292",
+      "being_id": "B-c2d53b17",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:52",
+      "being_name": "Wren",
+      "generation": 1
+    },
+    {
+      "id": 89,
+      "scenario_id": "S-64281",
+      "being_id": "B-490a63e2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:26",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 90,
+      "scenario_id": "S-64281",
+      "being_id": "B-22f6defe",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:26",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 91,
+      "scenario_id": "S-64281",
+      "being_id": "B-0446cbe5",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:26",
+      "being_name": "Flint",
+      "generation": 1
+    },
+    {
+      "id": 92,
+      "scenario_id": "S-64281",
+      "being_id": "B-7d7abb04",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:31:26",
+      "being_name": "Iris",
+      "generation": 1
+    },
+    {
+      "id": 85,
+      "scenario_id": "S-89972",
+      "being_id": "B-4fd3ad09",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:54",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 86,
+      "scenario_id": "S-89972",
+      "being_id": "B-cf8d4d33",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:54",
+      "being_name": "Zephyr",
+      "generation": 1
+    },
+    {
+      "id": 87,
+      "scenario_id": "S-89972",
+      "being_id": "B-447074f9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:54",
+      "being_name": "Selene",
+      "generation": 1
+    },
+    {
+      "id": 88,
+      "scenario_id": "S-89972",
+      "being_id": "B-22f6defe",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:54",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 81,
+      "scenario_id": "S-83921",
+      "being_id": "B-22f6defe",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:26",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 82,
+      "scenario_id": "S-83921",
+      "being_id": "B-7d7abb04",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:26",
+      "being_name": "Iris",
+      "generation": 1
+    },
+    {
+      "id": 83,
+      "scenario_id": "S-83921",
+      "being_id": "B-b9ebf5b2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:26",
+      "being_name": "Flux",
+      "generation": 0
+    },
+    {
+      "id": 84,
+      "scenario_id": "S-83921",
+      "being_id": "B-82bcf104",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:30:26",
+      "being_name": "Daphne",
+      "generation": 0
+    },
+    {
+      "id": 77,
+      "scenario_id": "S-93317",
+      "being_id": "B-22f6defe",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:57",
+      "being_name": "Daphne",
+      "generation": 1
+    },
+    {
+      "id": 78,
+      "scenario_id": "S-93317",
+      "being_id": "B-82bcf104",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:57",
+      "being_name": "Daphne",
+      "generation": 0
+    },
+    {
+      "id": 79,
+      "scenario_id": "S-93317",
+      "being_id": "B-4fd3ad09",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:57",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 80,
+      "scenario_id": "S-93317",
+      "being_id": "B-69ca0148",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:57",
+      "being_name": "Ash",
+      "generation": 0
+    },
+    {
+      "id": 73,
+      "scenario_id": "S-75374",
+      "being_id": "B-490a63e2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:24",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 74,
+      "scenario_id": "S-75374",
+      "being_id": "B-4fd3ad09",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:24",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 75,
+      "scenario_id": "S-75374",
+      "being_id": "B-d184d134",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:24",
+      "being_name": "Coral",
+      "generation": 1
+    },
+    {
+      "id": 76,
+      "scenario_id": "S-75374",
+      "being_id": "B-b9ebf5b2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:29:24",
+      "being_name": "Flux",
+      "generation": 0
+    },
+    {
+      "id": 69,
+      "scenario_id": "S-56950",
+      "being_id": "B-25de4a9d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:58",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 70,
+      "scenario_id": "S-56950",
+      "being_id": "B-79656419",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:58",
+      "being_name": "Luna",
+      "generation": 0
+    },
+    {
+      "id": 71,
+      "scenario_id": "S-56950",
+      "being_id": "B-72bf545b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:58",
+      "being_name": "Vale",
+      "generation": 0
+    },
+    {
+      "id": 72,
+      "scenario_id": "S-56950",
+      "being_id": "B-fc258203",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:58",
+      "being_name": "Rune",
+      "generation": 0
+    },
+    {
+      "id": 65,
+      "scenario_id": "S-29818",
+      "being_id": "B-2580858c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:32",
+      "being_name": "Lyra",
+      "generation": 0
+    },
+    {
+      "id": 66,
+      "scenario_id": "S-29818",
+      "being_id": "B-491e6055",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:32",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 67,
+      "scenario_id": "S-29818",
+      "being_id": "B-72bf545b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:32",
+      "being_name": "Vale",
+      "generation": 0
+    },
+    {
+      "id": 68,
+      "scenario_id": "S-29818",
+      "being_id": "B-82bcf104",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:32",
+      "being_name": "Daphne",
+      "generation": 0
+    },
+    {
+      "id": 61,
+      "scenario_id": "S-89820",
+      "being_id": "B-491e6055",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:04",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 62,
+      "scenario_id": "S-89820",
+      "being_id": "B-b9ebf5b2",
+      "mastery_score": 8.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:04",
+      "being_name": "Flux",
+      "generation": 0
+    },
+    {
+      "id": 63,
+      "scenario_id": "S-89820",
+      "being_id": "B-69ca0148",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:04",
+      "being_name": "Ash",
+      "generation": 0
+    },
+    {
+      "id": 64,
+      "scenario_id": "S-89820",
+      "being_id": "B-fc258203",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:28:04",
+      "being_name": "Rune",
+      "generation": 0
+    },
+    {
+      "id": 57,
+      "scenario_id": "S-86020",
+      "being_id": "B-b9ebf5b2",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:37",
+      "being_name": "Flux",
+      "generation": 0
+    },
+    {
+      "id": 58,
+      "scenario_id": "S-86020",
+      "being_id": "B-82bcf104",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:37",
+      "being_name": "Daphne",
+      "generation": 0
+    },
+    {
+      "id": 59,
+      "scenario_id": "S-86020",
+      "being_id": "B-491e6055",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:37",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 60,
+      "scenario_id": "S-86020",
+      "being_id": "B-69ca0148",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:37",
+      "being_name": "Ash",
+      "generation": 0
+    },
+    {
+      "id": 53,
+      "scenario_id": "S-95714",
+      "being_id": "B-3f6d3c45",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:11",
+      "being_name": "Rain",
+      "generation": 0
+    },
+    {
+      "id": 54,
+      "scenario_id": "S-95714",
+      "being_id": "B-491e6055",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:11",
+      "being_name": "Spark",
+      "generation": 0
+    },
+    {
+      "id": 55,
+      "scenario_id": "S-95714",
+      "being_id": "B-25de4a9d",
+      "mastery_score": 8.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:11",
+      "being_name": "Zenith",
+      "generation": 0
+    },
+    {
+      "id": 56,
+      "scenario_id": "S-95714",
+      "being_id": "B-7be48c34",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:27:11",
+      "being_name": "Perseus",
+      "generation": 0
+    },
+    {
+      "id": 49,
+      "scenario_id": "S-47930",
+      "being_id": "B-908d5f0f",
+      "mastery_score": 6.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:26:21",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 50,
+      "scenario_id": "S-47930",
+      "being_id": "B-d06731d4",
+      "mastery_score": 6.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:26:21",
+      "being_name": "Phoenix",
+      "generation": 1
+    },
+    {
+      "id": 51,
+      "scenario_id": "S-47930",
+      "being_id": "B-76a10dd9",
+      "mastery_score": 6.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:26:21",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 52,
+      "scenario_id": "S-47930",
+      "being_id": "B-a6c1003b",
+      "mastery_score": 6.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:26:21",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 45,
+      "scenario_id": "S-90580",
+      "being_id": "B-a126c593",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:51",
+      "being_name": "Sage",
+      "generation": 1
+    },
+    {
+      "id": 46,
+      "scenario_id": "S-90580",
+      "being_id": "B-a6c1003b",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:51",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 47,
+      "scenario_id": "S-90580",
+      "being_id": "B-76a10dd9",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:51",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 48,
+      "scenario_id": "S-90580",
+      "being_id": "B-3edc0718",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:51",
+      "being_name": "Lyra",
+      "generation": 1
+    },
+    {
+      "id": 41,
+      "scenario_id": "S-90797",
+      "being_id": "B-f982084a",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:25",
+      "being_name": "Flux",
+      "generation": 1
+    },
+    {
+      "id": 42,
+      "scenario_id": "S-90797",
+      "being_id": "B-5603df3c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:25",
+      "being_name": "Nova",
+      "generation": 1
+    },
+    {
+      "id": 43,
+      "scenario_id": "S-90797",
+      "being_id": "B-d06731d4",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:25",
+      "being_name": "Phoenix",
+      "generation": 1
+    },
+    {
+      "id": 44,
+      "scenario_id": "S-90797",
+      "being_id": "B-76a10dd9",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:25",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 37,
+      "scenario_id": "S-50963",
+      "being_id": "B-a6c1003b",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:03",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 38,
+      "scenario_id": "S-50963",
+      "being_id": "B-908d5f0f",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:03",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 39,
+      "scenario_id": "S-50963",
+      "being_id": "B-f982084a",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:03",
+      "being_name": "Flux",
+      "generation": 1
+    },
+    {
+      "id": 40,
+      "scenario_id": "S-50963",
+      "being_id": "B-3edc0718",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:25:03",
+      "being_name": "Lyra",
+      "generation": 1
+    },
+    {
+      "id": 33,
+      "scenario_id": "S-28229",
+      "being_id": "B-5603df3c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:24:24",
+      "being_name": "Nova",
+      "generation": 1
+    },
+    {
+      "id": 34,
+      "scenario_id": "S-28229",
+      "being_id": "B-f982084a",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:24:24",
+      "being_name": "Flux",
+      "generation": 1
+    },
+    {
+      "id": 35,
+      "scenario_id": "S-28229",
+      "being_id": "B-908d5f0f",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:24:24",
+      "being_name": "Cedar",
+      "generation": 1
+    },
+    {
+      "id": 36,
+      "scenario_id": "S-28229",
+      "being_id": "B-a126c593",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:24:24",
+      "being_name": "Sage",
+      "generation": 1
+    },
+    {
+      "id": 29,
+      "scenario_id": "S-62310",
+      "being_id": "B-319f3d95",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:56",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 30,
+      "scenario_id": "S-62310",
+      "being_id": "B-76a10dd9",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:56",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 31,
+      "scenario_id": "S-62310",
+      "being_id": "B-d6adc926",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:56",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 32,
+      "scenario_id": "S-62310",
+      "being_id": "B-87150a0c",
+      "mastery_score": 7.3,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:56",
+      "being_name": "Selene",
+      "generation": 0
+    },
+    {
+      "id": 25,
+      "scenario_id": "S-92259",
+      "being_id": "B-a34bb4ba",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:23",
+      "being_name": "Rhea",
+      "generation": 0
+    },
+    {
+      "id": 26,
+      "scenario_id": "S-92259",
+      "being_id": "B-0b95143a",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:23",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 27,
+      "scenario_id": "S-92259",
+      "being_id": "B-87150a0c",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:23",
+      "being_name": "Selene",
+      "generation": 0
+    },
+    {
+      "id": 28,
+      "scenario_id": "S-92259",
+      "being_id": "B-d6adc926",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:23:23",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 21,
+      "scenario_id": "S-83649",
+      "being_id": "B-1d075d3f",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:50",
+      "being_name": "Dawn",
+      "generation": 0
+    },
+    {
+      "id": 22,
+      "scenario_id": "S-83649",
+      "being_id": "B-a34bb4ba",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:50",
+      "being_name": "Rhea",
+      "generation": 0
+    },
+    {
+      "id": 23,
+      "scenario_id": "S-83649",
+      "being_id": "B-d6adc926",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:50",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 24,
+      "scenario_id": "S-83649",
+      "being_id": "B-0b95143a",
+      "mastery_score": 6.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:50",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 17,
+      "scenario_id": "S-25040",
+      "being_id": "B-0b95143a",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:16",
+      "being_name": "Iris",
+      "generation": 0
+    },
+    {
+      "id": 18,
+      "scenario_id": "S-25040",
+      "being_id": "B-76a10dd9",
+      "mastery_score": 6.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:16",
+      "being_name": "Drift",
+      "generation": 0
+    },
+    {
+      "id": 19,
+      "scenario_id": "S-25040",
+      "being_id": "B-319f3d95",
+      "mastery_score": 7.8,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:16",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 20,
+      "scenario_id": "S-25040",
+      "being_id": "B-a6c1003b",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:22:16",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 13,
+      "scenario_id": "S-96599",
+      "being_id": "B-87150a0c",
+      "mastery_score": 7.8,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:21:37",
+      "being_name": "Selene",
+      "generation": 0
+    },
+    {
+      "id": 14,
+      "scenario_id": "S-96599",
+      "being_id": "B-319f3d95",
+      "mastery_score": 8.2,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:21:37",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 15,
+      "scenario_id": "S-96599",
+      "being_id": "B-a34bb4ba",
+      "mastery_score": 7.5,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:21:37",
+      "being_name": "Rhea",
+      "generation": 0
+    },
+    {
+      "id": 16,
+      "scenario_id": "S-96599",
+      "being_id": "B-a6c1003b",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:21:37",
+      "being_name": "Flint",
+      "generation": 0
+    },
+    {
+      "id": 9,
+      "scenario_id": "S-24552",
+      "being_id": "B-f1f0faec",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:19:27",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 10,
+      "scenario_id": "S-24552",
+      "being_id": "B-e16e541e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:19:27",
+      "being_name": "Perseus",
+      "generation": 0
+    },
+    {
+      "id": 11,
+      "scenario_id": "S-24552",
+      "being_id": "B-4190be0d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:19:27",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 12,
+      "scenario_id": "S-24552",
+      "being_id": "B-cb5de407",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:19:27",
+      "being_name": "Wolf",
+      "generation": 0
+    },
+    {
+      "id": 5,
+      "scenario_id": "S-95188",
+      "being_id": "B-cb5de407",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:50",
+      "being_name": "Wolf",
+      "generation": 0
+    },
+    {
+      "id": 6,
+      "scenario_id": "S-95188",
+      "being_id": "B-f1f0faec",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:50",
+      "being_name": "Artemis",
+      "generation": 0
+    },
+    {
+      "id": 7,
+      "scenario_id": "S-95188",
+      "being_id": "B-e16e541e",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:50",
+      "being_name": "Perseus",
+      "generation": 0
+    },
+    {
+      "id": 8,
+      "scenario_id": "S-95188",
+      "being_id": "B-4190be0d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:50",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 1,
+      "scenario_id": "S-41013",
+      "being_id": "B-4190be0d",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:12",
+      "being_name": "River",
+      "generation": 0
+    },
+    {
+      "id": 2,
+      "scenario_id": "S-41013",
+      "being_id": "B-e16e541e",
+      "mastery_score": 7.2,
+      "won": 0,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:12",
+      "being_name": "Perseus",
+      "generation": 0
+    },
+    {
+      "id": 3,
+      "scenario_id": "S-41013",
+      "being_id": "B-cb5de407",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:12",
+      "being_name": "Wolf",
+      "generation": 0
+    },
+    {
+      "id": 4,
+      "scenario_id": "S-41013",
+      "being_id": "B-f1f0faec",
+      "mastery_score": 7.5,
+      "won": 1,
+      "tournament_id": null,
+      "created_at": "2026-02-23 06:18:12",
+      "being_name": "Artemis",
+      "generation": 0
+    }
+  ],
+  "evolution_history": {
+    "generation_stats": {
+      "0": {
+        "count": 52,
+        "avg_mastery": 6.585691391941394,
+        "best": {
+          "id": "B-25de4a9d",
+          "name": "Zenith",
+          "score": 8.0
+        }
+      },
+      "1": {
+        "count": 40,
+        "avg_mastery": 6.922416666666666,
+        "best": {
+          "id": "B-653554a3",
+          "name": "River",
+          "score": 8.0
+        }
+      },
+      "2": {
+        "count": 27,
+        "avg_mastery": 7.2424691358024695,
+        "best": {
+          "id": "B-06d9dbb9",
+          "name": "Ember",
+          "score": 7.7
+        }
+      },
+      "3": {
+        "count": 11,
+        "avg_mastery": 5.736363636363636,
+        "best": {
+          "id": "B-1eba5546",
+          "name": "River",
+          "score": 7.733333333333333
+        }
+      }
+    },
+    "lineage_trees": {
+      "B-3f10da56": [
+        {
+          "id": "B-653554a3",
+          "name": "River",
+          "generation": 1,
+          "mastery": 8.0
+        }
+      ],
+      "B-a521e23c": [
+        {
+          "id": "B-c537cfe8",
+          "name": "Selene",
+          "generation": 1,
+          "mastery": 7.566666666666666
+        },
+        {
+          "id": "B-ee8d7447",
+          "name": "Onyx",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-ea132a31",
+          "name": "Cliff",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-cd876634",
+          "name": "Zenith",
+          "generation": 1,
+          "mastery": 7.425
+        },
+        {
+          "id": "B-4cf1803b",
+          "name": "Daphne",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-daa69f9f",
+          "name": "Drift",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-4100ea1b": [
+        {
+          "id": "B-c537cfe8",
+          "name": "Selene",
+          "generation": 1,
+          "mastery": 7.566666666666666
+        },
+        {
+          "id": "B-cd876634",
+          "name": "Zenith",
+          "generation": 1,
+          "mastery": 7.425
+        },
+        {
+          "id": "B-bd6b166e",
+          "name": "Artemis",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-4cf1803b",
+          "name": "Daphne",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-3411cfb0",
+          "name": "Knox",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-7c40173f",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.266666666666667
+        }
+      ],
+      "B-a6c1003b": [
+        {
+          "id": "B-5603df3c",
+          "name": "Nova",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-a126c593",
+          "name": "Sage",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-908d5f0f",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.066666666666666
+        }
+      ],
+      "B-76a10dd9": [
+        {
+          "id": "B-5603df3c",
+          "name": "Nova",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-a126c593",
+          "name": "Sage",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-908d5f0f",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.066666666666666
+        }
+      ],
+      "B-2580858c": [
+        {
+          "id": "B-cf8d4d33",
+          "name": "Zephyr",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-69ca0148": [
+        {
+          "id": "B-447074f9",
+          "name": "Selene",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-e43b602f",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-0446cbe5",
+          "name": "Flint",
+          "generation": 1,
+          "mastery": 7.2
+        },
+        {
+          "id": "B-c2d53b17",
+          "name": "Wren",
+          "generation": 1,
+          "mastery": 7.0
+        },
+        {
+          "id": "B-b306e531",
+          "name": "Wren",
+          "generation": 1,
+          "mastery": 0.0
+        },
+        {
+          "id": "B-06d9dbb9",
+          "name": "Ember",
+          "generation": 2,
+          "mastery": 7.7
+        },
+        {
+          "id": "B-f430522a",
+          "name": "Echo",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-82bcf104": [
+        {
+          "id": "B-447074f9",
+          "name": "Selene",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-490a63e2",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-4fd3ad09",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.3
+        }
+      ],
+      "B-b9ebf5b2": [
+        {
+          "id": "B-490a63e2",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-e43b602f",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-4fd3ad09",
+          "name": "Cedar",
+          "generation": 1,
+          "mastery": 7.3
+        },
+        {
+          "id": "B-0446cbe5",
+          "name": "Flint",
+          "generation": 1,
+          "mastery": 7.2
+        },
+        {
+          "id": "B-c2d53b17",
+          "name": "Wren",
+          "generation": 1,
+          "mastery": 7.0
+        },
+        {
+          "id": "B-b306e531",
+          "name": "Wren",
+          "generation": 1,
+          "mastery": 0.0
+        },
+        {
+          "id": "B-4d219afb",
+          "name": "Nova",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-7be48c34": [
+        {
+          "id": "B-7d7abb04",
+          "name": "Iris",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-72bf545b": [
+        {
+          "id": "B-d184d134",
+          "name": "Coral",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-5e436e8c": [
+        {
+          "id": "B-de5d6731",
+          "name": "Perseus",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-fa092a78",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-4682b92d",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-87a95d62",
+          "name": "Ares",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-6c9d669e",
+          "name": "Hawk",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-5c379551",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.45
+        },
+        {
+          "id": "B-ac04c82f",
+          "name": "River",
+          "generation": 2,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-3b4de462",
+          "name": "Knox",
+          "generation": 3,
+          "mastery": 6.5
+        }
+      ],
+      "B-16ab2d81": [
+        {
+          "id": "B-de5d6731",
+          "name": "Perseus",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-ee8d7447",
+          "name": "Onyx",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-fa092a78",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-ea132a31",
+          "name": "Cliff",
+          "generation": 1,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-bd6b166e",
+          "name": "Artemis",
+          "generation": 1,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-366d2529",
+          "name": "Aria",
+          "generation": 1,
+          "mastery": 7.283333333333334
+        }
+      ],
+      "B-96677446": [
+        {
+          "id": "B-bb35f83e",
+          "name": "Cliff",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-5a2aa670": [
+        {
+          "id": "B-030847b2",
+          "name": "Lyra",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-486d12ea": [
+        {
+          "id": "B-3369f2c7",
+          "name": "River",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-da2541bb": [
+        {
+          "id": "B-a4ef3368",
+          "name": "Ash",
+          "generation": 1,
+          "mastery": 7.5
+        }
+      ],
+      "B-641b36b6": [
+        {
+          "id": "B-f60b9e1e",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 7.4799999999999995
+        }
+      ],
+      "B-319f3d95": [
+        {
+          "id": "B-3edc0718",
+          "name": "Lyra",
+          "generation": 1,
+          "mastery": 7.35
+        }
+      ],
+      "B-25de4a9d": [
+        {
+          "id": "B-22f6defe",
+          "name": "Daphne",
+          "generation": 1,
+          "mastery": 7.25
+        }
+      ],
+      "B-d6adc926": [
+        {
+          "id": "B-f982084a",
+          "name": "Flux",
+          "generation": 1,
+          "mastery": 7.166666666666667
+        }
+      ],
+      "B-94fe998f": [
+        {
+          "id": "B-2cf0482d",
+          "name": "Vale",
+          "generation": 1,
+          "mastery": 7.15
+        },
+        {
+          "id": "B-dc92cfd2",
+          "name": "Ares",
+          "generation": 1,
+          "mastery": 6.733333333333333
+        },
+        {
+          "id": "B-4ca29805",
+          "name": "Jade",
+          "generation": 1,
+          "mastery": 6.633333333333333
+        },
+        {
+          "id": "B-e1e502f8",
+          "name": "Zephyr",
+          "generation": 1,
+          "mastery": 0.0
+        }
+      ],
+      "B-a5dc82e3": [
+        {
+          "id": "B-2cf0482d",
+          "name": "Vale",
+          "generation": 1,
+          "mastery": 7.15
+        },
+        {
+          "id": "B-dc92cfd2",
+          "name": "Ares",
+          "generation": 1,
+          "mastery": 6.733333333333333
+        },
+        {
+          "id": "B-364150d9",
+          "name": "Flint",
+          "generation": 1,
+          "mastery": 6.266666666666667
+        },
+        {
+          "id": "B-e1e502f8",
+          "name": "Zephyr",
+          "generation": 1,
+          "mastery": 0.0
+        }
+      ],
+      "B-45eec783": [
+        {
+          "id": "B-68bf9e0d",
+          "name": "Wolf",
+          "generation": 1,
+          "mastery": 7.0
+        }
+      ],
+      "B-6a3638b4": [
+        {
+          "id": "B-c52e48b5",
+          "name": "Thea",
+          "generation": 1,
+          "mastery": 6.875
+        }
+      ],
+      "B-37d77138": [
+        {
+          "id": "B-01f8cb12",
+          "name": "Blaze",
+          "generation": 1,
+          "mastery": 6.8
+        }
+      ],
+      "B-0b95143a": [
+        {
+          "id": "B-d06731d4",
+          "name": "Phoenix",
+          "generation": 1,
+          "mastery": 6.65
+        }
+      ],
+      "B-d184d134": [
+        {
+          "id": "B-06d9dbb9",
+          "name": "Ember",
+          "generation": 2,
+          "mastery": 7.7
+        },
+        {
+          "id": "B-f430522a",
+          "name": "Echo",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-4d219afb",
+          "name": "Nova",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-22f6defe": [
+        {
+          "id": "B-f45d8fc4",
+          "name": "Ridge",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-7d7abb04": [
+        {
+          "id": "B-da4d1623",
+          "name": "River",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-cf8d4d33": [
+        {
+          "id": "B-ff2f96d9",
+          "name": "Stone",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-f60b9e1e": [
+        {
+          "id": "B-daa69f9f",
+          "name": "Drift",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-4682b92d",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-3411cfb0",
+          "name": "Knox",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-5c379551",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.45
+        }
+      ],
+      "B-3369f2c7": [
+        {
+          "id": "B-8e1e50a0",
+          "name": "Cliff",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-a4ef3368": [
+        {
+          "id": "B-2e81d4cc",
+          "name": "Atlas",
+          "generation": 2,
+          "mastery": 7.5
+        }
+      ],
+      "B-366d2529": [
+        {
+          "id": "B-87a95d62",
+          "name": "Ares",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-6c9d669e",
+          "name": "Hawk",
+          "generation": 2,
+          "mastery": 7.5
+        },
+        {
+          "id": "B-ac04c82f",
+          "name": "River",
+          "generation": 2,
+          "mastery": 7.3999999999999995
+        },
+        {
+          "id": "B-7c40173f",
+          "name": "Thorn",
+          "generation": 2,
+          "mastery": 7.266666666666667
+        },
+        {
+          "id": "B-9d7ac1c2",
+          "name": "Wolf",
+          "generation": 3,
+          "mastery": 7.575
+        }
+      ],
+      "B-030847b2": [
+        {
+          "id": "B-127bf9a6",
+          "name": "Hawk",
+          "generation": 2,
+          "mastery": 7.4799999999999995
+        }
+      ],
+      "B-447074f9": [
+        {
+          "id": "B-ae90b520",
+          "name": "Blaze",
+          "generation": 2,
+          "mastery": 7.4
+        }
+      ],
+      "B-4cf1803b": [
+        {
+          "id": "B-44bd2cc1",
+          "name": "Thea",
+          "generation": 2,
+          "mastery": 7.3999999999999995
+        }
+      ],
+      "B-653554a3": [
+        {
+          "id": "B-ecc8aef8",
+          "name": "Wren",
+          "generation": 2,
+          "mastery": 7.15
+        }
+      ],
+      "B-bb35f83e": [
+        {
+          "id": "B-8f40abb8",
+          "name": "Wren",
+          "generation": 2,
+          "mastery": 7.0
+        }
+      ],
+      "B-2cf0482d": [
+        {
+          "id": "B-b2a89b5a",
+          "name": "River",
+          "generation": 2,
+          "mastery": 6.7
+        }
+      ],
+      "B-c52e48b5": [
+        {
+          "id": "B-33ecdfe3",
+          "name": "Vale",
+          "generation": 2,
+          "mastery": 6.666666666666667
+        },
+        {
+          "id": "B-cacfeee5",
+          "name": "Drift",
+          "generation": 2,
+          "mastery": 6.65
+        },
+        {
+          "id": "B-620d244a",
+          "name": "Ridge",
+          "generation": 2,
+          "mastery": 6.6000000000000005
+        },
+        {
+          "id": "B-c147ebac",
+          "name": "Dawn",
+          "generation": 3,
+          "mastery": 7.166666666666667
+        },
+        {
+          "id": "B-8780ebd5",
+          "name": "Rain",
+          "generation": 3,
+          "mastery": 6.7749999999999995
+        },
+        {
+          "id": "B-9420176d",
+          "name": "Helios",
+          "generation": 3,
+          "mastery": 5.85
+        }
+      ],
+      "B-01f8cb12": [
+        {
+          "id": "B-33ecdfe3",
+          "name": "Vale",
+          "generation": 2,
+          "mastery": 6.666666666666667
+        },
+        {
+          "id": "B-cacfeee5",
+          "name": "Drift",
+          "generation": 2,
+          "mastery": 6.65
+        },
+        {
+          "id": "B-620d244a",
+          "name": "Ridge",
+          "generation": 2,
+          "mastery": 6.6000000000000005
+        }
+      ],
+      "B-364150d9": [
+        {
+          "id": "B-ce162a63",
+          "name": "Cedar",
+          "generation": 2,
+          "mastery": 6.65
+        }
+      ],
+      "B-4ca29805": [
+        {
+          "id": "B-8b022be2",
+          "name": "Vale",
+          "generation": 2,
+          "mastery": 6.033333333333334
+        }
+      ],
+      "B-2e81d4cc": [
+        {
+          "id": "B-1eba5546",
+          "name": "River",
+          "generation": 3,
+          "mastery": 7.733333333333333
+        }
+      ],
+      "B-127bf9a6": [
+        {
+          "id": "B-9d7ac1c2",
+          "name": "Wolf",
+          "generation": 3,
+          "mastery": 7.575
+        },
+        {
+          "id": "B-3b4de462",
+          "name": "Knox",
+          "generation": 3,
+          "mastery": 6.5
+        }
+      ],
+      "B-3411cfb0": [
+        {
+          "id": "B-4bb1e00e",
+          "name": "Ash",
+          "generation": 3,
+          "mastery": 7.5
+        }
+      ],
+      "B-4682b92d": [
+        {
+          "id": "B-3da850fd",
+          "name": "Echo",
+          "generation": 3,
+          "mastery": 7.5
+        }
+      ],
+      "B-33ecdfe3": [
+        {
+          "id": "B-c147ebac",
+          "name": "Dawn",
+          "generation": 3,
+          "mastery": 7.166666666666667
+        },
+        {
+          "id": "B-8780ebd5",
+          "name": "Rain",
+          "generation": 3,
+          "mastery": 6.7749999999999995
+        },
+        {
+          "id": "B-9420176d",
+          "name": "Helios",
+          "generation": 3,
+          "mastery": 5.85
+        }
+      ],
+      "B-8e1e50a0": [
+        {
+          "id": "B-16b6f6d5",
+          "name": "Storm",
+          "generation": 3,
+          "mastery": 6.5
+        }
+      ],
+      "B-b2a89b5a": [
+        {
+          "id": "B-e57694d3",
+          "name": "Vale",
+          "generation": 3,
+          "mastery": 0.0
+        }
+      ],
+      "B-daa69f9f": [
+        {
+          "id": "B-e2e4ee48",
+          "name": "Thea",
+          "generation": 3,
+          "mastery": 0.0
+        }
+      ]
+    },
+    "total_beings": 130,
+    "max_generation": 3
+  }
+}

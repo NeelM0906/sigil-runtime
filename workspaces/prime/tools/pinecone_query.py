@@ -42,13 +42,21 @@ def load_env_file(path):
     return values
 
 
-def get_embedding(text, openai_api_key, model="text-embedding-3-small"):
-    """Get embedding from OpenAI API."""
-    url = "https://api.openai.com/v1/embeddings"
-    headers = {
-        "Authorization": f"Bearer {openai_api_key}",
-        "Content-Type": "application/json"
-    }
+def get_embedding(text, openai_api_key, model="text-embedding-3-small", openrouter_api_key=None):
+    """Get embedding from OpenRouter (preferred) or OpenAI API."""
+    if openrouter_api_key:
+        url = "https://openrouter.ai/api/v1/embeddings"
+        headers = {
+            "Authorization": f"Bearer {openrouter_api_key}",
+            "Content-Type": "application/json"
+        }
+        model = f"openai/{model}" if not model.startswith("openai/") else model
+    else:
+        url = "https://api.openai.com/v1/embeddings"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+            "Content-Type": "application/json"
+        }
     data = json.dumps({"input": text, "model": model}).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req) as resp:
@@ -61,8 +69,9 @@ def query_pinecone(index_name, query_text, pinecone_api_key, openai_api_key, nam
     pc = Pinecone(api_key=pinecone_api_key)
     index = pc.Index(index_name)
 
-    # Get embedding for query
-    embedding = get_embedding(query_text, openai_api_key=openai_api_key)
+    # Get embedding for query (prefer OpenRouter)
+    openrouter_key = os.environ.get('OPENROUTER_API_KEY')
+    embedding = get_embedding(query_text, openai_api_key=openai_api_key, openrouter_api_key=openrouter_key)
 
     # Query Pinecone
     kwargs = {

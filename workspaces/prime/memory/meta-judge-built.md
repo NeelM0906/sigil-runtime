@@ -2,7 +2,7 @@
 
 **Created:** 2026-02-23  
 **Miner:** Miner 14  
-**Location:** `/Users/samantha/Projects/colosseum/v2/data/meta_judge.json`
+**Location:** `./workspaces/prime/Projects/colosseum/v2/data/meta_judge.json`
 
 ## What Was Built
 

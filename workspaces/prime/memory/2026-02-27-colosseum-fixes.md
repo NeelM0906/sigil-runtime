@@ -15,13 +15,13 @@
 ## Fixes Applied
 
 ### 1. ✅ Upgraded Scoring/Judge Model
-**File:** `/Users/samantha/Projects/colosseum/colosseum_daemon.py`
+**File:** `./workspaces/prime/Projects/colosseum/colosseum_daemon.py`
 - Generation model: `gpt-4o-mini` → `gpt-4o`
 - Judge model: `gpt-4o-mini` → `o1` (reasoning model!)
 
 ### 2. ✅ Multi-Model Judge System (19 Judges × 6 LLMs)
-**File:** `/Users/samantha/Projects/colosseum/multi_model_judges.py`
-**File:** `/Users/samantha/Projects/colosseum/judge_model_assignments.json`
+**File:** `./workspaces/prime/Projects/colosseum/multi_model_judges.py`
+**File:** `./workspaces/prime/Projects/colosseum/judge_model_assignments.json`
 
 Each judge now uses the LLM best suited for its evaluation:
 
@@ -35,7 +35,7 @@ Each judge now uses the LLM best suited for its evaluation:
 | DeepSeek R1 | self_mastery_judge | Deep reasoning |
 
 ### 3. ✅ Fixed Self-Correction Loop (Closed Loop Verification)
-**File:** `/Users/samantha/Projects/colosseum/colosseum/evolution_v2.py`
+**File:** `./workspaces/prime/Projects/colosseum/colosseum/evolution_v2.py`
 
 NEW: Mutations are now VERIFIED:
 - Up to 3 mutation attempts per being
@@ -43,7 +43,7 @@ NEW: Mutations are now VERIFIED:
 - Track verified vs failed mutations in stats
 
 ### 4. ✅ Configurable Evolution Ratios
-**File:** `/Users/samantha/Projects/colosseum/colosseum/evolution_v2.py`
+**File:** `./workspaces/prime/Projects/colosseum/colosseum/evolution_v2.py`
 
 ```python
 EvolutionConfig(
@@ -61,7 +61,7 @@ Adaptive ratios:
 - Low-scoring population (<5.0): Keep 20%, mutate 40%, crossover 40%
 
 ### 5. ✅ Only Save Changed Beings
-**File:** `/Users/samantha/Projects/colosseum/colosseum/evolution_v2.py`
+**File:** `./workspaces/prime/Projects/colosseum/colosseum/evolution_v2.py`
 
 Before: All beings saved every round (even unchanged survivors)
 After: Only mutants and newborns are saved
@@ -73,12 +73,12 @@ Evolution stats now tracked:
 
 ## Files Changed
 
-1. `/Users/samantha/Projects/colosseum/colosseum_daemon.py` — Model upgrades, v2 import
-2. `/Users/samantha/Projects/colosseum/colosseum/evolution_v2.py` — NEW: Improved evolution
-3. `/Users/samantha/Projects/colosseum/multi_model_judges.py` — NEW: Multi-model judging
-4. `/Users/samantha/Projects/colosseum/judge_model_assignments.json` — NEW: Judge-to-model mapping
-5. `/Users/samantha/Projects/colosseum/model_benchmark.py` — NEW: Model testing framework
-6. `/Users/samantha/Projects/colosseum/recalibration_daemon.py` — Model upgrades
+1. `./workspaces/prime/Projects/colosseum/colosseum_daemon.py` — Model upgrades, v2 import
+2. `./workspaces/prime/Projects/colosseum/colosseum/evolution_v2.py` — NEW: Improved evolution
+3. `./workspaces/prime/Projects/colosseum/multi_model_judges.py` — NEW: Multi-model judging
+4. `./workspaces/prime/Projects/colosseum/judge_model_assignments.json` — NEW: Judge-to-model mapping
+5. `./workspaces/prime/Projects/colosseum/model_benchmark.py` — NEW: Model testing framework
+6. `./workspaces/prime/Projects/colosseum/recalibration_daemon.py` — Model upgrades
 
 ## Daemon Status
 - Restarted at 1:59 PM EST

@@ -10,9 +10,9 @@
    
 2. **Add to ~/.openclaw/.env:**
    ```
-   ZOOM_ACCOUNT_ID=xxx
-   ZOOM_CLIENT_ID=xxx
-   ZOOM_CLIENT_SECRET=xxx
+   ZOOM_ACCOUNT_ID=[REDACTED]
+   ZOOM_CLIENT_ID=[REDACTED]
+   ZOOM_CLIENT_SECRET=[REDACTED]
    ```
 
 ## Requirements

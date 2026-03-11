@@ -1,10 +1,25 @@
-# BOMBA SR Runtime
+# SAI Dashboard Runtime
 
-<!-- Last verified: 2026-03-06. Update this date when sections are reviewed. -->
+<!-- Last verified: 2026-03-11. Update this date when sections are reviewed. -->
 
-A local-first, multi-tenant runtime for self-correcting AI agents. BOMBA SR provides a complete agent runtime layer with agentic tool loops, three-tier persistent memory, real sub-agent orchestration, multi-being identity injection, proactive autonomy, and a self-correcting adaptation engine.
+This branch packages the live SAI dashboard and runtime into one portable repo. The repo includes the dashboard UI, runtime backend, bundled OpenClaw-compatible workspace tree, projects, skills, tools, Colosseum assets, and historical session data so the system can be moved to another machine without depending on a separate `~/.openclaw` install.
 
-The system operates as a **being ecosystem** — 5 runtime sisters (Prime, Forge, Scholar, Recovery, Memory) host 19 ACT-I specialized beings across 80 operational clusters, orchestrated through a 4-phase planning engine with per-being tool filtering and tenant isolation.
+The runtime still behaves like a multi-being ecosystem: Prime, Forge, Scholar, Recovery, and Memory share one dashboard and one backend, with access to Pinecone, Supabase, Postgres fallback reads, Fal video generation, Colosseum data, and the bundled project tree.
+
+## Portable Layout
+
+The repo is self-contained around these roots:
+
+| Path | Purpose |
+|---|---|
+| `mission-control/` | React dashboard frontend |
+| `src/bomba_sr/` | Runtime, orchestration, tools, dashboard API |
+| `workspaces/` | Bundled Prime / Forge / Scholar / Recovery / Memory workspaces |
+| `portable-openclaw/` | Portable OpenClaw-style root used by legacy scripts and session imports |
+| `.portable-home/` | Portable HOME shim for scripts that expect `~/.openclaw` |
+| `.runtime/` | Local runtime DBs, events, artifacts, and tenant state |
+
+If you need to re-import from an existing OpenClaw source tree, use `scripts/import_portable_assets.sh /path/to/source-root`. It copies the full workspace folders and agent folders into this repo.
 
 ---
 
@@ -21,8 +36,9 @@ The system operates as a **being ecosystem** — 5 runtime sisters (Prime, Forge
 9. [Tool System & Governance](#tool-system--governance)
 10. [ACT-I Integration](#act-i-integration)
 11. [Quick Start & Development](#quick-start--development)
-12. [Configuration Reference](#configuration-reference)
-13. [Migration History](#migration-history)
+12. [GitHub Publishing](#github-publishing)
+13. [Configuration Reference](#configuration-reference)
+14. [Migration History](#migration-history)
 
 ---
 
@@ -568,51 +584,107 @@ ACT-I beings share their parent sister's tenant (no new databases). Identity is 
 ### Requirements
 
 - Python 3.11+
-- An LLM provider API key (OpenRouter, Anthropic, or OpenAI)
+- Node.js 20+
+- `OPENROUTER_API_KEY`
 
-### Setup
+### Portable Setup
 
 ```bash
-# 1. Clone and set up environment
-git clone <repo-url> && cd PROJEKT
+# 1. Clone
+git clone https://github.com/NeelM0906/sigil-runtime.git
+cd sigil-runtime
+
+# 2. Python env
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-# 2. Configure environment
+# 3. Frontend deps
+cd mission-control
+npm install
+cd ..
+
+# 4. Configure secrets
 cp .env.example .env
-# Edit .env — set at minimum: OPENROUTER_API_KEY=your-key-here
+# Fill in the keys you actually use:
+# OPENROUTER_API_KEY
+# PINECONE_API_KEY / PINECONE_API_KEY_STRATA
+# SUPABASE_URL / SUPABASE_SERVICE_KEY / DATABASE_URL
+# FAL_KEY
+# BLAND_API_KEY / ELEVENLABS_API_KEY / DEEPGRAM_API_KEY / ZOOM_* as needed
 
-# 3. Run tests (100+ should pass)
-PYTHONPATH=src python -m pytest -q
+# 5. Build the portable OpenClaw layout
+python3 scripts/bootstrap_portable_root.py
 
-# 4a. CLI mode
-PYTHONPATH=src python scripts/run_chat_cli.py \
-  --tenant-id tenant-local --user-id user-local \
-  --workspace "$(pwd)"
-
-# 4b. HTTP server mode
+# 6. Run backend
 PYTHONPATH=src python scripts/run_runtime_server.py --host 127.0.0.1 --port 8787
 
-# 5. Health check
+# 7. Run frontend in another terminal
+cd mission-control
+npm run dev
+
+# 8. Health check
 curl -s http://127.0.0.1:8787/health | python -m json.tool
-# {"ok": true}
 ```
+
+Open:
+
+- Dashboard: `http://127.0.0.1:5173`
+- Backend: `http://127.0.0.1:8787`
+
+### Optional Helper Shell
+
+Some bundled legacy scripts still expect a HOME-style OpenClaw layout. Use this helper before running them manually:
+
+```bash
+source scripts/use_portable_openclaw.sh
+```
+
+That exports a repo-local `HOME`, `OPENCLAW_HOME`, and `OPENCLAW_ENV_FILE` so those scripts resolve inside this repo instead of a machine-global install.
+
+### What Is Bundled
+
+- Full workspace copies under `workspaces/`
+- Portable agent/session history under `portable-openclaw/agents/`
+- Colosseum project data under `workspaces/prime/Projects/colosseum/`
+- Prove Ahead, webinar, transcript, and recovery project folders under `workspaces/*/Projects/`
+- Dashboard artifacts and task output in `.runtime/`
 
 ### Testing
 
 ```bash
-# All tests (~1.5s)
-PYTHONPATH=src python -m pytest -q
+# Main regression suites
+PYTHONPATH=src python -m pytest tests/test_dashboard_service.py tests/test_orchestration_engine.py tests/test_orchestration_subagent.py -q
 
-# Verbose single file
-PYTHONPATH=src python -m pytest tests/test_wave1_capabilities.py -v
+# Full suite
+PYTHONPATH=src python -m pytest -q
 
 # Single test with output
 PYTHONPATH=src python -m pytest tests/test_wave1_capabilities.py::TestName::test_method -v -s
 ```
 
 76 test files. Naming conventions: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`, `test_builtin_*`, `test_sisters*`, `test_dashboard_*`, `test_orchestration_*`, `test_acti_*`.
+
+## GitHub Publishing
+
+This repo is meant to be portable across machines, but secrets are intentionally not committed.
+
+1. Copy `.env.example` to `.env`
+2. Fill in the API keys you actually use
+3. Run `python3 scripts/bootstrap_portable_root.py`
+4. Start the backend and frontend with the commands above
+
+If you are preparing a public push after importing a fresh OpenClaw bundle, run:
+
+```bash
+python3 scripts/sanitize_portable_bundle.py portable-openclaw workspaces README.md
+```
+
+That pass scrubs embedded credentials and machine-specific paths from imported history and configs before you commit.
+
+GitHub limit note:
+- This repo intentionally excludes oversized generated artifacts that GitHub rejects, including Colosseum SQLite databases, large Colosseum logs, and large source MP3 files under `workspaces/prime/Projects/youtube-transcripts/`.
+- Those files are not required to run the dashboard or runtime. If you have a private local copy and want them back in a working tree, place them in the same paths after cloning.
 
 ### Adding a New Tool
 
@@ -670,14 +742,14 @@ All configuration via environment variables, loaded in `src/bomba_sr/runtime/con
 
 | Variable | Description |
 |---|---|
-| `OPENROUTER_API_KEY` | OpenRouter API key (or use `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) |
+| `OPENROUTER_API_KEY` | Required primary model routing key |
 
 ### LLM & Runtime
 
 | Variable | Default | Description |
 |---|---|---|
 | `BOMBA_MODEL_ID` | `anthropic/claude-opus-4.6` | Default model |
-| `BOMBA_RUNTIME_HOME` | `.runtime` | State directory |
+| `BOMBA_RUNTIME_HOME` | `.runtime` | Runtime state directory inside the repo |
 | `BOMBA_AGENTIC_LOOP_ENABLED` | `true` | Enable tool loop |
 | `BOMBA_MAX_LOOP_ITERATIONS` | `25` | Max loop iterations |
 | `BOMBA_LOOP_DETECTION_WINDOW` | `5` | Repeating call detection |
@@ -717,8 +789,14 @@ All configuration via environment variables, loaded in `src/bomba_sr/runtime/con
 | `BOMBA_PINECONE_DEFAULT_INDEX` | `ublib2` | Default Pinecone index |
 | `PINECONE_API_KEY` | none | Primary Pinecone API key |
 | `PINECONE_API_KEY_STRATA` | none | STRATA indexes key |
+| `SUPABASE_URL` | none | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | none | Supabase service role key |
+| `DATABASE_URL` | none | Postgres connection string or fallback source for postgres tools |
 | `BOMBA_VOICE_ENABLED` | `false` | Enable voice tools |
 | `BLAND_API_KEY` | none | Bland API key |
+| `ELEVENLABS_API_KEY` | none | ElevenLabs voice / transcript integrations |
+| `DEEPGRAM_API_KEY` | none | Deepgram STT integrations |
+| `FAL_KEY` | none | Fal text-to-video / media generation |
 | `BOMBA_COLOSSEUM_ENABLED` | `false` | Enable Colosseum tools |
 | `BOMBA_PROVE_AHEAD_ENABLED` | `false` | Enable Prove-Ahead tools |
 

@@ -2,7 +2,11 @@
 CHDDIA² Colosseum v2 — Area-Specific Scenarios
 39 scenarios, one per being, specific to ACT-I / Unblinded / Callagy Recovery
 """
-import json, random
+import json
+import random
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 SCENARIOS = {
     # AREA 1: VISION & LEADERSHIP
@@ -294,7 +298,8 @@ SCENARIOS = {
 }
 
 # Save scenarios
-with open("/Users/samantha/Projects/colosseum/v2/data/scenarios.json", "w") as f:
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+with (DATA_DIR / "scenarios.json").open("w", encoding="utf-8") as f:
     json.dump(SCENARIOS, f, indent=2)
 
 print(f"✅ Generated {len(SCENARIOS)} scenarios across all 13 areas")

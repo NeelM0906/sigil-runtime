@@ -11,6 +11,21 @@ venv/
 # Local env/runtime
 .env
 .runtime/
+.portable-home/
+portable-openclaw/.env
+workspaces/*/.env
+workspaces/*/tools/.venv
+workspaces/prime/Projects/colosseum/colosseum.db
+workspaces/prime/Projects/colosseum/domains/*/colosseum.db
+workspaces/prime/Projects/colosseum/v2/data/colosseum.db
+workspaces/prime/Projects/colosseum/logs/*.log
+workspaces/prime/Projects/colosseum/logs/*.log.*
+workspaces/prime/Projects/youtube-transcripts/*.mp3
+portable-openclaw/agents/*/sessions/*.jsonl.deleted.*
+portable-openclaw/agents/*/sessions/*.jsonl.reset.*
+portable-openclaw/agents/*/sessions/backup/
+workspaces/prime/Projects/colosseum/*.bak*
+workspaces/prime/tools/sai-outreach/contacts_backup.json
 .DS_Store
 
 # Build/packaging

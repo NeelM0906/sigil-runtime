@@ -465,7 +465,7 @@ def _prove_ahead_report_factory(workspace_root: Path | None):
 
 def builtin_prove_ahead_tools(
     provider: LLMProvider | None = None,
-    default_model_id: str = "gpt-4o-mini",
+    default_model_id: str = "anthropic/claude-opus-4.6",
     workspace_root: Path | None = None,
 ) -> list[ToolDefinition]:
     return [

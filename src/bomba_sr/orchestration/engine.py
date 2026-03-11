@@ -294,14 +294,17 @@ class OrchestrationEngine:
         self._lock = threading.Lock()
         self._completed_task_count: int = 0
         self._dream_trigger_every: int = int(os.environ.get("BOMBA_DREAM_TRIGGER_EVERY", "5"))
+        self.subagent_orch: SubAgentOrchestrator | None = None
+        self.protocol: SubAgentProtocol | None = None
+        self._orchestration_worker = None
         self._ensure_task_results_schema()
         self._ensure_orchestration_state_schema()
         self.cleanup_orphaned_orchestrations()
 
         # SubAgent protocol integration — passed in or auto-resolved from bridge
         if subagent_orchestrator is not None:
-            self.subagent_orch: SubAgentOrchestrator | None = subagent_orchestrator
-            self.protocol: SubAgentProtocol | None = subagent_orchestrator.protocol
+            self.subagent_orch = subagent_orchestrator
+            self.protocol = subagent_orchestrator.protocol
             # Create a dashboard-aware worker for orchestration spawns
             from bomba_sr.subagents.worker import SubAgentWorkerFactory
             self._orchestration_worker = SubAgentWorkerFactory(
@@ -1075,6 +1078,7 @@ class OrchestrationEngine:
                   sub.being_id, run.get("status") if run else "none", len(output))
 
         # Being status (busy → online) is managed by the worker's finally block.
+        state = self._get_state(parent_task_id)
 
         # Emit completion event for live tracker
         try:
@@ -1105,7 +1109,6 @@ class OrchestrationEngine:
 
         # Extract deliverables from subtask output and notify chat
         try:
-            state = self._get_state(parent_task_id)
             _cs = state.get("chat_session_id", "general")
             if output and not output.startswith("[Error"):
                 # Extract code blocks into deliverable files
@@ -1481,7 +1484,7 @@ class OrchestrationEngine:
         from bomba_sr.runtime.bridge import TurnRequest
         from bomba_sr.llm.providers import ChatMessage, provider_from_env
 
-        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", os.environ.get("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6"))
         provider = provider_from_env()
 
         summaries: dict[str, str] = {}
@@ -1783,6 +1786,21 @@ class OrchestrationEngine:
         })
 
     def _prime_workspace(self) -> str:
+        try:
+            existing = getattr(self.bridge, "_tenants", {}).get(self.prime_tenant_id)
+            existing_workspace = getattr(getattr(existing, "context", None), "workspace_root", None)
+            if existing_workspace:
+                return str(existing_workspace)
+        except Exception:
+            pass
+        try:
+            prime = self.dashboard.get_being("prime") if self.dashboard else None
+            workspace = str((prime or {}).get("workspace") or "").strip()
+            if workspace:
+                path = Path(workspace)
+                return str(path if path.is_absolute() else (_PROJECT_ROOT / path))
+        except Exception:
+            pass
         return str(_PROJECT_ROOT / "workspaces" / "prime")
 
     # ------------------------------------------------------------------
@@ -2419,7 +2437,7 @@ class OrchestrationEngine:
             return
 
         import os
-        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+        classify_model = os.environ.get("BOMBA_CLASSIFY_MODEL", os.environ.get("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6"))
 
         for sub in plan.sub_tasks:
             try:

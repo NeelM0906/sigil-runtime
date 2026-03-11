@@ -1,7 +1,10 @@
 import json
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # Load existing judges
-with open("/Users/samantha/Projects/colosseum/v2/data/judges.json") as f:
+with (DATA_DIR / "judges.json").open(encoding="utf-8") as f:
     JUDGES = json.load(f)
 
 # Add Ecosystem Merger Judge
@@ -75,7 +78,7 @@ Return JSON: {"room_command": X, "energy_transfer": X, "action_causing": X, "ide
 }
 
 # Save expanded judges
-with open("/Users/samantha/Projects/colosseum/v2/data/judges.json", "w") as f:
+with (DATA_DIR / "judges.json").open("w", encoding="utf-8") as f:
     json.dump(JUDGES, f, indent=2)
 
 print(f"✅ Expanded to {len(JUDGES)} judges")

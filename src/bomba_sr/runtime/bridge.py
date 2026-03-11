@@ -32,9 +32,10 @@ from bomba_sr.identity.profile import UserIdentityService
 from bomba_sr.identity.soul import SoulConfig, load_soul_from_workspace
 from bomba_sr.info.retrieval import GenericInfoRetriever
 from bomba_sr.llm.providers import ChatMessage, LLMProvider, provider_from_env
-from bomba_sr.memory.embeddings import OpenAIEmbeddingProvider
+from bomba_sr.memory.embeddings import OpenAIEmbeddingProvider, default_embedding_api_key
 from bomba_sr.memory.hybrid import HybridMemoryStore, resolve_being_id
 from bomba_sr.models.capabilities import CapabilityError, ModelCapabilityService
+from bomba_sr.openclaw.integration import ensure_portable_openclaw_layout, list_skill_roots
 from bomba_sr.plugins.registry import PluginRegistry
 from bomba_sr.projects.service import ProjectService
 from bomba_sr.runtime.config import RuntimeConfig
@@ -58,6 +59,7 @@ from bomba_sr.tools.builtin_colosseum import builtin_colosseum_tools
 from bomba_sr.tools.builtin_compaction import builtin_compaction_tools
 from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
 from bomba_sr.tools.builtin_exec import builtin_exec_tools
+from bomba_sr.tools.builtin_fal import builtin_fal_tools
 from bomba_sr.tools.builtin_fs import builtin_fs_tools
 from bomba_sr.tools.builtin_knowledge import builtin_knowledge_tools
 from bomba_sr.tools.builtin_team_context import builtin_team_context_tools
@@ -71,6 +73,7 @@ from bomba_sr.tools.builtin_scheduler import builtin_scheduler_tools
 from bomba_sr.tools.builtin_skills import builtin_skill_tools
 from bomba_sr.tools.builtin_sisters import builtin_sister_tools
 from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
+from bomba_sr.tools.builtin_data_access import builtin_data_access_tools
 from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 
@@ -159,12 +162,14 @@ class RuntimeBridge:
         embedding_provider: OpenAIEmbeddingProvider | None = None,
     ) -> None:
         self.config = config or RuntimeConfig()
+        ensure_portable_openclaw_layout()
         self.provider = provider or provider_from_env()
         self.registry = TenantRegistry(self.config.runtime_home)
         self.serena_transport = serena_transport
         self.embedding_provider = embedding_provider
-        if self.embedding_provider is None and os.getenv("OPENAI_API_KEY"):
-            self.embedding_provider = OpenAIEmbeddingProvider(api_key=os.environ["OPENAI_API_KEY"])
+        default_embed_key = default_embedding_api_key()
+        if self.embedding_provider is None and default_embed_key:
+            self.embedding_provider = OpenAIEmbeddingProvider(api_key=default_embed_key)
         self._tenants: dict[str, _TenantRuntime] = {}
         self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
         self._cron_schedulers: dict[str, CronScheduler] = {}
@@ -2527,10 +2532,20 @@ class RuntimeBridge:
             skill_roots = [Path(p).expanduser() for p in self.config.skill_roots]
         else:
             skill_roots = [
-                context.workspace_root / "skills",
+                *list_skill_roots(context.workspace_root),
                 Path.home() / ".sigil" / "skills",
+                Path("/opt/homebrew/lib/node_modules/openclaw/skills"),
                 Path(__file__).resolve().parents[1] / "skills" / "bundled",
             ]
+        deduped_skill_roots: list[Path] = []
+        seen_skill_roots: set[Path] = set()
+        for root in skill_roots:
+            resolved = root.expanduser().resolve()
+            if resolved in seen_skill_roots:
+                continue
+            seen_skill_roots.add(resolved)
+            deduped_skill_roots.append(resolved)
+        skill_roots = deduped_skill_roots
         plugin_skill_dirs = plugin_registry.get_skill_dirs()
         if plugin_skill_dirs:
             skill_roots = [skill_roots[0], *plugin_skill_dirs, *skill_roots[1:]]
@@ -2605,8 +2620,17 @@ class RuntimeBridge:
                     default_namespace=self.config.pinecone_default_namespace,
                 )
             )
+        if self.config.supabase_enabled or self.config.postgres_enabled:
+            tool_executor.register_many(
+                builtin_data_access_tools(
+                    enable_supabase=self.config.supabase_enabled,
+                    enable_postgres=self.config.postgres_enabled,
+                )
+            )
         if self.config.voice_enabled:
             tool_executor.register_many(builtin_voice_tools(provider=self.config.voice_provider))
+        if self.config.fal_enabled:
+            tool_executor.register_many(builtin_fal_tools(default_video_model=self.config.fal_video_model))
         if self.config.colosseum_enabled:
             tool_executor.register_many(
                 builtin_colosseum_tools(

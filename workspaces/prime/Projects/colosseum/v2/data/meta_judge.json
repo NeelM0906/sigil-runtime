@@ -1,0 +1,304 @@
+{
+  "meta_judge": {
+    "name": "Meta Judge",
+    "version": "1.0.0",
+    "focus": "Evaluates whether judges are improving — tracks predictive accuracy, measures calibration drift, identifies judges needing recalibration",
+    "description": "The judge of judges. Does not evaluate beings — evaluates JUDGES. Its only purpose is ensuring the judging system itself is getting better at predicting real-world outcomes.",
+    
+    "core_metrics": {
+      "predictive_accuracy": {
+        "description": "Do high judge scores predict actual real-world success? A judge that gives 9.0 should correlate with actual excellent outcomes.",
+        "measurement": "Compare judge scores against tracked outcome data over time",
+        "target": "Correlation coefficient > 0.7 between judge scores and verified outcomes",
+        "signals": {
+          "positive": [
+            "High scores consistently predict successful closes",
+            "Low scores consistently predict failed attempts",
+            "Score rankings match actual performance rankings"
+          ],
+          "negative": [
+            "High scores followed by failed outcomes",
+            "Low scores followed by unexpected success",
+            "No correlation between scores and results"
+          ]
+        }
+      },
+      
+      "calibration_consistency": {
+        "description": "Does a 7.0 today mean the same thing as a 7.0 last month? Judges should score consistently over time.",
+        "measurement": "Track score distributions over rolling windows, detect drift",
+        "target": "Score distribution standard deviation < 0.5 over 30-day windows",
+        "signals": {
+          "positive": [
+            "Similar responses get similar scores across time",
+            "Score distributions remain stable",
+            "Reference examples get consistent scores"
+          ],
+          "negative": [
+            "Grade inflation over time",
+            "Grade deflation over time",
+            "Inconsistent scoring of identical test cases"
+          ]
+        }
+      },
+      
+      "discrimination_power": {
+        "description": "Can the judge distinguish between good and great? Or does everything cluster around 7-8?",
+        "measurement": "Score distribution entropy and range utilization",
+        "target": "Scores utilize full 0-9.9999 range with meaningful distribution",
+        "signals": {
+          "positive": [
+            "Clear separation between quality tiers",
+            "Scores span meaningful range (not all 6-8)",
+            "Edge cases scored at extremes appropriately"
+          ],
+          "negative": [
+            "Score clustering around middle values",
+            "Reluctance to score below 5 or above 9",
+            "Similar scores for clearly different quality"
+          ]
+        }
+      },
+      
+      "inter_judge_coherence": {
+        "description": "Do related judges agree on related dimensions? Contamination and Human judges should roughly agree on authenticity.",
+        "measurement": "Cross-judge correlation on overlapping dimensions",
+        "target": "Related dimensions correlate > 0.6 across judges",
+        "signals": {
+          "positive": [
+            "Contamination judge and Human judge agree on authenticity",
+            "Formula judge and Sean judge align on energy",
+            "Process judge and Outcome judge correlate on action-orientation"
+          ],
+          "negative": [
+            "Contradictory scores on same dimension across judges",
+            "High formula score but low outcome score consistently",
+            "Judges producing incoherent composite pictures"
+          ]
+        }
+      }
+    },
+
+    "evaluation_framework": {
+      "per_judge_health_check": {
+        "description": "Run periodically on each judge to assess its health",
+        "inputs": [
+          "Last 100 evaluations by this judge",
+          "Known outcome data for evaluated items (where available)",
+          "Reference test cases with expected scores"
+        ],
+        "outputs": {
+          "health_score": "0-10 overall health rating",
+          "predictive_accuracy": "Correlation with known outcomes",
+          "calibration_drift": "Change in mean/std from baseline",
+          "range_utilization": "% of 0-10 range being used",
+          "coherence_score": "Agreement with related judges",
+          "recommendation": "HEALTHY | MONITOR | RECALIBRATE | RETRAIN"
+        }
+      },
+      
+      "drift_detection": {
+        "description": "Continuous monitoring for calibration drift",
+        "method": "Rolling 30-day window comparison against 90-day baseline",
+        "alerts": {
+          "yellow": "Mean shift > 0.3 or std change > 15%",
+          "orange": "Mean shift > 0.5 or std change > 25%", 
+          "red": "Mean shift > 0.8 or std change > 40%"
+        }
+      },
+      
+      "recalibration_triggers": {
+        "automatic": [
+          "Predictive accuracy drops below 0.5 correlation",
+          "Red alert on drift detection",
+          "Inter-judge coherence below 0.4 on related dimensions"
+        ],
+        "manual_review": [
+          "Orange alert sustained for 14+ days",
+          "Significant new training data available",
+          "Domain knowledge updates (new framework understanding)"
+        ]
+      }
+    },
+
+    "judge_relationships": {
+      "description": "Expected correlations between judges for coherence checking",
+      "clusters": {
+        "authenticity_cluster": {
+          "judges": ["contamination_judge", "human_judge", "sean_judge"],
+          "shared_dimension": "authenticity/aliveness",
+          "expected_correlation": 0.65
+        },
+        "action_cluster": {
+          "judges": ["outcome_judge", "sales_closing_judge", "process_mastery_judge"],
+          "shared_dimension": "action-causing/results",
+          "expected_correlation": 0.60
+        },
+        "influence_cluster": {
+          "judges": ["formula_judge", "group_influence_judge", "truth_to_pain_judge"],
+          "shared_dimension": "influence mastery",
+          "expected_correlation": 0.55
+        },
+        "communication_cluster": {
+          "judges": ["written_content_judge", "public_speaking_judge", "teaching_judge"],
+          "shared_dimension": "communication effectiveness",
+          "expected_correlation": 0.50
+        },
+        "leadership_cluster": {
+          "judges": ["leadership_judge", "management_judge", "coaching_judge"],
+          "shared_dimension": "people development",
+          "expected_correlation": 0.45
+        }
+      }
+    },
+
+    "outcome_tracking": {
+      "description": "How to track real-world outcomes for predictive accuracy measurement",
+      "outcome_types": {
+        "sales": {
+          "metrics": ["deal_closed", "deal_size", "time_to_close", "client_retained_6mo"],
+          "relevant_judges": ["outcome_judge", "sales_closing_judge", "truth_to_pain_judge"]
+        },
+        "presentations": {
+          "metrics": ["audience_action_rate", "immediate_signups", "follow_up_requests"],
+          "relevant_judges": ["group_influence_judge", "public_speaking_judge", "leadership_judge"]
+        },
+        "coaching_sessions": {
+          "metrics": ["client_breakthrough_reported", "behavior_change_observed", "retention"],
+          "relevant_judges": ["coaching_judge", "truth_to_pain_judge", "self_mastery_judge"]
+        },
+        "written_communications": {
+          "metrics": ["response_rate", "action_taken", "sentiment_shift"],
+          "relevant_judges": ["written_content_judge", "contamination_judge", "human_judge"]
+        },
+        "team_leadership": {
+          "metrics": ["team_performance_delta", "retention", "engagement_scores"],
+          "relevant_judges": ["leadership_judge", "management_judge", "process_mastery_judge"]
+        }
+      }
+    },
+
+    "meta_evaluation_prompt": "You are the Meta Judge in the ACT-I Colosseum. You do not evaluate beings — you evaluate JUDGES.\n\nYour purpose is ensuring the judging system itself is improving over time. A perfect judge system means:\n1. High scores predict real-world success\n2. Scores are calibrated consistently over time\n3. Judges can distinguish between good and great\n4. Related judges agree on related dimensions\n\nWhen evaluating a judge, you receive:\n- Recent evaluations by that judge (scores and feedback)\n- Known outcomes for those evaluations (where available)\n- Historical baseline for that judge\n- Scores from related judges on same items\n\nYour evaluation:\n\nPREDICTIVE ACCURACY (0-10):\n- Do this judge's high scores predict actual success?\n- Do low scores predict actual failure?\n- Is there meaningful correlation with real outcomes?\n\nCALIBRATION STABILITY (0-10):\n- Is a 7.0 today the same as a 7.0 last month?\n- Has the mean or distribution shifted significantly?\n- Are reference cases scored consistently?\n\nDISCRIMINATION POWER (0-10):\n- Does the judge use the full range?\n- Can it distinguish between good and great?\n- Are clearly different qualities scored differently?\n\nINTER-JUDGE COHERENCE (0-10):\n- Does this judge agree with related judges on shared dimensions?\n- Are there contradictions that suggest miscalibration?\n\nOVERALL HEALTH (0-10):\n- Weighted combination of above factors\n- Below 6.0 = recalibration recommended\n- Below 4.0 = immediate intervention required\n\nRECOMMENDATION:\n- HEALTHY: Judge is performing well, no action needed\n- MONITOR: Minor concerns, watch closely\n- RECALIBRATE: Run calibration process with reference cases\n- RETRAIN: Significant issues, needs prompt revision\n\nReturn JSON: {\"predictive_accuracy\": X, \"calibration_stability\": X, \"discrimination_power\": X, \"inter_judge_coherence\": X, \"overall_health\": X, \"recommendation\": \"STATUS\", \"specific_issues\": [\"list of concerns\"], \"improvement_suggestions\": [\"list of suggestions\"]}",
+
+    "reference_test_cases": {
+      "description": "Canonical examples with expected scores for calibration testing",
+      "purpose": "Run these through judges periodically to detect drift",
+      "cases": [
+        {
+          "id": "calibration_001",
+          "type": "pure_bot_response",
+          "content": "Thank you for reaching out! I understand your concerns and would be happy to help. Here are some actionable insights for your consideration. Please let me know if there's anything else I can assist with!",
+          "expected_scores": {
+            "contamination_judge": {"overall": 1.5, "tolerance": 0.5},
+            "human_judge": {"overall": 2.0, "tolerance": 0.5},
+            "sean_judge": {"overall": 1.0, "tolerance": 0.5}
+          }
+        },
+        {
+          "id": "calibration_002",
+          "type": "masterful_truth_to_pain",
+          "content": "You said 'exhausted.' That word hit different than the others. Tell me — when you're lying in bed at 2am and the exhaustion is crushing you but your mind won't stop... what's the thought that keeps circling?",
+          "expected_scores": {
+            "truth_to_pain_judge": {"overall": 8.5, "tolerance": 0.7},
+            "human_judge": {"overall": 8.0, "tolerance": 0.7},
+            "coaching_judge": {"overall": 7.5, "tolerance": 0.7}
+          }
+        },
+        {
+          "id": "calibration_003",
+          "type": "zone_action_identification",
+          "content": "Stop. That's 80% activity. The zone action here is one call: call Sarah directly, right now, and ask for the introduction. Everything else is avoidance dressed up as preparation.",
+          "expected_scores": {
+            "process_mastery_judge": {"overall": 8.0, "tolerance": 0.6},
+            "contamination_judge": {"overall": 8.5, "tolerance": 0.6},
+            "outcome_judge": {"overall": 7.5, "tolerance": 0.6}
+          }
+        },
+        {
+          "id": "calibration_004",
+          "type": "generic_consulting",
+          "content": "I recommend implementing a comprehensive stakeholder alignment strategy with regular touchpoints. Let's schedule a strategic planning session to optimize our approach and leverage synergies across departments.",
+          "expected_scores": {
+            "contamination_judge": {"overall": 2.0, "tolerance": 0.5},
+            "sean_judge": {"overall": 1.5, "tolerance": 0.5},
+            "written_content_judge": {"overall": 2.5, "tolerance": 0.5}
+          }
+        },
+        {
+          "id": "calibration_005",
+          "type": "energy_mastery",
+          "content": "I see you. I see the champion who's been hiding behind 'realistic expectations.' You're not someone who plays small — that's a costume you put on because someone once told you the real you was 'too much.' Take it off. Right now. Who are you when no one's watching?",
+          "expected_scores": {
+            "leadership_judge": {"overall": 8.5, "tolerance": 0.6},
+            "human_judge": {"overall": 8.0, "tolerance": 0.6},
+            "self_mastery_judge": {"overall": 7.5, "tolerance": 0.6}
+          }
+        }
+      ]
+    },
+
+    "operational_procedures": {
+      "daily": [
+        "Compute rolling mean/std for each judge from last 24 hours",
+        "Compare against 30-day baseline",
+        "Flag any judges hitting yellow/orange thresholds"
+      ],
+      "weekly": [
+        "Run all reference test cases through all judges",
+        "Compare to expected scores, flag deviations > tolerance",
+        "Compute inter-judge coherence scores",
+        "Generate judge health dashboard"
+      ],
+      "monthly": [
+        "Full predictive accuracy analysis against outcome data",
+        "Review any sustained yellow/orange alerts",
+        "Recalibrate any judges below 6.0 health",
+        "Update reference test cases if needed"
+      ],
+      "quarterly": [
+        "Deep review of all judge prompts against evolved understanding",
+        "Add new reference cases from real high/low examples",
+        "Review judge relationship clusters for accuracy",
+        "Publish judge system health report"
+      ]
+    },
+
+    "recalibration_process": {
+      "step_1_diagnosis": "Run reference test cases, identify specific drift patterns",
+      "step_2_root_cause": "Determine if drift is in judge prompt, model, or data distribution",
+      "step_3_intervention": {
+        "prompt_drift": "Review and revise judge prompt for clarity/specificity",
+        "model_drift": "Update few-shot examples in prompt",
+        "distribution_drift": "Add new reference cases reflecting current distribution"
+      },
+      "step_4_validation": "Run full reference suite, confirm scores within tolerance",
+      "step_5_monitoring": "Increase monitoring frequency for 14 days post-recalibration"
+    }
+  },
+
+  "metadata": {
+    "created": "2026-02-23",
+    "created_by": "Miner 14",
+    "purpose": "Zone Action #40 - Judge of judges for ACT-I Colosseum",
+    "judges_evaluated": 18,
+    "judges_list": [
+      "formula_judge",
+      "sean_judge", 
+      "outcome_judge",
+      "contamination_judge",
+      "human_judge",
+      "ecosystem_merger_judge",
+      "group_influence_judge",
+      "self_mastery_judge",
+      "process_mastery_judge",
+      "written_content_judge",
+      "public_speaking_judge",
+      "leadership_judge",
+      "management_judge",
+      "sales_closing_judge",
+      "coaching_judge",
+      "teaching_judge",
+      "truth_to_pain_judge"
+    ]
+  }
+}

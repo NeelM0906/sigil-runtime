@@ -1,0 +1,24 @@
+{
+  "export_timestamp": "2026-02-23T18:45:03.613383",
+  "data_sources": {
+    "v1_sqlite": "./workspaces/prime/Projects/colosseum/colosseum.db",
+    "v2_json": "./workspaces/prime/Projects/colosseum/v2/data"
+  },
+  "counts": {
+    "v1_beings": 130,
+    "v2_beings": 43,
+    "judges": 17,
+    "tournaments": 6
+  },
+  "highlights": {
+    "best_v1_being": {
+      "name": "Flint",
+      "score": 7.833333333333333
+    },
+    "best_v2_being": {
+      "title": "Ecosystem Merger Specialist",
+      "area": "Marketing \u2014 Outbound / Sourcing",
+      "average": 6.764285714285714
+    }
+  }
+}

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 import threading
 import time
-import traceback
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -14,6 +15,18 @@ from bomba_sr.subagents.protocol import SubAgentProtocol, SubAgentTask
 
 SubAgentWorker = Callable[[str, SubAgentTask, SubAgentProtocol], dict[str, Any]]
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_error_detail(exc: Exception) -> str:
+    detail = f"{type(exc).__name__}: {exc}".strip()
+    if not detail:
+        detail = type(exc).__name__
+    home = os.path.expanduser("~").rstrip("/")
+    if home:
+        detail = detail.replace(home, "~")
+    detail = re.sub(r"/Users/[^/\s]+/\.openclaw", "~/.openclaw", detail)
+    detail = re.sub(r"/home/[^/\s]+/\.openclaw", "~/.openclaw", detail)
+    return detail[:800]
 
 
 @dataclass
@@ -131,7 +144,8 @@ class SubAgentOrchestrator:
             )
             return result
         except Exception as exc:  # pragma: no cover - defensive path
-            self.protocol.fail(run_id=run_id, reason=f"{exc}\n{traceback.format_exc()}")
+            logger.exception("Sub-agent worker failed for run %s", run_id)
+            self.protocol.fail(run_id=run_id, reason=_sanitize_error_detail(exc))
             if self.crash_detector.record_crash():
                 logger.warning("Sub-agent crash storm detected. Entering cooldown and cancelling pending futures.")
                 self._cancel_pending_futures()

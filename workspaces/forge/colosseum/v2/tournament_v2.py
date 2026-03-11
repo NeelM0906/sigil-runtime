@@ -2,21 +2,42 @@
 CHDDIA² Colosseum v2 — Tournament Engine
 39 beings × 5 judges × area-specific scenarios
 """
-import json, os, time, asyncio
+import asyncio
+import json
+import os
+import time
+from pathlib import Path
+
 from openai import AsyncOpenAI
 
-client = AsyncOpenAI()
+from bomba_sr.openclaw.script_support import load_portable_env
+
+load_portable_env(Path(__file__))
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+RESULTS_DIR = DATA_DIR / "results"
+MODEL_ID = os.getenv("BOMBA_COLOSSEUM_MODEL_ID") or os.getenv("BOMBA_MODEL_ID") or "anthropic/claude-opus-4.6"
+
+_openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+_openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+if _openrouter_key:
+    client = AsyncOpenAI(
+        api_key=_openrouter_key,
+        base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+    )
+else:
+    client = AsyncOpenAI(api_key=_openai_key or None)
 
 # Load data
-with open("/Users/samantha/Projects/colosseum/v2/data/beings.json") as f:
+with (DATA_DIR / "beings.json").open(encoding="utf-8") as f:
     BEINGS = json.load(f)
-with open("/Users/samantha/Projects/colosseum/v2/data/judges.json") as f:
+with (DATA_DIR / "judges.json").open(encoding="utf-8") as f:
     JUDGES = json.load(f)
-with open("/Users/samantha/Projects/colosseum/v2/data/scenarios.json") as f:
+with (DATA_DIR / "scenarios.json").open(encoding="utf-8") as f:
     SCENARIOS = json.load(f)
 
-RESULTS_DIR = "/Users/samantha/Projects/colosseum/v2/data/results"
-os.makedirs(RESULTS_DIR, exist_ok=True)
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 async def generate_response(being, scenario):
     """Have a being respond to its scenario."""
@@ -30,7 +51,7 @@ Respond as your character would in this exact situation. Be specific, be masterf
 
     try:
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL_ID,
             messages=[
                 {"role": "system", "content": being["dna"]},
                 {"role": "user", "content": prompt}
@@ -55,7 +76,7 @@ Score this response according to your criteria. Be rigorous. Be specific. Return
 
     try:
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=MODEL_ID,
             messages=[
                 {"role": "system", "content": judge_data["prompt"]},
                 {"role": "user", "content": prompt}
@@ -181,8 +202,8 @@ async def run_tournament(rounds=3):
         print(f"{medal} {i+1:2d}. {entry['title']:40s} | {entry['area']:30s} | {entry['average']:.2f}")
     
     # Save results
-    results_file = f"{RESULTS_DIR}/tournament_{int(time.time())}.json"
-    with open(results_file, "w") as f:
+    results_file = RESULTS_DIR / f"tournament_{int(time.time())}.json"
+    with results_file.open("w", encoding="utf-8") as f:
         json.dump({
             "leaderboard": leaderboard,
             "rounds": rounds,
@@ -195,7 +216,7 @@ async def run_tournament(rounds=3):
     print(f"\n💾 Results saved to {results_file}")
     
     # Save leaderboard summary
-    with open(f"{RESULTS_DIR}/leaderboard_latest.json", "w") as f:
+    with (RESULTS_DIR / "leaderboard_latest.json").open("w", encoding="utf-8") as f:
         json.dump(leaderboard, f, indent=2)
     
     return leaderboard

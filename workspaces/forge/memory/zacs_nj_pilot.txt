@@ -1,0 +1,17 @@
+```json
+{
+  "type": "question",
+  "stage": "P",
+  "collected_patch": {
+    "prompting": {
+      "stated_vision": "Launch NJ pilot split-test against 16,991 PI attorneys",
+      "context": "From the Forge; Cert Call Section 5",
+      "tool_reference": "Compare & Contrast weapon",
+      "desired_outcome": "Execution gate definition with binary gates and no fluff"
+    },
+    "urgency_signals": "Direct request for absolute specification; 'no fluff'; implies immediate action readiness"
+  },
+  "message_to_user": "I found references to Context, Contrast, and Zone Action in the knowledge base, but the specific ZACS-04 12-point framework and the binary execution gates for the NJ pilot split-test aren't directly surfaced. Before I route this to the specialist agents: **What is the ONE hardest constraint blocking you from launching this pilot right now—is it the gate logic itself, stakeholder approval, attorney list validation, or something else?** This tells me whether to focus RTI (diagnosis of the gate definition) or RAI (decision readiness) or ZACS (execution sequencing).",
+  "notes": "User is operating at solution-readiness level (specific framework request + execution language). This appears to be an explicit routing/action invitation masked as a framework question. Recommend RTI + ZACS strata routing once constraint is clarified. Inferred trigger: pilot launch imminent. Current state unclear—need to confirm if 12-point logic exists in custom Forge or needs to be reverse-engineered from first principles."
+}
+```

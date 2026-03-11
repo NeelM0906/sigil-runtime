@@ -26,17 +26,17 @@
 - **Minimum tech stack:** CRM+Email (ActiveCampaign/HubSpot), Landing Pages (ClickFunnels/Leadpages), Payments (Stripe+ThriveCart), Webinar (Zoom), Ads (Meta+Google), Analytics (GA4+Pixel).
 - **Critical rule:** Never launch without an email list. Build list weeks 1-6, launch weeks 7-9, scale weeks 10-12.
 
+### Fal.ai Video Generation — Production Notes
+- **Default text-to-video model:** `fal-ai/wan/v2.2-a14b/text-to-video` — reliable, completes in ~2-3 min
+- **Cinematic prompting:** Lead with camera movement type ("cinematic tracking shot"), then subject, then environment, then lighting, then quality modifiers ("Shot on RED camera, anamorphic lens, 24fps cinematic motion")
+- **Aspect ratio:** 16:9 for cinematic widescreen; always specify explicitly
+- **Duration:** 5 seconds is a safe default; produces ~5.5MB MP4 files at higher quality settings
+- **Seed reproducibility:** Seeds are returned in results (e.g., seed 235600130) — store for re-generation or variation work
+- **Workflow:** Single `fal_video_generate` call with `wait_for_completion=true` and generous timeout (300s) is cleanest for sub-agent delivery
+- **Prompt structure for nature/adventure scenes:** Camera movement → subject action → environment details → lighting conditions → atmospheric elements → color palette → technical specs → emotional tone. This order consistently produces coherent results.
+- **Fallback models if needed:** kling-video, minimax, or other fal.ai text-to-video endpoints
+
 ### Legal Industry Outreach (B2B Enterprise Sales)
 - **Optimal sequence length:** 6 emails over 25 days for cold outreach to managing partners and C-suite legal decision makers
 - **Subject line split test:** Authority-based ("27 years of courtroom influence") vs. problem-focused ("Why BigLaw partners are increasing originations by $2.4M") - authority performs better with legal audience
-- **Credibility establishment:** Lead with founder's legal background and specific achievements (trial verdicts, years of practice) before product benefits
-- **Industry pain points:** Address fear of lawyer replacement vs. enhancement, focus on human skills that can't be automated (influence, persuasion, relationship building)
-- **Social proof structure:** Specific metrics (89% increase, $2.4M origination boost) + unnamed case studies + peer testimonials from similar firm types
-- **Professional courtesy:** Always include respectful exit sequence maintaining relationship integrity - legal industry values long-term reputation
-- **Supporting materials:** One-pager focusing on methodology over features, proposal template with 3 pricing tiers, objection handling for "soft skills ROI" concerns
-- **Key messaging:** "We don't replace lawyers, we create better lawyers" - directly addresses primary adoption barrier
-
-### Visual Identity & Social Media Design
-- **Premium positioning color psychology:** Navy (#1B365D) + Gold (#D4AF37) combination conveys authority + achievement for legal industry
-- **Typography hierarchy:** Montserrat (professional authority) + Playfair Display (elegant wisdom) creates trustworthy but approachable brand
-- **Social media optimization:** LinkedIn carousels 1080x108
+- **Credibility establishment:** Lead with founder's legal background and specific achievements (trial verdicts, years of practice) bef

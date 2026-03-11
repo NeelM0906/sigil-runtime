@@ -74,7 +74,7 @@
 ## 2️⃣ SYSTEMS BUILT
 
 ### 🏛️ The Colosseum
-- **Location:** `/Users/samantha/Projects/colosseum/`
+- **Location:** `./workspaces/prime/Projects/colosseum/`
 - **Dashboard:** http://localhost:3000
 - **Capabilities:**
   - 4 lineages: Callie, Athena, Sean, Mixed
@@ -84,7 +84,7 @@
   - Best score: **8.92** (Phoenix)
 
 ### 📊 Colosseum Daemon (24/7 Automation)
-- **Location:** `/Users/samantha/Projects/colosseum/colosseum_daemon.py`
+- **Location:** `./workspaces/prime/Projects/colosseum/colosseum_daemon.py`
 - Auto-evolves population every N rounds
 - Rotating log files (10MB × 10)
 - launchctl/systemctl service support
@@ -116,7 +116,7 @@ Original 7 judges + 10 new specialized judges:
 | (Reserved) | Expansion slot |
 
 ### 📣 Marketing Machine
-- **Location:** `/Users/samantha/Projects/webinar-machine/`
+- **Location:** `./workspaces/prime/Projects/webinar-machine/`
 - Complete webinar framework for mid-April launch
 - Split-test spec with Python tracking framework
 - 7-stage funnel architecture

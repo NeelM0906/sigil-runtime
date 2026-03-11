@@ -25,6 +25,16 @@ from bomba_sr.acti.loader import (
     SHARED_HEART_SKILLS,
     BEING_SISTER_MAP,
 )
+from bomba_sr.dashboard.openclaw_sync import OpenClawSync
+from bomba_sr.openclaw.integration import (
+    bundled_openclaw_root,
+    ensure_portable_openclaw_layout,
+    list_agent_workspaces,
+    list_project_inventory,
+    list_skill_roots,
+    portable_display_path,
+    sanitize_portable_text,
+)
 
 
 MC_TENANT = "tenant-local"
@@ -41,8 +51,9 @@ TYPE_ACTI = "acti"             # ACT-I specialized beings
 log = logging.getLogger(__name__)
 
 # ── Task classification ──────────────────────────────────────
-# Fast model for classification calls (cheap, low-latency).
-_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", "openai/gpt-4o-mini")
+# Keep dashboard classification on the same model the bundled OpenClaw runtime uses
+# unless the caller explicitly overrides it.
+_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", os.getenv("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6"))
 
 _CLASSIFY_SYSTEM_PROMPT = """\
 You are a message classifier for a multi-agent command center.
@@ -99,6 +110,25 @@ _NOT_TASK_PATTERNS = re.compile(
 _REPRESENTATION_KEYWORDS = re.compile(
     r"\b(capabilities?|history|performance|strengths?|weaknesses?"
     r"|track\s+record|how.*been\s+doing|past\s+tasks?|profile|background)\b",
+    re.IGNORECASE,
+)
+
+_SHORT_CONFIRMATION_PATTERNS = (
+    re.compile(r"^(?:yes|yeah|yep|yup|sure|ok(?:ay)?|do it|run it|make it|send it|create it|generate it)[.!?\s]*$", re.IGNORECASE),
+    re.compile(r"^(?:yes|sure|ok(?:ay)?)\s+(?:generate|create|run|make|send)\s+it[.!?\s]*$", re.IGNORECASE),
+    re.compile(r"^go\s+ahead[.!?\s]*$", re.IGNORECASE),
+    re.compile(r"^go\s+ahead\s+and\s+(?:generate|create|run|make|send)\s+it[.!?\s]*$", re.IGNORECASE),
+)
+
+_ACTIONABLE_ASSISTANT_HINTS = re.compile(
+    r"\b("
+    r"would you like me to|want me to|say the word|go ahead and|"
+    r"i can (?:generate|create|run|make|send)|"
+    r"i'll (?:generate|create|run|make|send)|"
+    r"let me (?:generate|create|run|make|send)|"
+    r"(?:generate|create|run|make|send) (?:it|this|that)|"
+    r"fire it off|one moment"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -174,14 +204,17 @@ class DashboardService:
         bridge: Any | None = None,
         sisters: Any | None = None,
     ):
+        ensure_portable_openclaw_layout(_PROJECT_ROOT)
         self.db = db
         self.bridge = bridge
         self.sisters = sisters
         self.project_service: Any | None = None
         self.orchestration_engine: Any | None = None
+        self.openclaw_sync: OpenClawSync | None = None
         self._sse_clients: dict[str, queue.Queue] = {}
         self._sse_lock = threading.Lock()
         self._ensure_schema()
+        self._sanitize_stored_paths()
 
     # ------------------------------------------------------------------
     # Schema
@@ -299,6 +332,39 @@ class DashboardService:
             "INSERT OR IGNORE INTO mc_chat_sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
             ("general", "General", now, now),
         )
+
+    def _sanitize_stored_paths(self) -> None:
+        changed = False
+        with self.db.transaction() as conn:
+            rows = conn.execute("SELECT id, content FROM mc_messages").fetchall()
+            for row in rows:
+                original = str(row["content"] or "")
+                cleaned = sanitize_portable_text(original, _PROJECT_ROOT)
+                if cleaned != original:
+                    conn.execute("UPDATE mc_messages SET content = ? WHERE id = ?", (cleaned, row["id"]))
+                    changed = True
+
+            beings = conn.execute("SELECT id, workspace FROM mc_beings").fetchall()
+            for row in beings:
+                original_ws = str(row["workspace"] or "")
+                if not original_ws:
+                    continue
+                cleaned_ws = portable_display_path(original_ws, _PROJECT_ROOT)
+                if cleaned_ws != original_ws:
+                    conn.execute("UPDATE mc_beings SET workspace = ? WHERE id = ?", (cleaned_ws, row["id"]))
+                    changed = True
+
+            history_rows = conn.execute("SELECT id, details FROM mc_task_history").fetchall()
+            for row in history_rows:
+                original = str(row["details"] or "")
+                if not original:
+                    continue
+                cleaned = sanitize_portable_text(original, _PROJECT_ROOT)
+                if cleaned != original:
+                    conn.execute("UPDATE mc_task_history SET details = ? WHERE id = ?", (cleaned, row["id"]))
+                    changed = True
+        if changed:
+            log.info("Sanitized stored Mission Control paths for portability")
 
     # ------------------------------------------------------------------
     # Beings
@@ -546,7 +612,7 @@ class DashboardService:
                     b.get("description"), b.get("type"),
                     json.dumps(b.get("tools", [])),
                     json.dumps(b.get("skills", [])), b.get("color"),
-                    b.get("model_id"), b.get("workspace"),
+                    b.get("model_id"), portable_display_path(b.get("workspace"), _PROJECT_ROOT),
                     b.get("tenant_id"), 1 if b.get("auto_start") else 0,
                     b.get("phone"), b.get("agent_id"),
                     now, b["id"],
@@ -564,7 +630,7 @@ class DashboardService:
                     b.get("status", "offline"), b.get("description"),
                     b.get("type"), json.dumps(b.get("tools", [])),
                     json.dumps(b.get("skills", [])), b.get("color"),
-                    b.get("model_id"), b.get("workspace"),
+                    b.get("model_id"), portable_display_path(b.get("workspace"), _PROJECT_ROOT),
                     b.get("tenant_id"), 1 if b.get("auto_start") else 0,
                     b.get("phone"), b.get("agent_id"),
                     json.dumps(b.get("metrics", {})), now, now,
@@ -645,6 +711,10 @@ class DashboardService:
             return f"busy (task: {task_name})"
 
         return "online"
+
+    def sync_openclaw_once(self) -> None:
+        if self.openclaw_sync is not None and self.openclaw_sync.enabled:
+            self.openclaw_sync.sync_once()
 
     def get_being(self, being_id: str) -> dict | None:
         row = self.db.execute(
@@ -774,19 +844,62 @@ class DashboardService:
         self._emit_event("deliverable_created", d)
         return d
 
+    @staticmethod
+    def _output_sort_key(item: dict) -> str:
+        return str(item.get("created_at") or "")
+
+    @staticmethod
+    def _artifact_output_row(record: dict) -> dict:
+        path = str(record.get("path") or "")
+        filename = Path(path).name or str(record.get("title") or record.get("artifact_id") or "artifact")
+        mime_type = str(record.get("mime_type") or "")
+        file_type = str(record.get("artifact_type") or mime_type or "artifact")
+        return {
+            "id": f"artifact-{record.get('artifact_id')}",
+            "task_id": record.get("task_id"),
+            "being_id": None,
+            "filename": filename,
+            "file_type": file_type,
+            "file_path": path,
+            "url": f"/api/mc/artifacts/{record.get('artifact_id')}/download",
+            "line_count": 0,
+            "byte_size": int(record.get("file_size") or 0),
+            "created_at": str(record.get("created_at") or ""),
+            "source": "artifact",
+            "artifact_id": record.get("artifact_id"),
+            "mime_type": mime_type,
+            "title": str(record.get("title") or filename),
+        }
+
     def list_deliverables(self, task_id: str) -> list[dict]:
         rows = self.db.execute(
             "SELECT * FROM mc_deliverables WHERE task_id = ? ORDER BY created_at DESC",
             (task_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        items = [dict(r) for r in rows]
+        items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id))
+        return sorted(items, key=self._output_sort_key, reverse=True)
 
     def list_all_deliverables(self, limit: int = 50) -> list[dict]:
         rows = self.db.execute(
             "SELECT * FROM mc_deliverables ORDER BY created_at DESC LIMIT ?",
             (limit,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        items = [dict(r) for r in rows]
+        store = getattr(self, "_artifact_store", None)
+        if store:
+            try:
+                items.extend(
+                    self._artifact_output_row(r.to_dict())
+                    for r in store.list_recent_artifacts(MC_TENANT, limit=limit)
+                )
+            except Exception:
+                pass
+        deduped: dict[str, dict] = {}
+        for item in sorted(items, key=self._output_sort_key, reverse=True):
+            key = str(item.get("id") or item.get("artifact_id") or uuid.uuid4().hex)
+            deduped.setdefault(key, item)
+        return list(deduped.values())[:limit]
 
     # ------------------------------------------------------------------
     # Chat messages
@@ -879,6 +992,64 @@ class DashboardService:
         )
         t.start()
 
+    @staticmethod
+    def _is_short_confirmation(content: str) -> bool:
+        cleaned = re.sub(r"\s+", " ", content.strip())
+        if not cleaned or len(cleaned) > 80:
+            return False
+        return any(pattern.match(cleaned) for pattern in _SHORT_CONFIRMATION_PATTERNS)
+
+    def _recent_actionable_assistant_offer(self, chat_session_id: str, preferred_sender: str | None = None) -> dict | None:
+        rows = self.db.execute(
+            """SELECT * FROM mc_messages
+               WHERE session_id = ? AND sender != 'user'
+               ORDER BY timestamp DESC LIMIT 12""",
+            (chat_session_id,),
+        ).fetchall()
+        if not rows:
+            return None
+
+        preferred: list[dict] = []
+        fallback: list[dict] = []
+        for row in rows:
+            msg = self._message_row(row)
+            content = str(msg.get("content") or "").strip()
+            if not content:
+                continue
+            if preferred_sender and msg.get("sender") == preferred_sender:
+                preferred.append(msg)
+            else:
+                fallback.append(msg)
+
+        for group in (preferred, fallback):
+            for msg in group:
+                if _ACTIONABLE_ASSISTANT_HINTS.search(str(msg.get("content") or "")):
+                    return msg
+            if group:
+                return group[0]
+        return None
+
+    def _effective_user_message(self, being_id: str, content: str, chat_session_id: str) -> str:
+        if not self._is_short_confirmation(content):
+            return content
+        offer = self._recent_actionable_assistant_offer(chat_session_id, preferred_sender=being_id)
+        if offer is None:
+            return content
+        offer_content = re.sub(r"\s+", " ", str(offer.get("content") or "")).strip()
+        if not offer_content:
+            return content
+        task_ref = str(offer.get("taskRef") or offer.get("task_ref") or "").strip()
+        task_attr = f' task_ref="{task_ref}"' if task_ref else ""
+        return (
+            "The user message below is a short follow-up confirmation. "
+            "Resolve it only against the most recent actionable assistant offer in this same dashboard chat session. "
+            "Do not switch to older unrelated requests.\n\n"
+            f'<confirmed_offer sender="{offer.get("sender", "")}" timestamp="{offer.get("timestamp", "")}"{task_attr}>\n'
+            f"{offer_content[:2400]}\n"
+            "</confirmed_offer>\n\n"
+            f"User follow-up: {content}"
+        )
+
     def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "general") -> None:
         """Call bridge.handle_turn for a being and store the response.
 
@@ -926,14 +1097,11 @@ class DashboardService:
             return
 
         tenant_id = being.get("tenant_id") or MC_TENANT
-        session_id = f"mc-chat-{being_id}"
+        session_id = self._runtime_chat_session_id(being_id, chat_session_id)
 
         # Resolve workspace: being's workspace relative to project root
-        ws = being.get("workspace")
-        if ws and ws != ".":
-            workspace = str(_PROJECT_ROOT / ws)
-        else:
-            workspace = str(_PROJECT_ROOT)
+        ws_abs = self._resolve_workspace_path(being.get("workspace"))
+        workspace = str(ws_abs or _PROJECT_ROOT)
 
         # ── Classify the message before creating any task ──
         classification = self._classify_message(content)
@@ -992,12 +1160,13 @@ class DashboardService:
         error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
-            _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(content))
+            effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
             req = TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session_id,
                 user_id=sender,
-                user_message=content,
+                user_message=effective_content,
                 workspace_root=workspace,
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
@@ -1357,18 +1526,26 @@ class DashboardService:
         task_id = d.get("task_id")
         if task_id:
             self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
+        self._emit_event("deliverable_created", self._artifact_output_row(d))
 
     def get_being_skill_list(self, being_id: str) -> list[dict]:
         """Return skills available to a being with metadata."""
         skill_ids = get_being_skills(being_id)
         skills: list[dict] = []
+        being = self.get_being(being_id) or {}
+        workspace_root = self._resolve_workspace_path(being.get("workspace"))
         for sid in skill_ids:
-            # Try to find the SKILL.md for richer metadata
-            skill_dir = _PROJECT_ROOT / "skills" / sid.replace("-", "_")
-            if not skill_dir.is_dir():
-                skill_dir = _PROJECT_ROOT / "skills" / sid
+            skill_dir = None
+            for root in self._skill_roots_for_workspace(workspace_root):
+                for candidate_name in (sid.replace("-", "_"), sid):
+                    candidate = root / candidate_name
+                    if candidate.is_dir():
+                        skill_dir = candidate
+                        break
+                if skill_dir is not None:
+                    break
             desc = ""
-            if skill_dir.is_dir():
+            if skill_dir is not None:
                 skill_md = skill_dir / "SKILL.md"
                 if skill_md.is_file():
                     try:
@@ -1404,6 +1581,28 @@ class DashboardService:
                 workspace_root=str(Path.cwd()),
                 project_id=MC_PROJECT_ID,
             )
+        external_sync = (
+            os.getenv("BOMBA_ENABLE_EXTERNAL_SYNC", "").lower() in {"1", "true", "yes"}
+            or bool(os.getenv("BOMBA_OPENCLAW_SOURCE_ROOT", "").strip())
+        )
+        bundled_sync = os.getenv("BOMBA_ENABLE_BUNDLED_SYNC", "true").lower() not in {"0", "false", "no"}
+        bundled_root = bundled_openclaw_root(_PROJECT_ROOT)
+        bundled_root_ready = (
+            bundled_root.is_dir()
+            and (bundled_root / "openclaw.json").is_file()
+            and (bundled_root / "agents").is_dir()
+        )
+        if self.openclaw_sync is None and (external_sync or (bundled_sync and bundled_root_ready)):
+            self.openclaw_sync = OpenClawSync(
+                dashboard_svc=self,
+                db=self.db,
+                project_service=project_service,
+                openclaw_root=None if external_sync else bundled_root,
+            )
+            self.openclaw_sync.start()
+
+    def list_projects_catalog(self) -> list[dict[str, Any]]:
+        return list_project_inventory(_PROJECT_ROOT)
 
     def list_tasks(
         self,
@@ -1782,7 +1981,7 @@ class DashboardService:
             return None
 
         ws_rel = being.get("workspace") or ""
-        ws_abs = (_PROJECT_ROOT / ws_rel).resolve() if ws_rel else None
+        ws_abs = self._resolve_workspace_path(ws_rel) if ws_rel else None
         ws_exists = ws_abs is not None and ws_abs.is_dir()
 
         # ── 1. Identity section ──────────────────────────────────
@@ -1796,7 +1995,7 @@ class DashboardService:
                     mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
                     identity_files.append({
                         "name": fname,
-                        "rel_path": str(fpath.relative_to(_PROJECT_ROOT)),
+                        "rel_path": self._display_path(fpath),
                         "size": stat.st_size,
                         "modified": mtime,
                     })
@@ -1812,7 +2011,7 @@ class DashboardService:
                     stat = fpath.stat()
                     identity_files.append({
                         "name": fname,
-                        "rel_path": str(fpath.relative_to(_PROJECT_ROOT)),
+                        "rel_path": self._display_path(fpath),
                         "size": stat.st_size,
                         "modified": datetime.fromtimestamp(
                             stat.st_mtime, tz=timezone.utc
@@ -1827,7 +2026,7 @@ class DashboardService:
             "status": being.get("status", "offline"),
             "avatar": being.get("avatar", ""),
             "workspace": ws_rel,
-            "workspace_abs": str(ws_abs) if ws_abs else None,
+            "workspace_abs": portable_display_path(ws_abs, _PROJECT_ROOT) if ws_abs else None,
             "first_contact": first_contact,
             "model_id": being.get("model_id", ""),
             "tenant_id": being.get("tenant_id", ""),
@@ -1969,8 +2168,13 @@ class DashboardService:
             return None
 
         try:
-            target = (_PROJECT_ROOT / rel_path).resolve()
-            if not str(target).startswith(str(_PROJECT_ROOT.resolve())):
+            target = self._resolve_workspace_path(rel_path)
+            if target is None:
+                return None
+            if not (
+                str(target).startswith(str(_PROJECT_ROOT.resolve()))
+                or (self.openclaw_sync and self.openclaw_sync.enabled and str(target).startswith(str(self.openclaw_sync.root.resolve())))
+            ):
                 return None
         except (ValueError, OSError):
             return None
@@ -1985,10 +2189,14 @@ class DashboardService:
 
     # ── Detail sub-scanners ──────────────────────────────────────
 
-    @staticmethod
-    def _scan_memory(ws_abs: Path, ws_rel: str) -> dict:
+    def _scan_memory(self, ws_abs: Path, ws_rel: str) -> dict:
         """Scan the memory/ directory under a workspace (recursive)."""
         memory_dir = ws_abs / "memory"
+        if not memory_dir.is_dir():
+            workspaces = list_agent_workspaces(ws_abs)
+            main_workspace = workspaces.get("main")
+            if main_workspace is not None and (main_workspace / "memory").is_dir():
+                memory_dir = main_workspace / "memory"
         if not memory_dir.is_dir():
             return {
                 "path": None, "file_count": 0, "total_size": 0,
@@ -2013,7 +2221,7 @@ class DashboardService:
                     last_mtime = stat.st_mtime
                 files.append({
                     "name": entry.name,
-                    "rel_path": str(entry.relative_to(_PROJECT_ROOT)),
+                    "rel_path": self._display_path(entry),
                     "size": stat.st_size,
                     "modified": datetime.fromtimestamp(
                         stat.st_mtime, tz=timezone.utc
@@ -2021,7 +2229,7 @@ class DashboardService:
                 })
 
         return {
-            "path": f"{ws_rel}/memory",
+            "path": self._display_path(memory_dir),
             "file_count": len(files),
             "total_size": total_size,
             "last_updated": (
@@ -2077,9 +2285,14 @@ class DashboardService:
             except OSError:
                 pass
 
-        # Workspace tools/ directory scripts
-        tools_dir = ws_abs / "tools"
-        if tools_dir.is_dir():
+        tool_dirs = [ws_abs / "tools"]
+        for workspace in list_agent_workspaces(ws_abs).values():
+            tool_dir = workspace / "tools"
+            if tool_dir not in tool_dirs:
+                tool_dirs.append(tool_dir)
+        for tools_dir in tool_dirs:
+            if not tools_dir.is_dir():
+                continue
             for entry in sorted(tools_dir.iterdir()):
                 if entry.is_file() and not entry.name.startswith("."):
                     tname = entry.stem
@@ -2093,8 +2306,7 @@ class DashboardService:
 
         return tools
 
-    @staticmethod
-    def _resolve_skills(being: dict, ws_abs: Path | None) -> list[dict]:
+    def _resolve_skills(self, being: dict, ws_abs: Path | None) -> list[dict]:
         """Return skill definitions for a being."""
         skills: list[dict] = []
         seen_names: set[str] = set()
@@ -2106,9 +2318,9 @@ class DashboardService:
                 seen_names.add(name)
                 skills.append({"name": name, "description": "", "path": None})
 
-        # Global skills/ directory
-        global_skills_dir = _PROJECT_ROOT / "skills"
-        if global_skills_dir.is_dir():
+        for global_skills_dir in self._skill_roots_for_workspace(ws_abs):
+            if not global_skills_dir.is_dir():
+                continue
             for entry in sorted(global_skills_dir.iterdir()):
                 if entry.is_dir():
                     skill_md = entry / "SKILL.md"
@@ -2133,13 +2345,12 @@ class DashboardService:
                         skills.append({
                             "name": sname,
                             "description": desc,
-                            "path": str(entry.relative_to(_PROJECT_ROOT)),
+                            "path": self._display_path(entry),
                         })
 
         return skills
 
-    @staticmethod
-    def _build_file_tree(ws_abs: Path, max_depth: int = 2) -> list[dict]:
+    def _build_file_tree(self, ws_abs: Path, max_depth: int = 2) -> list[dict]:
         """Build a file/directory tree for the workspace (limited depth)."""
 
         def _scan(directory: Path, depth: int) -> list[dict]:
@@ -2158,14 +2369,14 @@ class DashboardService:
                     entries.append({
                         "name": item.name,
                         "type": "dir",
-                        "rel_path": str(item.relative_to(_PROJECT_ROOT)),
+                        "rel_path": self._display_path(item),
                         "children": children,
                     })
                 elif item.is_file():
                     entries.append({
                         "name": item.name,
                         "type": "file",
-                        "rel_path": str(item.relative_to(_PROJECT_ROOT)),
+                        "rel_path": self._display_path(item),
                         "size": item.stat().st_size,
                     })
             return entries
@@ -2209,6 +2420,8 @@ class DashboardService:
                 except (json.JSONDecodeError, TypeError):
                     pass
         d["auto_start"] = bool(d.get("auto_start"))
+        if d.get("workspace"):
+            d["workspace"] = portable_display_path(d.get("workspace"), _PROJECT_ROOT)
         return d
 
     @staticmethod
@@ -2219,6 +2432,12 @@ class DashboardService:
                 d["targets"] = json.loads(d["targets"])
             except (json.JSONDecodeError, TypeError):
                 d["targets"] = []
+        if "content" in d and isinstance(d["content"], str):
+            d["content"] = sanitize_portable_text(d["content"], _PROJECT_ROOT)
+        if "task_ref" in d and "taskRef" not in d:
+            d["taskRef"] = d["task_ref"]
+        if "session_id" in d and "sessionId" not in d:
+            d["sessionId"] = d["session_id"]
         return d
 
     def _normalize_task(self, task: dict) -> dict:
@@ -2252,6 +2471,30 @@ class DashboardService:
             if task_id:
                 t["artifacts"] = self.list_task_artifacts(task_id)
         return t
+
+    @staticmethod
+    def _resolve_workspace_path(workspace: str | Path | None) -> Path | None:
+        if not workspace:
+            return None
+        raw = Path(str(workspace))
+        return raw.resolve() if raw.is_absolute() else (_PROJECT_ROOT / raw).resolve()
+
+    @staticmethod
+    def _display_path(path: Path) -> str:
+        return portable_display_path(path, _PROJECT_ROOT)
+
+    @staticmethod
+    def _runtime_chat_session_id(being_id: str, chat_session_id: str) -> str:
+        cleaned = re.sub(r"[^a-zA-Z0-9_.-]+", "-", chat_session_id).strip("-") or "general"
+        return f"mc-chat-{cleaned}-{being_id}"
+
+    @staticmethod
+    def _skill_roots_for_workspace(workspace_root: Path | None) -> list[Path]:
+        roots = list_skill_roots(workspace_root)
+        project_skills = _PROJECT_ROOT / "skills"
+        if project_skills.is_dir() and project_skills not in roots:
+            roots.append(project_skills)
+        return roots
 
     @staticmethod
     def _now() -> str:

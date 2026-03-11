@@ -26,6 +26,11 @@ const FILE_ICONS = {
   svg: { icon: '\u{1F58C}', label: 'Vector' },
   png: { icon: '\u{1F5BC}', label: 'Image' },
   jpg: { icon: '\u{1F5BC}', label: 'Image' },
+  jpeg: { icon: '\u{1F5BC}', label: 'Image' },
+  gif: { icon: '\u{1F39E}', label: 'GIF' },
+  mp4: { icon: '\u{1F39E}', label: 'Video' },
+  mov: { icon: '\u{1F39E}', label: 'Video' },
+  webm: { icon: '\u{1F39E}', label: 'Video' },
   yaml: { icon: '\u{2699}', label: 'Config' },
   yml: { icon: '\u{2699}', label: 'Config' },
 }
@@ -64,10 +69,10 @@ function SpawnCard({ spawn }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-text-primary truncate">{spawn.being_name}</span>
+            <span className="text-xs font-medium text-text-primary break-words">{spawn.being_name}</span>
             <span className="text-[9px] text-text-muted px-1 py-0 rounded bg-bg-hover uppercase">{spawn.being_type}</span>
           </div>
-          <p className="text-[10px] text-text-secondary truncate mt-0.5">{spawn.title}</p>
+          <p className="text-[10px] text-text-secondary mt-0.5 whitespace-pre-wrap break-words">{spawn.title}</p>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -83,7 +88,7 @@ function SpawnCard({ spawn }) {
       )}
 
       {spawn.status === 'completed' && spawn.output_preview && (
-        <p className="mt-1.5 text-[10px] text-text-muted line-clamp-2">{spawn.output_preview}</p>
+        <p className="mt-1.5 text-[10px] text-text-muted whitespace-pre-wrap break-words">{spawn.output_preview}</p>
       )}
     </div>
   )
@@ -93,7 +98,7 @@ function SpawnCard({ spawn }) {
 
 function DeliverableCard({ item }) {
   const info = getFileInfo(item.filename)
-  const isWebViewable = /\.(html?|svg|png|jpg|jpeg|gif|pdf|txt|md)$/i.test(item.filename || '')
+  const isWebViewable = /\.(html?|svg|png|jpg|jpeg|gif|pdf|txt|md|mp4|mov|webm)$/i.test(item.filename || '')
 
   return (
     <div className="p-2.5 rounded-lg border border-accent-purple/20 bg-accent-purple/5 transition-all hover:border-accent-purple/40">
@@ -103,7 +108,7 @@ function DeliverableCard({ item }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-medium text-text-primary truncate block">{item.filename}</span>
+          <span className="text-xs font-medium text-text-primary block break-words">{item.filename}</span>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[9px] text-accent-purple px-1 py-0 rounded bg-accent-purple/10 uppercase">{info.label}</span>
             {item.line_count > 0 && (

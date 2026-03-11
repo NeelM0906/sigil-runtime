@@ -151,7 +151,7 @@ The hardest part is reception. Key learnings built into the pathway:
 
 ## 📁 FILE LOCATIONS
 
-All files in: `/Users/samantha/.openclaw/workspace/sisters/sai-recovery/agents/sai-bd-wc/`
+All files in: `~/.openclaw/workspace/sisters/sai-recovery/agents/sai-bd-wc/`
 
 | File | Purpose |
 |------|---------|

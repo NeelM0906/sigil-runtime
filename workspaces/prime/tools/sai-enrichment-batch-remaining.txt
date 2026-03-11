@@ -1,0 +1,14 @@
+commercial-litigation:Legal
+deposition-preparation-and-cross-examination:Legal
+family-law-practice:Legal
+intellectual-property-law-and-patent-strategy:Legal
+legal-operations-personal-injury:Legal
+real-estate-law-and-transactions:Legal
+regulatory-affairs-and-government-relations:Legal
+prompt-engineering-and-ai-architecture:Technology/Engineering
+voice-ai-and-conversational-design:Technology/Engineering
+cybersecurity-and-information-security:Technology/Engineering
+api-development-and-system-integration:Technology/Engineering
+web-development-and-engineering:Technology/Engineering
+automation-and-workflow-orchestration:Technology/Engineering
+venture-capital-and-fundraising:Financial/Legal

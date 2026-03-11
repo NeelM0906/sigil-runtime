@@ -2,6 +2,9 @@
 CHDDIA² Colosseum v2 — 5 Judge Panel
 """
 import json
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 JUDGES = {
     "formula_judge": {
@@ -136,7 +139,8 @@ Return JSON: {"warmth": X, "energy": X, "surprise": X, "presence": X, "magnetism
 }
 
 # Save judges
-with open("/Users/samantha/Projects/colosseum/v2/data/judges.json", "w") as f:
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+with (DATA_DIR / "judges.json").open("w", encoding="utf-8") as f:
     json.dump(JUDGES, f, indent=2)
 
 print(f"✅ Generated {len(JUDGES)} judges")

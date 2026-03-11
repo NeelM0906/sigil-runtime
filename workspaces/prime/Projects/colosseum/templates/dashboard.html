@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I Colosseum</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a0a2e 0%, #0d1117 50%, #1a0505 100%);
+            border-bottom: 2px solid #ff4444;
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 28px; color: #fff; }
+        .header h1 span { color: #ff4444; }
+        .header .subtitle { color: #888; font-size: 14px; margin-top: 4px; }
+        .stats-bar {
+            display: flex;
+            gap: 32px;
+            padding: 16px 40px;
+            background: #111118;
+            border-bottom: 1px solid #222;
+        }
+        .stat { text-align: center; }
+        .stat .value { font-size: 28px; font-weight: bold; color: #ff4444; }
+        .stat .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .container { padding: 24px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .full-width { grid-column: 1 / -1; }
+        .card {
+            background: #13131a;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 8px 12px; color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #222; }
+        td { padding: 10px 12px; border-bottom: 1px solid #1a1a22; font-size: 14px; }
+        tr:hover { background: #1a1a25; }
+        .rank { font-weight: bold; color: #ff4444; }
+        .rank.gold { color: #ffd700; }
+        .score { font-family: 'SF Mono', monospace; }
+        .score.high { color: #4ade80; }
+        .score.mid { color: #fbbf24; }
+        .score.low { color: #f87171; }
+        .lineage { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+        .lineage.callie { background: #2d1b69; color: #a78bfa; }
+        .lineage.athena { background: #1b3d69; color: #7bb8fa; }
+        .lineage.hybrid { background: #3d1b40; color: #fa7bda; }
+        .energy-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; width: 120px; }
+        .energy-bar .fun { background: #fbbf24; }
+        .energy-bar .asp { background: #a78bfa; }
+        .energy-bar .god { background: #f472b6; }
+        .energy-bar .zeus { background: #60a5fa; }
+        .btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #ff6666; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        .round-card {
+            background: #1a1a25;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+        }
+        .round-card .round-header { display: flex; justify-content: space-between; font-size: 13px; color: #888; }
+        .round-card .being-name { font-weight: bold; color: #fff; }
+        .round-card .response-preview { font-size: 13px; color: #aaa; margin-top: 6px; font-style: italic; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .empty-state { text-align: center; padding: 40px; color: #444; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        #tournament-status { font-size: 14px; color: #888; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🏛️ ACT-I <span>COLOSSEUM</span></h1>
+            <div class="subtitle">Where ACT-I Beings Evolve Through Influence Mastery</div>
+        </div>
+        <div>
+            <button class="btn" onclick="startTournament('blitz')">⚡ Blitz</button>
+            <button class="btn" onclick="startTournament('deep')" style="background:#a78bfa">🔮 Deep</button>
+            <button class="btn" onclick="startTournament('marathon')" style="background:#f59e0b">🏃 Marathon</button>
+        </div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar">
+        <div class="stat"><div class="value" id="stat-beings">—</div><div class="label">Beings</div></div>
+        <div class="stat"><div class="value" id="stat-rounds">—</div><div class="label">Rounds</div></div>
+        <div class="stat"><div class="value" id="stat-tournaments">—</div><div class="label">Tournaments</div></div>
+        <div class="stat"><div class="value" id="stat-avg">—</div><div class="label">Avg Mastery</div></div>
+        <div class="stat"><div class="value" id="stat-best">—</div><div class="label">Best Score</div></div>
+        <div class="stat"><div class="value" id="stat-gen">—</div><div class="label">Generations</div></div>
+    </div>
+
+    <div id="tournament-status"></div>
+
+    <div class="container">
+        <div class="card full-width">
+            <h2>👑 Leaderboard</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Being</th>
+                        <th>Gen</th>
+                        <th>Lineage</th>
+                        <th>Avg Mastery</th>
+                        <th>Best</th>
+                        <th>W/L</th>
+                        <th>Win%</th>
+                        <th>Energy Blend</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr><td colspan="9" class="empty-state"><div class="icon">⚔️</div>No beings have competed yet. Start a tournament!</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🔥 Recent Rounds</h2>
+            <div id="recent-rounds">
+                <div class="empty-state"><div class="icon">🏟️</div>The arena awaits.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📊 Scenario Preview</h2>
+            <div id="scenario-preview">
+                <button class="btn" onclick="loadScenario()">Generate Scenario</button>
+                <div id="scenario-content" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API}/api/stats`);
+                const data = await res.json();
+                document.getElementById('stat-beings').textContent = data.total_beings || 0;
+                document.getElementById('stat-rounds').textContent = data.total_rounds || 0;
+                document.getElementById('stat-tournaments').textContent = data.total_tournaments || 0;
+                document.getElementById('stat-avg').textContent = data.avg_mastery_across_all?.toFixed(3) || '—';
+                document.getElementById('stat-best').textContent = data.best_single_score?.score?.toFixed(3) || '—';
+                document.getElementById('stat-gen').textContent = data.generations_evolved || 0;
+            } catch(e) { console.error('Stats error:', e); }
+        }
+
+        async function loadLeaderboard() {
+            try {
+                const res = await fetch(`${API}/api/leaderboard?limit=20`);
+                const data = await res.json();
+                const tbody = document.getElementById('leaderboard-body');
+                if (!data.leaderboard?.length) return;
+                tbody.innerHTML = data.leaderboard.map((b, i) => {
+                    const rankClass = i === 0 ? 'rank gold' : 'rank';
+                    const rankText = i === 0 ? '👑 #1' : `#${i + 1}`;
+                    const scoreClass = b.avg_mastery >= 7 ? 'high' : (b.avg_mastery >= 5 ? 'mid' : 'low');
+                    const e = b.energy;
+                    return `<tr>
+                        <td class="${rankClass}">${rankText}</td>
+                        <td><strong>${b.name}</strong></td>
+                        <td>${b.generation}</td>
+                        <td><span class="lineage ${b.lineage}">${b.lineage}</span></td>
+                        <td class="score ${scoreClass}">${b.avg_mastery.toFixed(4)}</td>
+                        <td class="score">${b.best_score.toFixed(2)}</td>
+                        <td>${b.wins}/${b.losses}</td>
+                        <td>${(b.win_rate * 100).toFixed(0)}%</td>
+                        <td><div class="energy-bar">
+                            <div class="fun" style="width:${e.fun*100}%"></div>
+                            <div class="asp" style="width:${e.aspirational*100}%"></div>
+                            <div class="god" style="width:${e.goddess*100}%"></div>
+                            <div class="zeus" style="width:${e.zeus*100}%"></div>
+                        </div></td>
+                    </tr>`;
+                }).join('');
+            } catch(e) { console.error('Leaderboard error:', e); }
+        }
+
+        async function loadRounds() {
+            try {
+                const res = await fetch(`${API}/api/rounds?limit=10`);
+                const data = await res.json();
+                const container = document.getElementById('recent-rounds');
+                if (!data.rounds?.length) return;
+                container.innerHTML = data.rounds.map(r => {
+                    const preview = r.response ? r.response.substring(0, 120) + '...' : '';
+                    const scoreClass = r.mastery_score >= 7 ? 'high' : (r.mastery_score >= 5 ? 'mid' : 'low');
+                    return `<div class="round-card">
+                        <div class="round-header">
+                            <span class="being-name">${r.being_name || r.being_id} ${r.won ? '🏆' : ''}</span>
+                            <span class="score ${scoreClass}">${r.mastery_score?.toFixed(2)}</span>
+                        </div>
+                        <div class="response-preview">${preview}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { console.error('Rounds error:', e); }
+        }
+
+        async function startTournament(mode) {
+            try {
+                const res = await fetch(`${API}/api/tournament/start?mode=${mode}`, { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('tournament-status').innerHTML =
+                    `<div style="padding:12px 40px;color:#ff4444;" class="pulse">⚔️ Tournament started (${mode})... refreshing in 30s</div>`;
+                setTimeout(() => { refresh(); }, 30000);
+            } catch(e) { console.error('Start error:', e); }
+        }
+
+        async function loadScenario() {
+            try {
+                const res = await fetch(`${API}/api/scenario/preview`);
+                const s = await res.json();
+                document.getElementById('scenario-content').innerHTML = `
+                    <div style="font-size:13px;">
+                        <strong>[${s.difficulty?.toUpperCase()}] ${s.category}</strong><br><br>
+                        <strong>Situation:</strong> ${s.situation}<br><br>
+                        <strong>Person:</strong> ${s.person?.name} — ${s.person?.role}<br>
+                        <em>Feeling: ${s.person?.emotional_state}</em><br><br>
+                        <strong>Challenge:</strong> ${s.challenge}<br><br>
+                        <strong>Context:</strong> ${s.context}
+                    </div>
+                `;
+            } catch(e) { console.error('Scenario error:', e); }
+        }
+
+        function refresh() {
+            loadStats();
+            loadLeaderboard();
+            loadRounds();
+        }
+
+        refresh();
+        setInterval(refresh, 15000);
+    </script>
+</body>
+</html>

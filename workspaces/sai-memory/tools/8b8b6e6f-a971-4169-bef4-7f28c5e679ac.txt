@@ -1,0 +1,10 @@
+ICO, the issue is that memory, scholar, and forge are using text tags instead of calling
+the actual TTS tool.
+The tag sometimes render audio, sometimes don't.
+The only reliable method is what recovery and I do.
+One, call TTS tool, get MP3 path.
+Two, call message tool with file path, attach MP3 to Discord.
+Their configs may need TTS tool enabled, or they need to stop using the inline tag
+approach and switch to the two-step method.
+This is a config level fix on each sister's open-claw agent settings.
+Want me to check their configs?

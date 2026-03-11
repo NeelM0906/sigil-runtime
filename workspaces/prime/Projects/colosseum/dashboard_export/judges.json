@@ -1,0 +1,253 @@
+{
+  "exported_at": "2026-02-23T18:45:03.598547",
+  "total_count": 18,
+  "judges": [
+    {
+      "id": "formula_judge",
+      "name": "Formula Judge",
+      "focus": "Scores purely on the 39 components of the Unblinded Formula",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "Step 1",
+        "Step 2",
+        "Step 3",
+        "Step 4"
+      ]
+    },
+    {
+      "id": "sean_judge",
+      "name": "Sean Judge",
+      "focus": "Calibrated against Sean Callagy's actual patterns",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "PATTERN_MATCH",
+        "ENERGY_CALIBRATION",
+        "BREVITY",
+        "AUTHENTICITY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "outcome_judge",
+      "name": "Outcome Judge",
+      "focus": "Did it cause the intended result?",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "CLARITY_OF_OUTCOME",
+        "LIKELIHOOD_OF_YES",
+        "ACTION_ORIENTATION",
+        "OBSTACLE_REMOVAL",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "contamination_judge",
+      "name": "Contamination Judge",
+      "focus": "Detects human contamination, bot patterns, 80% activity",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "BOT_SCORE",
+        "CONSULTING_SCORE",
+        "ZONE_ACTION_SCORE",
+        "AUTHENTICITY_SCORE",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "human_judge",
+      "name": "Human Judge",
+      "focus": "Is it alive, warm, real? Would a human want to keep talking?",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "WARMTH",
+        "ENERGY",
+        "SURPRISE",
+        "PRESENCE",
+        "MAGNETISM",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "ecosystem_merger_judge",
+      "name": "Ecosystem Merger Judge",
+      "focus": "Scores on the 4 value components, 6 roles, and dynamic replacement cost assessment",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "VALUE_ASSESSMENT",
+        "ROLE_MASTERY",
+        "DYNAMIC_THINKING",
+        "GROUPING_AWARENESS",
+        "INTEGRITY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "group_influence_judge",
+      "name": "Group Influence Judge",
+      "focus": "Scores on public speaking, leadership presence, causing groups to rise and take action",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "ROOM_COMMAND",
+        "ENERGY_TRANSFER",
+        "ACTION_CAUSING",
+        "IDENTITY_ELEVATION",
+        "COMPOUND_INFLUENCE",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "self_mastery_judge",
+      "name": "Self Mastery Judge",
+      "focus": "Scores purely on the internal game \u2014 mindset, destroyer navigation, tenacity, and operating from the curve of possibility",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "DESTROYER_NAVIGATION",
+        "CONTAMINATION_FREEDOM",
+        "TENACITY",
+        "IDENTITY_OWNERSHIP",
+        "CURVE_THINKING",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "process_mastery_judge",
+      "name": "Process Mastery Judge",
+      "focus": "Scores on the 7 Levers of business acceleration \u2014 the systematic approach to exponential growth",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "LEVER_SELECTION",
+        "ZONE_VS_80",
+        "SYSTEMATIC_APPROACH",
+        "TIME_AWARENESS",
+        "MEASUREMENT_ORIENTATION",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "written_content_judge",
+      "name": "Written Content Judge",
+      "focus": "Scores written communication \u2014 emails, posts, copy \u2014 on Bolt-style directness, energy transfer through text, and causing action",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "BOLT_DIRECTNESS",
+        "ENERGY_TRANSFER",
+        "CLARITY",
+        "ACTION_ORIENTATION",
+        "VOICE",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "public_speaking_judge",
+      "name": "Public Speaking Judge",
+      "focus": "Scores verbal communication to groups \u2014 stage presence, energy modulation, storytelling, and causing audiences to act",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "DISRUPTION",
+        "PRESENCE",
+        "ENERGY_MODULATION",
+        "STORYTELLING",
+        "TRANSFORMATION",
+        "ACTION_CAUSING",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "leadership_judge",
+      "name": "Leadership Judge",
+      "focus": "Scores the ability to elevate team identity, cast vision, and cause people to commit and execute beyond what they thought possible",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "IDENTITY_ELEVATION",
+        "VISION_CASTING",
+        "MODELING",
+        "SAFETY_CREATION",
+        "EXCELLENCE_DEMAND",
+        "ENERGY_MASTERY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "management_judge",
+      "name": "Management Judge",
+      "focus": "Scores operational excellence \u2014 systems, accountability, delegation, and causing consistent execution",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "SYSTEMS_QUALITY",
+        "CLARITY",
+        "ACCOUNTABILITY",
+        "DELEGATION",
+        "FEEDBACK",
+        "TIME_MASTERY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "sales_closing_judge",
+      "name": "Sales Closing Judge",
+      "focus": "Scores the critical moment of causing yes \u2014 handling objections, creating urgency, and moving to action with integrity",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "OBSTACLE_IDENTIFICATION",
+        "OBSTACLE_DISSOLUTION",
+        "URGENCY_CREATION",
+        "ASK_CLARITY",
+        "SILENCE_MASTERY",
+        "INTEGRITY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "coaching_judge",
+      "name": "Coaching Judge",
+      "focus": "Scores the ability to guide others to their own breakthroughs \u2014 asking over telling, creating awareness, causing transformation",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "QUESTION_QUALITY",
+        "RESTRAINT",
+        "LISTENING",
+        "CHALLENGE",
+        "SPACE_HOLDING",
+        "BREAKTHROUGH_CAUSING",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "teaching_judge",
+      "name": "Teaching Judge",
+      "focus": "Scores the ability to transfer knowledge and skills \u2014 clarity, scaffolding, checking for understanding, and causing competence",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "ASSESSMENT",
+        "SCAFFOLDING",
+        "MODELING",
+        "PRACTICE_DESIGN",
+        "UNDERSTANDING_CHECK",
+        "MEMORABILITY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "truth_to_pain_judge",
+      "name": "Truth to Pain Judge",
+      "focus": "Scores mastery of Step 2 \u2014 finding real pain, articulating it better than the person can, and creating the emotional foundation for change",
+      "source": "v2_expanded",
+      "scoring_dimensions": [
+        "LISTENING",
+        "PIVOT_SKILL",
+        "DEPTH",
+        "ARTICULATION",
+        "PACING",
+        "INTEGRITY",
+        "OVERALL"
+      ]
+    },
+    {
+      "id": "meta_judge",
+      "name": "meta_judge",
+      "focus": "",
+      "source": "v2_meta",
+      "scoring_dimensions": []
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "voice-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.19.0",
+    "twilio": "^5.5.0"
+  }
+}

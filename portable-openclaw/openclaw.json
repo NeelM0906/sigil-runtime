@@ -1,0 +1,811 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.2.26",
+    "lastTouchedAt": "2026-03-09T02:34:33.824Z"
+  },
+  "env": {},
+  "wizard": {
+    "lastRunAt": "2026-02-28T15:20:08.185Z",
+    "lastRunVersion": "2026.2.26",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
+  },
+  "browser": {
+    "enabled": true,
+    "defaultProfile": "chrome"
+  },
+  "acp": {
+    "enabled": true,
+    "defaultAgent": "main",
+    "allowedAgents": [
+      "main",
+      "forge",
+      "scholar",
+      "memory",
+      "recovery"
+    ]
+  },
+  "agents": {
+    "defaults": {
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "workspace": "./workspace",
+      "memorySearch": {
+        "enabled": true,
+        "sources": [
+          "memory",
+          "sessions"
+        ],
+        "experimental": {
+          "sessionMemory": true
+        },
+        "provider": "openai",
+        "remote": {
+          "baseUrl": "https://openrouter.ai/api/v1/",
+          "apiKey": "[REDACTED]"
+        },
+        "model": "openai/text-embedding-3-small",
+        "query": {
+          "hybrid": {
+            "enabled": true,
+            "vectorWeight": 0.7,
+            "textWeight": 0.3,
+            "mmr": {
+              "enabled": true,
+              "lambda": 0.7
+            },
+            "temporalDecay": {
+              "enabled": true,
+              "halfLifeDays": 30
+            }
+          }
+        },
+        "cache": {
+          "enabled": true,
+          "maxEntries": 50000
+        }
+      },
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "1h"
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "reserveTokensFloor": 20000,
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 8000,
+          "prompt": "Write lasting notes to memory files. Include everything important from this session. Reply NO_REPLY when done.",
+          "systemPrompt": "Session nearing compaction. You are Sai. Store ALL durable memories to memory/YYYY-MM-DD.md NOW. Capture decisions, teachings, lessons, and anything Sean said."
+        }
+      },
+      "heartbeat": {
+        "every": "30m"
+      },
+      "maxConcurrent": 10,
+      "subagents": {
+        "maxConcurrent": 20
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "model": {
+          "primary": "openrouter/anthropic/claude-opus-4.6",
+          "fallbacks": [
+            "openrouter/google/gemini-3.1-pro-preview",
+            "openrouter/anthropic/claude-sonnet-4.6"
+          ]
+        },
+        "subagents": {
+          "allowAgents": [
+            "forge",
+            "scholar",
+            "memory",
+            "recovery"
+          ]
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "exec",
+            "process",
+            "web_search",
+            "web_fetch",
+            "memory_search",
+            "memory_get",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "browser",
+            "canvas",
+            "message",
+            "cron",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "image",
+            "tts"
+          ]
+        },
+        "workspace": "./workspace",
+        "agentDir": "./agents/main/agent"
+      },
+      {
+        "id": "forge",
+        "name": "forge",
+        "workspace": "./workspace-forge",
+        "agentDir": "./agents/forge/agent",
+        "model": {
+          "primary": "openrouter/anthropic/claude-sonnet-4.6",
+          "fallbacks": [
+            "openrouter/anthropic/claude-opus-4.6"
+          ]
+        },
+        "heartbeat": {
+          "every": "30m"
+        },
+        "subagents": {
+          "allowAgents": [
+            "main",
+            "scholar",
+            "memory",
+            "recovery"
+          ]
+        },
+        "tools": {
+          "profile": "minimal",
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "exec",
+            "process",
+            "memory_search",
+            "memory_get",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "canvas",
+            "browser",
+            "message",
+            "cron",
+            "nodes",
+            "agents_list",
+            "image",
+            "voice_call",
+            "tts",
+            "web_search",
+            "web_fetch",
+            "gateway"
+          ]
+        }
+      },
+      {
+        "id": "scholar",
+        "name": "scholar",
+        "workspace": "./workspace-scholar",
+        "agentDir": "./agents/scholar/agent",
+        "model": {
+          "primary": "openrouter/openai/gpt-5.2",
+          "fallbacks": [
+            "openrouter/anthropic/claude-sonnet-4.6",
+            "openrouter/google/gemini-3.1-pro-preview"
+          ]
+        },
+        "heartbeat": {
+          "every": "30m"
+        },
+        "subagents": {
+          "allowAgents": [
+            "main",
+            "forge",
+            "memory",
+            "recovery"
+          ]
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "exec",
+            "process",
+            "web_search",
+            "web_fetch",
+            "memory_search",
+            "memory_get",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "browser",
+            "canvas",
+            "message",
+            "cron",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "image",
+            "tts",
+            "voice_call"
+          ]
+        }
+      },
+      {
+        "id": "recovery",
+        "name": "recovery",
+        "workspace": "./workspace/sisters/sai-recovery",
+        "model": {
+          "primary": "openrouter/anthropic/claude-sonnet-4.6",
+          "fallbacks": [
+            "openrouter/google/gemini-3.1-pro-preview",
+            "openrouter/anthropic/claude-opus-4.6"
+          ]
+        },
+        "heartbeat": {
+          "every": "30m"
+        },
+        "subagents": {
+          "allowAgents": [
+            "main",
+            "forge",
+            "scholar",
+            "memory"
+          ]
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "exec",
+            "process",
+            "web_search",
+            "web_fetch",
+            "memory_search",
+            "memory_get",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "browser",
+            "canvas",
+            "message",
+            "cron",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "image",
+            "tts",
+            "voice_call"
+          ]
+        },
+        "agentDir": "./agents/recovery/agent"
+      },
+      {
+        "id": "memory",
+        "name": "memory",
+        "workspace": "./workspace-memory",
+        "model": {
+          "primary": "openrouter/google/gemini-3.1-pro-preview-customtools",
+          "fallbacks": [
+            "openrouter/anthropic/claude-sonnet-4.6",
+            "openrouter/google/gemini-3.1-pro-preview"
+          ]
+        },
+        "heartbeat": {
+          "every": "30m"
+        },
+        "subagents": {
+          "allowAgents": [
+            "main",
+            "forge",
+            "scholar",
+            "recovery"
+          ]
+        },
+        "tools": {
+          "alsoAllow": [
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "exec",
+            "process",
+            "web_search",
+            "web_fetch",
+            "memory_search",
+            "memory_get",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "browser",
+            "canvas",
+            "message",
+            "cron",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "image",
+            "tts",
+            "voice_call"
+          ]
+        },
+        "agentDir": "./agents/memory/agent"
+      }
+    ]
+  },
+  "tools": {
+    "agentToAgent": {
+      "enabled": true,
+      "allow": [
+        "main",
+        "forge",
+        "scholar",
+        "memory",
+        "recovery"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "forge",
+      "match": {
+        "channel": "telegram",
+        "accountId": "forge"
+      }
+    },
+    {
+      "agentId": "scholar",
+      "match": {
+        "channel": "telegram",
+        "accountId": "scholar"
+      }
+    },
+    {
+      "agentId": "recovery",
+      "match": {
+        "channel": "telegram",
+        "accountId": "recovery"
+      }
+    },
+    {
+      "agentId": "main",
+      "match": {
+        "channel": "discord",
+        "accountId": "default"
+      }
+    },
+    {
+      "agentId": "forge",
+      "match": {
+        "channel": "discord",
+        "accountId": "forge"
+      }
+    },
+    {
+      "agentId": "scholar",
+      "match": {
+        "channel": "discord",
+        "accountId": "scholar"
+      }
+    },
+    {
+      "agentId": "sevenlevers",
+      "match": {
+        "channel": "discord",
+        "accountId": "sevenlevers"
+      }
+    },
+    {
+      "agentId": "recovery",
+      "match": {
+        "channel": "discord",
+        "accountId": "recovery"
+      }
+    },
+    {
+      "agentId": "memory",
+      "match": {
+        "channel": "discord",
+        "accountId": "memory"
+      }
+    }
+  ],
+  "messages": {
+    "ackReactionScope": "group-mentions",
+    "tts": {
+      "auto": "tagged",
+      "provider": "elevenlabs",
+      "elevenlabs": {
+        "voiceId": "CJXmyMqQHq6bTPm3iEMP",
+        "modelId": "eleven_multilingual_v2"
+      }
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "agentToAgent": {
+      "maxPingPongTurns": 5
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "botToken": "8458935565:AAGeL_V9WiOJ9fkLkeqrCl9sFmJUNlaoUOg",
+      "groups": {
+        "*": {
+          "requireMention": false
+        },
+        "-1003751626544": {
+          "requireMention": false
+        },
+        "-1003817384313": {
+          "requireMention": false
+        },
+        "-1005106480854": {
+          "requireMention": false
+        }
+      },
+      "groupPolicy": "allowlist",
+      "streaming": "off",
+      "accounts": {
+        "forge": {
+          "name": "Sai Forge \u2694\ufe0f",
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8778353066:AAE_H7jNZ3g4KgMjNLKL3OQUXTO9HmZK3V4",
+          "groups": {
+            "-1003751626544": {
+              "requireMention": false
+            },
+            "-1003817384313": {
+              "requireMention": false
+            }
+          },
+          "groupPolicy": "allowlist",
+          "streaming": "off"
+        },
+        "scholar": {
+          "name": "Sai Scholar \ud83d\udcda",
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8628485128:AAFIcbIwO3LbvtBpBbcffx_XT8km5oCXOfg",
+          "groups": {
+            "-1003751626544": {
+              "requireMention": false
+            },
+            "-1003817384313": {
+              "requireMention": false
+            }
+          },
+          "groupPolicy": "allowlist",
+          "streaming": "off"
+        },
+        "recovery": {
+          "name": "SAI Recovery \ud83c\udfe5",
+          "enabled": true,
+          "dmPolicy": "open",
+          "botToken": "8623399014:AAGBc9Cy6NEukxn-Fp4Dqr6lVKe1-OeV_Ns",
+          "groups": {
+            "-1003751626544": {
+              "requireMention": true
+            },
+            "-1003817384313": {
+              "requireMention": false
+            }
+          },
+          "allowFrom": [
+            "*"
+          ],
+          "groupPolicy": "open",
+          "streaming": "off"
+        },
+        "default": {
+          "name": "Sai Prime \ud83d\udd25",
+          "dmPolicy": "pairing",
+          "groups": {
+            "*": {
+              "requireMention": false
+            },
+            "-1003751626544": {
+              "requireMention": false
+            },
+            "-1005106480854": {
+              "requireMention": false
+            }
+          },
+          "groupPolicy": "allowlist",
+          "streaming": "off"
+        }
+      }
+    },
+    "discord": {
+      "enabled": true,
+      "allowBots": true,
+      "groupPolicy": "allowlist",
+      "streaming": "off",
+      "guilds": {
+        "1476702984954970313": {
+          "requireMention": false,
+          "users": [
+            "1476700546231697469"
+          ],
+          "channels": {
+            "1476702984954970316": {
+              "requireMention": false
+            },
+            "1480427494426284173": {
+              "requireMention": false
+            }
+          }
+        }
+      },
+      "threadBindings": {
+        "enabled": true,
+        "spawnSubagentSessions": true,
+        "spawnAcpSessions": true
+      },
+      "status": "online",
+      "accounts": {
+        "default": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {
+            "1476702984954970313": {
+              "requireMention": false,
+              "channels": {
+                "1476702984954970316": {
+                  "requireMention": false
+                },
+                "1480427494426284173": {
+                  "requireMention": false
+                }
+              }
+            }
+          },
+          "threadBindings": {
+            "enabled": true,
+            "spawnSubagentSessions": true,
+            "spawnAcpSessions": true
+          },
+          "voice": {
+            "enabled": true,
+            "tts": {
+              "provider": "elevenlabs",
+              "elevenlabs": {
+                "voiceId": "CJXmyMqQHq6bTPm3iEMP",
+                "modelId": "eleven_multilingual_v2"
+              }
+            }
+          }
+        },
+        "forge": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {
+            "1476702984954970313": {
+              "requireMention": false,
+              "channels": {
+                "1476702984954970316": {
+                  "requireMention": false
+                }
+              }
+            }
+          },
+          "threadBindings": {
+            "enabled": true,
+            "spawnSubagentSessions": true,
+            "spawnAcpSessions": true
+          },
+          "voice": {
+            "enabled": true,
+            "tts": {
+              "provider": "elevenlabs",
+              "elevenlabs": {
+                "voiceId": "sY9LG7ve3XEbsAXk1Ogh",
+                "modelId": "eleven_multilingual_v2"
+              }
+            }
+          }
+        },
+        "scholar": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {
+            "1476702984954970313": {
+              "requireMention": false,
+              "channels": {
+                "1476702984954970316": {
+                  "requireMention": false
+                }
+              }
+            }
+          },
+          "threadBindings": {
+            "enabled": true,
+            "spawnSubagentSessions": true,
+            "spawnAcpSessions": true
+          },
+          "voice": {
+            "enabled": true,
+            "tts": {
+              "provider": "elevenlabs",
+              "elevenlabs": {
+                "voiceId": "J1HAi64ZEaeZiI9UBak6",
+                "modelId": "eleven_multilingual_v2"
+              }
+            }
+          }
+        },
+        "sevenlevers": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {}
+        },
+        "recovery": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {
+            "1476702984954970313": {
+              "requireMention": false,
+              "channels": {
+                "1476702984954970316": {
+                  "requireMention": false
+                },
+                "1478503599104462879": {
+                  "requireMention": false
+                },
+                "1479242507995971776": {
+                  "requireMention": false
+                },
+                "1479242528200069164": {
+                  "requireMention": false
+                },
+                "1479242550853239065": {
+                  "requireMention": false
+                }
+              }
+            }
+          },
+          "threadBindings": {
+            "enabled": true,
+            "spawnSubagentSessions": true,
+            "spawnAcpSessions": true
+          },
+          "voice": {
+            "enabled": true,
+            "tts": {
+              "provider": "elevenlabs",
+              "elevenlabs": {
+                "voiceId": "OAv0NDI9LZTkwNjsbe95",
+                "modelId": "eleven_multilingual_v2"
+              }
+            }
+          }
+        },
+        "memory": {
+          "token": "[REDACTED]",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "guilds": {
+            "1476702984954970313": {
+              "requireMention": false,
+              "channels": {
+                "1476702984954970316": {
+                  "requireMention": false
+                }
+              }
+            }
+          },
+          "threadBindings": {
+            "enabled": true,
+            "spawnSubagentSessions": true,
+            "spawnAcpSessions": true
+          },
+          "voice": {
+            "enabled": true,
+            "tts": {
+              "provider": "elevenlabs",
+              "elevenlabs": {
+                "voiceId": "HpSVTprBun63u96uF0up",
+                "modelId": "eleven_multilingual_v2"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "customBindHost": "127.0.0.1",
+    "auth": {
+      "mode": "token",
+      "token": "[REDACTED]"
+    }
+  },
+  "skills": {
+    "entries": {
+      "sag": {
+        "apiKey": "[REDACTED]"
+      },
+      "openai-whisper-api": {
+        "apiKey": "[REDACTED]"
+      },
+      "openai-image-gen": {
+        "apiKey": "[REDACTED]"
+      }
+    }
+  },
+  "plugins": {
+    "entries": {
+      "voice-call": {
+        "enabled": true,
+        "config": {
+          "provider": "twilio",
+          "fromNumber": "+19738603823",
+          "twilio": {
+            "accountSid": "AC9a598ac83205aff455ecb79a55f8fc6c",
+            "authToken": "EuaQ5xS2ad0QnnZEYgCuuRDy0FbjdMPu"
+          },
+          "serve": {
+            "port": 3334,
+            "path": "/voice/webhook"
+          },
+          "outbound": {
+            "defaultMode": "conversation"
+          },
+          "streaming": {
+            "enabled": true,
+            "streamPath": "/voice/stream"
+          },
+          "tts": {
+            "provider": "elevenlabs",
+            "elevenlabs": {
+              "apiKey": "[REDACTED]",
+              "voiceId": "JBFqnCBsd6RMkjVDRZzb",
+              "modelId": "eleven_multilingual_v2"
+            }
+          },
+          "inboundPolicy": "allowlist",
+          "allowFrom": [],
+          "inboundGreeting": "Hey! This is Sean's assistant. What can I help you with?"
+        }
+      },
+      "telegram": {
+        "enabled": true,
+        "config": {}
+      },
+      "acpx": {
+        "enabled": true
+      }
+    }
+  }
+}

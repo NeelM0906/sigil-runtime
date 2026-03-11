@@ -100,9 +100,13 @@ class AgenticSearchExecutor:
         )
 
     def _run_pass(self, plan: SearchPlan, unrestricted: bool) -> tuple[list[SearchHit], list[str]]:
-        if not self._rg_available:
+        if not self._rg_available or "\n" in plan.query:
             hits = self._exec_python_fallback(plan, pass_label=(2 if unrestricted else 1), unrestricted=unrestricted)
-            cmd_desc = f"python-fallback-search pass={2 if unrestricted else 1} unrestricted={str(unrestricted).lower()}"
+            mode = "multiline-query" if "\n" in plan.query else "rg-unavailable"
+            cmd_desc = (
+                f"python-fallback-search pass={2 if unrestricted else 1} "
+                f"unrestricted={str(unrestricted).lower()} mode={mode}"
+            )
             return self._dedupe_hits(hits), [cmd_desc]
 
         commands: list[list[str]] = []
@@ -163,6 +167,7 @@ class AgenticSearchExecutor:
     def _exec_python_fallback(self, plan: SearchPlan, pass_label: int, unrestricted: bool) -> list[SearchHit]:
         hits: list[SearchHit] = []
         query = plan.query
+        multiline = "\n" in query
         cwd_real = Path(os.path.realpath(str(self.cwd)))
         scope_paths = [self.cwd / s for s in plan.scope]
 
@@ -186,6 +191,31 @@ class AgenticSearchExecutor:
                     if plan.file_types and not self._matches_types(filename, plan.file_types):
                         continue
                     if not unrestricted and self._is_low_value_path(rel_path):
+                        continue
+
+                    if multiline:
+                        try:
+                            text = path_obj.read_text(encoding="utf-8", errors="ignore")
+                        except OSError:
+                            continue
+                        start = 0
+                        while True:
+                            idx = text.find(query, start)
+                            if idx < 0:
+                                break
+                            line_no = text.count("\n", 0, idx) + 1
+                            snippet = " ".join(query.splitlines())[:240]
+                            hits.append(
+                                SearchHit(
+                                    path=rel_path,
+                                    line_start=line_no,
+                                    line_end=line_no + query.count("\n"),
+                                    confidence=self._confidence(rel_path, snippet),
+                                    snippet=snippet,
+                                    rationale=self._rationale(rel_path, snippet, pass_label),
+                                )
+                            )
+                            start = idx + max(1, len(query))
                         continue
 
                     for line_no, line in self._iter_file_lines(path_obj):

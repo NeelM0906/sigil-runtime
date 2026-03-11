@@ -1,0 +1,15 @@
+{
+  "started_at": "2026-02-24T00:02:33.239516",
+  "total_rounds": 4040,
+  "total_evolutions": 901,
+  "total_beings_created": 2151,
+  "current_session_rounds": 1990,
+  "last_hourly_report": "2026-02-28T23:39:39.303248",
+  "hourly_stats": {
+    "rounds": 0,
+    "evolutions": 0,
+    "avg_score": 0.0,
+    "best_score": 0.0,
+    "best_being": ""
+  }
+}

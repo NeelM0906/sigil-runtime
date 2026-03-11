@@ -1,0 +1,89 @@
+{
+  "judge_model_assignments": {
+    "formula_judge": {
+      "model": "openai/o1",
+      "reason": "Complex 39-component scoring needs deep reasoning"
+    },
+    "sean_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Pattern matching against Sean's style needs nuance & warmth detection"
+    },
+    "outcome_judge": {
+      "model": "openai/o1",
+      "reason": "Causal reasoning about what caused results"
+    },
+    "contamination_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Best at detecting subtle bot patterns & sycophancy"
+    },
+    "human_judge": {
+      "model": "anthropic/claude-sonnet-4.5",
+      "reason": "Best at recognizing genuine human warmth"
+    },
+    "ecosystem_merger_judge": {
+      "model": "openai/gpt-4o",
+      "reason": "Good at structured business value assessment"
+    },
+    "group_influence_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Needs to understand group dynamics & energy"
+    },
+    "self_mastery_judge": {
+      "model": "deepseek/deepseek-r1",
+      "reason": "Reasoning model for internal mindset evaluation"
+    },
+    "process_mastery_judge": {
+      "model": "openai/o1",
+      "reason": "Systematic 7 Levers needs logical reasoning"
+    },
+    "written_content_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Best at evaluating written style & tone"
+    },
+    "public_speaking_judge": {
+      "model": "google/gemini-2.5-pro",
+      "reason": "Good at evaluating verbal/audio content patterns"
+    },
+    "leadership_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Understands vision casting & team elevation"
+    },
+    "management_judge": {
+      "model": "openai/gpt-4o",
+      "reason": "Good at operational/systems evaluation"
+    },
+    "sales_closing_judge": {
+      "model": "anthropic/claude-sonnet-4.5",
+      "reason": "Understands agreement-making nuance"
+    },
+    "coaching_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Best at recognizing breakthrough facilitation"
+    },
+    "teaching_judge": {
+      "model": "google/gemini-2.5-pro",
+      "reason": "Good at evaluating knowledge transfer clarity"
+    },
+    "truth_to_pain_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Needs emotional intelligence for pain articulation"
+    },
+    "zone_action_judge": {
+      "model": "openai/o1",
+      "reason": "Reasoning about 0.8% vs 80% activity prioritization"
+    },
+    "relationship_judge": {
+      "model": "anthropic/claude-opus-4.5",
+      "reason": "Best at understanding genuine human connection"
+    }
+  },
+  "model_summary": {
+    "anthropic/claude-opus-4.5": ["sean_judge", "contamination_judge", "group_influence_judge", "written_content_judge", "leadership_judge", "coaching_judge", "truth_to_pain_judge", "relationship_judge"],
+    "openai/o1": ["formula_judge", "outcome_judge", "process_mastery_judge", "zone_action_judge"],
+    "anthropic/claude-sonnet-4.5": ["human_judge", "sales_closing_judge"],
+    "openai/gpt-4o": ["ecosystem_merger_judge", "management_judge"],
+    "google/gemini-2.5-pro": ["public_speaking_judge", "teaching_judge"],
+    "deepseek/deepseek-r1": ["self_mastery_judge"]
+  },
+  "notes": "Assignments based on model strengths: Claude for nuance/warmth/writing, o1 for reasoning/logic, GPT-4o for structured evaluation, Gemini for breadth, DeepSeek-R1 for deep reasoning at lower cost"
+}

@@ -26,6 +26,8 @@ ARTIFACT_TYPES: dict[str, tuple[str, str, bool]] = {
     "docx": (".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", True),
     # Image types
     "image": (".png", "image/png", True),
+    "video": (".mp4", "video/mp4", True),
+    "gif": (".gif", "image/gif", True),
     "svg": (".svg", "image/svg+xml", False),
     # Data types
     "json": (".json", "application/json", False),
@@ -287,6 +289,17 @@ class ArtifactStore:
             ORDER BY created_at DESC LIMIT ?
             """,
             (tenant_id, task_id, limit),
+        ).fetchall()
+        return [self._row_to_record(row) for row in rows]
+
+    def list_recent_artifacts(self, tenant_id: str, limit: int = 50) -> list[ArtifactRecord]:
+        rows = self.db.execute(
+            """
+            SELECT * FROM artifacts
+            WHERE tenant_id = ?
+            ORDER BY created_at DESC LIMIT ?
+            """,
+            (tenant_id, limit),
         ).fetchall()
         return [self._row_to_record(row) for row in rows]
 

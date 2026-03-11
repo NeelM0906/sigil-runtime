@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from bomba_sr.llm.providers import ChatMessage, LLMProvider
+from bomba_sr.openclaw.integration import discover_colosseum_data_roots
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 # ---------------------------------------------------------------------------
@@ -26,12 +27,49 @@ _SCENARIOS_FILE = "colosseum/v2/data/scenarios.json"
 _RESULTS_DIR = "colosseum/v2/data/results"
 
 
+def _resolve_colosseum_root(
+    arguments: dict[str, Any],
+    context: ToolContext,
+    workspace_root: Path | None,
+) -> tuple[Path, list[dict[str, str]]]:
+    anchor = workspace_root or context.workspace_root
+    roots = discover_colosseum_data_roots(anchor)
+    if not roots:
+        raise ValueError("No Colosseum data roots were found for this workspace")
+
+    choices = [
+        {
+            "arena": f"arena-{idx + 1}",
+            "path": str(root),
+        }
+        for idx, root in enumerate(roots)
+    ]
+    requested = str(arguments.get("arena") or "").strip()
+    if requested:
+        for choice, root in zip(choices, roots):
+            if requested in {choice["arena"], choice["path"], root.name}:
+                return root, choices
+        raise ValueError(f"Unknown Colosseum arena: {requested}")
+    return roots[0], choices
+
+
 def _guard_workspace_path(workspace_root: Path, relative: str) -> Path:
     resolved_root = workspace_root.resolve()
-    path = (resolved_root / relative).resolve()
-    if not path.is_relative_to(resolved_root):
+    candidates = [relative]
+    if relative.startswith("colosseum/"):
+        candidates.append(relative[len("colosseum/"):])
+    else:
+        candidates.append(f"colosseum/{relative}")
+    for candidate in candidates:
+        path = (resolved_root / candidate).resolve()
+        if not path.is_relative_to(resolved_root):
+            continue
+        if path.exists():
+            return path
+    fallback = (resolved_root / candidates[0]).resolve()
+    if not fallback.is_relative_to(resolved_root):
         raise ValueError(f"Path traversal denied: {relative}")
-    return path
+    return fallback
 
 
 def _load_json(workspace_root: Path, relative: str) -> Any:
@@ -125,7 +163,7 @@ def _colosseum_run_round_factory(
     workspace_root: Path | None,
 ):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        ws = workspace_root or context.workspace_root
+        ws, arenas = _resolve_colosseum_root(arguments, context, workspace_root)
         beings = _load_json(ws, _BEINGS_FILE)
         judges = _load_json(ws, _JUDGES_FILE)
         scenarios = _load_json(ws, _SCENARIOS_FILE)
@@ -224,6 +262,8 @@ def _colosseum_run_round_factory(
         return {
             "round_results": len(all_results),
             "model_used": model,
+            "arena": str(ws),
+            "available_arenas": arenas,
             "top_5": [
                 {"title": r["being_title"], "area": r["area"], "score": r["average_overall"]}
                 for r in sorted_results[:5]
@@ -240,22 +280,22 @@ def _colosseum_run_round_factory(
 
 def _colosseum_leaderboard_factory(workspace_root: Path | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        ws = workspace_root or context.workspace_root
+        ws, arenas = _resolve_colosseum_root(arguments, context, workspace_root)
         try:
             leaderboard = _load_json(ws, _LEADERBOARD_FILE)
         except ValueError:
-            return {"leaderboard": [], "message": "No tournament results yet."}
+            return {"leaderboard": [], "message": "No tournament results yet.", "arena": str(ws), "available_arenas": arenas}
         top_n = int(arguments.get("top_n") or 0)
         if top_n > 0:
             leaderboard = leaderboard[:top_n]
-        return {"leaderboard": leaderboard, "total_beings": len(leaderboard)}
+        return {"leaderboard": leaderboard, "total_beings": len(leaderboard), "arena": str(ws), "available_arenas": arenas}
 
     return run
 
 
 def _colosseum_being_list_factory(workspace_root: Path | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        ws = workspace_root or context.workspace_root
+        ws, arenas = _resolve_colosseum_root(arguments, context, workspace_root)
         beings = _load_json(ws, _BEINGS_FILE)
         area_filter = arguments.get("area_filter")
         if area_filter:
@@ -271,7 +311,7 @@ def _colosseum_being_list_factory(workspace_root: Path | None):
             }
             for b in beings
         ]
-        return {"beings": summary, "count": len(summary)}
+        return {"beings": summary, "count": len(summary), "arena": str(ws), "available_arenas": arenas}
 
     return run
 
@@ -282,7 +322,7 @@ def _colosseum_evolve_factory(
     workspace_root: Path | None,
 ):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        ws = workspace_root or context.workspace_root
+        ws, arenas = _resolve_colosseum_root(arguments, context, workspace_root)
         beings = _load_json(ws, _BEINGS_FILE)
         model = arguments.get("model") or default_model_id
 
@@ -362,6 +402,8 @@ def _colosseum_evolve_factory(
             "mutated": len(mid_40),
             "crossover": len(bottom_30),
             "total": len(evolved),
+            "arena": str(ws),
+            "available_arenas": arenas,
         }
 
     return run
@@ -369,7 +411,7 @@ def _colosseum_evolve_factory(
 
 def _colosseum_scenario_list_factory(workspace_root: Path | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        ws = workspace_root or context.workspace_root
+        ws, arenas = _resolve_colosseum_root(arguments, context, workspace_root)
         scenarios = _load_json(ws, _SCENARIOS_FILE)
         if not isinstance(scenarios, dict):
             raise ValueError("scenarios.json must be a JSON object")
@@ -385,7 +427,7 @@ def _colosseum_scenario_list_factory(workspace_root: Path | None):
                 "person": s.get("person", {}).get("name", ""),
                 "success_criteria": s.get("success_criteria", "")[:200],
             })
-        return {"scenarios": summaries, "count": len(summaries)}
+        return {"scenarios": summaries, "count": len(summaries), "arena": str(ws), "available_arenas": arenas}
 
     return run
 
@@ -397,7 +439,7 @@ def _colosseum_scenario_list_factory(workspace_root: Path | None):
 
 def builtin_colosseum_tools(
     provider: LLMProvider,
-    default_model_id: str = "gpt-4o-mini",
+    default_model_id: str = "anthropic/claude-opus-4.6",
     workspace_root: Path | None = None,
 ) -> list[ToolDefinition]:
     return [
@@ -427,6 +469,10 @@ def builtin_colosseum_tools(
                         "type": "string",
                         "description": "LLM model to use (default: configured colosseum model).",
                     },
+                    "arena": {
+                        "type": "string",
+                        "description": "Optional Colosseum arena path or arena-N identifier.",
+                    },
                 },
                 "additionalProperties": False,
             },
@@ -444,6 +490,10 @@ def builtin_colosseum_tools(
                         "type": "integer",
                         "description": "Return only the top N entries (0 = all).",
                     },
+                    "arena": {
+                        "type": "string",
+                        "description": "Optional Colosseum arena path or arena-N identifier.",
+                    },
                 },
                 "additionalProperties": False,
             },
@@ -460,6 +510,10 @@ def builtin_colosseum_tools(
                     "area_filter": {
                         "type": "string",
                         "description": "Optional area key to filter (e.g. 'vision_leadership').",
+                    },
+                    "arena": {
+                        "type": "string",
+                        "description": "Optional Colosseum arena path or arena-N identifier.",
                     },
                 },
                 "additionalProperties": False,
@@ -481,6 +535,10 @@ def builtin_colosseum_tools(
                         "type": "string",
                         "description": "LLM model for evolution prompts (default: configured colosseum model).",
                     },
+                    "arena": {
+                        "type": "string",
+                        "description": "Optional Colosseum arena path or arena-N identifier.",
+                    },
                 },
                 "additionalProperties": False,
             },
@@ -497,6 +555,10 @@ def builtin_colosseum_tools(
                     "area_filter": {
                         "type": "string",
                         "description": "Optional area key prefix to filter scenarios.",
+                    },
+                    "arena": {
+                        "type": "string",
+                        "description": "Optional Colosseum arena path or arena-N identifier.",
                     },
                 },
                 "additionalProperties": False,

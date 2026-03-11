@@ -3,7 +3,6 @@ from __future__ import annotations
 import glob
 import fnmatch
 import os
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -84,6 +83,36 @@ def _glob_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
     return {"files": sorted(files)}
 
 
+def _literal_grep_matches(pattern: str, root: Path, file_glob: str) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    multiline = "\n" in pattern
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = str(path.relative_to(root))
+        if not fnmatch.fnmatch(rel, file_glob):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if multiline:
+            start = 0
+            while True:
+                idx = text.find(pattern, start)
+                if idx < 0:
+                    break
+                line_no = text.count("\n", 0, idx) + 1
+                snippet = " ".join(pattern.splitlines())[:240]
+                matches.append({"path": str(path), "line": line_no, "snippet": snippet})
+                start = idx + max(1, len(pattern))
+            continue
+        for idx, line in enumerate(text.splitlines(), start=1):
+            if pattern in line:
+                matches.append({"path": str(path), "line": idx, "snippet": line.strip()})
+    return matches
+
+
 def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     pattern = str(arguments.get("pattern") or "").strip()
     if not pattern:
@@ -93,11 +122,12 @@ def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
     file_glob = str(arguments.get("glob") or "**/*")
 
     rg_bin = shutil.which("rg")
-    if rg_bin is not None:
+    if rg_bin is not None and "\n" not in pattern:
         cmd = [
             rg_bin,
             "-n",
             "--hidden",
+            "--fixed-strings",
             "--glob",
             file_glob,
             pattern,
@@ -121,22 +151,7 @@ def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
             )
         return {"matches": matches}
 
-    matches = []
-    matcher = re.compile(pattern)
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        rel = str(path.relative_to(root))
-        if not fnmatch.fnmatch(rel, file_glob):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        for idx, line in enumerate(text.splitlines(), start=1):
-            if matcher.search(line):
-                matches.append({"path": str(path), "line": idx, "snippet": line.strip()})
-    return {"matches": matches}
+    return {"matches": _literal_grep_matches(pattern, root, file_glob)}
 
 
 def builtin_fs_tools() -> list[ToolDefinition]:

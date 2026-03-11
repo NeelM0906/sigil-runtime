@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 
 # Load .env BEFORE importing bomba_sr so RuntimeConfig picks up all vars.
-def _load_dotenv_early(path: Path) -> None:
+def _load_dotenv_early(path: Path, *, override: bool = True) -> None:
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -43,23 +43,71 @@ def _load_dotenv_early(path: Path) -> None:
         key, value = raw.split("=", 1)
         key = key.strip()
         value = value.strip().strip("'").strip('"')
-        if key and (key not in os.environ or not os.environ.get(key)):
+        if key and (override or key not in os.environ or not os.environ.get(key)):
             os.environ[key] = value
 
 _load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
 
+
+def _load_openclaw_runtime_defaults(project_root: Path) -> None:
+    config_path = project_root / "portable-openclaw" / "openclaw.json"
+    if not config_path.is_file():
+        return
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    agents = payload.get("agents") if isinstance(payload, dict) else {}
+    agents = agents if isinstance(agents, dict) else {}
+    defaults = agents.get("defaults") if isinstance(agents.get("defaults"), dict) else {}
+    default_model = str(defaults.get("model") or "").strip()
+    main_model = ""
+    for item in agents.get("list") or []:
+        if isinstance(item, dict) and str(item.get("id") or "").strip() == "main":
+            model = item.get("model")
+            if isinstance(model, dict):
+                main_model = str(model.get("primary") or "").strip()
+            elif isinstance(model, str):
+                main_model = model.strip()
+            break
+    selected_model = (main_model or default_model or "openrouter/anthropic/claude-opus-4.6").removeprefix("openrouter/")
+    os.environ.setdefault("BOMBA_LLM_PROVIDER_PRIORITY", "openrouter")
+    os.environ.setdefault("BOMBA_MODEL_ID", selected_model)
+    os.environ.setdefault("BOMBA_CLASSIFY_MODEL", selected_model)
+    os.environ.setdefault("BOMBA_COLOSSEUM_MODEL_ID", selected_model)
+    os.environ.setdefault("BOMBA_TEAM_MANAGER_MODEL_ID", selected_model)
+
+    memory_search = defaults.get("memorySearch") if isinstance(defaults.get("memorySearch"), dict) else {}
+    embed_model = str(memory_search.get("model") or "").strip()
+    remote = memory_search.get("remote") if isinstance(memory_search.get("remote"), dict) else {}
+    remote_base = str(remote.get("baseUrl") or "").strip().rstrip("/")
+    if embed_model:
+        os.environ.setdefault("OPENAI_EMBEDDING_MODEL", embed_model)
+        os.environ.setdefault("BOMBA_PINECONE_EMBED_MODEL", embed_model)
+    if remote_base:
+        os.environ.setdefault("OPENROUTER_BASE_URL", remote_base)
+
 from bomba_sr.context.policy import TurnProfile
+from bomba_sr.openclaw.integration import bundled_openclaw_root, ensure_portable_openclaw_layout, portable_home_root
 from bomba_sr.runtime.bridge import RuntimeBridge, TurnRequest
 from bomba_sr.subagents.protocol import SubAgentTask
 from bomba_sr.subagents.worker import SubAgentWorkerFactory
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_load_openclaw_runtime_defaults(PROJECT_ROOT)
 PRIME_WORKSPACE = PROJECT_ROOT / "workspaces" / "prime"
+ensure_portable_openclaw_layout(PROJECT_ROOT)
+os.environ.setdefault("SIGIL_REPO_ROOT", str(PROJECT_ROOT))
+os.environ.setdefault("SIGIL_WORKSPACES_ROOT", str(PROJECT_ROOT / "workspaces"))
+os.environ.setdefault("SIGIL_PORTABLE_HOME", str(portable_home_root(PROJECT_ROOT)))
+os.environ.setdefault("OPENCLAW_HOME", str(bundled_openclaw_root(PROJECT_ROOT)))
+os.environ.setdefault("OPENCLAW_ROOT", str(bundled_openclaw_root(PROJECT_ROOT)))
+os.environ.setdefault("OPENCLAW_ENV_FILE", str(PROJECT_ROOT / ".env"))
 
 
-def _load_dotenv(path: Path) -> None:
-    """Read .env file into os.environ (does not overwrite existing vars)."""
+def _load_dotenv(path: Path, *, override: bool = True) -> None:
+    """Read .env file into os.environ, preferring the repo-local bundle."""
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -73,7 +121,7 @@ def _load_dotenv(path: Path) -> None:
         key, value = raw.split("=", 1)
         key = key.strip()
         value = value.strip().strip("'").strip('"')
-        if key and (key not in os.environ or not os.environ.get(key)):
+        if key and (override or key not in os.environ or not os.environ.get(key)):
             os.environ[key] = value
 
 MIME_TYPES = {
@@ -1299,6 +1347,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         self._write_cors(404, {"error": "being not found"})
                         return
                     self._write_cors(200, {"being": being})
+                    return
+
+                # --- Projects Catalog ---
+                if path == "/api/mc/projects":
+                    projects = dashboard_svc.list_projects_catalog()
+                    self._write_cors(200, {"projects": projects})
                     return
 
                 # --- Dream Cycle ---

@@ -4,7 +4,7 @@
 
 ## What Was Built
 
-Complete webinar marketing framework at `/Users/samantha/Projects/webinar-machine/`:
+Complete webinar marketing framework at `./workspaces/prime/Projects/webinar-machine/`:
 
 ### Core Documents
 
