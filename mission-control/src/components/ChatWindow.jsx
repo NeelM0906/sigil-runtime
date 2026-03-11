@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { chatApi, tasksApi } from '../api'
 import { useSSE } from '../hooks/useSSE'
@@ -114,7 +115,7 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
         </div>
 
         {/* Content */}
-        <div className={`text-sm leading-relaxed px-3 py-2 rounded-lg ${
+        <div className={`text-sm leading-relaxed px-3 py-2 rounded-lg text-left ${
           isUser
             ? 'bg-accent-blue/15 text-text-primary border border-accent-blue/20'
             : 'bg-bg-card text-text-primary border border-border'
@@ -136,30 +137,70 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
 // ── Highlighted @mentions in content ─────────────────────────
 
 function HighlightedContent({ content, getBeingById }) {
-  // Split on @mentions
-  const parts = content.split(/(@\w+)/g)
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith('@')) {
-          const name = part.slice(1).toLowerCase()
-          // Find being by name (case-insensitive)
-          const being = getBeingById(name) ||
-            // Try matching by name instead of id
-            null
-          if (being) {
-            return (
-              <span key={i} className="font-medium" style={{ color: being.color }}>
-                {part}
-              </span>
-            )
-          }
-          // Try to color by finding a being whose name matches
-          return <span key={i} className="font-medium text-accent-blue">{part}</span>
+  // Custom renderer that colors @mentions inside markdown text nodes
+  const renderMention = (text) => {
+    const parts = text.split(/(@\w+)/g)
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        const name = part.slice(1).toLowerCase()
+        const being = getBeingById(name) || null
+        if (being) {
+          return <span key={i} className="font-medium" style={{ color: being.color }}>{part}</span>
         }
-        return <span key={i}>{part}</span>
-      })}
-    </>
+        return <span key={i} className="font-medium text-accent-blue">{part}</span>
+      }
+      return <span key={i}>{part}</span>
+    })
+  }
+
+  return (
+    <Markdown
+      components={{
+        // Headings
+        h1: ({ children }) => <h3 className="text-base font-bold mt-3 mb-1.5 text-text-primary">{children}</h3>,
+        h2: ({ children }) => <h4 className="text-sm font-bold mt-2.5 mb-1 text-text-primary">{children}</h4>,
+        h3: ({ children }) => <h5 className="text-sm font-semibold mt-2 mb-1 text-text-primary">{children}</h5>,
+        // Paragraphs
+        p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+        // Bold / italic
+        strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
+        em: ({ children }) => <em className="italic">{children}</em>,
+        // Lists
+        ul: ({ children }) => <ul className="list-disc list-inside mb-1.5 space-y-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal list-inside mb-1.5 space-y-0.5">{children}</ol>,
+        li: ({ children }) => <li className="text-sm">{children}</li>,
+        // Tables
+        table: ({ children }) => (
+          <div className="overflow-x-auto my-2">
+            <table className="text-xs w-full border-collapse">{children}</table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,
+        th: ({ children }) => <th className="text-left px-2 py-1 font-semibold text-text-secondary">{children}</th>,
+        td: ({ children }) => <td className="px-2 py-1 border-t border-border/50">{children}</td>,
+        // Code
+        code: ({ children, className }) => {
+          const isBlock = className?.includes('language-')
+          if (isBlock) {
+            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto">{children}</code>
+          }
+          return <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
+        },
+        pre: ({ children }) => <pre className="my-1.5">{children}</pre>,
+        // Horizontal rule
+        hr: () => <hr className="border-border/50 my-2" />,
+        // Links
+        a: ({ href, children }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">{children}</a>
+        ),
+        // Blockquote
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-accent-blue/40 pl-2 my-1.5 text-text-secondary italic">{children}</blockquote>
+        ),
+      }}
+    >
+      {content}
+    </Markdown>
   )
 }
 
@@ -344,14 +385,31 @@ export function ChatWindow() {
     if (!input.trim()) return
 
     const content = input.trim()
-    const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
+
+    // Resolve @mentions from content into targets (covers inline typing without dropdown selection)
+    const resolvedTargets = [...targets]
+    const mentionMatches = content.match(/@(\w+)/g) || []
+    for (const mention of mentionMatches) {
+      const name = mention.slice(1).toLowerCase()
+      const being = beings.find(b =>
+        CHAT_ROUTABLE_TYPES.has(b.type) && (
+          b.name.toLowerCase() === name ||
+          b.id.toLowerCase() === name
+        )
+      )
+      if (being && !resolvedTargets.includes(being.id)) {
+        resolvedTargets.push(being.id)
+      }
+    }
+
+    const mode = resolvedTargets.length > 1 ? execMode : (resolvedTargets.length === 1 ? null : null)
 
     // Optimistic: add user message immediately
     const tempMsg = {
       id: `temp-${Date.now()}`,
-      type: targets.length === 0 ? 'broadcast' : targets.length === 1 ? 'direct' : 'group',
+      type: resolvedTargets.length === 0 ? 'broadcast' : resolvedTargets.length === 1 ? 'direct' : 'group',
       sender: 'user',
-      targets: [...targets],
+      targets: [...resolvedTargets],
       content,
       timestamp: new Date().toISOString(),
       mode,
