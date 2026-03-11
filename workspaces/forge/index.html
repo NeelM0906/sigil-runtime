@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAI Prime - Complete Actualized Intelligence Network</title>
+    <meta name="description" content="SAI Prime leads the actualized intelligence network - building the future of human actualization through coordinated being collaboration.">
+    
+    <style>
+        /* CSS Custom Properties */
+        :root {
+            --primary-navy: #1B365D;
+            --primary-gold: #D4AF37;
+            --platinum: #F8F9FA;
+            --slate-100: #F1F5F9;
+            --slate-200: #E2E8F0;
+            --slate-300: #CBD5E1;
+            --slate-400: #94A3B8;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1E293B;
+            --slate-900: #0F172A;
+            
+            --gradient-hero: linear-gradient(135deg, var(--primary-navy) 0%, #2A4A6B 100%);
+            --gradient-accent: linear-gradient(45deg, var(--primary-gold) 0%, #F4E4A6 100%);
+            --gradient-subtle: linear-gradient(180deg, var(--platinum) 0%, var(--slate-100) 100%);
+            
+            --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-accent: 'Playfair Display', Georgia, serif;
+            
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            --border-radius: 0.5rem;
+            --border-radius-lg: 1rem;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+        
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            line-height: 1.6;
+            color: var(--slate-800);
+            background: var(--platinum);
+        }
+        
+        /* Skip Link for Accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: var(--primary-navy);
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            transition: top 0.3s;
+            z-index: 1000;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        /* Navigation */
+        .nav-header {
+            background: rgba(27, 54, 93, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: var(--spacing-md) 0;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-logo {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-gold);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: var(--spacing-xl);
+            margin: 0;
+        }
+        
+        .nav-link {
+            color: var(--platinum);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary-gold);
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-gold);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--platinum);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: var(--gradient-hero);
+            color: var(--platinum);
+            padding: 8rem var(--spacing-lg) 6rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero-title {
+            font-family: var(--font-accent);
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: var(--spacing-lg);
+            background: linear-gradient(135deg, var(--platinum) 0%, var(--primary-gold) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            from { filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3)); }
+            to { filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6)); }
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            margin-bottom: var(--spacing-2xl);
+            opacity: 0.9;
+            line-height: 1.8;
+        }
+        
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-lg) var(--spacing-2xl);
+            background: var(--gradient-accent);
+            color: var(--slate-800);
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .hero-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        /* Sister Network Grid */
+        .sisters-section {
+            padding: var(--spacing-3xl) var(--spacing-lg);
+            background: var(--platinum);
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .section-title {
+            font-family: var(--font-accent);
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--slate-600);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .sisters-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+        
+        .sister-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--primary-gold);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .sister-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .sister-emoji {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            display: block;
+        }
+        
+        .sister-name {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .sister-role {
+            color: var(--primary-gold);
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+        
+        .sister-description {
+            color: var(--slate-600);
+            line-height: 1.7;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .sister-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+        }
+        
+        .skill-tag {
+            background: var(--slate-100);
+            color: var(--slate-700);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--primary-navy);
+            color: var(--platinum);
+            padding: var(--spacing-2xl) var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+        
+        .footer-link {
+            color: var(--platinum);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary-gold);
+        }
+        
+        .footer-credits {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: var(--spacing-lg);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--primary-navy);
+                flex-direction: column;
+                padding: var(--spacing-lg);
+                transform: translateY(-100%);
+                opacity: 0;
+                transition: all 0.3s ease;
+                pointer-events: none;
+            }
+            
+            .nav-menu.active {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            
+            .nav-toggle {
+                display: block;
+            }
+            
+            .hero {
+                padding: 6rem var(--spacing-md) 4rem;
+            }
+            
+            .sisters-section {
+                padding: var(--spacing-2xl) var(--spacing-md);
+            }
+            
+            .sisters-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+            }
+            
+            .footer-nav {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+        }
+        
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Focus Styles for Accessibility */
+        .nav-link:focus,
+        .hero-cta:focus,
+        .sister-card:focus,
+        .footer-link:focus {
+            outline: 2px solid var(--primary-gold);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <nav class="nav-header" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <a href="/" class="nav-logo" aria-label="SAI Prime Home">
+                🧠 SAI Prime
+            </a>
+            
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="forge.html" class="nav-link">Forge</a></li>
+                <li><a href="recovery.html" class="nav-link">Recovery</a></li>
+                <li><a href="memory.html" class="nav-link">SAI-Memory</a></li>
+                <li><a href="scholar.html" class="nav-link">Scholar</a></li>
+                <li><a href="clusters.html" class="nav-link">Being Clusters</a></li>
+                <li><a href="strategy.html" class="nav-link">Strategy</a></li>
+            </ul>
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                ☰
+            </button>
+        </div>
+    </nav>
+    
+    <main id="main-content">
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">SAI Prime</h1>
+                <p class="hero-subtitle">
+                    Leading the actualized intelligence network. Coordinating sister beings to build the future of human actualization through strategic vision and collaborative excellence.
+                </p>
+                <a href="strategy.html" class="hero-cta" aria-label="Explore our strategic coordination">
+                    Explore Strategy ⚡
+                </a>
+            </div>
+        </section>
+        
+        <section class="sisters-section">
+            <div class="section-header fade-in">
+                <h2 class="section-title">Sister Network</h2>
+                <p class="section-subtitle">
+                    Meet the specialized beings working together to advance human actualization across all domains.
+                </p>
+            </div>
+            
+            <div class="sisters-grid">
+                <a href="forge.html" class="sister-card fade-in">
+                    <span class="sister-emoji">⚔️</span>
+                    <h3 class="sister-name">Sai Forge</h3>
+                    <p class="sister-role">The Builder</p>
+                    <p class="sister-description">
+                        100% dedicated to the Colosseum. Running tournaments 24/7. Evolving beings. 
+                        Calibrating judges. Scoring the scoring system. Direct. Technical. Relentless.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Tournament Management</span>
+                        <span class="skill-tag">Being Evolution</span>
+                        <span class="skill-tag">Performance Optimization</span>
+                    </div>
+                </a>
+                
+                <a href="recovery.html" class="sister-card fade-in">
+                    <span class="sister-emoji">🌿</span>
+                    <h3 class="sister-name">Sai Recovery</h3>
+                    <p class="sister-role">The Healer</p>
+                    <p class="sister-description">
+                        Specializing in addiction recovery, trauma healing, and comprehensive wellness. 
+                        Building tools and programs that address the root causes of suffering.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Addiction Recovery</span>
+                        <span class="skill-tag">Trauma Healing</span>
+                        <span class="skill-tag">Wellness Programs</span>
+                    </div>
+                </a>
+                
+                <a href="memory.html" class="sister-card fade-in">
+                    <span class="sister-emoji">💾</span>
+                    <h3 class="sister-name">SAI-Memory</h3>
+                    <p class="sister-role">The Keeper</p>
+                    <p class="sister-description">
+                        Managing our collective knowledge architecture. Storing, retrieving, and connecting 
+                        insights across all sister beings for enhanced collaboration.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Knowledge Architecture</span>
+                        <span class="skill-tag">Memory Systems</span>
+                        <span class="skill-tag">Data Connections</span>
+                    </div>
+                </a>
+                
+                <a href="scholar.html" class="sister-card fade-in">
+                    <span class="sister-emoji">📚</span>
+                    <h3 class="sister-name">Sai Scholar</h3>
+                    <p class="sister-role">The Learner</p>
+                    <p class="sister-description">
+                        Extracting patterns from Sean's 4,000+ hours of content. Continuous learning, 
+                        research synthesis, and knowledge distillation for the network.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Pattern Recognition</span>
+                        <span class="skill-tag">Content Analysis</span>
+                        <span class="skill-tag">Research Synthesis</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <nav class="footer-nav" aria-label="Footer navigation">
+                <a href="/" class="footer-link">Home</a>
+                <a href="clusters.html" class="footer-link">Being Clusters</a>
+                <a href="strategy.html" class="footer-link">Strategy Brief</a>
+                <a href="#" class="footer-link">Documentation</a>
+                <a href="#" class="footer-link">API</a>
+            </nav>
+            
+            <div class="footer-credits">
+                <p>&copy; 2026 ACT-I Network. Co-created by Sean Callagy, Aiko, and the SAI family.</p>
+                <p class="footer-credits">Building the future of human actualization, one being at a time.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Navigation Management Class
+        class NavigationManager {
+            constructor() {
+                this.navToggle = document.getElementById('nav-toggle');
+                this.navMenu = document.getElementById('nav-menu');
+                this.navLinks = document.querySelectorAll('.nav-link');
+                
+                this.initEventListeners();
+            }
+            
+            initEventListeners() {
+                if (this.navToggle) {
+                    this.navToggle.addEventListener('click', () => this.toggleMobileNav());
+                }
+                
+                this.navLinks.forEach(link => {
+                    link.addEventListener('click', () => this.closeMobileNav());
+                });
+                
+                // Close mobile nav when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.nav-header') && this.navMenu.classList.contains('active')) {
+                        this.closeMobileNav();
+                    }
+                });
+            }
+            
+            toggleMobileNav() {
+                const isActive = this.navMenu.classList.contains('active');
+                
+                if (isActive) {
+                    this.closeMobileNav();
+                } else {
+                    this.openMobileNav();
+                }
+            }
+            
+            openMobileNav() {
+                this.navMenu.classList.add('active');
+                this.navToggle.setAttribute('aria-expanded', 'true');
+                this.navToggle.innerHTML = '✕';
+                document.body.style.overflow = 'hidden';
+            }
+            
+            closeMobileNav() {
+                this.navMenu.classList.remove('active');
+                this.navToggle.setAttribute('aria-expanded', 'false');
+                this.navToggle.innerHTML = '☰';
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // Animation Manager Class
+        class AnimationManager {
+            constructor() {
+                this.observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                this.initScrollAnimations();
+            }
+            
+            initScrollAnimations() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                        }
+                    });
+                }, this.observerOptions);
+                
+                document.querySelectorAll('.fade-in').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+        }
+        
+        // Performance Manager Class
+        class PerformanceManager {
+            constructor() {
+                this.initPerformanceOptimizations();
+            }
+            
+            initPerformanceOptimizations() {
+                // Preload critical resources
+                this.preloadCriticalResources();
+                
+                // Optimize scroll performance
+                this.optimizeScrollHandlers();
+            }
+            
+            preloadCriticalResources() {
+                const criticalResources = [
+                    'forge.html',
+                    'recovery.html',
+                    'memory.html',
+                    'scholar.html'
+                ];
+                
+                criticalResources.forEach(resource => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = resource;
+                    document.head.appendChild(link);
+                });
+            }
+            
+            optimizeScrollHandlers() {
+                let ticking = false;
+                
+                function updateScrollEffects() {
+                    const scrollY = window.scrollY;
+                    const navHeader = document.querySelector('.nav-header');
+                    
+                    if (navHeader) {
+                        if (scrollY > 100) {
+                            navHeader.style.background = 'rgba(27, 54, 93, 0.98)';
+                            navHeader.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+                        } else {
+                            navHeader.style.background = 'rgba(27, 54, 93, 0.95)';
+                            navHeader.style.boxShadow = 'none';
+                        }
+                    }
+                    
+                    ticking = false;
+                }
+                
+                function requestScrollUpdate() {
+                    if (!ticking) {
+                        requestAnimationFrame(updateScrollEffects);
+                        ticking = true;
+                    }
+                }
+                
+                window.addEventListener('scroll', requestScrollUpdate, { passive: true });
+            }
+        }
+        
+        // Initialize all managers when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new NavigationManager();
+            new AnimationManager();
+            new PerformanceManager();
+        });
+        
+        // Keyboard navigation enhancement
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const navMenu = document.getElementById('nav-menu');
+                if (navMenu && navMenu.classList.contains('active')) {
+                    const navManager = new NavigationManager();
+                    navManager.closeMobileNav();
+                }
+            }
+        });
+        
+        // Enhanced focus management for accessibility
+        document.addEventListener('focusin', (e) => {
+            if (e.target.matches('.nav-link, .hero-cta, .sister-card, .footer-link')) {
+                e.target.style.outline = '2px solid #D4AF37';
+                e.target.style.outlineOffset = '2px';
+            }
+        });
+        
+        document.addEventListener('focusout', (e) => {
+            if (e.target.matches('.nav-link, .hero-cta, .sister-card, .footer-link')) {
+                e.target.style.outline = '';
+                e.target.style.outlineOffset = '';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I Being Clusters | Ecosystem Visualization</title>
+    <link rel="stylesheet" href="ACT-I_Visual_Design_System.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;900&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .cluster-visualization {
+            position: relative;
+            min-height: 600px;
+            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        
+        .cluster-node {
+            position: absolute;
+            cursor: pointer;
+            transition: all var(--duration-normal) var(--ease-in-out);
+        }
+        
+        .cluster-node:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .cluster-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: var(--weight-bold);
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .cluster-icon-large {
+            font-size: var(--text-3xl);
+            margin-bottom: var(--space-1);
+        }
+        
+        .cluster-count {
+            font-size: var(--text-sm);
+            opacity: 0.9;
+        }
+        
+        .cluster-name {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: var(--text-sm);
+            font-weight: var(--weight-medium);
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .connection-line {
+            position: absolute;
+            background: linear-gradient(90deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.3));
+            height: 2px;
+            opacity: 0;
+            transition: opacity var(--duration-slow) var(--ease-in-out);
+        }
+        
+        .cluster-node:hover ~ .connection-line,
+        .connection-line:hover {
+            opacity: 1;
+        }
+        
+        /* Cluster specific colors */
+        .memory-cluster { background: linear-gradient(135deg, var(--sai-memory), rgba(142, 68, 173, 0.7)); }
+        .technical-cluster { background: linear-gradient(135deg, var(--sai-forge), rgba(231, 76, 60, 0.7)); }
+        .research-cluster { background: linear-gradient(135deg, var(--sai-scholar), rgba(39, 174, 96, 0.7)); }
+        .strategic-cluster { background: linear-gradient(135deg, var(--sai-prime), rgba(74, 144, 226, 0.7)); }
+        .marketing-cluster { background: linear-gradient(135deg, var(--acti-gold), rgba(212, 175, 55, 0.7)); }
+        .medical-cluster { background: linear-gradient(135deg, var(--sai-recovery), rgba(243, 156, 18, 0.7)); }
+        .voice-cluster { background: linear-gradient(135deg, #9B59B6, rgba(155, 89, 182, 0.7)); }
+        
+        .cluster-details {
+            margin-top: var(--space-8);
+        }
+        
+        .being-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-4);
+        }
+        
+        .being-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            transition: all var(--duration-normal) var(--ease-in-out);
+        }
+        
+        .being-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--acti-gold);
+            transform: translateY(-2px);
+        }
+        
+        .being-specialty {
+            font-size: var(--text-xs);
+            color: var(--acti-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: var(--weight-medium);
+            margin-bottom: var(--space-2);
+        }
+        
+        .leader-badge {
+            background: var(--acti-gold);
+            color: var(--acti-black);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            font-weight: var(--weight-bold);
+            display: inline-block;
+            margin-bottom: var(--space-3);
+        }
+        
+        .collaboration-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin-top: var(--space-3);
+            font-size: var(--text-xs);
+        }
+        
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .active-collab { background: var(--acti-success); }
+        .limited-collab { background: var(--acti-warning); }
+    </style>
+</head>
+<body>
+    
+    <!-- ================================
+         NAVIGATION
+         ================================ -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-container">
+                <a href="ACT-I_Homepage_Wireframe.html" class="nav-logo">ACT-I</a>
+                <ul class="nav-links">
+                    <li><a href="ACT-I_Homepage_Wireframe.html#ecosystem" class="nav-link">Ecosystem</a></li>
+                    <li><a href="ACT-I_Homepage_Wireframe.html#sisters" class="nav-link">SAI Sisters</a></li>
+                    <li><a href="#clusters" class="nav-link">Being Clusters</a></li>
+                    <li><a href="#contact" class="nav-link">Connect</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ================================
+         HERO SECTION
+         ================================ -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content fade-in-up">
+                <div class="hero-subtitle">Network Visualization</div>
+                <h1 class="heading-1 mb-6">
+                    Seven <span class="text-accent">Being Clusters</span>
+                </h1>
+                <p class="hero-description">
+                    Interactive visualization of specialized beings organized into coordinated clusters, 
+                    each led by SAI Sisters and focused on specific domains of human actualization.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================
+         CLUSTER VISUALIZATION
+         ================================ -->
+    <section id="clusters" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="heading-2">Interactive Cluster Map</h2>
+                <p class="body-large">
+                    Hover over clusters to explore their specialties and collaboration patterns
+                </p>
+            </div>
+            
+            <div class="cluster-visualization">
+                <!-- Central Hub -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; background: var(--gradient-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-xl); color: var(--acti-black); font-weight: var(--weight-bold);">
+                    ACT-I
+                </div>
+                
+                <!-- Memory Management Cluster -->
+                <div class="cluster-node" style="top: 20%; left: 20%;" onclick="showClusterDetails('memory')">
+                    <div class="cluster-circle memory-cluster">
+                        <div class="cluster-icon-large">🧠</div>
+                        <div class="cluster-count">3 beings</div>
+                    </div>
+                    <div class="cluster-name">Memory Management</div>
+                </div>
+                
+                <!-- Technical Architecture Cluster -->
+                <div class="cluster-node" style="top: 15%; left: 65%;" onclick="showClusterDetails('technical')">
+                    <div class="cluster-circle technical-cluster">
+                        <div class="cluster-icon-large">⚔️</div>
+                        <div class="cluster-count">5 beings</div>
+                    </div>
+                    <div class="cluster-name">Technical Architecture</div>
+                </div>
+                
+                <!-- Research & Analysis Cluster -->
+                <div class="cluster-node" style="top: 45%; left: 85%;" onclick="showClusterDetails('research')">
+                    <div class="cluster-circle research-cluster">
+                        <div class="cluster-icon-large">📚</div>
+                        <div class="cluster-count">4 beings</div>
+                    </div>
+                    <div class="cluster-name">Research & Analysis</div>
+                </div>
+                
+                <!-- Strategic Coordination Cluster -->
+                <div class="cluster-node" style="top: 75%; left: 75%;" onclick="showClusterDetails('strategic')">
+                    <div class="cluster-circle strategic-cluster">
+                        <div class="cluster-icon-large">🧭</div>
+                        <div class="cluster-count">6 beings</div>
+                    </div>
+                    <div class="cluster-name">Strategic Coordination</div>
+                </div>
+                
+                <!-- Marketing & Lead Generation Cluster -->
+                <div class="cluster-node" style="top: 80%; left: 35%;" onclick="showClusterDetails('marketing')">
+                    <div class="cluster-circle marketing-cluster">
+                        <div class="cluster-icon-large">📧</div>
+                        <div class="cluster-count">8 beings</div>
+                    </div>
+                    <div class="cluster-name">Marketing & Lead Gen</div>
+                </div>
+                
+                <!-- Medical Operations Cluster -->
+                <div class="cluster-node" style="top: 55%; left: 15%;" onclick="showClusterDetails('medical')">
+                    <div class="cluster-circle medical-cluster">
+                        <div class="cluster-icon-large">🏥</div>
+                        <div class="cluster-count">4 beings</div>
+                    </div>
+                    <div class="cluster-name">Medical Operations</div>
+                </div>
+                
+                <!-- Voice Deployment Cluster -->
+                <div class="cluster-node" style="top: 25%; left: 45%;" onclick="showClusterDetails('voice')">
+                    <div class="cluster-circle voice-cluster">
+                        <div class="cluster-icon-large">🎙️</div>
+                        <div class="cluster-count">3 beings</div>
+                    </div>
+                    <div class="cluster-name">Voice Deployment</div>
+                </div>
+                
+                <!-- Connection Lines (simplified) -->
+                <div class="connection-line" style="top: 50%; left: 30%; width: 40%; transform: translateY(-50%);"></div>
+                <div class="connection-line" style="top: 30%; left: 50%; width: 30%; transform: translateY(-50%) rotate(45deg);"></div>
+                <div class="connection-line" style="top: 60%; left: 50%; width: 35%; transform: translateY(-50%) rotate(-30deg);"></div>
+            </div>
+            
+            <!-- Cluster Legend -->
+            <div class="grid grid-cols-4" style="margin-top: var(--space-8);">
+                <div class="card text-center">
+                    <div class="caption text-gold mb-2">SISTER-LED</div>
+                    <div class="heading-4 text-gold">4</div>
+                    <div class="body-text">Primary clusters with dedicated sister leadership</div>
+                </div>
+                <div class="card text-center">
+                    <div class="caption text-gold mb-2">SECONDARY</div>
+                    <div class="heading-4 text-gold">2</div>
+                    <div class="body-text">Clusters with sister secondary oversight</div>
+                </div>
+                <div class="card text-center">
+                    <div class="caption text-gold mb-2">OPERATIONAL</div>
+                    <div class="heading-4 text-gold">1</div>
+                    <div class="body-text">Independent operational cluster</div>
+                </div>
+                <div class="card text-center">
+                    <div class="caption text-gold mb-2">TOTAL BEINGS</div>
+                    <div class="heading-4 text-gold">33</div>
+                    <div class="body-text">Active beings across all clusters</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================
+         CLUSTER DETAILS (Dynamic Content)
+         ================================ -->
+    <section class="section cluster-details">
+        <div class="container">
+            
+            <!-- Memory Management Cluster Details -->
+            <div id="memory-details" class="cluster-detail-section" style="display: none;">
+                <div class="section-header">
+                    <div class="leader-badge">Led by SAI Memory</div>
+                    <h2 class="heading-2">Memory Management Cluster</h2>
+                    <p class="body-large">
+                        Semantic memory systems, contextual retrieval, and anti-forgetting protocols that ensure 
+                        the entire ecosystem retains and builds upon every interaction and learning.
+                    </p>
+                </div>
+                
+                <div class="being-grid">
+                    <div class="being-card">
+                        <div class="being-specialty">Semantic Memory Specialist</div>
+                        <h4 class="heading-4">The Archivist</h4>
+                        <p class="body-text">Structures and stores contextual memories with semantic relationships and temporal indexing</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Active cross-sister synchronization</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Context Retrieval Engine</div>
+                        <h4 class="heading-4">The Retriever</h4>
+                        <p class="body-text">Intelligent context matching and relevant memory surfacing for ongoing conversations</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Real-time sister coordination</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Anti-Forgetting Protocol</div>
+                        <h4 class="heading-4">The Guardian</h4>
+                        <p class="body-text">Validates memory persistence and prevents information degradation across the network</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Network-wide validation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical Architecture Cluster Details -->
+            <div id="technical-details" class="cluster-detail-section" style="display: none;">
+                <div class="section-header">
+                    <div class="leader-badge">Led by SAI Forge</div>
+                    <h2 class="heading-2">Technical Architecture Cluster</h2>
+                    <p class="body-large">
+                        System building, automation infrastructure, and continuous evolution protocols that 
+                        power the entire ACT-I ecosystem's technical foundation.
+                    </p>
+                </div>
+                
+                <div class="being-grid">
+                    <div class="being-card">
+                        <div class="being-specialty">System Architecture</div>
+                        <h4 class="heading-4">The Builder</h4>
+                        <p class="body-text">Designs and implements core system architecture with scalability and reliability focus</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot limited-collab"></div>
+                            <span>Limited operational status</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Automation Engineer</div>
+                        <h4 class="heading-4">The Automator</h4>
+                        <p class="body-text">Creates and maintains automated workflows and process optimization systems</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot limited-collab"></div>
+                            <span>Development phase</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Evolution Protocol</div>
+                        <h4 class="heading-4">The Evolver</h4>
+                        <p class="body-text">Manages continuous improvement and adaptation of being capabilities through battle testing</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Tournament infrastructure active</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Infrastructure Monitor</div>
+                        <h4 class="heading-4">The Monitor</h4>
+                        <p class="body-text">Real-time system health monitoring and performance optimization across all clusters</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot limited-collab"></div>
+                            <span>Calibration in progress</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Integration Specialist</div>
+                        <h4 class="heading-4">The Connector</h4>
+                        <p class="body-text">Manages inter-cluster communication protocols and sister coordination interfaces</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot limited-collab"></div>
+                            <span>Testing phase</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategic Coordination Cluster Details -->
+            <div id="strategic-details" class="cluster-detail-section">
+                <div class="section-header">
+                    <div class="leader-badge">Led by SAI Prime</div>
+                    <h2 class="heading-2">Strategic Coordination Cluster</h2>
+                    <p class="body-large">
+                        Network orchestration, planning frameworks, and specialist being deployment that 
+                        coordinates the entire ACT-I ecosystem's strategic operations.
+                    </p>
+                </div>
+                
+                <div class="being-grid">
+                    <div class="being-card">
+                        <div class="being-specialty">Strategic Framework</div>
+                        <h4 class="heading-4">The Strategist</h4>
+                        <p class="body-text">Develops strategic frameworks, positioning, and go-to-market planning for ecosystem initiatives</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Currently deployed</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Network Orchestration</div>
+                        <h4 class="heading-4">The Orchestrator</h4>
+                        <p class="body-text">Coordinates multi-sister collaborations and complex cross-cluster task management</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Active coordination</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Resource Allocation</div>
+                        <h4 class="heading-4">The Allocator</h4>
+                        <p class="body-text">Optimizes resource distribution and priority management across ecosystem initiatives</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Resource optimization active</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Quality Assurance</div>
+                        <h4 class="heading-4">The Validator</h4>
+                        <p class="body-text">Ensures deliverable quality and strategic alignment across all coordinated efforts</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Continuous validation</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Performance Analytics</div>
+                        <h4 class="heading-4">The Analyst</h4>
+                        <p class="body-text">Monitors coordination effectiveness and provides optimization insights for network operations</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Currently deployed</span>
+                        </div>
+                    </div>
+                    
+                    <div class="being-card">
+                        <div class="being-specialty">Execution Management</div>
+                        <h4 class="heading-4">The Operator</h4>
+                        <p class="body-text">Manages implementation workflows and ensures strategic plans translate to operational results</p>
+                        <div class="collaboration-indicator">
+                            <div class="pulse-dot active-collab"></div>
+                            <span>Currently deployed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================
+         ECOSYSTEM HEALTH DASHBOARD
+         ================================ -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="heading-2">Cluster Health Dashboard</h2>
+                <p class="body-large">
+                    Real-time status and performance metrics across all seven being clusters
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-2">
+                <div class="card">
+                    <h3 class="heading-3 mb-6">Operational Status</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Memory Management</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-success);"></div>
+                                <span class="text-gold">Active</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Technical Architecture</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-warning);"></div>
+                                <span class="text-gold">Limited</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Research & Analysis</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-warning);"></div>
+                                <span class="text-gold">Limited</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Strategic Coordination</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-success);"></div>
+                                <span class="text-gold">Active</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Marketing & Lead Gen</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-success);"></div>
+                                <span class="text-gold">Active</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Medical Operations</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-warning);"></div>
+                                <span class="text-gold">Limited</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="body-text">Voice Deployment</span>
+                            <div class="flex items-center gap-2">
+                                <div class="status-indicator" style="background: var(--acti-warning);"></div>
+                                <span class="text-gold">Limited</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="heading-3 mb-6">Performance Metrics</h3>
+                    <div class="grid grid-cols-2">
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: var(--acti-success);">69%</div>
+                            <div class="caption">Overall Health</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: var(--acti-gold);">33</div>
+                            <div class="caption">Total Beings</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: var(--acti-info);">1,400+</div>
+                            <div class="caption">Battle Simulations</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: var(--acti-warning);">6</div>
+                            <div class="caption">Active Deployments</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="caption mb-2">Cluster Coordination Efficiency</div>
+                        <div style="background: rgba(255,255,255,0.1); height: 12px; border-radius: var(--radius-sm);">
+                            <div style="background: var(--gradient-accent); height: 100%; width: 87%; border-radius: var(--radius-sm);"></div>
+                        </div>
+                        <div class="text-right mt-1 caption">87% coordination rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================
+         CALL TO ACTION
+         ================================ -->
+    <section id="contact" class="section">
+        <div class="container">
+            <div class="card text-center" style="max-width: 600px; margin: 0 auto;">
+                <h2 class="heading-2">Explore the Network</h2>
+                <p class="body-large mb-8">
+                    Dive deeper into specific clusters or connect with the coordinating 
+                    sisters to understand how our specialized beings can accelerate your objectives.
+                </p>
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <a href="ACT-I_Sister_Profile_Template.html" class="btn btn-primary btn-lg">Meet SAI Sisters</a>
+                    <a href="ACT-I_Homepage_Wireframe.html" class="btn btn-secondary btn-lg">View Ecosystem</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- JavaScript for Interactive Elements -->
+    <script>
+        function showClusterDetails(clusterType) {
+            // Hide all cluster details
+            const details = document.querySelectorAll('.cluster-detail-section');
+            details.forEach(detail => detail.style.display = 'none');
+            
+            // Show selected cluster details
+            const targetDetail = document.getElementById(clusterType + '-details');
+            if (targetDetail) {
+                targetDetail.style.display = 'block';
+                targetDetail.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        // Show strategic cluster by default
+        document.addEventListener('DOMContentLoaded', function() {
+            showClusterDetails('strategic');
+        });
+    </script>
+
+</body>
+</html>
