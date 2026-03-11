@@ -1702,6 +1702,74 @@ class DashboardService:
         return task
 
     # ------------------------------------------------------------------
+    # Active agents (comms tab)
+    # ------------------------------------------------------------------
+
+    def get_active_agents(self, session_id: str | None = None) -> list[dict]:
+        """Return the list of agents currently active across orchestration tasks.
+
+        Each entry contains the agent's being name, ID, avatar, color,
+        the task it is working on, and its current status (spawning / working).
+        Optionally filtered by *session_id* (chat session).
+        """
+        agents: list[dict] = []
+        engine = self.orchestration_engine
+        if engine is None:
+            return agents
+
+        # Iterate over in-memory active orchestration tasks
+        with engine._lock:
+            active_snapshot = {
+                tid: {
+                    "status": s["status"],
+                    "goal": s.get("goal", ""),
+                    "subtask_ids": dict(s.get("subtask_ids", {})),
+                    "subtask_outputs": set(s.get("subtask_outputs", {}).keys()),
+                    "chat_session_id": s.get("chat_session_id", "general"),
+                    "plan": s.get("plan"),
+                }
+                for tid, s in engine._active.items()
+                if s["status"] not in ("completed", "failed")
+            }
+
+        for task_id, snap in active_snapshot.items():
+            if session_id and snap["chat_session_id"] != session_id:
+                continue
+            plan = snap["plan"]
+            subtask_map: dict[str, str] = {}  # being_id -> subtask title
+            if plan is not None:
+                try:
+                    subtasks = plan.subtasks if hasattr(plan, "subtasks") else []
+                    for sub in subtasks:
+                        bid = sub.being_id if hasattr(sub, "being_id") else ""
+                        title = sub.title if hasattr(sub, "title") else ""
+                        if bid:
+                            subtask_map[bid] = title
+                except Exception:
+                    pass
+
+            for being_id, _run_id in snap["subtask_ids"].items():
+                being = self.get_being(being_id) or {}
+                # Determine status: if output exists it's done, otherwise working
+                if being_id in snap["subtask_outputs"]:
+                    agent_status = "completed"
+                else:
+                    agent_status = "working"
+                agents.append({
+                    "being_id": being_id,
+                    "name": being.get("name", being_id),
+                    "avatar": being.get("avatar", "?"),
+                    "color": being.get("color", "#666"),
+                    "type": being.get("type", "unknown"),
+                    "task_id": task_id,
+                    "task_goal": snap["goal"][:120],
+                    "subtask_title": subtask_map.get(being_id, ""),
+                    "status": agent_status,
+                    "session_id": snap["chat_session_id"],
+                })
+        return agents
+
+    # ------------------------------------------------------------------
     # Sub-agents
     # ------------------------------------------------------------------
 

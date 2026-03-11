@@ -1467,6 +1467,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"runs": runs})
                     return
 
+                # --- Active agents (comms tab) ---
+                if path == "/api/mc/active-agents":
+                    sid = query.get("session_id", [None])[0]
+                    agents = dashboard_svc.get_active_agents(session_id=sid)
+                    self._write_cors(200, {"agents": agents})
+                    return
+
                 # --- Artifacts ---
                 if path.startswith("/api/mc/artifacts/") and path.endswith("/preview"):
                     aid = path.split("/api/mc/artifacts/", 1)[1].split("/")[0]
