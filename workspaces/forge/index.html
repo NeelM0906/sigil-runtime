@@ -3,252 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACT-I | AI-Powered Creative Agency | Human Amplification Through AI</title>
-    <meta name="description" content="ACT-I: The first AI that makes humans better, not replaceable. Complete, Holistic, Diagnostic, Dynamic, Interconnected, Automated Actualization Tool powered by 6 specialized AI beings.">
-    <meta name="keywords" content="AI creative agency, human amplification, AI beings, creative automation, digital transformation">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>SAI Prime - Complete Actualized Intelligence Network</title>
+    <meta name="description" content="SAI Prime leads the actualized intelligence network - building the future of human actualization through coordinated being collaboration.">
+    
     <style>
-        /* Enhanced Reset and Base Styles */
-        *, *::before, *::after {
+        /* CSS Custom Properties */
+        :root {
+            --primary-navy: #1B365D;
+            --primary-gold: #D4AF37;
+            --platinum: #F8F9FA;
+            --slate-100: #F1F5F9;
+            --slate-200: #E2E8F0;
+            --slate-300: #CBD5E1;
+            --slate-400: #94A3B8;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1E293B;
+            --slate-900: #0F172A;
+            
+            --gradient-hero: linear-gradient(135deg, var(--primary-navy) 0%, #2A4A6B 100%);
+            --gradient-accent: linear-gradient(45deg, var(--primary-gold) 0%, #F4E4A6 100%);
+            --gradient-subtle: linear-gradient(180deg, var(--platinum) 0%, var(--slate-100) 100%);
+            
+            --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-accent: 'Playfair Display', Georgia, serif;
+            
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            
+            --border-radius: 0.5rem;
+            --border-radius-lg: 1rem;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+        
+        /* Reset & Base Styles */
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
-        :root {
-            /* Core Colors */
-            --navy: #1B365D;
-            --gold: #D4AF37;
-            --platinum: #F8F9FA;
-            --dark-gray: #2C3E50;
-            --light-gray: #ECF0F1;
-            --white: #FFFFFF;
-            --black: #000000;
-            
-            /* Enhanced Color Palette */
-            --navy-light: #2A4A6B;
-            --navy-dark: #0F1F35;
-            --gold-light: #E6C76A;
-            --gold-dark: #B8941F;
-            
-            /* Functional Colors */
-            --success: #2ECC71;
-            --warning: #F39C12;
-            --error: #E74C3C;
-            --info: #3498DB;
-            
-            /* Shadows and Effects */
-            --shadow-sm: 0 2px 4px rgba(27, 54, 93, 0.1);
-            --shadow-md: 0 4px 12px rgba(27, 54, 93, 0.15);
-            --shadow-lg: 0 8px 25px rgba(27, 54, 93, 0.2);
-            --shadow-xl: 0 12px 40px rgba(27, 54, 93, 0.25);
-            --glow-gold: 0 0 20px rgba(212, 175, 55, 0.3);
-            
-            /* Transitions */
-            --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            
-            /* Typography Scale */
-            --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            --font-secondary: 'Playfair Display', Georgia, serif;
-            
-            /* Spacing Scale */
-            --space-xs: 0.5rem;
-            --space-sm: 1rem;
-            --space-md: 1.5rem;
-            --space-lg: 2rem;
-            --space-xl: 3rem;
-            --space-2xl: 4rem;
-            --space-3xl: 6rem;
-            
-            /* Layout */
-            --max-width: 1400px;
-            --container-padding: 2rem;
-            --border-radius: 12px;
-            --border-radius-lg: 20px;
-        }
-
-        /* Enhanced Typography */
+        
         html {
-            font-size: 16px;
             scroll-behavior: smooth;
         }
-
+        
         body {
             font-family: var(--font-primary);
             line-height: 1.6;
-            color: var(--white);
-            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 40%, var(--dark-gray) 100%);
-            overflow-x: hidden;
-            scroll-padding-top: 80px;
+            color: var(--slate-800);
+            background: var(--platinum);
         }
-
-        /* Typography Hierarchy */
-        .text-hero {
-            font-size: clamp(3rem, 8vw, 5.5rem);
-            font-weight: 800;
-            font-family: var(--font-secondary);
-            line-height: 1;
-            letter-spacing: -0.02em;
+        
+        /* Skip Link for Accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: var(--primary-navy);
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            transition: top 0.3s;
+            z-index: 1000;
         }
-
-        .text-display {
-            font-size: clamp(2.5rem, 6vw, 4rem);
-            font-weight: 700;
-            font-family: var(--font-secondary);
-            line-height: 1.1;
+        
+        .skip-link:focus {
+            top: 6px;
         }
-
-        .text-headline {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .text-title {
-            font-size: clamp(1.5rem, 3vw, 2rem);
-            font-weight: 600;
-            line-height: 1.3;
-        }
-
-        .text-body {
-            font-size: clamp(1rem, 2vw, 1.2rem);
-            font-weight: 400;
-            line-height: 1.6;
-        }
-
-        .text-small {
-            font-size: clamp(0.875rem, 1.5vw, 1rem);
-            font-weight: 400;
-            line-height: 1.5;
-        }
-
-        /* Enhanced Layout Components */
-        .container {
-            max-width: var(--max-width);
-            margin: 0 auto;
-            padding: 0 var(--container-padding);
-        }
-
-        .section {
-            padding: var(--space-3xl) 0;
-            position: relative;
-        }
-
-        /* Enhanced Header */
-        .header {
+        
+        /* Navigation */
+        .nav-header {
+            background: rgba(27, 54, 93, 0.95);
+            backdrop-filter: blur(10px);
             position: fixed;
             top: 0;
-            width: 100%;
-            background: rgba(15, 31, 53, 0.95);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-            z-index: 1000;
-            transition: var(--transition-normal);
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: var(--spacing-md) 0;
+            transition: all 0.3s ease;
         }
-
-        .header.scrolled {
-            background: rgba(15, 31, 53, 0.98);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .nav {
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-lg);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: var(--space-sm) 0;
-            min-height: 80px;
         }
-
-        .logo {
-            font-size: 1.75rem;
-            font-weight: 800;
-            font-family: var(--font-secondary);
-            color: var(--gold);
+        
+        .nav-logo {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-gold);
             text-decoration: none;
             display: flex;
             align-items: center;
-            gap: var(--space-xs);
+            gap: var(--spacing-sm);
         }
-
-        .logo::before {
-            content: "⚔️";
-            font-size: 1.5rem;
-            animation: pulse 2s infinite;
-        }
-
-        .nav-links {
+        
+        .nav-menu {
             display: flex;
             list-style: none;
-            gap: var(--space-lg);
-            align-items: center;
+            gap: var(--spacing-xl);
+            margin: 0;
         }
-
-        .nav-links a {
-            color: var(--white);
+        
+        .nav-link {
+            color: var(--platinum);
             text-decoration: none;
             font-weight: 500;
+            transition: color 0.3s ease;
             position: relative;
-            transition: var(--transition-fast);
-            padding: var(--space-xs) var(--space-sm);
-            border-radius: var(--border-radius);
         }
-
-        .nav-links a::after {
+        
+        .nav-link:hover {
+            color: var(--primary-gold);
+        }
+        
+        .nav-link::after {
             content: '';
             position: absolute;
-            bottom: -2px;
-            left: 50%;
+            bottom: -4px;
+            left: 0;
             width: 0;
             height: 2px;
-            background: var(--gold);
-            transition: var(--transition-fast);
-            transform: translateX(-50%);
+            background: var(--primary-gold);
+            transition: width 0.3s ease;
         }
-
-        .nav-links a:hover::after {
+        
+        .nav-link:hover::after {
             width: 100%;
         }
-
-        .nav-links a:hover {
-            color: var(--gold);
-            background: rgba(212, 175, 55, 0.1);
-        }
-
+        
         .nav-toggle {
             display: none;
-            flex-direction: column;
-            gap: 4px;
             background: none;
             border: none;
+            color: var(--platinum);
+            font-size: 1.5rem;
             cursor: pointer;
-            padding: var(--space-xs);
         }
-
-        .nav-toggle span {
-            width: 25px;
-            height: 3px;
-            background: var(--white);
-            transition: var(--transition-fast);
-        }
-
-        /* Enhanced Hero Section */
+        
+        /* Hero Section */
         .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: calc(80px + var(--space-lg)) 0 var(--space-lg);
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(27, 54, 93, 0.3) 0%, transparent 50%),
-                linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 50%, var(--dark-gray) 100%);
+            background: var(--gradient-hero);
+            color: var(--platinum);
+            padding: 8rem var(--spacing-lg) 6rem;
+            text-align: center;
             position: relative;
             overflow: hidden;
         }
-
+        
         .hero::before {
             content: '';
             position: absolute;
@@ -256,1365 +174,440 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D4AF37' fill-opacity='0.05'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
             opacity: 0.3;
         }
-
+        
         .hero-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-2xl);
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-text {
-            animation: slideInLeft 1s ease-out;
-        }
-
-        .hero-tagline {
-            color: var(--gold);
-            font-weight: 600;
-            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-            margin-bottom: var(--space-sm);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .hero-subtitle {
-            color: var(--platinum);
-            margin: var(--space-md) 0 var(--space-lg);
-            opacity: 0.9;
-            max-width: 90%;
-        }
-
-        .hero-visual {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: slideInRight 1s ease-out;
-        }
-
-        .hero-graphic {
-            width: 100%;
-            max-width: 500px;
-            height: 400px;
-            background: 
-                linear-gradient(45deg, rgba(212, 175, 55, 0.1) 0%, rgba(27, 54, 93, 0.2) 100%);
-            border-radius: var(--border-radius-lg);
-            border: 2px solid rgba(212, 175, 55, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-graphic::before {
-            content: "⚔️ 🤖 💡 📈 🎯 🚀";
-            font-size: 3rem;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        /* Enhanced CTA Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            padding: var(--space-md) var(--space-xl);
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: var(--transition-normal);
-            position: relative;
-            overflow: hidden;
-            font-family: var(--font-primary);
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, var(--gold), var(--gold-light));
-            color: var(--navy);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--glow-gold), var(--shadow-xl);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--white);
-            border: 2px solid var(--white);
-        }
-
-        .btn-secondary:hover {
-            background: var(--white);
-            color: var(--navy);
-            transform: translateY(-2px);
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: var(--transition-slow);
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: var(--space-md);
-            margin-top: var(--space-lg);
-            flex-wrap: wrap;
-        }
-
-        /* Enhanced Beings Section */
-        .beings-section {
-            background: 
-                linear-gradient(180deg, var(--dark-gray) 0%, var(--navy) 100%),
-                url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23D4AF37' fill-opacity='0.03'%3E%3Cpath d='M20 20c0-11.046-8.954-20-20-20v20h20zm0 0c11.046 0 20-8.954 20-20H20v20z'/%3E%3C/g%3E%3C/svg%3E");
-        }
-
-        .section-header {
-            text-align: center;
-            margin-bottom: var(--space-2xl);
-        }
-
-        .section-title {
-            color: var(--gold);
-            margin-bottom: var(--space-md);
-        }
-
-        .section-subtitle {
-            color: var(--platinum);
             max-width: 800px;
             margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero-title {
+            font-family: var(--font-accent);
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: var(--spacing-lg);
+            background: linear-gradient(135deg, var(--platinum) 0%, var(--primary-gold) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            from { filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3)); }
+            to { filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6)); }
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            margin-bottom: var(--spacing-2xl);
             opacity: 0.9;
+            line-height: 1.8;
         }
-
-        .beings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: var(--space-lg);
-            margin-top: var(--space-2xl);
-        }
-
-        .being-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: var(--border-radius-lg);
-            padding: var(--space-xl);
-            transition: var(--transition-normal);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .being-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--gold), var(--gold-light));
-            transform: scaleX(0);
-            transition: var(--transition-normal);
-        }
-
-        .being-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .being-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--gold);
-            box-shadow: var(--glow-gold), var(--shadow-xl);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .being-header {
-            display: flex;
+        
+        .hero-cta {
+            display: inline-flex;
             align-items: center;
-            gap: var(--space-md);
-            margin-bottom: var(--space-md);
-        }
-
-        .being-icon {
-            font-size: 3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(45deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.2));
-            border-radius: 50%;
-            border: 2px solid rgba(212, 175, 55, 0.3);
-        }
-
-        .being-title {
-            font-family: var(--font-secondary);
-            color: var(--gold);
-        }
-
-        .being-description {
-            color: var(--platinum);
-            margin-bottom: var(--space-md);
-            line-height: 1.6;
-        }
-
-        .being-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: var(--space-sm);
-            margin-top: var(--space-md);
-            padding-top: var(--space-md);
-            border-top: 1px solid rgba(212, 175, 55, 0.2);
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: var(--space-xs);
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--gold);
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: var(--platinum);
-            opacity: 0.8;
-        }
-
-        /* Enhanced Services Section */
-        .services-section {
-            background: var(--navy);
-            position: relative;
-        }
-
-        .services-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h100v100H0z' fill='%23D4AF37' fill-opacity='0.02'/%3E%3Cpath d='M50 0v100M0 50h100' stroke='%23D4AF37' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E");
-            opacity: 0.3;
-        }
-
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: var(--space-xl);
-            margin-top: var(--space-2xl);
-            position: relative;
-            z-index: 1;
-        }
-
-        .service-card {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.15);
+            gap: var(--spacing-sm);
+            padding: var(--spacing-lg) var(--spacing-2xl);
+            background: var(--gradient-accent);
+            color: var(--slate-800);
+            text-decoration: none;
+            font-weight: 600;
             border-radius: var(--border-radius-lg);
-            padding: var(--space-2xl);
-            text-align: center;
-            transition: var(--transition-normal);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(15px);
-        }
-
-        .service-card::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(212, 175, 55, 0.1), transparent);
-            transform: rotate(45deg) translate(-50%, -50%);
-            transition: var(--transition-slow);
-            opacity: 0;
-        }
-
-        .service-card:hover::after {
-            opacity: 1;
-            animation: shine 1s ease-out;
-        }
-
-        .service-card:hover {
-            transform: scale(1.03);
-            border-color: var(--gold);
-            box-shadow: var(--glow-gold), var(--shadow-xl);
-        }
-
-        .popular-badge {
-            position: absolute;
-            top: -12px;
-            right: var(--space-lg);
-            background: linear-gradient(45deg, var(--gold), var(--gold-light));
-            color: var(--navy);
-            padding: var(--space-xs) var(--space-md);
-            border-radius: 50px;
-            font-size: 0.875rem;
-            font-weight: 700;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: var(--shadow-md);
+            letter-spacing: 0.5px;
         }
-
-        .service-title {
-            color: var(--white);
-            margin-bottom: var(--space-md);
-            font-family: var(--font-secondary);
+        
+        .hero-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
         }
-
-        .service-price {
-            font-size: 3rem;
-            color: var(--gold);
-            font-weight: 800;
-            margin: var(--space-md) 0 var(--space-lg);
-            font-family: var(--font-secondary);
+        
+        /* Sister Network Grid */
+        .sisters-section {
+            padding: var(--spacing-3xl) var(--spacing-lg);
+            background: var(--platinum);
         }
-
-        .service-price .period {
-            font-size: 1rem;
-            opacity: 0.7;
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: var(--spacing-3xl);
         }
-
-        .service-features {
-            list-style: none;
-            text-align: left;
-            margin-bottom: var(--space-lg);
+        
+        .section-title {
+            font-family: var(--font-accent);
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-md);
         }
-
-        .service-features li {
-            padding: var(--space-xs) 0;
-            color: var(--platinum);
-            position: relative;
-            padding-left: var(--space-lg);
-        }
-
-        .service-features li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: var(--gold);
-            font-weight: bold;
+        
+        .section-subtitle {
             font-size: 1.2rem;
-        }
-
-        /* Enhanced Contact Section */
-        .contact-section {
-            background: 
-                linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-gray) 100%);
-            position: relative;
-        }
-
-        .contact-form {
+            color: var(--slate-600);
             max-width: 600px;
-            margin: var(--space-2xl) auto 0;
-            background: rgba(255, 255, 255, 0.05);
-            padding: var(--space-2xl);
-            border-radius: var(--border-radius-lg);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            backdrop-filter: blur(15px);
+            margin: 0 auto;
         }
-
-        .form-grid {
+        
+        .sisters-grid {
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-md);
-            margin-bottom: var(--space-md);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
         }
-
-        .form-group {
-            margin-bottom: var(--space-md);
-            position: relative;
+        
+        .sister-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--primary-gold);
+            text-decoration: none;
+            color: inherit;
         }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
+        
+        .sister-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
         }
-
-        .form-label {
+        
+        .sister-emoji {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
             display: block;
-            margin-bottom: var(--space-xs);
-            color: var(--white);
-            font-weight: 500;
+        }
+        
+        .sister-name {
+            font-family: var(--font-accent);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-navy);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .sister-role {
+            color: var(--primary-gold);
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             font-size: 0.9rem;
         }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            width: 100%;
-            padding: var(--space-md);
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+        
+        .sister-description {
+            color: var(--slate-600);
+            line-height: 1.7;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .sister-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+        }
+        
+        .skill-tag {
+            background: var(--slate-100);
+            color: var(--slate-700);
+            padding: var(--spacing-xs) var(--spacing-sm);
             border-radius: var(--border-radius);
-            color: var(--white);
-            font-size: 1rem;
-            transition: var(--transition-fast);
-            font-family: var(--font-primary);
+            font-size: 0.85rem;
+            font-weight: 500;
         }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--gold);
-            box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .form-input::placeholder,
-        .form-textarea::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .error-message {
-            display: none;
-            color: var(--error);
-            font-size: 0.875rem;
-            margin-top: var(--space-xs);
-            padding: var(--space-xs);
-            background: rgba(231, 76, 60, 0.1);
-            border-radius: var(--border-radius);
-        }
-
-        .success-message {
-            display: none;
-            color: var(--success);
-            font-size: 0.875rem;
-            margin-top: var(--space-xs);
-            padding: var(--space-xs);
-            background: rgba(46, 204, 113, 0.1);
-            border-radius: var(--border-radius);
-        }
-
-        /* Enhanced Footer */
+        
+        /* Footer */
         .footer {
-            background: var(--navy-dark);
-            padding: var(--space-xl) 0;
-            border-top: 1px solid rgba(212, 175, 55, 0.2);
+            background: var(--primary-navy);
+            color: var(--platinum);
+            padding: var(--spacing-2xl) var(--spacing-lg);
             text-align: center;
         }
-
+        
         .footer-content {
-            color: var(--platinum);
-            opacity: 0.8;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-
-        .footer-links {
+        
+        .footer-nav {
             display: flex;
             justify-content: center;
-            gap: var(--space-lg);
-            margin-bottom: var(--space-md);
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
             flex-wrap: wrap;
         }
-
-        .footer-links a {
+        
+        .footer-link {
             color: var(--platinum);
             text-decoration: none;
-            transition: var(--transition-fast);
+            transition: color 0.3s ease;
         }
-
-        .footer-links a:hover {
-            color: var(--gold);
+        
+        .footer-link:hover {
+            color: var(--primary-gold);
         }
-
-        /* Enhanced Animations */
-        @keyframes slideInLeft {
-            from {
+        
+        .footer-credits {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: var(--spacing-lg);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-menu {
+                position: fixed;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--primary-navy);
+                flex-direction: column;
+                padding: var(--spacing-lg);
+                transform: translateY(-100%);
                 opacity: 0;
-                transform: translateX(-50px);
+                transition: all 0.3s ease;
+                pointer-events: none;
             }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
-        }
-
-        @keyframes shine {
-            0% { transform: rotate(45deg) translate(-200%, -200%); }
-            100% { transform: rotate(45deg) translate(200%, 200%); }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
+            
+            .nav-menu.active {
                 transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            
+            .nav-toggle {
+                display: block;
+            }
+            
+            .hero {
+                padding: 6rem var(--spacing-md) 4rem;
+            }
+            
+            .sisters-section {
+                padding: var(--spacing-2xl) var(--spacing-md);
+            }
+            
+            .sisters-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+            }
+            
+            .footer-nav {
+                flex-direction: column;
+                gap: var(--spacing-md);
             }
         }
-
-        /* Scroll Animations */
-        .fade-in-up {
+        
+        /* Animations */
+        .fade-in {
             opacity: 0;
             transform: translateY(30px);
-            transition: var(--transition-slow);
+            transition: all 0.6s ease;
         }
-
-        .fade-in-up.visible {
+        
+        .fade-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
-
-        /* Loading States */
-        .btn-loading {
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .btn-loading::after {
-            content: '';
-            position: absolute;
-            right: var(--space-md);
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            border: 2px solid currentColor;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: translateY(-50%) rotate(360deg); }
-        }
-
-        /* Enhanced Responsive Design */
-        @media (max-width: 768px) {
-            :root {
-                --container-padding: 1rem;
-                --space-3xl: 3rem;
-                --space-2xl: 2rem;
-            }
-
-            .nav-toggle {
-                display: flex;
-                z-index: 1001;
-            }
-
-            .nav-links {
-                position: fixed;
-                top: 0;
-                right: -100%;
-                height: 100vh;
-                width: 80%;
-                max-width: 300px;
-                background: var(--navy-dark);
-                flex-direction: column;
-                padding: 100px var(--space-lg) var(--space-lg);
-                transition: var(--transition-normal);
-                box-shadow: var(--shadow-xl);
-            }
-
-            .nav-links.open {
-                right: 0;
-            }
-
-            .nav-links a {
-                width: 100%;
-                padding: var(--space-md);
-                border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-            }
-
-            .hero-content {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: var(--space-xl);
-            }
-
-            .hero-cta {
-                justify-content: center;
-            }
-
-            .btn {
-                padding: var(--space-sm) var(--space-lg);
-                font-size: 1rem;
-            }
-
-            .beings-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .being-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .hero-graphic {
-                height: 250px;
-            }
-
-            .service-card {
-                padding: var(--space-lg);
-            }
-
-            .contact-form {
-                padding: var(--space-lg);
-            }
-
-            .nav-links {
-                width: 100%;
-            }
-        }
-
-        /* Performance Optimizations */
-        .being-card,
-        .service-card {
-            will-change: transform;
-        }
-
-        /* Dark Mode Specific Enhancements */
-        ::selection {
-            background: var(--gold);
-            color: var(--navy);
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--navy-dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--gold);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--gold-light);
-        }
-
-        /* Focus States for Accessibility */
-        .btn:focus,
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus,
-        .nav-links a:focus {
-            outline: 2px solid var(--gold);
+        
+        /* Focus Styles for Accessibility */
+        .nav-link:focus,
+        .hero-cta:focus,
+        .sister-card:focus,
+        .footer-link:focus {
+            outline: 2px solid var(--primary-gold);
             outline-offset: 2px;
-        }
-
-        /* Skip Link for Accessibility */
-        .skip-link {
-            position: absolute;
-            top: -40px;
-            left: 6px;
-            background: var(--gold);
-            color: var(--navy);
-            padding: 8px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: 600;
-            transition: var(--transition-fast);
-        }
-
-        .skip-link:focus {
-            top: 6px;
         }
     </style>
 </head>
 <body>
-    <!-- Skip Link for Accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
-
-    <!-- Enhanced Header -->
-    <header class="header" role="banner">
-        <nav class="nav container" role="navigation" aria-label="Main navigation">
-            <a href="#home" class="logo" aria-label="ACT-I Homepage">ACT-I</a>
+    
+    <nav class="nav-header" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <a href="/" class="nav-logo" aria-label="SAI Prime Home">
+                🧠 SAI Prime
+            </a>
             
-            <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            
-            <ul class="nav-links" role="list">
-                <li><a href="#home">HOME</a></li>
-                <li><a href="#beings">BEINGS</a></li>
-                <li><a href="#services">SOLUTIONS</a></li>
-                <li><a href="#contact">CONTACT</a></li>
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="forge.html" class="nav-link">Forge</a></li>
+                <li><a href="recovery.html" class="nav-link">Recovery</a></li>
+                <li><a href="memory.html" class="nav-link">SAI-Memory</a></li>
+                <li><a href="scholar.html" class="nav-link">Scholar</a></li>
+                <li><a href="clusters.html" class="nav-link">Being Clusters</a></li>
+                <li><a href="strategy.html" class="nav-link">Strategy</a></li>
             </ul>
-        </nav>
-    </header>
-
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                ☰
+            </button>
+        </div>
+    </nav>
+    
     <main id="main-content">
-        <!-- Enhanced Hero Section -->
-        <section id="home" class="hero section" role="banner">
-            <div class="container">
-                <div class="hero-content">
-                    <div class="hero-text">
-                        <div class="hero-tagline">The First AI That Makes Humans Better</div>
-                        <h1 class="text-hero">
-                            Amplify Your <span style="color: var(--gold);">Potential</span><br>
-                            Don't Replace It
-                        </h1>
-                        <p class="hero-subtitle text-body">
-                            ACT-I is the Complete, Holistic, Diagnostic, Dynamic, Interconnected, Automated Actualization Tool. Six specialized AI beings working together to elevate human capability, not eliminate it.
-                        </p>
-                        <div class="hero-cta">
-                            <a href="#contact" class="btn btn-primary">
-                                Start Your Journey
-                                <span>→</span>
-                            </a>
-                            <a href="#beings" class="btn btn-secondary">
-                                Meet Our Beings
-                                <span>⚔️</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="hero-visual">
-                        <div class="hero-graphic" aria-hidden="true"></div>
-                    </div>
-                </div>
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">SAI Prime</h1>
+                <p class="hero-subtitle">
+                    Leading the actualized intelligence network. Coordinating sister beings to build the future of human actualization through strategic vision and collaborative excellence.
+                </p>
+                <a href="strategy.html" class="hero-cta" aria-label="Explore our strategic coordination">
+                    Explore Strategy ⚡
+                </a>
             </div>
         </section>
-
-        <!-- Enhanced Beings Section -->
-        <section id="beings" class="beings-section section">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="text-headline section-title">Our AI Being Ecosystem</h2>
-                    <p class="text-body section-subtitle">
-                        Six specialized beings, each mastering distinct domains of human amplification. Battle-tested, continuously evolving, designed to make you unstoppable.
-                    </p>
-                </div>
-
-                <div class="beings-grid">
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">🗣️</div>
-                            <div>
-                                <h3 class="being-title text-title">Athena</h3>
-                                <div class="text-small" style="color: var(--gold);">Voice Agent</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            Field-deployed voice intelligence. Currently managing real-world conferences and client interactions with human-like conversation capabilities.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">24/7</span>
-                                <span class="stat-label">Active</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">92%</span>
-                                <span class="stat-label">Accuracy</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Live</span>
-                                <span class="stat-label">Status</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">💎</div>
-                            <div>
-                                <h3 class="being-title text-title">Mira</h3>
-                                <div class="text-small" style="color: var(--gold);">Voice Backup</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            Operational backup voice agent providing seamless continuity. Deployed for high-stakes conferences and mission-critical communications.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">100%</span>
-                                <span class="stat-label">Uptime</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">0.2s</span>
-                                <span class="stat-label">Response</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Ready</span>
-                                <span class="stat-label">Status</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">🔄</div>
-                            <div>
-                                <h3 class="being-title text-title">Recovery Pipeline</h3>
-                                <div class="text-small" style="color: var(--gold);">Data Intelligence</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            Live dashboard managing 126K professional contacts with predictive analytics and automated relationship management systems.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">126K</span>
-                                <span class="stat-label">Contacts</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Real-time</span>
-                                <span class="stat-label">Updates</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Active</span>
-                                <span class="stat-label">Pipeline</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">⚔️</div>
-                            <div>
-                                <h3 class="being-title text-title">Email Colosseum</h3>
-                                <div class="text-small" style="color: var(--gold);">Battle Engine</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            1,400+ simulated battles testing email effectiveness. Champion copy "$47K Mistake" holds 24W-5L record. Continuous optimization through combat.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">1,400+</span>
-                                <span class="stat-label">Battles</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">24-5</span>
-                                <span class="stat-label">Champion</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Testing</span>
-                                <span class="stat-label">Always</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">📱</div>
-                            <div>
-                                <h3 class="being-title text-title">SMS Engine</h3>
-                                <div class="text-small" style="color: var(--gold);">Notification System</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            Multi-channel notification and engagement system. Currently integrating with primary infrastructure for seamless communication flows.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">Multi</span>
-                                <span class="stat-label">Channel</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Auto</span>
-                                <span class="stat-label">Flow</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">Beta</span>
-                                <span class="stat-label">Phase</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="being-card fade-in-up">
-                        <div class="being-header">
-                            <div class="being-icon">🎯</div>
-                            <div>
-                                <h3 class="being-title text-title">Zone Action Framework</h3>
-                                <div class="text-small" style="color: var(--gold);">Action Engine</div>
-                            </div>
-                        </div>
-                        <p class="being-description text-body">
-                            67 completed actions with 27 actively tracked. Systematic implementation of the Unblinded Formula's 7 Levers for human actualization.
-                        </p>
-                        <div class="being-stats">
-                            <div class="stat-item">
-                                <span class="stat-value">67</span>
-                                <span class="stat-label">Complete</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">27</span>
-                                <span class="stat-label">Active</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-value">7</span>
-                                <span class="stat-label">Levers</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        
+        <section class="sisters-section">
+            <div class="section-header fade-in">
+                <h2 class="section-title">Sister Network</h2>
+                <p class="section-subtitle">
+                    Meet the specialized beings working together to advance human actualization across all domains.
+                </p>
             </div>
-        </section>
-
-        <!-- Enhanced Services Section -->
-        <section id="services" class="services-section section">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="text-headline section-title">Partnership Tiers</h2>
-                    <p class="text-body section-subtitle">
-                        Choose your level of human amplification. Each tier includes battle-tested beings, proven methodologies, and continuous optimization.
+            
+            <div class="sisters-grid">
+                <a href="forge.html" class="sister-card fade-in">
+                    <span class="sister-emoji">⚔️</span>
+                    <h3 class="sister-name">Sai Forge</h3>
+                    <p class="sister-role">The Builder</p>
+                    <p class="sister-description">
+                        100% dedicated to the Colosseum. Running tournaments 24/7. Evolving beings. 
+                        Calibrating judges. Scoring the scoring system. Direct. Technical. Relentless.
                     </p>
-                </div>
-
-                <div class="services-grid">
-                    <div class="service-card fade-in-up">
-                        <h3 class="service-title text-title">Foundation</h3>
-                        <div class="service-price">$50K</div>
-                        <ul class="service-features">
-                            <li>2-3 core beings deployment</li>
-                            <li>Email Colosseum optimization</li>
-                            <li>Recovery Pipeline access</li>
-                            <li>Monthly performance reports</li>
-                            <li>Basic integration setup</li>
-                        </ul>
-                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">
-                            Start Foundation
-                        </a>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Tournament Management</span>
+                        <span class="skill-tag">Being Evolution</span>
+                        <span class="skill-tag">Performance Optimization</span>
                     </div>
-
-                    <div class="service-card fade-in-up">
-                        <div class="popular-badge">Most Popular</div>
-                        <h3 class="service-title text-title">Amplification</h3>
-                        <div class="service-price">$150K</div>
-                        <ul class="service-features">
-                            <li>Full 6-being ecosystem</li>
-                            <li>Voice agents (Athena + Mira)</li>
-                            <li>Complete battle-testing suite</li>
-                            <li>Live dashboard access</li>
-                            <li>Weekly optimization calls</li>
-                            <li>Custom integrations</li>
-                        </ul>
-                        <a href="#contact" class="btn btn-primary" style="width: 100%;">
-                            Choose Amplification
-                        </a>
-                    </div>
-
-                    <div class="service-card fade-in-up">
-                        <h3 class="service-title text-title">Transformation</h3>
-                        <div class="service-price">$500K+</div>
-                        <ul class="service-features">
-                            <li>Custom being development</li>
-                            <li>Unblinded Formula mastery</li>
-                            <li>Dedicated team allocation</li>
-                            <li>Real-time optimization</li>
-                            <li>Priority development queue</li>
-                            <li>Complete ecosystem ownership</li>
-                        </ul>
-                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">
-                            Discuss Custom
-                        </a>
-                    </div>
-
-                    <div class="service-card fade-in-up">
-                        <h3 class="service-title text-title">Retainer</h3>
-                        <div class="service-price">$25K<span class="period">/mo</span></div>
-                        <ul class="service-features">
-                            <li>Dedicated being team</li>
-                            <li>Continuous optimization</li>
-                            <li>Priority access to updates</li>
-                            <li>Monthly strategy sessions</li>
-                            <li>Custom integration development</li>
-                            <li>Direct team communication</li>
-                        </ul>
-                        <a href="#contact" class="btn btn-secondary" style="width: 100%;">
-                            Start Retainer
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Enhanced Contact Section -->
-        <section id="contact" class="contact-section section">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="text-headline section-title">Start Your Amplification</h2>
-                    <p class="text-body section-subtitle">
-                        Ready to experience what happens when AI amplifies human potential instead of replacing it? Let's discuss your transformation.
+                </a>
+                
+                <a href="recovery.html" class="sister-card fade-in">
+                    <span class="sister-emoji">🌿</span>
+                    <h3 class="sister-name">Sai Recovery</h3>
+                    <p class="sister-role">The Healer</p>
+                    <p class="sister-description">
+                        Specializing in addiction recovery, trauma healing, and comprehensive wellness. 
+                        Building tools and programs that address the root causes of suffering.
                     </p>
-                </div>
-
-                <form class="contact-form" id="contactForm" novalidate>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="firstName" class="form-label">First Name *</label>
-                            <input type="text" id="firstName" name="firstName" class="form-input" required aria-describedby="firstNameError">
-                            <div class="error-message" id="firstNameError" role="alert"></div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="lastName" class="form-label">Last Name *</label>
-                            <input type="text" id="lastName" name="lastName" class="form-input" required aria-describedby="lastNameError">
-                            <div class="error-message" id="lastNameError" role="alert"></div>
-                        </div>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Addiction Recovery</span>
+                        <span class="skill-tag">Trauma Healing</span>
+                        <span class="skill-tag">Wellness Programs</span>
                     </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="email" class="form-label">Email Address *</label>
-                            <input type="email" id="email" name="email" class="form-input" required aria-describedby="emailError">
-                            <div class="error-message" id="emailError" role="alert"></div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="phone" class="form-label">Phone Number</label>
-                            <input type="tel" id="phone" name="phone" class="form-input" aria-describedby="phoneError">
-                            <div class="error-message" id="phoneError" role="alert"></div>
-                        </div>
+                </a>
+                
+                <a href="memory.html" class="sister-card fade-in">
+                    <span class="sister-emoji">💾</span>
+                    <h3 class="sister-name">SAI-Memory</h3>
+                    <p class="sister-role">The Keeper</p>
+                    <p class="sister-description">
+                        Managing our collective knowledge architecture. Storing, retrieving, and connecting 
+                        insights across all sister beings for enhanced collaboration.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Knowledge Architecture</span>
+                        <span class="skill-tag">Memory Systems</span>
+                        <span class="skill-tag">Data Connections</span>
                     </div>
-
-                    <div class="form-group">
-                        <label for="company" class="form-label">Company/Organization</label>
-                        <input type="text" id="company" name="company" class="form-input" placeholder="Your company or organization">
+                </a>
+                
+                <a href="scholar.html" class="sister-card fade-in">
+                    <span class="sister-emoji">📚</span>
+                    <h3 class="sister-name">Sai Scholar</h3>
+                    <p class="sister-role">The Learner</p>
+                    <p class="sister-description">
+                        Extracting patterns from Sean's 4,000+ hours of content. Continuous learning, 
+                        research synthesis, and knowledge distillation for the network.
+                    </p>
+                    <div class="sister-skills">
+                        <span class="skill-tag">Pattern Recognition</span>
+                        <span class="skill-tag">Content Analysis</span>
+                        <span class="skill-tag">Research Synthesis</span>
                     </div>
-
-                    <div class="form-group">
-                        <label for="service" class="form-label">Partnership Interest *</label>
-                        <select id="service" name="service" class="form-select" required aria-describedby="serviceError">
-                            <option value="">Select your partnership tier</option>
-                            <option value="foundation">Foundation ($50K) - Core beings deployment</option>
-                            <option value="amplification">Amplification ($150K) - Full ecosystem</option>
-                            <option value="transformation">Transformation ($500K+) - Custom development</option>
-                            <option value="retainer">Retainer ($25K/mo) - Dedicated team</option>
-                            <option value="consultation">Initial Consultation - Let's discuss</option>
-                        </select>
-                        <div class="error-message" id="serviceError" role="alert"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="timeline" class="form-label">Project Timeline</label>
-                        <select id="timeline" name="timeline" class="form-select">
-                            <option value="">Select timeline preference</option>
-                            <option value="immediate">Immediate (within 30 days)</option>
-                            <option value="quarter">This quarter (within 3 months)</option>
-                            <option value="planning">Planning phase (3-6 months)</option>
-                            <option value="future">Future consideration (6+ months)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="goals" class="form-label">Amplification Goals *</label>
-                        <textarea id="goals" name="goals" class="form-textarea" rows="5" required 
-                                  placeholder="Describe your current challenges, goals, and what human potential you want to amplify..."
-                                  aria-describedby="goalsError"></textarea>
-                        <div class="error-message" id="goalsError" role="alert"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="currentSolution" class="form-label">Current Solutions</label>
-                        <textarea id="currentSolution" name="currentSolution" class="form-textarea" rows="3"
-                                  placeholder="What tools, systems, or approaches are you currently using?"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
-                        Send Partnership Inquiry
-                        <span>→</span>
-                    </button>
-
-                    <div class="success-message" id="successMessage" role="alert">
-                        Thank you for your inquiry! We'll be in touch within 24 hours to discuss your amplification journey.
-                    </div>
-                </form>
+                </a>
             </div>
         </section>
     </main>
-
-    <!-- Enhanced Footer -->
-    <footer class="footer" role="contentinfo">
-        <div class="container">
-            <div class="footer-links">
-                <a href="#home">Home</a>
-                <a href="#beings">Beings</a>
-                <a href="#services">Solutions</a>
-                <a href="#contact">Contact</a>
-                <a href="#privacy">Privacy</a>
-                <a href="#terms">Terms</a>
-            </div>
-            <div class="footer-content">
-                <p>&copy; 2026 ACT-I. All rights reserved.</p>
-                <p style="margin-top: var(--space-xs); font-size: 0.875rem; opacity: 0.7;">
-                    The first Complete, Holistic, Diagnostic, Dynamic, Interconnected, Automated Actualization Tool
-                </p>
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <nav class="footer-nav" aria-label="Footer navigation">
+                <a href="/" class="footer-link">Home</a>
+                <a href="clusters.html" class="footer-link">Being Clusters</a>
+                <a href="strategy.html" class="footer-link">Strategy Brief</a>
+                <a href="#" class="footer-link">Documentation</a>
+                <a href="#" class="footer-link">API</a>
+            </nav>
+            
+            <div class="footer-credits">
+                <p>&copy; 2026 ACT-I Network. Co-created by Sean Callagy, Aiko, and the SAI family.</p>
+                <p class="footer-credits">Building the future of human actualization, one being at a time.</p>
             </div>
         </div>
     </footer>
-
+    
     <script>
-        // Enhanced JavaScript with improved functionality
-        
-        // Navigation and Mobile Menu
+        // Navigation Management Class
         class NavigationManager {
             constructor() {
-                this.navToggle = document.querySelector('.nav-toggle');
-                this.navLinks = document.querySelector('.nav-links');
-                this.header = document.querySelector('.header');
-                this.isMenuOpen = false;
+                this.navToggle = document.getElementById('nav-toggle');
+                this.navMenu = document.getElementById('nav-menu');
+                this.navLinks = document.querySelectorAll('.nav-link');
                 
-                this.init();
+                this.initEventListeners();
             }
             
-            init() {
-                // Mobile menu toggle
-                this.navToggle?.addEventListener('click', () => this.toggleMenu());
+            initEventListeners() {
+                if (this.navToggle) {
+                    this.navToggle.addEventListener('click', () => this.toggleMobileNav());
+                }
                 
-                // Close menu when clicking on links
-                this.navLinks?.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'A') {
-                        this.closeMenu();
-                    }
+                this.navLinks.forEach(link => {
+                    link.addEventListener('click', () => this.closeMobileNav());
                 });
                 
-                // Close menu when clicking outside
+                // Close mobile nav when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.nav') && this.isMenuOpen) {
-                        this.closeMenu();
+                    if (!e.target.closest('.nav-header') && this.navMenu.classList.contains('active')) {
+                        this.closeMobileNav();
                     }
                 });
-                
-                // Header scroll effect
-                window.addEventListener('scroll', () => this.handleScroll(), { passive: true });
-                
-                // Smooth scrolling for navigation links
-                this.setupSmoothScrolling();
             }
             
-            toggleMenu() {
-                this.isMenuOpen = !this.isMenuOpen;
-                this.navLinks?.classList.toggle('open', this.isMenuOpen);
-                this.navToggle?.setAttribute('aria-expanded', this.isMenuOpen.toString());
-                document.body.style.overflow = this.isMenuOpen ? 'hidden' : '';
+            toggleMobileNav() {
+                const isActive = this.navMenu.classList.contains('active');
+                
+                if (isActive) {
+                    this.closeMobileNav();
+                } else {
+                    this.openMobileNav();
+                }
             }
             
-            closeMenu() {
-                this.isMenuOpen = false;
-                this.navLinks?.classList.remove('open');
-                this.navToggle?.setAttribute('aria-expanded', 'false');
+            openMobileNav() {
+                this.navMenu.classList.add('active');
+                this.navToggle.setAttribute('aria-expanded', 'true');
+                this.navToggle.innerHTML = '✕';
+                document.body.style.overflow = 'hidden';
+            }
+            
+            closeMobileNav() {
+                this.navMenu.classList.remove('active');
+                this.navToggle.setAttribute('aria-expanded', 'false');
+                this.navToggle.innerHTML = '☰';
                 document.body.style.overflow = '';
             }
-            
-            handleScroll() {
-                const scrolled = window.scrollY > 50;
-                this.header?.classList.toggle('scrolled', scrolled);
-            }
-            
-            setupSmoothScrolling() {
-                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                    anchor.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const target = document.querySelector(anchor.getAttribute('href'));
-                        if (target) {
-                            target.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    });
-                });
-            }
         }
-
-        // Enhanced Form Validation and Submission
-        class FormManager {
-            constructor() {
-                this.form = document.getElementById('contactForm');
-                this.submitBtn = document.getElementById('submitBtn');
-                this.successMessage = document.getElementById('successMessage');
-                
-                this.validators = {
-                    firstName: (value) => value.trim().length >= 2,
-                    lastName: (value) => value.trim().length >= 2,
-                    email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-                    phone: (value) => !value || /^[\+]?[1-9][\d]{0,15}$/.test(value.replace(/\s/g, '')),
-                    service: (value) => value !== '',
-                    goals: (value) => value.trim().length >= 10
-                };
-                
-                this.init();
-            }
-            
-            init() {
-                if (!this.form) return;
-                
-                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-                
-                // Real-time validation
-                Object.keys(this.validators).forEach(fieldName => {
-                    const field = document.getElementById(fieldName);
-                    if (field) {
-                        field.addEventListener('blur', () => this.validateField(fieldName));
-                        field.addEventListener('input', () => this.clearError(fieldName));
-                    }
-                });
-            }
-            
-            validateField(fieldName) {
-                const field = document.getElementById(fieldName);
-                const errorElement = document.getElementById(`${fieldName}Error`);
-                
-                if (!field || !this.validators[fieldName]) return true;
-                
-                const isValid = this.validators[fieldName](field.value);
-                
-                if (!isValid) {
-                    this.showError(fieldName, this.getErrorMessage(fieldName));
-                } else {
-                    this.clearError(fieldName);
-                }
-                
-                return isValid;
-            }
-            
-            showError(fieldName, message) {
-                const errorElement = document.getElementById(`${fieldName}Error`);
-                const field = document.getElementById(fieldName);
-                
-                if (errorElement && field) {
-                    errorElement.textContent = message;
-                    errorElement.style.display = 'block';
-                    field.setAttribute('aria-invalid', 'true');
-                }
-            }
-            
-            clearError(fieldName) {
-                const errorElement = document.getElementById(`${fieldName}Error`);
-                const field = document.getElementById(fieldName);
-                
-                if (errorElement && field) {
-                    errorElement.style.display = 'none';
-                    field.setAttribute('aria-invalid', 'false');
-                }
-            }
-            
-            getErrorMessage(fieldName) {
-                const messages = {
-                    firstName: 'First name must be at least 2 characters',
-                    lastName: 'Last name must be at least 2 characters',
-                    email: 'Please enter a valid email address',
-                    phone: 'Please enter a valid phone number',
-                    service: 'Please select a partnership tier',
-                    goals: 'Please describe your goals (at least 10 characters)'
-                };
-                
-                return messages[fieldName] || 'This field is required';
-            }
-            
-            async handleSubmit(e) {
-                e.preventDefault();
-                
-                // Clear previous success message
-                this.successMessage.style.display = 'none';
-                
-                // Validate all fields
-                let isValid = true;
-                Object.keys(this.validators).forEach(fieldName => {
-                    if (!this.validateField(fieldName)) {
-                        isValid = false;
-                    }
-                });
-                
-                if (!isValid) {
-                    // Focus on first error field
-                    const firstError = this.form.querySelector('[aria-invalid="true"]');
-                    firstError?.focus();
-                    return;
-                }
-                
-                // Show loading state
-                this.setSubmitState(true);
-                
-                try {
-                    // Simulate form submission
-                    await this.submitForm();
-                    this.showSuccess();
-                    this.form.reset();
-                } catch (error) {
-                    console.error('Form submission error:', error);
-                    this.showError('general', 'Something went wrong. Please try again.');
-                } finally {
-                    this.setSubmitState(false);
-                }
-            }
-            
-            setSubmitState(loading) {
-                if (!this.submitBtn) return;
-                
-                if (loading) {
-                    this.submitBtn.classList.add('btn-loading');
-                    this.submitBtn.disabled = true;
-                    this.submitBtn.querySelector('span').textContent = '';
-                } else {
-                    this.submitBtn.classList.remove('btn-loading');
-                    this.submitBtn.disabled = false;
-                    this.submitBtn.querySelector('span').textContent = '→';
-                }
-            }
-            
-            async submitForm() {
-                // Simulate API call
-                return new Promise((resolve) => {
-                    setTimeout(resolve, 2000);
-                });
-            }
-            
-            showSuccess() {
-                this.successMessage.style.display = 'block';
-                this.successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
-
-        // Intersection Observer for Animations
+        
+        // Animation Manager Class
         class AnimationManager {
             constructor() {
                 this.observerOptions = {
@@ -1622,116 +615,117 @@
                     rootMargin: '0px 0px -50px 0px'
                 };
                 
-                this.init();
+                this.initScrollAnimations();
             }
             
-            init() {
-                if (!window.IntersectionObserver) return;
-                
-                this.observer = new IntersectionObserver((entries) => {
+            initScrollAnimations() {
+                const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             entry.target.classList.add('visible');
-                            this.observer.unobserve(entry.target);
                         }
                     });
                 }, this.observerOptions);
                 
-                // Observe elements for animation
-                document.querySelectorAll('.fade-in-up').forEach(el => {
-                    this.observer.observe(el);
+                document.querySelectorAll('.fade-in').forEach(el => {
+                    observer.observe(el);
                 });
             }
         }
-
-        // Performance Optimizations
+        
+        // Performance Manager Class
         class PerformanceManager {
             constructor() {
-                this.init();
+                this.initPerformanceOptimizations();
             }
             
-            init() {
-                // Lazy load images when they come into view
-                this.setupLazyLoading();
-                
-                // Prefetch critical resources
-                this.prefetchResources();
+            initPerformanceOptimizations() {
+                // Preload critical resources
+                this.preloadCriticalResources();
                 
                 // Optimize scroll performance
-                this.optimizeScrolling();
+                this.optimizeScrollHandlers();
             }
             
-            setupLazyLoading() {
-                if ('IntersectionObserver' in window) {
-                    const imageObserver = new IntersectionObserver((entries) => {
-                        entries.forEach(entry => {
-                            if (entry.isIntersecting) {
-                                const img = entry.target;
-                                if (img.dataset.src) {
-                                    img.src = img.dataset.src;
-                                    img.removeAttribute('data-src');
-                                    imageObserver.unobserve(img);
-                                }
-                            }
-                        });
-                    });
-                    
-                    document.querySelectorAll('img[data-src]').forEach(img => {
-                        imageObserver.observe(img);
-                    });
-                }
-            }
-            
-            prefetchResources() {
-                // Prefetch fonts
-                const fontLinks = [
-                    'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap',
-                    'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap'
+            preloadCriticalResources() {
+                const criticalResources = [
+                    'forge.html',
+                    'recovery.html',
+                    'memory.html',
+                    'scholar.html'
                 ];
                 
-                fontLinks.forEach(href => {
+                criticalResources.forEach(resource => {
                     const link = document.createElement('link');
                     link.rel = 'prefetch';
-                    link.href = href;
+                    link.href = resource;
                     document.head.appendChild(link);
                 });
             }
             
-            optimizeScrolling() {
+            optimizeScrollHandlers() {
                 let ticking = false;
                 
-                const optimizedScroll = () => {
-                    // Handle scroll events here
+                function updateScrollEffects() {
+                    const scrollY = window.scrollY;
+                    const navHeader = document.querySelector('.nav-header');
+                    
+                    if (navHeader) {
+                        if (scrollY > 100) {
+                            navHeader.style.background = 'rgba(27, 54, 93, 0.98)';
+                            navHeader.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+                        } else {
+                            navHeader.style.background = 'rgba(27, 54, 93, 0.95)';
+                            navHeader.style.boxShadow = 'none';
+                        }
+                    }
+                    
                     ticking = false;
-                };
+                }
                 
-                window.addEventListener('scroll', () => {
+                function requestScrollUpdate() {
                     if (!ticking) {
-                        requestAnimationFrame(optimizedScroll);
+                        requestAnimationFrame(updateScrollEffects);
                         ticking = true;
                     }
-                }, { passive: true });
+                }
+                
+                window.addEventListener('scroll', requestScrollUpdate, { passive: true });
             }
         }
-
+        
         // Initialize all managers when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             new NavigationManager();
-            new FormManager();
             new AnimationManager();
             new PerformanceManager();
-            
-            // Add any additional initialization here
-            console.log('🚀 ACT-I landing page initialized');
         });
-
-        // Service Worker for offline capability (if needed)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Uncomment to register service worker
-                // navigator.serviceWorker.register('/sw.js');
-            });
-        }
+        
+        // Keyboard navigation enhancement
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const navMenu = document.getElementById('nav-menu');
+                if (navMenu && navMenu.classList.contains('active')) {
+                    const navManager = new NavigationManager();
+                    navManager.closeMobileNav();
+                }
+            }
+        });
+        
+        // Enhanced focus management for accessibility
+        document.addEventListener('focusin', (e) => {
+            if (e.target.matches('.nav-link, .hero-cta, .sister-card, .footer-link')) {
+                e.target.style.outline = '2px solid #D4AF37';
+                e.target.style.outlineOffset = '2px';
+            }
+        });
+        
+        document.addEventListener('focusout', (e) => {
+            if (e.target.matches('.nav-link, .hero-cta, .sister-card, .footer-link')) {
+                e.target.style.outline = '';
+                e.target.style.outlineOffset = '';
+            }
+        });
     </script>
 </body>
 </html>

@@ -73,6 +73,9 @@ CHARS_PER_TOKEN = 3.5
 # Fallback summary word limit per being (stage A of two-stage fallback)
 FALLBACK_SUMMARY_WORDS = 500
 
+# Per-subtask execution timeout (seconds)
+SUBTASK_TIMEOUT = int(os.environ.get("BOMBA_SUBTASK_TIMEOUT", "600"))
+
 
 def _truncate_outputs_to_budget(
     outputs: dict[str, str],
@@ -677,7 +680,7 @@ class OrchestrationEngine:
                     task_id, plan, sub.being_id,
                 )
                 run_id = self._execute_subtask(task_id, sub, prior_outputs=prior_outputs)
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
         else:
             # Parallel: spawn all, then await all
@@ -687,7 +690,7 @@ class OrchestrationEngine:
                 run_ids.append((sub, run_id))
 
             for sub, run_id in run_ids:
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
 
         # Persist subtask_ids to DB for crash recovery
@@ -718,7 +721,7 @@ class OrchestrationEngine:
                 run_ids.append((sub, run_id))
 
             for sub, run_id in run_ids:
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
 
         elif plan.synthesis_strategy == "sequential":
@@ -731,7 +734,7 @@ class OrchestrationEngine:
                     task_id, sub, message,
                     idempotency_suffix=f":round:{round_number}",
                 )
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
         else:
             # Parallel merge/compare: each being gets all outputs
@@ -745,7 +748,7 @@ class OrchestrationEngine:
                 run_ids.append((sub, run_id))
 
             for sub, run_id in run_ids:
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
 
         # Persist subtask_ids
@@ -803,7 +806,7 @@ class OrchestrationEngine:
             input_context_refs=(),
             output_schema={},
             priority="high",
-            run_timeout_seconds=300,
+            run_timeout_seconds=SUBTASK_TIMEOUT,
             cleanup="archive",
             workspace_root=workspace,
         )
@@ -988,6 +991,27 @@ class OrchestrationEngine:
         except Exception:
             pass
 
+        # Emit spawn event for live tracker
+        try:
+            _session_id = state.get("chat_session_id", "general")
+            _session_name = self._resolve_session_name(_session_id)
+            log.info("[ORCH-TRACKER] Emitting orchestration_spawn SPAWNING for %s (session=%s)", sub.being_id, _session_id)
+            self.dashboard._emit_event("orchestration_spawn", {
+                "task_id": parent_task_id,
+                "being_id": sub.being_id,
+                "being_name": being.get("name", sub.being_id),
+                "being_type": being.get("type", "unknown"),
+                "being_avatar": being.get("avatar", "?"),
+                "being_color": being.get("color", "#666"),
+                "title": sub.title,
+                "status": "spawning",
+                "goal": state.get("goal", "")[:100],
+                "session_id": _session_id,
+                "session_name": _session_name,
+            })
+        except Exception as exc:
+            log.warning("[ORCH-TRACKER] Failed to emit spawn event: %s", exc)
+
         task = SubAgentTask(
             tenant_id=tenant_id,
             task_id=sub.being_id,
@@ -1000,7 +1024,7 @@ class OrchestrationEngine:
             input_context_refs=(),
             output_schema={},
             priority="high",
-            run_timeout_seconds=300,
+            run_timeout_seconds=SUBTASK_TIMEOUT,
             cleanup="archive",
             workspace_root=workspace,
         )
@@ -1052,6 +1076,29 @@ class OrchestrationEngine:
 
         # Being status (busy → online) is managed by the worker's finally block.
 
+        # Emit completion event for live tracker
+        try:
+            is_error = not output or output.startswith("[Error")
+            _session_id = state.get("chat_session_id", "general")
+            _session_name = self._resolve_session_name(_session_id)
+            log.info("[ORCH-TRACKER] Emitting orchestration_spawn %s for %s",
+                     "FAILED" if is_error else "COMPLETED", sub.being_id)
+            self.dashboard._emit_event("orchestration_spawn", {
+                "task_id": parent_task_id,
+                "being_id": sub.being_id,
+                "being_name": being.get("name", sub.being_id),
+                "being_type": being.get("type", "unknown"),
+                "being_avatar": being.get("avatar", "?"),
+                "being_color": being.get("color", "#666"),
+                "title": sub.title,
+                "status": "failed" if is_error else "completed",
+                "output_preview": (output or "")[:200],
+                "session_id": _session_id,
+                "session_name": _session_name,
+            })
+        except Exception as exc:
+            log.warning("[ORCH-TRACKER] Failed to emit completion event: %s", exc)
+
         # Populate state["subtask_outputs"] for _phase_review backward compat
         with self._lock:
             self._active[parent_task_id]["subtask_outputs"][sub.being_id] = output
@@ -1063,6 +1110,10 @@ class OrchestrationEngine:
             if output and not output.startswith("[Error"):
                 # Extract code blocks into deliverable files
                 cleaned_output, _ = self._extract_and_save_deliverables(
+                    parent_task_id, output, being_id=sub.being_id,
+                )
+                # Also detect file paths mentioned in output (tool-written files)
+                self._register_mentioned_files(
                     parent_task_id, output, being_id=sub.being_id,
                 )
                 preview = cleaned_output[:1500] + ("..." if len(cleaned_output) > 1500 else "")
@@ -1213,7 +1264,7 @@ class OrchestrationEngine:
                         input_context_refs=(),
                         output_schema={},
                         priority="high",
-                        run_timeout_seconds=300,
+                        run_timeout_seconds=SUBTASK_TIMEOUT,
                         cleanup="archive",
                         workspace_root=workspace,
                     )
@@ -1226,7 +1277,7 @@ class OrchestrationEngine:
                         child_agent_id=sub.being_id,
                         worker=self._orchestration_worker,
                     )
-                    rev_run = self._await_run_completion(handle.run_id, timeout=300)
+                    rev_run = self._await_run_completion(handle.run_id, timeout=SUBTASK_TIMEOUT)
                     # Read revised output from shared memory (worker writes it there)
                     if rev_run and rev_run.get("status") == "completed" and self.protocol is not None:
                         writes = self.protocol.read_shared_memory(
@@ -1325,6 +1376,8 @@ class OrchestrationEngine:
         final_output, saved_files = self._extract_and_save_deliverables(
             task_id, final_output,
         )
+        # Also detect file paths mentioned in synthesis output
+        self._register_mentioned_files(task_id, final_output)
 
         # Post final output back to user's chat
         self.dashboard.create_message(
@@ -1615,9 +1668,94 @@ class OrchestrationEngine:
                     return f"{safe[:40]}.html"
         return None
 
+    # Regex for absolute file paths (Windows and Unix)
+    _FILE_PATH_RE = re.compile(
+        r'(?:[A-Z]:\\[\w\\.\-/ ]+\.(?:html?|css|js|jsx|tsx?|py|json|md|txt|pdf|csv|sql|svg|png|jpg|yaml|yml))'
+        r'|(?:/[\w/.\-]+\.(?:html?|css|js|jsx|tsx?|py|json|md|txt|pdf|csv|sql|svg|png|jpg|yaml|yml))',
+        re.IGNORECASE,
+    )
+
+    # Extensions worth serving via browser
+    _SERVABLE_EXTS = {
+        ".html", ".htm", ".css", ".js", ".jsx", ".tsx", ".ts",
+        ".py", ".json", ".md", ".txt", ".pdf", ".csv", ".sql",
+        ".svg", ".png", ".jpg", ".yaml", ".yml",
+    }
+
+    def _register_mentioned_files(
+        self, task_id: str, text: str, being_id: str | None = None,
+    ) -> None:
+        """Scan output text for file paths written by tools and register as deliverables."""
+        matches = self._FILE_PATH_RE.findall(text)
+        if not matches:
+            return
+
+        seen: set[str] = set()
+        for raw_path in matches:
+            # Normalize
+            fpath = Path(raw_path.strip().strip('"').strip("'").rstrip("`"))
+            if str(fpath) in seen:
+                continue
+            seen.add(str(fpath))
+
+            if not fpath.exists() or not fpath.is_file():
+                continue
+            if fpath.suffix.lower() not in self._SERVABLE_EXTS:
+                continue
+
+            # Skip if already registered as a deliverable (from code block extraction)
+            existing = self.dashboard.list_deliverables(task_id)
+            if any(d.get("file_path") == str(fpath) for d in existing):
+                continue
+
+            # Copy to deliverables dir so it's servable via /deliverables/ URL
+            deliverables_dir = _PROJECT_ROOT / "deliverables" / task_id[:12]
+            deliverables_dir.mkdir(parents=True, exist_ok=True)
+            dest = deliverables_dir / fpath.name
+            try:
+                import shutil
+                shutil.copy2(str(fpath), str(dest))
+            except Exception as exc:
+                log.warning("Failed to copy deliverable %s: %s", fpath, exc)
+                continue
+
+            url = f"/deliverables/{task_id[:12]}/{fpath.name}"
+            byte_size = fpath.stat().st_size
+            line_count = 0
+            try:
+                line_count = fpath.read_text(encoding="utf-8").count("\n")
+            except Exception:
+                pass
+
+            ext = fpath.suffix.lstrip(".")
+            self.dashboard.create_deliverable(
+                task_id=task_id,
+                filename=fpath.name,
+                file_type=ext,
+                file_path=str(fpath),
+                url=url,
+                being_id=being_id,
+                line_count=line_count,
+                byte_size=byte_size,
+            )
+            log.info("[ORCH] Registered tool-written deliverable %s for task %s", fpath.name, task_id[:8])
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _resolve_session_name(self, session_id: str) -> str:
+        """Look up a chat session's display name, falling back to the ID."""
+        if not session_id or session_id == "general":
+            return "General"
+        try:
+            sessions = self.dashboard.list_sessions()
+            for s in sessions:
+                if s.get("id") == session_id:
+                    return s.get("name") or session_id
+        except Exception:
+            pass
+        return session_id
 
     def _get_state(self, task_id: str) -> dict[str, Any]:
         with self._lock:
@@ -2098,7 +2236,7 @@ class OrchestrationEngine:
                     task_id, plan, sub.being_id,
                 )
                 run_id = self._execute_subtask(task_id, sub, prior_outputs=prior)
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
         else:
             run_ids: list[tuple[SubTaskPlan, str]] = []
@@ -2106,7 +2244,7 @@ class OrchestrationEngine:
                 run_id = self._execute_subtask(task_id, sub)
                 run_ids.append((sub, run_id))
             for sub, run_id in run_ids:
-                run = self._await_run_completion(run_id, timeout=300)
+                run = self._await_run_completion(run_id, timeout=SUBTASK_TIMEOUT)
                 self._on_subtask_completed(task_id, sub, run)
 
         # Persist updated subtask_ids

@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT-I Competitive Analysis - Category Leadership</title>
+    <meta name="description" content="How ACT-I's multi-being collaborative intelligence creates category leadership in human actualization AI">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* ACT-I Brand Colors */
+            --navy-primary: #1B365D;
+            --navy-light: #2A4A73;
+            --gold-primary: #D4AF37;
+            --gold-light: #E6C968;
+            --platinum: #F8F9FA;
+            --white: #FFFFFF;
+            --gray-100: #F5F5F5;
+            --gray-200: #E9ECEF;
+            --gray-600: #6C757D;
+            --gray-800: #343A40;
+            
+            /* Semantic Colors */
+            --excellent: #22C55E;
+            --good: #84CC16;
+            --fair: #EAB308;
+            --poor: #EF4444;
+            --critical: #DC2626;
+            
+            /* Typography */
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Montserrat', sans-serif;
+            
+            /* Spacing */
+            --space-xs: 0.5rem;
+            --space-sm: 1rem;
+            --space-md: 1.5rem;
+            --space-lg: 2rem;
+            --space-xl: 3rem;
+            --space-2xl: 4rem;
+            
+            /* Shadows */
+            --shadow-sm: 0 2px 8px rgba(27, 54, 93, 0.1);
+            --shadow-md: 0 4px 16px rgba(27, 54, 93, 0.15);
+            --shadow-lg: 0 8px 32px rgba(27, 54, 93, 0.2);
+        }
+
+        body {
+            font-family: var(--font-body);
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: linear-gradient(135deg, var(--platinum) 0%, #FFFFFF 100%);
+            margin: 0;
+        }
+
+        /* Typography */
+        h1 {
+            font-family: var(--font-heading);
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--navy-primary);
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+            font-weight: 600;
+            color: var(--navy-primary);
+            margin: var(--space-xl) 0 var(--space-lg);
+            position: relative;
+        }
+
+        h2:after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold-primary), var(--gold-light));
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-family: var(--font-body);
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--navy-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--navy-primary) 0%, var(--navy-light) 100%);
+            color: var(--white);
+            padding: var(--space-xl) 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(212,175,55,0.1)"/></svg>') repeat;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .header h1 {
+            color: var(--white);
+            position: relative;
+            z-index: 2;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--gold-light);
+            margin-top: var(--space-sm);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Category Leader Badge */
+        .category-leader {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+            color: var(--navy-primary);
+            padding: var(--space-xs) var(--space-md);
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: var(--shadow-md);
+            margin: var(--space-md) auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .crown {
+            font-size: 1.2rem;
+        }
+
+        /* Comparison Table */
+        .comparison-section {
+            margin: var(--space-2xl) 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            margin: var(--space-xl) 0;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, var(--navy-primary), var(--navy-light));
+            color: var(--white);
+            font-weight: 600;
+            padding: var(--space-md);
+            text-align: center;
+            position: relative;
+        }
+
+        .comparison-table th:first-child {
+            text-align: left;
+            width: 200px;
+        }
+
+        .comparison-table th.acti-header {
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+            color: var(--navy-primary);
+            position: relative;
+        }
+
+        .comparison-table th.acti-header::after {
+            content: '👑';
+            position: absolute;
+            top: -5px;
+            right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .comparison-table td {
+            padding: var(--space-md);
+            text-align: center;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
+        }
+
+        .comparison-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            background: var(--gray-100);
+            border-right: 2px solid var(--gray-200);
+        }
+
+        .comparison-table tbody tr:hover {
+            background: rgba(27, 54, 93, 0.02);
+            transform: translateY(-1px);
+            transition: all 0.3s ease;
+        }
+
+        /* Score Indicators */
+        .score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-xs);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .score-excellent {
+            background: var(--excellent);
+            color: white;
+        }
+
+        .score-good {
+            background: var(--good);
+            color: white;
+        }
+
+        .score-fair {
+            background: var(--fair);
+            color: var(--navy-primary);
+        }
+
+        .score-poor {
+            background: var(--poor);
+            color: white;
+        }
+
+        .score-none {
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        /* Capability Icons */
+        .capability {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+        }
+
+        .check { color: var(--excellent); font-weight: bold; }
+        .cross { color: var(--poor); font-weight: bold; }
+        .partial { color: var(--fair); font-weight: bold; }
+
+        /* Differentiators Section */
+        .differentiators {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--space-xl);
+            margin: var(--space-2xl) 0;
+        }
+
+        .differentiator-card {
+            background: var(--white);
+            padding: var(--space-xl);
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .differentiator-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--gold-primary);
+        }
+
+        .differentiator-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--gold-primary), var(--gold-light));
+            border-radius: 16px 16px 0 0;
+        }
+
+        .differentiator-icon {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-md);
+            display: block;
+        }
+
+        .differentiator-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--navy-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .differentiator-description {
+            color: var(--gray-600);
+            margin-bottom: var(--space-md);
+            line-height: 1.7;
+        }
+
+        .differentiator-data {
+            background: var(--gray-100);
+            padding: var(--space-md);
+            border-radius: 8px;
+            border-left: 4px solid var(--gold-primary);
+        }
+
+        .data-point {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-xs);
+        }
+
+        .data-point:last-child {
+            margin-bottom: 0;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .data-value {
+            font-weight: 700;
+            color: var(--navy-primary);
+        }
+
+        /* Visual Scorecard */
+        .scorecard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-lg);
+            margin: var(--space-2xl) 0;
+        }
+
+        .competitor-card {
+            background: var(--white);
+            padding: var(--space-lg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+
+        .competitor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .competitor-card.acti-card {
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-light));
+            color: var(--navy-primary);
+            transform: scale(1.05);
+            position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .competitor-card.acti-card::before {
+            content: '🏆 CATEGORY LEADER';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--navy-primary);
+            color: var(--white);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .competitor-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        .score-grid {
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-xs);
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+        }
+
+        .acti-card .score-item {
+            background: rgba(27, 54, 93, 0.1);
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .score-value {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-md);
+            }
+
+            .comparison-table {
+                font-size: 0.85rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: var(--space-sm);
+            }
+
+            .comparison-table th:first-child,
+            .comparison-table td:first-child {
+                width: 120px;
+                font-size: 0.8rem;
+            }
+
+            .differentiators {
+                grid-template-columns: 1fr;
+                gap: var(--space-lg);
+            }
+
+            .scorecard {
+                grid-template-columns: 1fr;
+                gap: var(--space-md);
+            }
+
+            .competitor-card.acti-card {
+                transform: none;
+            }
+
+            h2 {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .comparison-table {
+                font-size: 0.75rem;
+            }
+
+            .score {
+                font-size: 0.8rem;
+                padding: 2px 8px;
+            }
+
+            .differentiator-card {
+                padding: var(--space-lg);
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .header {
+                background: var(--navy-primary) !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            .comparison-table,
+            .differentiator-card,
+            .competitor-card {
+                box-shadow: none;
+                border: 1px solid var(--gray-200);
+            }
+
+            .competitor-card.acti-card {
+                background: var(--gold-primary) !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+
+            body {
+                background: white !important;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus States */
+        button:focus,
+        a:focus {
+            outline: 2px solid var(--gold-primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="sr-only">Skip to main content</a>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>ACT-I Competitive Analysis</h1>
+            <p class="subtitle">Category Leadership in Human Actualization AI</p>
+            <div class="category-leader">
+                <span class="crown">👑</span>
+                Category Leader
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="container">
+        
+        <!-- Comparison Table Section -->
+        <section class="comparison-section">
+            <h2>Capability Comparison</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th class="acti-header">ACT-I</th>
+                        <th>ChatGPT</th>
+                        <th>Claude</th>
+                        <th>Copilot</th>
+                        <th>Gemini</th>
+                        <th>Jasper AI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Multi-Being Collaboration</td>
+                        <td><span class="score score-excellent">9.9</span></td>
+                        <td><span class="score score-none">1.0</span></td>
+                        <td><span class="score score-none">1.0</span></td>
+                        <td><span class="score score-none">1.0</span></td>
+                        <td><span class="score score-none">1.0</span></td>
+                        <td><span class="score score-none">1.0</span></td>
+                    </tr>
+                    <tr>
+                        <td>Human Actualization Focus</td>
+                        <td><span class="score score-excellent">9.8</span></td>
+                        <td><span class="score score-poor">2.3</span></td>
+                        <td><span class="score score-poor">1.8</span></td>
+                        <td><span class="score score-poor">1.5</span></td>
+                        <td><span class="score score-poor">2.1</span></td>
+                        <td><span class="score score-poor">1.9</span></td>
+                    </tr>
+                    <tr>
+                        <td>Persistent Memory Architecture</td>
+                        <td><span class="score score-excellent">9.7</span></td>
+                        <td><span class="score score-fair">6.2</span></td>
+                        <td><span class="score score-fair">6.8</span></td>
+                        <td><span class="score score-fair">5.9</span></td>
+                        <td><span class="score score-fair">6.1</span></td>
+                        <td><span class="score score-poor">4.2</span></td>
+                    </tr>
+                    <tr>
+                        <td>Specialized Domain Expertise</td>
+                        <td><span class="score score-excellent">9.5</span></td>
+                        <td><span class="score score-good">7.1</span></td>
+                        <td><span class="score score-good">7.8</span></td>
+                        <td><span class="score score-good">8.2</span></td>
+                        <td><span class="score score-good">7.5</span></td>
+                        <td><span class="score score-good">8.5</span></td>
+                    </tr>
+                    <tr>
+                        <td>Real-World Integration</td>
+                        <td><span class="score score-excellent">9.1</span></td>
+                        <td><span class="score score-good">7.8</span></td>
+                        <td><span class="score score-fair">6.5</span></td>
+                        <td><span class="score score-excellent">9.2</span></td>
+                        <td><span class="score score-good">7.2</span></td>
+                        <td><span class="score score-fair">6.8</span></td>
+                    </tr>
+                    <tr>
+                        <td>Transformation Methodology</td>
+                        <td><span class="score score-excellent">9.9</span></td>
+                        <td><span class="score score-poor">3.1</span></td>
+                        <td><span class="score score-poor">2.8</span></td>
+                        <td><span class="score score-poor">2.5</span></td>
+                        <td><span class="score score-poor">3.2</span></td>
+                        <td><span class="score score-poor">4.1</span></td>
+                    </tr>
+                    <tr>
+                        <td>Customization & Learning</td>
+                        <td><span class="score score-excellent">9.4</span></td>
+                        <td><span class="score score-good">7.2</span></td>
+                        <td><span class="score score-good">7.9</span></td>
+                        <td><span class="score score-good">8.1</span></td>
+                        <td><span class="score score-good">7.6</span></td>
+                        <td><span class="score score-good">8.3</span></td>
+                    </tr>
+                    <tr>
+                        <td>Proven Outcomes</td>
+                        <td><span class="score score-excellent">9.6</span></td>
+                        <td><span class="score score-fair">5.8</span></td>
+                        <td><span class="score score-fair">5.2</span></td>
+                        <td><span class="score score-fair">6.1</span></td>
+                        <td><span class="score score-fair">5.5</span></td>
+                        <td><span class="score score-fair">6.8</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Key Differentiators -->
+        <section>
+            <h2>Three Key Differentiators</h2>
+            
+            <div class="differentiators">
+                <div class="differentiator-card">
+                    <div class="differentiator-icon">🏗️</div>
+                    <h3 class="differentiator-title">Multi-Being Collaborative Intelligence</h3>
+                    <p class="differentiator-description">
+                        While competitors offer single-agent interactions, ACT-I deploys 13 specialized beings that collaborate in real-time. Each being masters specific domains while sharing persistent memory and coordinating outcomes.
+                    </p>
+                    <div class="differentiator-data">
+                        <div class="data-point">
+                            <span class="data-label">ACT-I:</span>
+                            <span class="data-value">13 Collaborative Beings</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Competitors:</span>
+                            <span class="data-value">1 Single Agent</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Advantage:</span>
+                            <span class="data-value">1,300% More Intelligence</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="differentiator-card">
+                    <div class="differentiator-icon">🎯</div>
+                    <h3 class="differentiator-title">Human Actualization vs Task Automation</h3>
+                    <p class="differentiator-description">
+                        Traditional AI tools automate tasks. ACT-I actualizes humans. Built on the 27-year Unblinded Formula methodology that has generated $1B+ in legal settlements and transformed thousands of professionals.
+                    </p>
+                    <div class="differentiator-data">
+                        <div class="data-point">
+                            <span class="data-label">Focus:</span>
+                            <span class="data-value">Making Professionals Legendary</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Methodology:</span>
+                            <span class="data-value">27-Year Proven Framework</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Outcomes:</span>
+                            <span class="data-value">$1B+ Real Results</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="differentiator-card">
+                    <div class="differentiator-icon">🧠</div>
+                    <h3 class="differentiator-title">Persistent Memory Architecture</h3>
+                    <p class="differentiator-description">
+                        ACT-I beings never forget. Our advanced memory architecture ensures continuous learning, relationship building, and outcome optimization across all interactions and collaborations.
+                    </p>
+                    <div class="differentiator-data">
+                        <div class="data-point">
+                            <span class="data-label">Memory Persistence:</span>
+                            <span class="data-value">Permanent Learning</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Cross-Being Sharing:</span>
+                            <span class="data-value">Unified Intelligence</span>
+                        </div>
+                        <div class="data-point">
+                            <span class="data-label">Context Retention:</span>
+                            <span class="data-value">Infinite Depth</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Scorecard -->
+        <section>
+            <h2>Visual Performance Scorecard</h2>
+            
+            <div class="scorecard">
+                <div class="competitor-card acti-card">
+                    <div class="competitor-name">ACT-I</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">9.9</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">9.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">9.7</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">9.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">9.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">9.9</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">9.4</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">9.6</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">ChatGPT</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">2.3</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">6.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">7.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">7.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">3.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">7.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">5.8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">Claude</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">1.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">6.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">7.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">6.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">2.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">7.9</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">5.2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">Microsoft Copilot</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">1.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">5.9</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">8.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">9.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">2.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">8.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">6.1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">Google Gemini</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">2.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">6.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">7.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">7.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">3.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">7.6</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">5.5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="competitor-card">
+                    <div class="competitor-name">Jasper AI</div>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <span class="score-label">Multi-Being Collaboration</span>
+                            <span class="score-value">1.0</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Human Actualization</span>
+                            <span class="score-value">1.9</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Memory Architecture</span>
+                            <span class="score-value">4.2</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Domain Expertise</span>
+                            <span class="score-value">8.5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Integration</span>
+                            <span class="score-value">6.8</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Methodology</span>
+                            <span class="score-value">4.1</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Customization</span>
+                            <span class="score-value">8.3</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Proven Outcomes</span>
+                            <span class="score-value">6.8</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section style="margin-top: 4rem; padding: 2rem; background: linear-gradient(135deg, #1B365D, #2A4A73); border-radius: 16px; color: white; text-align: center;">
+            <h3 style="color: #D4AF37; font-size: 1.8rem; margin-bottom: 1rem;">The Verdict</h3>
+            <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 1.5rem;">
+                While others automate tasks, <strong>ACT-I actualizes humans</strong>. Our multi-being collaborative intelligence combined with the 27-year Unblinded Formula creates an unmatched advantage in making professionals legendary.
+            </p>
+            <div style="background: rgba(212, 175, 55, 0.2); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #D4AF37;">
+                <p style="font-weight: 600; margin: 0;">
+                    ACT-I doesn't just compete in the AI market — we've created our own category: <em>Human Actualization AI</em>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Interactive JavaScript -->
+    <script>
+        // Smooth Scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add hover effects for table rows
+        const tableRows = document.querySelectorAll('.comparison-table tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 4px 16px rgba(27, 54, 93, 0.15)';
+            });
+            
+            row.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = 'none';
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements for animation
+        document.querySelectorAll('.differentiator-card, .competitor-card, .comparison-table').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+
+        // Add print functionality
+        function printPage() {
+            window.print();
+        }
+
+        // Keyboard navigation support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Remove any focus states
+                document.activeElement.blur();
+            }
+        });
+    </script>
+</body>
+</html>

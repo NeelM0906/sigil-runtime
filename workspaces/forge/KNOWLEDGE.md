@@ -36,7 +36,7 @@
 - **Supporting materials:** One-pager focusing on methodology over features, proposal template with 3 pricing tiers, objection handling for "soft skills ROI" concerns
 - **Key messaging:** "We don't replace lawyers, we create better lawyers" - directly addresses primary adoption barrier
 
-### Visual Identity & Brand Design Systems
-- **Premium positioning color psychology:** Navy (#0A1628) + Gold (#D4AF37) combination conveys authority + achievement for legal industry
+### Visual Identity & Social Media Design
+- **Premium positioning color psychology:** Navy (#1B365D) + Gold (#D4AF37) combination conveys authority + achievement for legal industry
 - **Typography hierarchy:** Montserrat (professional authority) + Playfair Display (elegant wisdom) creates trustworthy but approachable brand
-- **Dark theme optimization:** Navy primary (#0A1628), Navy
+- **Social media optimization:** LinkedIn carousels 1080x108

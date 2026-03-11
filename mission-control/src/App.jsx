@@ -6,6 +6,7 @@ import { BeingDetail } from './components/BeingDetail'
 import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
 import { SubAgentTracker } from './components/SubAgentTracker'
+import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 
 const TABS = [
@@ -45,8 +46,7 @@ export default function App() {
                 <ChatWindow />
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
-                <BeingsRegistry compact />
-                <SubAgentTracker />
+                <OrchestrationTracker />
               </div>
             </div>
           )}
