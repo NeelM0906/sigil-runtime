@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Children } from 'react'
+import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { chatApi, tasksApi, deliverablesApi } from '../api'
 import { useSSE } from '../hooks/useSSE'
@@ -136,17 +137,17 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
 // ── Deliverable Card ─────────────────────────────────────────
 
 const FILE_ICONS = {
-  html: { icon: '🌐', label: 'Website', color: '#e44d26' },
-  css: { icon: '🎨', label: 'Stylesheet', color: '#264de4' },
-  js: { icon: '⚡', label: 'JavaScript', color: '#f7df1e' },
-  javascript: { icon: '⚡', label: 'JavaScript', color: '#f7df1e' },
-  py: { icon: '🐍', label: 'Python', color: '#3776ab' },
-  python: { icon: '🐍', label: 'Python', color: '#3776ab' },
-  json: { icon: '📋', label: 'JSON', color: '#6b7280' },
-  md: { icon: '📝', label: 'Markdown', color: '#6b7280' },
-  sql: { icon: '🗃️', label: 'SQL', color: '#336791' },
-  svg: { icon: '🖼️', label: 'SVG', color: '#ffb13b' },
-  default: { icon: '📄', label: 'File', color: '#6b7280' },
+  html: { icon: '\u{1F310}', label: 'Website', color: '#e44d26' },
+  css: { icon: '\u{1F3A8}', label: 'Stylesheet', color: '#264de4' },
+  js: { icon: '\u26A1', label: 'JavaScript', color: '#f7df1e' },
+  javascript: { icon: '\u26A1', label: 'JavaScript', color: '#f7df1e' },
+  py: { icon: '\u{1F40D}', label: 'Python', color: '#3776ab' },
+  python: { icon: '\u{1F40D}', label: 'Python', color: '#3776ab' },
+  json: { icon: '\u{1F4CB}', label: 'JSON', color: '#6b7280' },
+  md: { icon: '\u{1F4DD}', label: 'Markdown', color: '#6b7280' },
+  sql: { icon: '\u{1F5C3}\uFE0F', label: 'SQL', color: '#336791' },
+  svg: { icon: '\u{1F5BC}\uFE0F', label: 'SVG', color: '#ffb13b' },
+  default: { icon: '\u{1F4C4}', label: 'File', color: '#6b7280' },
 }
 
 function DeliverableCard({ filename, url, fileType, lineCount, byteSize }) {
@@ -195,42 +196,92 @@ function DeliverableCard({ filename, url, fileType, lineCount, byteSize }) {
   )
 }
 
-// ── Highlighted @mentions + deliverable cards in content ─────
+// ── @mention processing for text children ────────────────────
+
+function MentionText({ children, getBeingById }) {
+  const processed = Children.toArray(children).flatMap((child, ci) => {
+    if (typeof child !== 'string') return [child]
+    const parts = child.split(/(@\w+)/g)
+    if (parts.length === 1) return [child]
+    return parts.map((part, pi) => {
+      if (part.startsWith('@')) {
+        const name = part.slice(1).toLowerCase()
+        const being = getBeingById(name) || null
+        if (being) {
+          return <span key={`${ci}-${pi}`} className="font-medium" style={{ color: being.color }}>{part}</span>
+        }
+        return <span key={`${ci}-${pi}`} className="font-medium text-accent-blue">{part}</span>
+      }
+      return part
+    })
+  })
+  return <>{processed}</>
+}
+
+// ── Markdown segment with @mention support ───────────────────
+
+function MarkdownSegment({ content, getBeingById }) {
+  const m = (children) => <MentionText getBeingById={getBeingById}>{children}</MentionText>
+
+  return (
+    <Markdown
+      components={{
+        h1: ({ children }) => <h3 className="text-base font-bold mt-3 mb-1.5 text-text-primary">{m(children)}</h3>,
+        h2: ({ children }) => <h4 className="text-sm font-bold mt-2.5 mb-1 text-text-primary">{m(children)}</h4>,
+        h3: ({ children }) => <h5 className="text-sm font-semibold mt-2 mb-1 text-text-primary">{m(children)}</h5>,
+        p: ({ children }) => <p className="mb-1.5 last:mb-0">{m(children)}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-text-primary">{m(children)}</strong>,
+        em: ({ children }) => <em className="italic">{m(children)}</em>,
+        ul: ({ children }) => <ul className="list-disc list-inside mb-1.5 space-y-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal list-inside mb-1.5 space-y-0.5">{children}</ol>,
+        li: ({ children }) => <li className="text-sm">{m(children)}</li>,
+        table: ({ children }) => (
+          <div className="overflow-x-auto my-2">
+            <table className="text-xs w-full border-collapse">{children}</table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,
+        th: ({ children }) => <th className="text-left px-2 py-1 font-semibold text-text-secondary">{m(children)}</th>,
+        td: ({ children }) => <td className="px-2 py-1 border-t border-border/50">{m(children)}</td>,
+        code: ({ children, className }) => {
+          const isBlock = className?.includes('language-')
+          if (isBlock) {
+            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto">{children}</code>
+          }
+          return <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
+        },
+        pre: ({ children }) => <pre className="my-1.5">{children}</pre>,
+        hr: () => <hr className="border-border/50 my-2" />,
+        a: ({ href, children }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">{children}</a>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-accent-blue/40 pl-2 my-1.5 text-text-secondary italic">{children}</blockquote>
+        ),
+      }}
+    >
+      {content}
+    </Markdown>
+  )
+}
+
+// ── Highlighted @mentions + markdown + deliverable cards ─────
 
 const DELIVERABLE_RE = /\[DELIVERABLE:(.*?):(.*?):(.*?):(\d+):(\d+)\]/g
 
 function HighlightedContent({ content, getBeingById }) {
-  // First split on deliverable markers
+  // Split on deliverable markers first
   const segments = content.split(DELIVERABLE_RE)
 
   // segments pattern: [text, fname, url, type, lines, bytes, text, fname, ...]
-  // Every 6th element starting from index 1 is a deliverable match group
   const elements = []
   let idx = 0
   while (idx < segments.length) {
     const text = segments[idx]
     if (text) {
-      // Render text with @mention highlighting
-      const mentionParts = text.split(/(@\w+)/g)
-      mentionParts.forEach((part, mi) => {
-        if (part.startsWith('@')) {
-          const name = part.slice(1).toLowerCase()
-          const being = getBeingById(name) || null
-          if (being) {
-            elements.push(
-              <span key={`${idx}-m${mi}`} className="font-medium" style={{ color: being.color }}>
-                {part}
-              </span>
-            )
-          } else {
-            elements.push(
-              <span key={`${idx}-m${mi}`} className="font-medium text-accent-blue">{part}</span>
-            )
-          }
-        } else if (part) {
-          elements.push(<span key={`${idx}-m${mi}`}>{part}</span>)
-        }
-      })
+      elements.push(
+        <MarkdownSegment key={`md-${idx}`} content={text} getBeingById={getBeingById} />
+      )
     }
     idx++
     // Check if next 5 items form a deliverable
