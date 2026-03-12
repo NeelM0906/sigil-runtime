@@ -1799,7 +1799,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
             if len(parts) < 3 or ".." in parts:
                 self._write_cors(404, {"error": "not found"})
                 return
-            fpath = PROJECT_ROOT / clean
+            fpath = PROJECT_ROOT / "projects" / clean
             if not fpath.is_file():
                 self._write_cors(404, {"error": "file not found"})
                 return

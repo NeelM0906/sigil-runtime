@@ -328,8 +328,14 @@ class OpenClawSync:
     def _workspace_for_agent(self, agent_id: str, cfg: dict[str, Any]) -> str:
         assert self.root is not None
         bundled = self.root.resolve() == bundled_openclaw_root(self.root).resolve()
+        # For "main", prefer the workspace subdir (symlink to workspaces/prime)
+        # so identity/memory files are read from the actual workspace, not the
+        # portable-openclaw root.
+        main_ws = self.root / "workspace"
+        if not main_ws.exists():
+            main_ws = self.root
         default_map = {
-            "main": self.root,
+            "main": main_ws,
             "forge": self.root / "workspace-forge",
             "scholar": self.root / "workspace-scholar",
             "memory": self.root / "workspace-memory",

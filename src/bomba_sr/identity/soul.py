@@ -32,6 +32,11 @@ class SoulConfig:
 
 def load_soul_from_workspace(workspace_root: Path) -> SoulConfig | None:
     root = Path(workspace_root).expanduser().resolve()
+    # If SOUL.md/IDENTITY.md not at root, check "workspace" subdir (OpenClaw symlink)
+    if not (root / "SOUL.md").exists() and not (root / "IDENTITY.md").exists():
+        ws_sub = root / "workspace"
+        if ws_sub.exists():
+            root = ws_sub.resolve()
     soul_path = root / "SOUL.md"
     identity_path = root / "IDENTITY.md"
     soul_text = _read_text(soul_path)

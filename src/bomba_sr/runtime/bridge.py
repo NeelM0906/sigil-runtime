@@ -76,6 +76,7 @@ from bomba_sr.tools.builtin_subagents import builtin_subagent_tools
 from bomba_sr.tools.builtin_data_access import builtin_data_access_tools
 from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
+from bomba_sr.tools.builtin_browser import builtin_browser_tools
 
 logger = logging.getLogger(__name__)
 
@@ -640,34 +641,39 @@ class RuntimeBridge:
             task_state["text"] += f" Active task={task_block['title']}({task_block['task_id']}) status={task_block['status']}."
 
         system_prefix_parts: list[str] = []
+        # For casual chat, only load core identity (SOUL + IDENTITY).
+        # Heavy files (MISSION, VISION, FORMULA, PRIORITIES, KNOWLEDGE, etc.)
+        # are only injected for task_execution/planning profiles.
+        _needs_deep_context = request.profile in (TurnProfile.TASK_EXECUTION, TurnProfile.PLANNING)
         if runtime.soul is not None:
             if runtime.soul.raw_soul_text.strip():
                 system_prefix_parts.append("<soul>\n" + runtime.soul.raw_soul_text.strip() + "\n</soul>")
             if runtime.soul.raw_identity_text.strip():
                 system_prefix_parts.append("<identity>\n" + runtime.soul.raw_identity_text.strip() + "\n</identity>")
-            mission_block: list[str] = []
-            if runtime.soul.mission_text and runtime.soul.mission_text.strip():
-                mission_block.append("<mission>\n" + runtime.soul.mission_text.strip() + "\n</mission>")
-            if runtime.soul.vision_text and runtime.soul.vision_text.strip():
-                mission_block.append("<vision>\n" + runtime.soul.vision_text.strip() + "\n</vision>")
-            if mission_block:
-                system_prefix_parts.append("\n".join(mission_block))
-            if runtime.soul.formula_text and runtime.soul.formula_text.strip():
-                system_prefix_parts.append("<formula>\n" + runtime.soul.formula_text.strip()[:12000] + "\n</formula>")
-            if runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
-                system_prefix_parts.append("<priorities>\n" + runtime.soul.priorities_text.strip()[:8000] + "\n</priorities>")
-            if runtime.soul.knowledge_text and runtime.soul.knowledge_text.strip():
-                system_prefix_parts.append(
-                    "<knowledge editable=\"true\">\n"
-                    + runtime.soul.knowledge_text.strip()[:4000]
-                    + "\n</knowledge>"
-                )
-            if runtime.soul.team_context_text and runtime.soul.team_context_text.strip():
-                system_prefix_parts.append(
-                    "<team-context readonly=\"true\">\n"
-                    + runtime.soul.team_context_text.strip()[:3000]
-                    + "\n</team-context>"
-                )
+            if _needs_deep_context:
+                mission_block: list[str] = []
+                if runtime.soul.mission_text and runtime.soul.mission_text.strip():
+                    mission_block.append("<mission>\n" + runtime.soul.mission_text.strip() + "\n</mission>")
+                if runtime.soul.vision_text and runtime.soul.vision_text.strip():
+                    mission_block.append("<vision>\n" + runtime.soul.vision_text.strip() + "\n</vision>")
+                if mission_block:
+                    system_prefix_parts.append("\n".join(mission_block))
+                if runtime.soul.formula_text and runtime.soul.formula_text.strip():
+                    system_prefix_parts.append("<formula>\n" + runtime.soul.formula_text.strip()[:12000] + "\n</formula>")
+                if runtime.soul.priorities_text and runtime.soul.priorities_text.strip():
+                    system_prefix_parts.append("<priorities>\n" + runtime.soul.priorities_text.strip()[:8000] + "\n</priorities>")
+                if runtime.soul.knowledge_text and runtime.soul.knowledge_text.strip():
+                    system_prefix_parts.append(
+                        "<knowledge editable=\"true\">\n"
+                        + runtime.soul.knowledge_text.strip()[:4000]
+                        + "\n</knowledge>"
+                    )
+                if runtime.soul.team_context_text and runtime.soul.team_context_text.strip():
+                    system_prefix_parts.append(
+                        "<team-context readonly=\"true\">\n"
+                        + runtime.soul.team_context_text.strip()[:3000]
+                        + "\n</team-context>"
+                    )
             if (request.include_representation
                     and runtime.soul.representation_text
                     and runtime.soul.representation_text.strip()):
@@ -677,15 +683,15 @@ class RuntimeBridge:
                     + '\n</representation>'
                 )
 
-        if runtime.soul is None:
-            # Fallback identity only when no SoulConfig is present.
-            # When a being HAS a SoulConfig, their SOUL.md/IDENTITY.md IS their identity.
+        if runtime.soul is not None:
+            # Identity comes from workspace SoulConfig — nothing else
             system_prefix_parts.append(
-                "You are BOMBA SR runtime assistant. Use cited evidence, respect explicit constraints, "
+                f"You are {runtime.soul.name}. "
+                "Use cited evidence, respect explicit constraints, "
                 "and prefer local-first retrieval before broad assumptions."
             )
         else:
-            # Operational guidelines without overriding the being's identity
+            # No SoulConfig found — minimal fallback
             system_prefix_parts.append(
                 "Use cited evidence, respect explicit constraints, "
                 "and prefer local-first retrieval before broad assumptions."
@@ -2613,6 +2619,7 @@ class RuntimeBridge:
         tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
         if self.config.web_search_enabled:
             tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
+            tool_executor.register_many(builtin_browser_tools())
         if self.config.pinecone_enabled:
             tool_executor.register_many(
                 builtin_pinecone_tools(

@@ -326,6 +326,12 @@ class DashboardService:
             pass  # column already exists
         self.db.execute("CREATE INDEX IF NOT EXISTS idx_mc_messages_session ON mc_messages(session_id, timestamp DESC)")
         self.db.execute("UPDATE mc_messages SET session_id = 'general' WHERE session_id IS NULL")
+        # Migration: add metadata column for outputs/agents attached to messages
+        try:
+            self.db.execute("ALTER TABLE mc_messages ADD COLUMN metadata TEXT")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
         # Seed default General session
         now = self._now()
         self.db.execute_commit(
@@ -942,18 +948,20 @@ class DashboardService:
         mode: str = "auto",
         task_ref: str | None = None,
         session_id: str = "general",
+        metadata: dict | None = None,
     ) -> dict:
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
             conn.execute(
                 """INSERT INTO mc_messages
-                   (id,type,sender,targets,content,timestamp,mode,task_ref,session_id)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                   (id,type,sender,targets,content,timestamp,mode,task_ref,session_id,metadata)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
                     msg_id, msg_type, sender,
                     json.dumps(targets or []),
                     content, now, mode, task_ref, session_id,
+                    json.dumps(metadata) if metadata else None,
                 ),
             )
             # Update session timestamp
@@ -1160,8 +1168,12 @@ class DashboardService:
         error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
+            from bomba_sr.context.policy import TurnProfile
             effective_content = self._effective_user_message(being_id, content, chat_session_id)
             _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
+            # Use deep context (TASK_EXECUTION) only for actual tasks;
+            # casual chat stays lean with just SOUL + IDENTITY.
+            _profile = TurnProfile.TASK_EXECUTION if classification in ("light_task", "full_task") else TurnProfile.CHAT
             req = TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -1170,20 +1182,25 @@ class DashboardService:
                 workspace_root=workspace,
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
+                profile=_profile,
                 on_iteration=_on_loop_iteration if all_steps else None,
                 include_representation=_inc_rep,
             )
             result = self.bridge.handle_turn(req)
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
+            msg_metadata: dict | None = None
             if isinstance(result, dict):
                 assistant = result.get("assistant")
                 if isinstance(assistant, dict):
                     reply = assistant.get("text", "")
                 if not reply:
                     reply = result.get("reply", result.get("response", ""))
+                # ── Build metadata for outputs & agents sections ──
+                msg_metadata = self._extract_message_metadata(result, tenant_id, session_id)
         except Exception as exc:
             reply = f"[Error from {being_id}: {exc}]"
+            msg_metadata = None
             error_occurred = True
         finally:
             # Restore online + stop typing regardless of success or failure
@@ -1213,6 +1230,7 @@ class DashboardService:
             msg_type="direct",
             task_ref=task_id,
             session_id=chat_session_id,
+            metadata=msg_metadata,
         )
 
     def init_orchestration(self, project_svc: Any) -> None:
@@ -1901,6 +1919,99 @@ class DashboardService:
         return task
 
     # ------------------------------------------------------------------
+    # Message metadata: outputs & agents
+    # ------------------------------------------------------------------
+
+    def _extract_message_metadata(self, result: dict, tenant_id: str, session_id: str) -> dict | None:
+        """Extract outputs (artifacts, links, files) and agents (subagents)
+        from a handle_turn result into structured metadata for the message."""
+        outputs: list[dict] = []
+        agents: list[dict] = []
+
+        # ── Outputs: artifacts from the turn result ──
+        for art in result.get("artifacts", []):
+            outputs.append({
+                "id": art.get("artifact_id"),
+                "type": art.get("type"),
+                "title": art.get("title"),
+                "mime_type": art.get("mime_type"),
+                "preview": (art.get("preview") or "")[:200],
+                "path": art.get("path"),
+                "created_at": art.get("created_at"),
+            })
+
+        # ── Outputs: extract links/URLs from the reply text ──
+        import re as _re
+        reply_text = ""
+        assistant = result.get("assistant")
+        if isinstance(assistant, dict):
+            reply_text = assistant.get("text", "")
+        url_pattern = _re.compile(r'https?://[^\s<>\'")\]]+')
+        seen_urls: set[str] = set()
+        for url in url_pattern.findall(reply_text):
+            url_clean = url.rstrip(".,;:!?")
+            if url_clean not in seen_urls:
+                seen_urls.add(url_clean)
+                outputs.append({
+                    "id": None,
+                    "type": "link",
+                    "title": url_clean[:80],
+                    "mime_type": None,
+                    "preview": None,
+                    "path": url_clean,
+                    "created_at": None,
+                })
+
+        # ── Agents: subagents spawned during the turn ──
+        # Tool calls that spawned subagents
+        if isinstance(assistant, dict):
+            for tc in assistant.get("tool_calls", []):
+                if isinstance(tc, dict) and tc.get("tool_name") in (
+                    "sessions_spawn", "sisters_spawn", "sisters_message",
+                ):
+                    agents.append({
+                        "type": "subagent" if tc["tool_name"] == "sessions_spawn" else "sister",
+                        "tool": tc["tool_name"],
+                        "goal": (tc.get("arguments", {}) or {}).get("goal", ""),
+                        "agent_id": (tc.get("result", {}) or {}).get("child_agent_id")
+                                    or (tc.get("arguments", {}) or {}).get("sister_id"),
+                        "status": "spawned",
+                    })
+
+        # ── Agents: subagent runs from the DB for this session ──
+        try:
+            rows = self.db.execute(
+                """SELECT run_id, child_agent_id, goal, status, progress_pct,
+                          accepted_at, ended_at
+                   FROM subagent_runs
+                   WHERE tenant_id = ? AND parent_session_id = ?
+                   ORDER BY accepted_at DESC LIMIT 20""",
+                (tenant_id, session_id),
+            ).fetchall()
+            for r in rows:
+                rd = dict(r)
+                agents.append({
+                    "type": "subagent",
+                    "run_id": rd.get("run_id"),
+                    "agent_id": rd.get("child_agent_id"),
+                    "goal": rd.get("goal"),
+                    "status": rd.get("status"),
+                    "progress_pct": rd.get("progress_pct"),
+                    "started_at": rd.get("accepted_at"),
+                    "ended_at": rd.get("ended_at"),
+                })
+        except Exception:
+            pass  # subagent_runs table may not exist yet
+
+        if not outputs and not agents:
+            return None
+
+        return {
+            "outputs": outputs if outputs else None,
+            "agents": agents if agents else None,
+        }
+
+    # ------------------------------------------------------------------
     # Sub-agents
     # ------------------------------------------------------------------
 
@@ -2438,6 +2549,12 @@ class DashboardService:
             d["taskRef"] = d["task_ref"]
         if "session_id" in d and "sessionId" not in d:
             d["sessionId"] = d["session_id"]
+        # Parse metadata JSON (outputs, agents)
+        if "metadata" in d and isinstance(d.get("metadata"), str):
+            try:
+                d["metadata"] = json.loads(d["metadata"])
+            except (json.JSONDecodeError, TypeError):
+                d["metadata"] = None
         return d
 
     def _normalize_task(self, task: dict) -> dict:
