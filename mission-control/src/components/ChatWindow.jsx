@@ -535,22 +535,29 @@ export function ChatWindow() {
   }, [])
 
   // Load messages from API
+  const isInitialLoad = useRef(true)
   const fetchMessages = useCallback(async () => {
-    setLoading(true)
+    if (isInitialLoad.current) setLoading(true)
     try {
       const apiFilters = { session_id: activeSessionId }
       if (filters.search) apiFilters.search = filters.search
       if (filters.sender) apiFilters.sender = filters.sender
       if (filters.target) apiFilters.target = filters.target
       const { messages: fetched } = await chatApi.list(apiFilters)
-      setMessages(fetched)
+      setMessages(prev => {
+        if (prev.length === fetched.length && prev.length > 0 && prev[prev.length - 1]?.id === fetched[fetched.length - 1]?.id) return prev
+        return fetched
+      })
       if (awaitingReplySince && fetched.some(msg => msg.sender !== 'user' && msg.timestamp > awaitingReplySince)) {
         setAwaitingReplySince(null)
       }
     } catch (err) {
       console.error('Failed to load messages:', err)
     } finally {
-      setLoading(false)
+      if (isInitialLoad.current) {
+        setLoading(false)
+        isInitialLoad.current = false
+      }
     }
   }, [filters, activeSessionId, awaitingReplySince])
 

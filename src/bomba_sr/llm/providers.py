@@ -58,7 +58,7 @@ class OpenAICompatibleProvider:
             },
         )
         try:
-            with urlopen(req, timeout=60) as response:
+            with urlopen(req) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             details = ""
@@ -177,7 +177,7 @@ class AnthropicProvider:
             },
         )
         try:
-            with urlopen(req, timeout=60) as response:
+            with urlopen(req) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             details = ""
@@ -223,7 +223,7 @@ class StaticEchoProvider:
                 else:
                     last_user = json.dumps(message.content)
                 break
-        response = f"[echo:{model}] {last_user[:500]}"
+        response = f"[SAI echo — no LLM key configured] {last_user[:500]}"
         return LLMResponse(
             text=response,
             model=model,

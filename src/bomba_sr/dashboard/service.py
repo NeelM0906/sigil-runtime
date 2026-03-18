@@ -6,15 +6,17 @@ and RuntimeBridge for real LLM routing.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import queue
 import re
+import secrets
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -315,6 +317,25 @@ class DashboardService:
             );
             CREATE INDEX IF NOT EXISTS idx_mc_deliverables_task
               ON mc_deliverables(task_id);
+
+            CREATE TABLE IF NOT EXISTS mc_users (
+              id TEXT PRIMARY KEY,
+              email TEXT NOT NULL UNIQUE,
+              name TEXT NOT NULL,
+              password_hash TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'operator',
+              avatar TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS mc_sessions_auth (
+              token TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              expires_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_sessions_auth_user ON mc_sessions_auth(user_id);
         """)
         self.db.commit()
 
@@ -332,8 +353,54 @@ class DashboardService:
             self.db.commit()
         except Exception:
             pass  # column already exists
-        # Seed default General session
-        now = self._now()
+        # Migration: add user_id to mc_chat_sessions
+        try:
+            self.db.execute("ALTER TABLE mc_chat_sessions ADD COLUMN user_id TEXT")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
+        self.db.execute("UPDATE mc_chat_sessions SET user_id = 'user-admin' WHERE user_id IS NULL")
+        self.db.commit()
+
+        # Migration: add user_id to mc_messages
+        try:
+            self.db.execute("ALTER TABLE mc_messages ADD COLUMN user_id TEXT")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
+        self.db.execute("UPDATE mc_messages SET user_id = 'user-admin' WHERE user_id IS NULL")
+        self.db.commit()
+
+        # Migration: add user_id to mc_deliverables
+        try:
+            self.db.execute("ALTER TABLE mc_deliverables ADD COLUMN user_id TEXT")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
+        self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
+        self.db.commit()
+
+        # Seed default users if table is empty
+        count = self.db.execute("SELECT COUNT(*) as c FROM mc_users").fetchone()["c"]
+        if count == 0:
+            now = self._now()
+            for email, name, pwd, role, uid in [
+                ("admin@sigil.ai", "Admin", "sigil2026", "admin", "user-admin"),
+                ("sai@sigil.ai", "Sai", "sai2026", "operator", "user-sai"),
+            ]:
+                self.db.execute_commit(
+                    "INSERT INTO mc_users (id,email,name,password_hash,role,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
+                    (uid, email, name, hashlib.sha256(pwd.encode()).hexdigest(), role, now, now),
+                )
+                # Create a General session for each seeded user
+                self.db.execute_commit(
+                    "INSERT OR IGNORE INTO mc_chat_sessions (id, name, user_id, created_at, updated_at) VALUES (?,?,?,?,?)",
+                    (f"general-{uid}", "General", uid, now, now),
+                )
+        else:
+            now = self._now()
+
+        # Seed default General session (legacy, backward compat)
         self.db.execute_commit(
             "INSERT OR IGNORE INTO mc_chat_sessions (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
             ("general", "General", now, now),

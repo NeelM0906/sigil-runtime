@@ -14,7 +14,7 @@ export function Header({ activeTab, setActiveTab, tabs }) {
             MC
           </div>
           <span className="font-semibold text-sm tracking-wide">MISSION CONTROL</span>
-          <span className="text-text-muted text-xs font-mono ml-1">BOMBA SR</span>
+          <span className="text-text-muted text-xs font-mono ml-1">SIGIL</span>
         </div>
 
         {/* Center: Tabs */}

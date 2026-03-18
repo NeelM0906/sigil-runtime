@@ -691,8 +691,9 @@ class RuntimeBridge:
                 "and prefer local-first retrieval before broad assumptions."
             )
         else:
-            # No SoulConfig found — minimal fallback
+            # No SoulConfig found — default to SAI identity
             system_prefix_parts.append(
+                "You are SAI (Super Actualized Intelligence), the Prime Orchestrator of the ACT-I ecosystem. "
                 "Use cited evidence, respect explicit constraints, "
                 "and prefer local-first retrieval before broad assumptions."
             )

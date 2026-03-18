@@ -7,6 +7,8 @@ import logging
 import mimetypes
 import os
 import sys
+import hashlib
+import secrets
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -47,6 +49,24 @@ def _load_dotenv_early(path: Path, *, override: bool = True) -> None:
             os.environ[key] = value
 
 _load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
+
+# ── Mission Control users ─────────────────────────────────────────────
+# password_hash = sha256(password).hexdigest()
+# To add users: python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+_MC_USERS: dict[str, dict] = {
+    "admin@sigil.ai": {
+        "id": "user-admin",
+        "name": "Admin",
+        "role": "admin",
+        "password_hash": hashlib.sha256(b"sigil2026").hexdigest(),
+    },
+    "sai@sigil.ai": {
+        "id": "user-sai",
+        "name": "Sai",
+        "role": "operator",
+        "password_hash": hashlib.sha256(b"sai2026").hexdigest(),
+    },
+}
 
 
 def _load_openclaw_runtime_defaults(project_root: Path) -> None:
@@ -1638,6 +1658,28 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"dream_cycle": result})
                     return
 
+                # --- Auth ---
+                if path == "/api/mc/auth/login":
+                    _email = (body.get("email") or "").strip().lower()
+                    _password = body.get("password") or ""
+                    _user = _MC_USERS.get(_email)
+                    if not _user:
+                        self._write_cors(401, {"error": "Invalid credentials"})
+                        return
+                    _hash = hashlib.sha256(_password.encode()).hexdigest()
+                    if _hash != _user["password_hash"]:
+                        self._write_cors(401, {"error": "Invalid credentials"})
+                        return
+                    _token = secrets.token_urlsafe(32)
+                    self._write_cors(200, {
+                        "user_id": _user["id"],
+                        "email": _email,
+                        "name": _user["name"],
+                        "role": _user["role"],
+                        "token": _token,
+                    })
+                    return
+
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     name = body.get("name", "New Chat")
@@ -1859,7 +1901,19 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
 def main() -> int:
     args = parse_args()
-    _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    env_example = Path(__file__).resolve().parent.parent / ".env.example"
+    if not env_path.exists() and env_example.exists():
+        import shutil
+        shutil.copy2(env_example, env_path)
+        print("INFO: Created .env from .env.example — fill in your API keys (especially OPENROUTER_API_KEY)")
+    _load_dotenv(env_path)
+    # Validate critical API key
+    _or_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not _or_key or _or_key.startswith("<") or _or_key == "your-openrouter-key":
+        print("WARNING: OPENROUTER_API_KEY is not set or still a placeholder.")
+        print("         Edit .env and set a valid key, or LLM calls will return 401 errors.")
+        print("         Get a key at https://openrouter.ai/keys")
     bridge = RuntimeBridge()
     worker_factory = SubAgentWorkerFactory(bridge=bridge)
 
