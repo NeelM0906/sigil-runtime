@@ -172,6 +172,7 @@ class RuntimeBridge:
         if self.embedding_provider is None and default_embed_key:
             self.embedding_provider = OpenAIEmbeddingProvider(api_key=default_embed_key)
         self._tenants: dict[str, _TenantRuntime] = {}
+        self._tenants_lock = threading.Lock()
         self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
         self._cron_schedulers: dict[str, CronScheduler] = {}
         self._dream_cycle: DreamCycle | None = None
@@ -2147,7 +2148,7 @@ class RuntimeBridge:
         # ── runtime ──
         runtime_info = {
             "uptime_seconds": round(uptime_seconds, 1),
-            "tenant_count": len(self._tenants),
+            "tenant_count": len(self._tenants),  # single dict read, GIL-safe
             "config": {
                 "model_id": self.config.default_model_id,
                 "provider": self.provider.provider_name,
@@ -2262,13 +2263,14 @@ class RuntimeBridge:
         try:
             for status_val in ["running", "completed", "failed"]:
                 row = db.execute(
-                    "SELECT COUNT(*) AS cnt FROM subagent_runs WHERE status = ?",
-                    (status_val,),
+                    "SELECT COUNT(*) AS cnt FROM subagent_runs WHERE tenant_id = ? AND status = ?",
+                    (tenant_id, status_val),
                 ).fetchone()
                 key_name = status_val if status_val != "running" else "active"
                 subagents_info[key_name] = row["cnt"] if row else 0
             rows = db.execute(
-                "SELECT * FROM subagent_runs ORDER BY created_at DESC LIMIT 20"
+                "SELECT * FROM subagent_runs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 20",
+                (tenant_id,),
             ).fetchall()
             subagents_info["runs"] = [dict(r) for r in rows]
         except Exception:
@@ -2426,8 +2428,8 @@ class RuntimeBridge:
 
         try:
             rows = db.execute(
-                "SELECT * FROM subagent_runs ORDER BY created_at DESC LIMIT ?",
-                (limit,),
+                "SELECT * FROM subagent_runs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?",
+                (tenant_id, limit),
             ).fetchall()
             for r in rows:
                 rd = dict(r)
@@ -2446,6 +2448,7 @@ class RuntimeBridge:
 
     def _tenant_runtime(self, tenant_id: str, workspace_root: str | None = None) -> _TenantRuntime:
         key = tenant_id
+        # Fast path: check without lock for existing tenants (dict reads are safe for single-key lookup)
         if key in self._tenants:
             existing = self._tenants[key]
             if workspace_root is not None:
@@ -2457,315 +2460,329 @@ class RuntimeBridge:
                     )
             return existing
 
-        context = self.registry.ensure_tenant(tenant_id=tenant_id, workspace_root=workspace_root)
-        soul_config = load_soul_from_workspace(context.workspace_root)
-        db = RuntimeDB(context.db_path)
-        db.script(
-            """
-            CREATE TABLE IF NOT EXISTS loop_executions (
-              id TEXT PRIMARY KEY,
-              tenant_id TEXT NOT NULL,
-              session_id TEXT NOT NULL,
-              turn_id TEXT NOT NULL,
-              iterations INTEGER NOT NULL,
-              tool_calls_json TEXT NOT NULL,
-              stopped_reason TEXT,
-              total_input_tokens INTEGER,
-              total_output_tokens INTEGER,
-              duration_ms INTEGER,
-              created_at TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_loop_exec_tenant
-              ON loop_executions(tenant_id, created_at DESC);
-            """
-        )
-        db.commit()
+        # Slow path: acquire lock, double-check, then init
+        with self._tenants_lock:
+            # Double-check after acquiring lock
+            if key in self._tenants:
+                existing = self._tenants[key]
+                if workspace_root is not None:
+                    requested = os.path.realpath(os.path.abspath(os.path.expanduser(workspace_root)))
+                    bound = os.path.realpath(str(existing.context.workspace_root))
+                    if requested != bound:
+                        raise ValueError(
+                            f"tenant {tenant_id} already bound to workspace {bound}, requested {requested}"
+                        )
+                return existing
 
-        if os.getenv("OPENROUTER_API_KEY"):
-            capabilities = ModelCapabilityService(
-                db=db,
-                api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
+            context = self.registry.ensure_tenant(tenant_id=tenant_id, workspace_root=workspace_root)
+            soul_config = load_soul_from_workspace(context.workspace_root)
+            db = RuntimeDB(context.db_path)
+            db.script(
+                """
+                CREATE TABLE IF NOT EXISTS loop_executions (
+                  id TEXT PRIMARY KEY,
+                  tenant_id TEXT NOT NULL,
+                  session_id TEXT NOT NULL,
+                  turn_id TEXT NOT NULL,
+                  iterations INTEGER NOT NULL,
+                  tool_calls_json TEXT NOT NULL,
+                  stopped_reason TEXT,
+                  total_input_tokens INTEGER,
+                  total_output_tokens INTEGER,
+                  duration_ms INTEGER,
+                  created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_loop_exec_tenant
+                  ON loop_executions(tenant_id, created_at DESC);
+                """
             )
-        else:
-            capabilities = ModelCapabilityService(
-                db=db,
-                fetcher=self._fallback_catalog,
-                cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
-            )
+            db.commit()
 
-        protocol = SubAgentProtocol(db)
-        from bomba_sr.subagents.worker import SubAgentWorkerFactory
-
-        subagent_worker_factory = SubAgentWorkerFactory(self)
-        default_subagent_worker = subagent_worker_factory.create_worker()
-        orchestrator = SubAgentOrchestrator(
-            protocol,
-            crash_storm_config=CrashStormConfig(
-                window_seconds=self.config.subagent_crash_window_seconds,
-                max_crashes=self.config.subagent_crash_max,
-                cooldown_seconds=self.config.subagent_crash_cooldown_seconds,
-            ),
-            max_spawn_depth=self.config.subagent_max_spawn_depth,
-            default_worker=default_subagent_worker,
-        )
-        codeintel = CodeIntelRouter(
-            config=self.config,
-            tenant_registry=self.registry,
-            serena_transport=self.serena_transport,
-        )
-
-        governance = ToolGovernanceService(db)
-        governance.upsert_default_policy(tenant_id)
-
-        plugin_registry = PluginRegistry(
-            allow=self.config.plugin_allow,
-            deny=self.config.plugin_deny,
-        )
-        plugin_paths = [Path(p).expanduser() for p in self.config.plugin_paths]
-        plugin_paths.append(context.workspace_root / ".bomba" / "plugins")
-        plugin_paths.append(Path.home() / ".sigil" / "plugins")
-        for manifest in plugin_registry.discover(plugin_paths):
-            try:
-                plugin_registry.load(manifest)
-            except Exception:
-                continue
-
-        skills_registry = SkillRegistry(db)
-        skills_engine = SkillEngine(skills_registry)
-        skill_roots: list[Path]
-        if self.config.skill_roots:
-            skill_roots = [Path(p).expanduser() for p in self.config.skill_roots]
-        else:
-            skill_roots = [
-                *list_skill_roots(context.workspace_root),
-                Path.home() / ".sigil" / "skills",
-                Path("/opt/homebrew/lib/node_modules/openclaw/skills"),
-                Path(__file__).resolve().parents[1] / "skills" / "bundled",
-            ]
-        deduped_skill_roots: list[Path] = []
-        seen_skill_roots: set[Path] = set()
-        for root in skill_roots:
-            resolved = root.expanduser().resolve()
-            if resolved in seen_skill_roots:
-                continue
-            seen_skill_roots.add(resolved)
-            deduped_skill_roots.append(resolved)
-        skill_roots = deduped_skill_roots
-        plugin_skill_dirs = plugin_registry.get_skill_dirs()
-        if plugin_skill_dirs:
-            skill_roots = [skill_roots[0], *plugin_skill_dirs, *skill_roots[1:]]
-        skill_parser = SkillMdParser(permissive=self.config.skill_parsing_permissive)
-        skill_loader = SkillLoader(
-            skill_roots=skill_roots,
-            eligibility=EligibilityEngine(),
-            parser=skill_parser,
-        )
-        for descriptor in skill_loader.scan().values():
-            skills_registry.register_from_descriptor(
-                tenant_id=tenant_id,
-                descriptor=descriptor,
-                status=("active" if descriptor.default_enabled else "validated"),
-            )
-        if self.config.skill_watcher_enabled:
-            skill_loader.start_watcher(self.config.skill_watcher_debounce_ms)
-
-        search = AgenticSearchExecutor(context.workspace_root)
-        memory = HybridMemoryStore(
-            db=db,
-            memory_root=context.memory_root,
-            auto_apply_confidence=self.config.learning_auto_apply_confidence,
-            embedding_provider=self.embedding_provider,
-        )
-        projects = ProjectService(db)
-        team_manager = None
-        if self.config.team_manager_enabled:
-            from bomba_sr.runtime.team_manager import TeamManagerService
-            team_manager = TeamManagerService(db)
-        policy_pipeline = PolicyPipeline(
-            governance=governance,
-            global_allow=self.config.tool_allow,
-            global_deny=self.config.tool_deny,
-        )
-        skills_ecosystem = SkillEcosystemService(
-            db=db,
-            registry=skills_registry,
-            loader=skill_loader,
-            parser=skill_parser,
-            governance=governance,
-            enabled_sources=self.config.skill_catalog_sources,
-            telemetry_enabled=self.config.skills_telemetry_enabled,
-            source_repos=self.config.skill_source_repo_overrides,
-            clawhub_api_base=self.config.clawhub_api_base,
-        )
-        sisters_registry: SisterRegistry | None = None
-        sisters_config_path = context.workspace_root / "sisters.json"
-        if sisters_config_path.exists() or tenant_id in {"tenant-prime", "tenant-local", "prime"}:
-            sisters_registry = SisterRegistry(
-                config_path=sisters_config_path,
-                orchestrator=orchestrator,
-                protocol=protocol,
-                parent_agent_id="prime",
-            )
-        tool_executor = ToolExecutor(
-            governance=governance,
-            pipeline=policy_pipeline,
-            tool_result_max_chars=self.config.tool_result_max_chars,
-        )
-        tool_executor.register_many(builtin_fs_tools())
-        tool_executor.register_many(
-            builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
-        )
-        tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
-        if self.config.web_search_enabled:
-            tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
-            tool_executor.register_many(builtin_browser_tools())
-        if self.config.pinecone_enabled:
-            tool_executor.register_many(
-                builtin_pinecone_tools(
-                    default_index=self.config.pinecone_default_index,
-                    default_namespace=self.config.pinecone_default_namespace,
+            if os.getenv("OPENROUTER_API_KEY"):
+                capabilities = ModelCapabilityService(
+                    db=db,
+                    api_base=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                    api_key=os.getenv("OPENROUTER_API_KEY"),
+                    cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
                 )
-            )
-        if self.config.supabase_enabled or self.config.postgres_enabled:
-            tool_executor.register_many(
-                builtin_data_access_tools(
-                    enable_supabase=self.config.supabase_enabled,
-                    enable_postgres=self.config.postgres_enabled,
+            else:
+                capabilities = ModelCapabilityService(
+                    db=db,
+                    fetcher=self._fallback_catalog,
+                    cache_ttl_seconds=self.config.capability_cache_ttl_seconds,
                 )
-            )
-        if self.config.voice_enabled:
-            tool_executor.register_many(builtin_voice_tools(provider=self.config.voice_provider))
-        if self.config.fal_enabled:
-            tool_executor.register_many(builtin_fal_tools(default_video_model=self.config.fal_video_model))
-        if self.config.colosseum_enabled:
-            tool_executor.register_many(
-                builtin_colosseum_tools(
-                    provider=self.provider,
-                    default_model_id=self.config.colosseum_model_id,
-                    workspace_root=context.workspace_root,
-                )
-            )
-        if self.config.prove_ahead_enabled:
-            tool_executor.register_many(
-                builtin_prove_ahead_tools(
-                    provider=self.provider,
-                    default_model_id=self.config.default_model_id,
-                    workspace_root=context.workspace_root,
-                )
-            )
-        if self.config.team_manager_enabled and team_manager is not None:
-            from bomba_sr.tools.builtin_team import builtin_team_tools
-            tool_executor.register_many(
-                builtin_team_tools(
-                    team_manager=team_manager,
-                    tenant_id=tenant_id,
-                )
-            )
-        tool_executor.register_many(builtin_memory_tools(memory))
-        tool_executor.register_many(builtin_knowledge_tools())
-        # Team context tool — only registered for Prime
-        if "prime" in tenant_id.lower() or tenant_id == "tenant-local":
-            tool_executor.register_many(builtin_team_context_tools())
-        tool_executor.register_many(builtin_approval_tools(governance, memory))
-        tool_executor.register_many(
-            builtin_subagent_tools(
-                orchestrator=orchestrator,
-                protocol=protocol,
+
+            protocol = SubAgentProtocol(db)
+            from bomba_sr.subagents.worker import SubAgentWorkerFactory
+
+            subagent_worker_factory = SubAgentWorkerFactory(self)
+            default_subagent_worker = subagent_worker_factory.create_worker()
+            orchestrator = SubAgentOrchestrator(
+                protocol,
+                crash_storm_config=CrashStormConfig(
+                    window_seconds=self.config.subagent_crash_window_seconds,
+                    max_crashes=self.config.subagent_crash_max,
+                    cooldown_seconds=self.config.subagent_crash_cooldown_seconds,
+                ),
+                max_spawn_depth=self.config.subagent_max_spawn_depth,
                 default_worker=default_subagent_worker,
             )
-        )
-        tool_executor.register_many(builtin_project_tools(projects))
-        tool_executor.register_many(
-            builtin_skill_tools(skill_loader, skills_registry, skills_ecosystem=skills_ecosystem)
-        )
-        tool_executor.register_many(
-            builtin_scheduler_tools(
-                add_schedule=self.add_schedule,
-                list_schedules=self.list_schedules,
-                remove_schedule=self.remove_schedule,
-                set_schedule_enabled=self.set_schedule_enabled,
+            codeintel = CodeIntelRouter(
+                config=self.config,
+                tenant_registry=self.registry,
+                serena_transport=self.serena_transport,
             )
-        )
-        tool_executor.register_many(
-            builtin_compaction_tools(
-                provider=self.provider,
-                default_model_id=self.config.default_model_id,
-                compaction_model_id=os.getenv("BOMBA_COMPACTION_MODEL_ID"),
-            )
-        )
-        tool_executor.register_many(builtin_model_switch_tools())
-        tool_executor.register_many(builtin_discovery_tools())
-        if sisters_registry is not None and sisters_registry.list_sisters():
-            tool_executor.register_many(
-                builtin_sister_tools(
-                    list_sisters=lambda: self.list_sisters(tenant_id, str(context.workspace_root)),
-                    spawn_sister=lambda sister_id: self.spawn_sister(tenant_id, sister_id, str(context.workspace_root)),
-                    stop_sister=lambda sister_id: self.stop_sister(tenant_id, sister_id, str(context.workspace_root)),
-                    sister_status=lambda sister_id: self.sister_status(tenant_id, sister_id, str(context.workspace_root)),
-                    message_sister=lambda sister_id, message: self.message_sister(
-                        tenant_id,
-                        sister_id,
-                        message,
-                        str(context.workspace_root),
-                    ),
-                )
-            )
-        for plugin_tool in plugin_registry.get_tools():
-            try:
-                tool_executor.register(plugin_tool)
-            except Exception:
-                continue
-        command_parser = CommandParser()
-        command_router = CommandRouter(skill_loader=skill_loader, tool_executor=tool_executor)
-        skill_disclosure = SkillDisclosure()
 
-        runtime = _TenantRuntime(
-            context=context,
-            db=db,
-            capabilities=capabilities,
-            context_engine=ContextPolicyEngine(),
-            search=search,
-            memory=memory,
-            protocol=protocol,
-            orchestrator=orchestrator,
-            adaptation=RuntimeAdaptationEngine(db),
-            artifacts=ArtifactStore(db=db, artifacts_root=context.artifacts_root),
-            codeintel=codeintel,
-            governance=governance,
-            projects=projects,
-            skills_registry=skills_registry,
-            skills_engine=skills_engine,
-            skill_loader=skill_loader,
-            skills_ecosystem=skills_ecosystem,
-            plugin_registry=plugin_registry,
-            policy_pipeline=policy_pipeline,
-            tool_executor=tool_executor,
-            command_parser=command_parser,
-            command_router=command_router,
-            skill_disclosure=skill_disclosure,
-            identity=UserIdentityService(db, auto_apply_confidence=self.config.learning_auto_apply_confidence),
-            soul=soul_config,
-            sisters=sisters_registry,
-            info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
-            team_manager=team_manager,
-        )
-        if sisters_registry is not None:
-            for sister in sisters_registry.list_sisters():
-                if not bool(sister.get("auto_start")):
-                    continue
-                if bool(sister.get("running")):
-                    continue
+            governance = ToolGovernanceService(db)
+            governance.upsert_default_policy(tenant_id)
+
+            plugin_registry = PluginRegistry(
+                allow=self.config.plugin_allow,
+                deny=self.config.plugin_deny,
+            )
+            plugin_paths = [Path(p).expanduser() for p in self.config.plugin_paths]
+            plugin_paths.append(context.workspace_root / ".bomba" / "plugins")
+            plugin_paths.append(Path.home() / ".sigil" / "plugins")
+            for manifest in plugin_registry.discover(plugin_paths):
                 try:
-                    sisters_registry.spawn_sister(
-                        str(sister["sister_id"]),
-                        parent_session_id="sisters-autostart",
-                    )
+                    plugin_registry.load(manifest)
                 except Exception:
                     continue
-        self._tenants[key] = runtime
-        return runtime
+
+            skills_registry = SkillRegistry(db)
+            skills_engine = SkillEngine(skills_registry)
+            skill_roots: list[Path]
+            if self.config.skill_roots:
+                skill_roots = [Path(p).expanduser() for p in self.config.skill_roots]
+            else:
+                skill_roots = [
+                    *list_skill_roots(context.workspace_root),
+                    Path.home() / ".sigil" / "skills",
+                    Path("/opt/homebrew/lib/node_modules/openclaw/skills"),
+                    Path(__file__).resolve().parents[1] / "skills" / "bundled",
+                ]
+            deduped_skill_roots: list[Path] = []
+            seen_skill_roots: set[Path] = set()
+            for root in skill_roots:
+                resolved = root.expanduser().resolve()
+                if resolved in seen_skill_roots:
+                    continue
+                seen_skill_roots.add(resolved)
+                deduped_skill_roots.append(resolved)
+            skill_roots = deduped_skill_roots
+            plugin_skill_dirs = plugin_registry.get_skill_dirs()
+            if plugin_skill_dirs:
+                skill_roots = [skill_roots[0], *plugin_skill_dirs, *skill_roots[1:]]
+            skill_parser = SkillMdParser(permissive=self.config.skill_parsing_permissive)
+            skill_loader = SkillLoader(
+                skill_roots=skill_roots,
+                eligibility=EligibilityEngine(),
+                parser=skill_parser,
+            )
+            for descriptor in skill_loader.scan().values():
+                skills_registry.register_from_descriptor(
+                    tenant_id=tenant_id,
+                    descriptor=descriptor,
+                    status=("active" if descriptor.default_enabled else "validated"),
+                )
+            if self.config.skill_watcher_enabled:
+                skill_loader.start_watcher(self.config.skill_watcher_debounce_ms)
+
+            search = AgenticSearchExecutor(context.workspace_root)
+            memory = HybridMemoryStore(
+                db=db,
+                memory_root=context.memory_root,
+                auto_apply_confidence=self.config.learning_auto_apply_confidence,
+                embedding_provider=self.embedding_provider,
+            )
+            projects = ProjectService(db)
+            team_manager = None
+            if self.config.team_manager_enabled:
+                from bomba_sr.runtime.team_manager import TeamManagerService
+                team_manager = TeamManagerService(db)
+            policy_pipeline = PolicyPipeline(
+                governance=governance,
+                global_allow=self.config.tool_allow,
+                global_deny=self.config.tool_deny,
+            )
+            skills_ecosystem = SkillEcosystemService(
+                db=db,
+                registry=skills_registry,
+                loader=skill_loader,
+                parser=skill_parser,
+                governance=governance,
+                enabled_sources=self.config.skill_catalog_sources,
+                telemetry_enabled=self.config.skills_telemetry_enabled,
+                source_repos=self.config.skill_source_repo_overrides,
+                clawhub_api_base=self.config.clawhub_api_base,
+            )
+            sisters_registry: SisterRegistry | None = None
+            sisters_config_path = context.workspace_root / "sisters.json"
+            if sisters_config_path.exists() or tenant_id in {"tenant-prime", "tenant-local", "prime"}:
+                sisters_registry = SisterRegistry(
+                    config_path=sisters_config_path,
+                    orchestrator=orchestrator,
+                    protocol=protocol,
+                    parent_agent_id="prime",
+                )
+            tool_executor = ToolExecutor(
+                governance=governance,
+                pipeline=policy_pipeline,
+                tool_result_max_chars=self.config.tool_result_max_chars,
+            )
+            tool_executor.register_many(builtin_fs_tools())
+            tool_executor.register_many(
+                builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
+            )
+            tool_executor.register_many(builtin_search_tools(search=search, codeintel=codeintel, tenant_context=context))
+            if self.config.web_search_enabled:
+                tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
+                tool_executor.register_many(builtin_browser_tools())
+            if self.config.pinecone_enabled:
+                tool_executor.register_many(
+                    builtin_pinecone_tools(
+                        default_index=self.config.pinecone_default_index,
+                        default_namespace=self.config.pinecone_default_namespace,
+                    )
+                )
+            if self.config.supabase_enabled or self.config.postgres_enabled:
+                tool_executor.register_many(
+                    builtin_data_access_tools(
+                        enable_supabase=self.config.supabase_enabled,
+                        enable_postgres=self.config.postgres_enabled,
+                    )
+                )
+            if self.config.voice_enabled:
+                tool_executor.register_many(builtin_voice_tools(provider=self.config.voice_provider))
+            if self.config.fal_enabled:
+                tool_executor.register_many(builtin_fal_tools(default_video_model=self.config.fal_video_model))
+            if self.config.colosseum_enabled:
+                tool_executor.register_many(
+                    builtin_colosseum_tools(
+                        provider=self.provider,
+                        default_model_id=self.config.colosseum_model_id,
+                        workspace_root=context.workspace_root,
+                    )
+                )
+            if self.config.prove_ahead_enabled:
+                tool_executor.register_many(
+                    builtin_prove_ahead_tools(
+                        provider=self.provider,
+                        default_model_id=self.config.default_model_id,
+                        workspace_root=context.workspace_root,
+                    )
+                )
+            if self.config.team_manager_enabled and team_manager is not None:
+                from bomba_sr.tools.builtin_team import builtin_team_tools
+                tool_executor.register_many(
+                    builtin_team_tools(
+                        team_manager=team_manager,
+                        tenant_id=tenant_id,
+                    )
+                )
+            tool_executor.register_many(builtin_memory_tools(memory))
+            tool_executor.register_many(builtin_knowledge_tools())
+            # Team context tool — only registered for Prime
+            if "prime" in tenant_id.lower() or tenant_id == "tenant-local":
+                tool_executor.register_many(builtin_team_context_tools())
+            tool_executor.register_many(builtin_approval_tools(governance, memory))
+            tool_executor.register_many(
+                builtin_subagent_tools(
+                    orchestrator=orchestrator,
+                    protocol=protocol,
+                    default_worker=default_subagent_worker,
+                )
+            )
+            tool_executor.register_many(builtin_project_tools(projects))
+            tool_executor.register_many(
+                builtin_skill_tools(skill_loader, skills_registry, skills_ecosystem=skills_ecosystem)
+            )
+            tool_executor.register_many(
+                builtin_scheduler_tools(
+                    add_schedule=self.add_schedule,
+                    list_schedules=self.list_schedules,
+                    remove_schedule=self.remove_schedule,
+                    set_schedule_enabled=self.set_schedule_enabled,
+                )
+            )
+            tool_executor.register_many(
+                builtin_compaction_tools(
+                    provider=self.provider,
+                    default_model_id=self.config.default_model_id,
+                    compaction_model_id=os.getenv("BOMBA_COMPACTION_MODEL_ID"),
+                )
+            )
+            tool_executor.register_many(builtin_model_switch_tools())
+            tool_executor.register_many(builtin_discovery_tools())
+            if sisters_registry is not None and sisters_registry.list_sisters():
+                tool_executor.register_many(
+                    builtin_sister_tools(
+                        list_sisters=lambda: self.list_sisters(tenant_id, str(context.workspace_root)),
+                        spawn_sister=lambda sister_id: self.spawn_sister(tenant_id, sister_id, str(context.workspace_root)),
+                        stop_sister=lambda sister_id: self.stop_sister(tenant_id, sister_id, str(context.workspace_root)),
+                        sister_status=lambda sister_id: self.sister_status(tenant_id, sister_id, str(context.workspace_root)),
+                        message_sister=lambda sister_id, message: self.message_sister(
+                            tenant_id,
+                            sister_id,
+                            message,
+                            str(context.workspace_root),
+                        ),
+                    )
+                )
+            for plugin_tool in plugin_registry.get_tools():
+                try:
+                    tool_executor.register(plugin_tool)
+                except Exception:
+                    continue
+            command_parser = CommandParser()
+            command_router = CommandRouter(skill_loader=skill_loader, tool_executor=tool_executor)
+            skill_disclosure = SkillDisclosure()
+
+            runtime = _TenantRuntime(
+                context=context,
+                db=db,
+                capabilities=capabilities,
+                context_engine=ContextPolicyEngine(),
+                search=search,
+                memory=memory,
+                protocol=protocol,
+                orchestrator=orchestrator,
+                adaptation=RuntimeAdaptationEngine(db),
+                artifacts=ArtifactStore(db=db, artifacts_root=context.artifacts_root),
+                codeintel=codeintel,
+                governance=governance,
+                projects=projects,
+                skills_registry=skills_registry,
+                skills_engine=skills_engine,
+                skill_loader=skill_loader,
+                skills_ecosystem=skills_ecosystem,
+                plugin_registry=plugin_registry,
+                policy_pipeline=policy_pipeline,
+                tool_executor=tool_executor,
+                command_parser=command_parser,
+                command_router=command_router,
+                skill_disclosure=skill_disclosure,
+                identity=UserIdentityService(db, auto_apply_confidence=self.config.learning_auto_apply_confidence),
+                soul=soul_config,
+                sisters=sisters_registry,
+                info=GenericInfoRetriever(enabled=self.config.generic_info_web_retrieval_enabled),
+                team_manager=team_manager,
+            )
+            if sisters_registry is not None:
+                for sister in sisters_registry.list_sisters():
+                    if not bool(sister.get("auto_start")):
+                        continue
+                    if bool(sister.get("running")):
+                        continue
+                    try:
+                        sisters_registry.spawn_sister(
+                            str(sister["sister_id"]),
+                            parent_session_id="sisters-autostart",
+                        )
+                    except Exception:
+                        continue
+            self._tenants[key] = runtime
+            return runtime
 
     def _autonomy_key(self, tenant_id: str, user_id: str, workspace_root: str | None) -> str:
         runtime = self._tenant_runtime(tenant_id=tenant_id, workspace_root=workspace_root)
