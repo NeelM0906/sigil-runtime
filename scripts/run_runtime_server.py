@@ -1778,7 +1778,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
-                    session_id = body.get("session_id", "general")
+                    session_id = body.get("session_id") or f"sess-{uuid.uuid4().hex}"
                     # Auto-route broadcast (no targets) to prime
                     if not targets:
                         targets = ["prime"]
