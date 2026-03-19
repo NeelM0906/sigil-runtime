@@ -586,6 +586,7 @@ class RuntimeBridge:
             raw_turns = runtime.memory.get_recent_turns(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
+                user_id=request.user_id,
                 limit=3,  # Fewer turns for subtask context — keep it focused
             )
             recent_turn_messages = _strip_tool_blocks(raw_turns)
@@ -593,6 +594,7 @@ class RuntimeBridge:
             recent_turn_messages = runtime.memory.get_recent_turns(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
+                user_id=request.user_id,
                 limit=5,
             )
         session_summary = runtime.memory.get_session_summary(
@@ -1017,6 +1019,7 @@ class RuntimeBridge:
             turns_to_summarize = runtime.memory.get_turns_for_summary(
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
+                user_id=request.user_id,
                 covers_through_turn=covered_turn,
                 recent_window=summary_recent_window,
                 limit=200,
