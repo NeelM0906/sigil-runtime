@@ -540,9 +540,15 @@ export function ChatWindow({ userId }) {
   // Load messages from API
   const isInitialLoad = useRef(true)
   const fetchMessages = useCallback(async () => {
+    // Don't fetch messages without a session — prevents leaking all messages
+    if (!activeSessionId) {
+      setMessages([])
+      setLoading(false)
+      return
+    }
     if (isInitialLoad.current) setLoading(true)
     try {
-      const apiFilters = { session_id: activeSessionId }
+      const apiFilters = { session_id: activeSessionId, user_id: userId }
       if (filters.search) apiFilters.search = filters.search
       if (filters.sender) apiFilters.sender = filters.sender
       if (filters.target) apiFilters.target = filters.target
@@ -562,7 +568,7 @@ export function ChatWindow({ userId }) {
         isInitialLoad.current = false
       }
     }
-  }, [filters, activeSessionId, awaitingReplySince])
+  }, [filters, activeSessionId, awaitingReplySince, userId])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
 

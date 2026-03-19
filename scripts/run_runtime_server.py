@@ -1565,6 +1565,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         target=query.get("target", [None])[0],
                         search=query.get("search", [None])[0],
                         session_id=query.get("session_id", [None])[0],
+                        user_id=query.get("user_id", [None])[0],
                         limit=int(query.get("limit", ["500"])[0]),
                         offset=int(query.get("offset", ["0"])[0]),
                     )
@@ -1779,6 +1780,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
                     session_id = body.get("session_id", "general")
+                    msg_user_id = body.get("user_id")
                     # Auto-route broadcast (no targets) to prime
                     if not targets:
                         targets = ["prime"]
@@ -1793,11 +1795,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         targets=targets, msg_type=msg_type,
                         mode=mode, task_ref=task_ref,
                         session_id=session_id,
+                        user_id=msg_user_id,
                     )
 
                     # Route to each targeted being in background
                     for tid in targets:
-                        dashboard_svc.route_to_being(tid, content, sender=sender, chat_session_id=session_id)
+                        dashboard_svc.route_to_being(tid, content, sender=sender, chat_session_id=session_id, user_id=msg_user_id)
 
                     self._write_cors(201, {"message": msg})
                     return

@@ -172,6 +172,7 @@ class RuntimeBridge:
         if self.embedding_provider is None and default_embed_key:
             self.embedding_provider = OpenAIEmbeddingProvider(api_key=default_embed_key)
         self._tenants: dict[str, _TenantRuntime] = {}
+        self._tenants_lock = threading.Lock()
         self._heartbeat_engines: dict[str, HeartbeatEngine] = {}
         self._cron_schedulers: dict[str, CronScheduler] = {}
         self._dream_cycle: DreamCycle | None = None
@@ -2446,8 +2447,9 @@ class RuntimeBridge:
 
     def _tenant_runtime(self, tenant_id: str, workspace_root: str | None = None) -> _TenantRuntime:
         key = tenant_id
-        if key in self._tenants:
-            existing = self._tenants[key]
+        # Fast path: check without lock for existing tenants (dict reads are thread-safe in CPython)
+        existing = self._tenants.get(key)
+        if existing is not None:
             if workspace_root is not None:
                 requested = os.path.realpath(os.path.abspath(os.path.expanduser(workspace_root)))
                 bound = os.path.realpath(str(existing.context.workspace_root))
@@ -2457,6 +2459,15 @@ class RuntimeBridge:
                     )
             return existing
 
+        # Slow path: acquire lock to prevent double-initialization race
+        with self._tenants_lock:
+            # Re-check after acquiring lock (another thread may have initialized)
+            if key in self._tenants:
+                return self._tenants[key]
+            return self._init_tenant_locked(key, tenant_id, workspace_root)
+
+    def _init_tenant_locked(self, key: str, tenant_id: str, workspace_root: str | None) -> _TenantRuntime:
+        """Initialize a new tenant runtime. Caller MUST hold self._tenants_lock."""
         context = self.registry.ensure_tenant(tenant_id=tenant_id, workspace_root=workspace_root)
         soul_config = load_soul_from_workspace(context.workspace_root)
         db = RuntimeDB(context.db_path)

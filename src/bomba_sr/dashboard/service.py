@@ -990,6 +990,7 @@ class DashboardService:
         target: str | None = None,
         search: str | None = None,
         session_id: str | None = None,
+        user_id: str | None = None,
         limit: int = 500,
         offset: int = 0,
     ) -> list[dict]:
@@ -998,6 +999,9 @@ class DashboardService:
         if session_id:
             sql += " AND session_id = ?"
             params.append(session_id)
+        if user_id:
+            sql += " AND (user_id = ? OR user_id IS NULL)"
+            params.append(user_id)
         if sender:
             sql += " AND sender = ?"
             params.append(sender)
@@ -1022,19 +1026,21 @@ class DashboardService:
         task_ref: str | None = None,
         session_id: str = "general",
         metadata: dict | None = None,
+        user_id: str | None = None,
     ) -> dict:
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
             conn.execute(
                 """INSERT INTO mc_messages
-                   (id,type,sender,targets,content,timestamp,mode,task_ref,session_id,metadata)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                   (id,type,sender,targets,content,timestamp,mode,task_ref,session_id,metadata,user_id)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     msg_id, msg_type, sender,
                     json.dumps(targets or []),
                     content, now, mode, task_ref, session_id,
                     json.dumps(metadata) if metadata else None,
+                    user_id,
                 ),
             )
             # Update session timestamp
@@ -1064,11 +1070,11 @@ class DashboardService:
         )
         return cur.rowcount > 0
 
-    def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "general") -> None:
+    def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "general", user_id: str | None = None) -> None:
         """Route a message to a being via LLM in a background thread."""
         t = threading.Thread(
             target=self._route_to_being_sync,
-            args=(being_id, content, sender, chat_session_id),
+            args=(being_id, content, sender, chat_session_id, user_id),
             daemon=True,
         )
         t.start()
@@ -1131,7 +1137,7 @@ class DashboardService:
             f"User follow-up: {content}"
         )
 
-    def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "general") -> None:
+    def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "general", user_id: str | None = None) -> None:
         """Call bridge.handle_turn for a being and store the response.
 
         Identity is loaded automatically by the bridge via SoulConfig from
@@ -1153,6 +1159,7 @@ class DashboardService:
                 targets=[sender],
                 msg_type="direct",
                 session_id=chat_session_id,
+                user_id=user_id,
             )
             return
 
@@ -1164,6 +1171,7 @@ class DashboardService:
                 targets=[sender],
                 msg_type="direct",
                 session_id=chat_session_id,
+                user_id=user_id,
             )
             return
 
@@ -1174,6 +1182,7 @@ class DashboardService:
                 targets=[sender],
                 msg_type="direct",
                 session_id=chat_session_id,
+                user_id=user_id,
             )
             return
 
@@ -1199,7 +1208,7 @@ class DashboardService:
             and self.orchestration_engine is not None
             and self.project_service is not None
         ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id)
+            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id, user_id=user_id)
             return
 
         task_id: str | None = None
@@ -1304,6 +1313,7 @@ class DashboardService:
             task_ref=task_id,
             session_id=chat_session_id,
             metadata=msg_metadata,
+            user_id=user_id,
         )
 
     def init_orchestration(self, project_svc: Any) -> None:
@@ -1333,6 +1343,7 @@ class DashboardService:
         sender: str,
         session_id: str,
         chat_session_id: str = "general",
+        user_id: str | None = None,
     ) -> None:
         """Route a full_task to Prime's orchestration engine instead of direct LLM."""
         # Acknowledge in chat immediately
@@ -1345,6 +1356,7 @@ class DashboardService:
             targets=[sender],
             msg_type="direct",
             session_id=chat_session_id,
+            user_id=user_id,
         )
 
         # Update Prime status
@@ -1375,6 +1387,7 @@ class DashboardService:
                 targets=[sender],
                 msg_type="direct",
                 session_id=chat_session_id,
+                user_id=user_id,
             )
             self.update_being("prime", {"status": "online"})
 
