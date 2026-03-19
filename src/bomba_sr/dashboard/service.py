@@ -848,18 +848,24 @@ class DashboardService:
     # Chat sessions
     # ------------------------------------------------------------------
 
-    def list_sessions(self) -> list[dict]:
-        rows = self.db.execute(
-            "SELECT * FROM mc_chat_sessions ORDER BY updated_at DESC"
-        ).fetchall()
+    def list_sessions(self, user_id: str | None = None) -> list[dict]:
+        if user_id:
+            rows = self.db.execute(
+                "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
+                (user_id,),
+            ).fetchall()
+        else:
+            rows = self.db.execute(
+                "SELECT * FROM mc_chat_sessions ORDER BY updated_at DESC"
+            ).fetchall()
         return [dict(r) for r in rows]
 
-    def create_session(self, name: str) -> dict:
+    def create_session(self, name: str, user_id: str | None = None) -> dict:
         sid = f"sess-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
-            "INSERT INTO mc_chat_sessions (id, name, created_at, updated_at) VALUES (?,?,?,?)",
-            (sid, name, now, now),
+            "INSERT INTO mc_chat_sessions (id, name, created_at, updated_at, user_id) VALUES (?,?,?,?,?)",
+            (sid, name, now, now, user_id),
         )
         session = dict(self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE id = ?", (sid,)

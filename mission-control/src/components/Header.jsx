@@ -1,6 +1,6 @@
 import { useBeings } from '../context/BeingsContext'
 
-export function Header({ activeTab, setActiveTab, tabs }) {
+export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
   const { beings } = useBeings()
   const onlineCount = beings.filter(b => b.status === 'online').length
   const busyCount = beings.filter(b => b.status === 'busy').length
@@ -11,10 +11,9 @@ export function Header({ activeTab, setActiveTab, tabs }) {
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded bg-accent-blue flex items-center justify-center text-xs font-bold tracking-wider">
-            MC
+            SAI
           </div>
           <span className="font-semibold text-sm tracking-wide">MISSION CONTROL</span>
-          <span className="text-text-muted text-xs font-mono ml-1">SIGIL</span>
         </div>
 
         {/* Center: Tabs */}
@@ -34,7 +33,7 @@ export function Header({ activeTab, setActiveTab, tabs }) {
           ))}
         </nav>
 
-        {/* Right: Status indicators */}
+        {/* Right: Status + User */}
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
@@ -46,9 +45,18 @@ export function Header({ activeTab, setActiveTab, tabs }) {
               <span className="text-text-secondary">{busyCount} busy</span>
             </div>
           )}
-          <div className="text-text-muted font-mono">
-            {new Date().toLocaleTimeString('en-US', { hour12: false })}
-          </div>
+          {user && (
+            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border">
+              <span className="text-text-secondary font-medium">{user.name}</span>
+              <button
+                onClick={onLogout}
+                className="text-text-muted hover:text-accent-red transition-colors"
+                title="Sign out"
+              >
+                Exit
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -10,6 +10,7 @@ import sys
 import hashlib
 import secrets
 import uuid
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -60,11 +61,23 @@ _MC_USERS: dict[str, dict] = {
         "role": "admin",
         "password_hash": hashlib.sha256(b"sigil2026").hexdigest(),
     },
-    "sai@sigil.ai": {
-        "id": "user-sai",
-        "name": "Sai",
+    "neel@acti.ai": {
+        "id": "user-neel",
+        "name": "Neel",
+        "role": "admin",
+        "password_hash": hashlib.sha256(b"neel2026").hexdigest(),
+    },
+    "nadav@acti.ai": {
+        "id": "user-nadav",
+        "name": "Nadav",
         "role": "operator",
-        "password_hash": hashlib.sha256(b"sai2026").hexdigest(),
+        "password_hash": hashlib.sha256(b"nadav2026").hexdigest(),
+    },
+    "sean@acti.ai": {
+        "id": "user-sean",
+        "name": "Sean",
+        "role": "admin",
+        "password_hash": hashlib.sha256(b"sean2026").hexdigest(),
     },
 }
 
@@ -114,6 +127,7 @@ from bomba_sr.subagents.protocol import SubAgentTask
 from bomba_sr.subagents.worker import SubAgentWorkerFactory
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
+MC_DIST_DIR = Path(__file__).resolve().parent.parent / "mission-control" / "dist"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _load_openclaw_runtime_defaults(PROJECT_ROOT)
 PRIME_WORKSPACE = PROJECT_ROOT / "workspaces" / "prime"
@@ -368,12 +382,43 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
-            # ── Dashboard redirect (frontend served by Vite at :5173) ──
-            if parsed.path == "/dashboard" or parsed.path.startswith("/dashboard/"):
+            # ── Dashboard: serve built frontend from mission-control/dist ──
+            if parsed.path == "/" or parsed.path == "/dashboard" or parsed.path.startswith("/dashboard/"):
+                if MC_DIST_DIR.is_dir():
+                    rel = parsed.path.lstrip("/").removeprefix("dashboard").lstrip("/") or "index.html"
+                    fpath = MC_DIST_DIR / rel
+                    if not fpath.is_file():
+                        fpath = MC_DIST_DIR / "index.html"  # SPA fallback
+                    if fpath.is_file():
+                        suffix = fpath.suffix.lower()
+                        ctype = MIME_TYPES.get(suffix, "application/octet-stream")
+                        data = fpath.read_bytes()
+                        self.send_response(200)
+                        self.send_header("Content-Type", ctype)
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Access-Control-Allow-Origin", "*")
+                        self.end_headers()
+                        self.wfile.write(data)
+                        return
+                # Fallback to Vite dev server if dist not built
                 self.send_response(302)
                 self.send_header("Location", "http://127.0.0.1:5173/")
                 self.end_headers()
                 return
+            # ── Static assets (JS/CSS) from dist ──
+            if parsed.path.startswith("/assets/") and MC_DIST_DIR.is_dir():
+                fpath = MC_DIST_DIR / parsed.path.lstrip("/")
+                if fpath.is_file():
+                    suffix = fpath.suffix.lower()
+                    ctype = MIME_TYPES.get(suffix, "application/octet-stream")
+                    data = fpath.read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
             # ── Deliverables static files ──
             if parsed.path.startswith("/deliverables/"):
                 self._serve_deliverable(parsed.path)
@@ -1508,7 +1553,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
-                    sessions = dashboard_svc.list_sessions()
+                    _uid = query.get("user_id", [None])[0]
+                    sessions = dashboard_svc.list_sessions(user_id=_uid)
                     self._write_cors(200, {"sessions": sessions})
                     return
 
@@ -1658,24 +1704,61 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"dream_cycle": result})
                     return
 
-                # --- Auth ---
+                # --- Auth: Login ---
                 if path == "/api/mc/auth/login":
                     _email = (body.get("email") or "").strip().lower()
                     _password = body.get("password") or ""
-                    _user = _MC_USERS.get(_email)
-                    if not _user:
-                        self._write_cors(401, {"error": "Invalid credentials"})
+                    if not _email or not _password:
+                        self._write_cors(400, {"error": "Email and password required"})
                         return
                     _hash = hashlib.sha256(_password.encode()).hexdigest()
-                    if _hash != _user["password_hash"]:
+                    _row = dashboard_svc.db.execute(
+                        "SELECT * FROM mc_users WHERE email = ?", (_email,)
+                    ).fetchone()
+                    if not _row or dict(_row).get("password_hash") != _hash:
                         self._write_cors(401, {"error": "Invalid credentials"})
                         return
+                    _user = dict(_row)
                     _token = secrets.token_urlsafe(32)
                     self._write_cors(200, {
                         "user_id": _user["id"],
-                        "email": _email,
+                        "email": _user["email"],
                         "name": _user["name"],
-                        "role": _user["role"],
+                        "role": _user.get("role", "operator"),
+                        "token": _token,
+                    })
+                    return
+
+                # --- Auth: Register ---
+                if path == "/api/mc/auth/register":
+                    _email = (body.get("email") or "").strip().lower()
+                    _password = body.get("password") or ""
+                    _name = (body.get("name") or "").strip()
+                    if not _email or not _password or not _name:
+                        self._write_cors(400, {"error": "Name, email, and password required"})
+                        return
+                    if len(_password) < 6:
+                        self._write_cors(400, {"error": "Password must be at least 6 characters"})
+                        return
+                    _existing = dashboard_svc.db.execute(
+                        "SELECT id FROM mc_users WHERE email = ?", (_email,)
+                    ).fetchone()
+                    if _existing:
+                        self._write_cors(409, {"error": "Account already exists"})
+                        return
+                    _uid = f"user-{uuid.uuid4().hex[:8]}"
+                    _hash = hashlib.sha256(_password.encode()).hexdigest()
+                    _now = datetime.now(timezone.utc).isoformat()
+                    dashboard_svc.db.execute_commit(
+                        "INSERT INTO mc_users (id, email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
+                        (_uid, _email, _name, _hash, "operator", _now, _now),
+                    )
+                    _token = secrets.token_urlsafe(32)
+                    self._write_cors(201, {
+                        "user_id": _uid,
+                        "email": _email,
+                        "name": _name,
+                        "role": "operator",
                         "token": _token,
                     })
                     return
@@ -1683,7 +1766,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     name = body.get("name", "New Chat")
-                    session = dashboard_svc.create_session(name)
+                    _uid = body.get("user_id")
+                    session = dashboard_svc.create_session(name, user_id=_uid)
                     self._write_cors(201, {"session": session})
                     return
 

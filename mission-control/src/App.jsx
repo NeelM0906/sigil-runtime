@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useAuth } from './context/AuthContext'
 import { BeingsProvider } from './context/BeingsContext'
+import { LoginPage } from './components/LoginPage'
 import { Header } from './components/Header'
 import { BeingsRegistry } from './components/BeingsRegistry'
 import { BeingDetail } from './components/BeingDetail'
@@ -18,15 +20,15 @@ const TABS = [
   { id: 'teams', label: 'Agent Teams' },
 ]
 
-export default function App() {
+function Dashboard() {
+  const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
-  // For cross-linking: task detail opened from being detail
   const [crossLinkTask, setCrossLinkTask] = useState(null)
 
   return (
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
-        <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} user={user} onLogout={logout} />
         <main className="p-3 max-w-[1920px] mx-auto">
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -48,7 +50,7 @@ export default function App() {
           {activeTab === 'chat' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
-                <ChatWindow />
+                <ChatWindow userId={user?.id} />
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <OrchestrationTracker />
@@ -60,7 +62,6 @@ export default function App() {
           )}
         </main>
 
-        {/* Global Being Detail slide-out — available on all tabs */}
         <BeingDetail onOpenTask={(task) => {
           setCrossLinkTask(task)
           setActiveTab('tasks')
@@ -68,4 +69,12 @@ export default function App() {
       </div>
     </BeingsProvider>
   )
+}
+
+export default function App() {
+  const { user, loading } = useAuth()
+
+  if (loading) return <div className="min-h-screen bg-bg-primary" />
+  if (!user) return <LoginPage />
+  return <Dashboard />
 }

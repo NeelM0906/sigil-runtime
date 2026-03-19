@@ -507,7 +507,7 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 // ── Main Chat Window ─────────────────────────────────────────
 
-export function ChatWindow() {
+export function ChatWindow({ userId }) {
   const { beings, getBeingById, openBeingDetail } = useBeings()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -523,16 +523,19 @@ export function ChatWindow() {
 
   // Session state
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState('general')
+  const [activeSessionId, setActiveSessionId] = useState(null)
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Load sessions on mount
+  // Load sessions on mount (scoped to user)
   useEffect(() => {
-    chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
-  }, [])
+    chatApi.sessions(userId).then(({ sessions: s }) => {
+      setSessions(s)
+      if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
+    }).catch(() => {})
+  }, [userId])
 
   // Load messages from API
   const isInitialLoad = useRef(true)
@@ -584,7 +587,7 @@ export function ChatWindow() {
   // Session CRUD handlers
   const handleCreateSession = async (name) => {
     try {
-      const { session } = await chatApi.createSession(name)
+      const { session } = await chatApi.createSession(name, userId)
       setSessions(prev => [session, ...prev])
       setActiveSessionId(session.id)
     } catch (err) {
@@ -710,6 +713,7 @@ export function ChatWindow() {
         content,
         mode,
         session_id: activeSessionId,
+        user_id: userId,
       })
 
       // Replace temp message with the persisted one

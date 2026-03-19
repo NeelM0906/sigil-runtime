@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
-  const { login } = useAuth()
+  const { login, register } = useAuth()
+  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,31 +18,20 @@ export function LoginPage() {
       setError('Email and password are required')
       return
     }
+    if (mode === 'register' && !name.trim()) {
+      setError('Name is required')
+      return
+    }
 
     setLoading(true)
     try {
-      // POST to backend auth endpoint
-      const res = await fetch('/api/mc/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      })
-      const data = await res.json()
-
-      if (!res.ok || data.error) {
-        setError(data.error || 'Invalid credentials')
-        return
+      if (mode === 'login') {
+        await login(email.trim(), password)
+      } else {
+        await register(email.trim(), password, name.trim())
       }
-
-      login({
-        id: data.user_id,
-        email: data.email,
-        name: data.name,
-        role: data.role,
-        token: data.token,
-      })
-    } catch {
-      setError('Unable to connect to server')
+    } catch (err) {
+      setError(err.message || 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -58,14 +49,31 @@ export function LoginPage() {
         {/* Logo + Title */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-accent-blue/20 border border-accent-blue/30 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold text-accent-blue tracking-wider">MC</span>
+            <span className="text-2xl font-bold text-accent-blue tracking-wider">SAI</span>
           </div>
           <h1 className="text-xl font-semibold text-text-primary tracking-wide">MISSION CONTROL</h1>
           <p className="text-text-muted text-xs mt-1 font-mono">SIGIL RUNTIME</p>
         </div>
 
-        {/* Login card */}
+        {/* Login/Register card */}
         <form onSubmit={handleSubmit} className="bg-bg-secondary border border-border rounded-xl p-6 space-y-4">
+          {mode === 'register' && (
+            <div>
+              <label className="block text-[11px] font-medium text-text-secondary uppercase tracking-wider mb-1.5">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Your name"
+                autoComplete="name"
+                autoFocus
+                className="w-full px-3 py-2.5 rounded-lg bg-bg-primary border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/60 focus:ring-1 focus:ring-accent-blue/30 transition-colors"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-[11px] font-medium text-text-secondary uppercase tracking-wider mb-1.5">
               Email
@@ -76,7 +84,7 @@ export function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
-              autoFocus
+              autoFocus={mode === 'login'}
               className="w-full px-3 py-2.5 rounded-lg bg-bg-primary border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/60 focus:ring-1 focus:ring-accent-blue/30 transition-colors"
             />
           </div>
@@ -89,8 +97,8 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
+              placeholder="--------"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               className="w-full px-3 py-2.5 rounded-lg bg-bg-primary border border-border text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/60 focus:ring-1 focus:ring-accent-blue/30 transition-colors"
             />
           </div>
@@ -110,17 +118,26 @@ export function LoginPage() {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Signing in...
+                {mode === 'login' ? 'Signing in...' : 'Creating account...'}
               </span>
             ) : (
-              'Sign in'
+              mode === 'login' ? 'Sign in' : 'Create account'
             )}
           </button>
+
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
+              className="text-xs text-text-muted hover:text-accent-blue transition-colors"
+            >
+              {mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
+            </button>
+          </div>
         </form>
 
-        {/* Footer */}
         <p className="text-center text-text-muted text-[10px] mt-6 font-mono">
-          SIGIL RUNTIME v1.0
+          SAI RUNTIME v1.0
         </p>
       </div>
     </div>
