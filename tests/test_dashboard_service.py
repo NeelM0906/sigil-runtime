@@ -485,8 +485,7 @@ class TestOpenClawSync:
         svc.ensure_mc_project(project_svc)
         svc.sync_openclaw_once()
 
-        sessions = svc.list_sessions()
-        imported = next((s for s in sessions if s["id"] == session_id), None)
+        imported = svc.get_session(session_id)
         assert imported is not None
         assert imported["name"].startswith("Discord 1477568016697790486")
 
@@ -508,8 +507,8 @@ class TestOpenClawSync:
         assert "read" in prime["tools"]
 
         svc.sync_openclaw_once()
-        sessions_again = [s for s in svc.list_sessions() if s["id"] == session_id]
-        assert len(sessions_again) == 1
+        session_again = svc.get_session(session_id)
+        assert session_again is not None
 
     def test_being_detail_supports_external_workspace_paths(self, db, project_svc, monkeypatch, tmp_path):
         openclaw_root = tmp_path / "openclaw"

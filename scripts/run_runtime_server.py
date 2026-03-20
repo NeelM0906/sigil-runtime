@@ -1554,6 +1554,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     _uid = query.get("user_id", [None])[0]
+                    if not _uid:
+                        self._write_cors(400, {"error": "user_id query parameter is required"})
+                        return
                     sessions = dashboard_svc.list_sessions(user_id=_uid)
                     self._write_cors(200, {"sessions": sessions})
                     return

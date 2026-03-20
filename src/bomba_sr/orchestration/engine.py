@@ -1855,10 +1855,9 @@ class OrchestrationEngine:
         if not session_id or session_id == "general":
             return "General"
         try:
-            sessions = self.dashboard.list_sessions()
-            for s in sessions:
-                if s.get("id") == session_id:
-                    return s.get("name") or session_id
+            s = self.dashboard.get_session(session_id)
+            if s:
+                return s.get("name") or session_id
         except Exception:
             pass
         return session_id

@@ -848,17 +848,21 @@ class DashboardService:
     # Chat sessions
     # ------------------------------------------------------------------
 
-    def list_sessions(self, user_id: str | None = None) -> list[dict]:
-        if user_id:
-            rows = self.db.execute(
-                "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
-                (user_id,),
-            ).fetchall()
-        else:
-            rows = self.db.execute(
-                "SELECT * FROM mc_chat_sessions ORDER BY updated_at DESC"
-            ).fetchall()
+    def list_sessions(self, user_id: str) -> list[dict]:
+        if not user_id:
+            raise ValueError("user_id is required")
+        rows = self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
+            (user_id,),
+        ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_session(self, session_id: str) -> dict | None:
+        """Look up a single chat session by id."""
+        row = self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        return dict(row) if row else None
 
     def create_session(self, name: str, user_id: str | None = None) -> dict:
         sid = f"sess-{uuid.uuid4().hex[:8]}"
@@ -1020,9 +1024,11 @@ class DashboardService:
         msg_type: str = "broadcast",
         mode: str = "auto",
         task_ref: str | None = None,
-        session_id: str = "general",
+        session_id: str = "",
         metadata: dict | None = None,
     ) -> dict:
+        if not session_id:
+            session_id = f"sess-{uuid.uuid4().hex[:8]}"
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
@@ -1064,7 +1070,7 @@ class DashboardService:
         )
         return cur.rowcount > 0
 
-    def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "general") -> None:
+    def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "") -> None:
         """Route a message to a being via LLM in a background thread."""
         t = threading.Thread(
             target=self._route_to_being_sync,
@@ -1131,7 +1137,7 @@ class DashboardService:
             f"User follow-up: {content}"
         )
 
-    def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "general") -> None:
+    def _route_to_being_sync(self, being_id: str, content: str, sender: str, chat_session_id: str = "") -> None:
         """Call bridge.handle_turn for a being and store the response.
 
         Identity is loaded automatically by the bridge via SoulConfig from
@@ -1332,7 +1338,7 @@ class DashboardService:
         content: str,
         sender: str,
         session_id: str,
-        chat_session_id: str = "general",
+        chat_session_id: str = "",
     ) -> None:
         """Route a full_task to Prime's orchestration engine instead of direct LLM."""
         # Acknowledge in chat immediately
@@ -2675,7 +2681,7 @@ class DashboardService:
 
     @staticmethod
     def _runtime_chat_session_id(being_id: str, chat_session_id: str) -> str:
-        cleaned = re.sub(r"[^a-zA-Z0-9_.-]+", "-", chat_session_id).strip("-") or "general"
+        cleaned = re.sub(r"[^a-zA-Z0-9_.-]+", "-", chat_session_id).strip("-") or f"sess-{uuid.uuid4().hex[:8]}"
         return f"mc-chat-{cleaned}-{being_id}"
 
     @staticmethod
