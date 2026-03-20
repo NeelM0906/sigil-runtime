@@ -652,7 +652,7 @@ export function ChatWindow({ userId }) {
         if (activeSessionRef.current === data.session_id) setActiveSessionId('general')
       } else {
         // Refresh sessions list on create/update
-        chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
+        chatApi.sessions(userId).then(({ sessions: s }) => setSessions(s)).catch(() => {})
       }
     },
   })

@@ -10,7 +10,7 @@ import sys
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -255,9 +255,28 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
             self.end_headers()
             self.wfile.write(encoded)
+
+        def _get_user_from_token(self) -> dict | None:
+            """Extract and validate Bearer token, return {user_id, tenant_id} or None."""
+            auth = self.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                return None
+            token = auth[7:]
+            row = dashboard_svc.db.execute(
+                "SELECT s.user_id, s.expires_at, u.tenant_id "
+                "FROM mc_sessions_auth s "
+                "JOIN mc_users u ON u.id = s.user_id "
+                "WHERE s.token = ?",
+                (token,),
+            ).fetchone()
+            if not row:
+                return None
+            if row["expires_at"] < datetime.now(timezone.utc).isoformat():
+                return None
+            return {"user_id": row["user_id"], "tenant_id": row["tenant_id"]}
 
         def _serve_static(self, rel_path: str) -> None:
             if ".." in rel_path or "\\" in rel_path:
@@ -301,7 +320,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
             self.send_header("Content-Length", "0")
             self.end_headers()
 
@@ -1553,21 +1572,26 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
-                    _uid = query.get("user_id", [None])[0]
-                    if not _uid:
-                        self._write_cors(400, {"error": "user_id query parameter is required"})
+                    _auth = self._get_user_from_token()
+                    if not _auth:
+                        self._write_cors(401, {"error": "Unauthorized"})
                         return
-                    sessions = dashboard_svc.list_sessions(user_id=_uid)
+                    sessions = dashboard_svc.list_sessions(user_id=_auth["user_id"])
                     self._write_cors(200, {"sessions": sessions})
                     return
 
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
+                    _auth = self._get_user_from_token()
+                    if not _auth:
+                        self._write_cors(401, {"error": "Valid auth token required"})
+                        return
                     msgs = dashboard_svc.list_messages(
                         sender=query.get("sender", [None])[0],
                         target=query.get("target", [None])[0],
                         search=query.get("search", [None])[0],
                         session_id=query.get("session_id", [None])[0],
+                        user_id=_auth["user_id"],
                         limit=int(query.get("limit", ["500"])[0]),
                         offset=int(query.get("offset", ["0"])[0]),
                     )
@@ -1723,11 +1747,18 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         return
                     _user = dict(_row)
                     _token = secrets.token_urlsafe(32)
+                    _now_ts = datetime.now(timezone.utc).isoformat()
+                    _expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                    dashboard_svc.db.execute_commit(
+                        "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+                        (_token, _user["id"], _now_ts, _expires),
+                    )
                     self._write_cors(200, {
                         "user_id": _user["id"],
                         "email": _user["email"],
                         "name": _user["name"],
                         "role": _user.get("role", "operator"),
+                        "tenant_id": _user.get("tenant_id", "tenant-local"),
                         "token": _token,
                     })
                     return
@@ -1750,18 +1781,25 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         self._write_cors(409, {"error": "Account already exists"})
                         return
                     _uid = f"user-{uuid.uuid4().hex[:8]}"
+                    _tenant_id = f"tenant-{uuid.uuid4().hex[:8]}"
                     _hash = hashlib.sha256(_password.encode()).hexdigest()
                     _now = datetime.now(timezone.utc).isoformat()
                     dashboard_svc.db.execute_commit(
-                        "INSERT INTO mc_users (id, email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-                        (_uid, _email, _name, _hash, "operator", _now, _now),
+                        "INSERT INTO mc_users (id, email, name, password_hash, role, tenant_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                        (_uid, _email, _name, _hash, "operator", _tenant_id, _now, _now),
                     )
                     _token = secrets.token_urlsafe(32)
+                    _expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                    dashboard_svc.db.execute_commit(
+                        "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+                        (_token, _uid, _now, _expires),
+                    )
                     self._write_cors(201, {
                         "user_id": _uid,
                         "email": _email,
                         "name": _name,
                         "role": "operator",
+                        "tenant_id": _tenant_id,
                         "token": _token,
                     })
                     return

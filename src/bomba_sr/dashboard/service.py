@@ -325,6 +325,7 @@ class DashboardService:
               password_hash TEXT NOT NULL,
               role TEXT NOT NULL DEFAULT 'operator',
               avatar TEXT,
+              tenant_id TEXT,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL
             );
@@ -380,17 +381,27 @@ class DashboardService:
         self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
+        # Migration: add tenant_id to mc_users
+        try:
+            self.db.execute("ALTER TABLE mc_users ADD COLUMN tenant_id TEXT")
+            self.db.commit()
+        except Exception:
+            pass  # column already exists
+        self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-admin' WHERE id = 'user-admin' AND tenant_id IS NULL")
+        self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-sai' WHERE id = 'user-sai' AND tenant_id IS NULL")
+        self.db.commit()
+
         # Seed default users if table is empty
         count = self.db.execute("SELECT COUNT(*) as c FROM mc_users").fetchone()["c"]
         if count == 0:
             now = self._now()
-            for email, name, pwd, role, uid in [
-                ("admin@sigil.ai", "Admin", "sigil2026", "admin", "user-admin"),
-                ("sai@sigil.ai", "Sai", "sai2026", "operator", "user-sai"),
+            for email, name, pwd, role, uid, tid in [
+                ("admin@sigil.ai", "Admin", "sigil2026", "admin", "user-admin", "tenant-admin"),
+                ("sai@sigil.ai", "Sai", "sai2026", "operator", "user-sai", "tenant-sai"),
             ]:
                 self.db.execute_commit(
-                    "INSERT INTO mc_users (id,email,name,password_hash,role,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
-                    (uid, email, name, hashlib.sha256(pwd.encode()).hexdigest(), role, now, now),
+                    "INSERT INTO mc_users (id,email,name,password_hash,role,tenant_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                    (uid, email, name, hashlib.sha256(pwd.encode()).hexdigest(), role, tid, now, now),
                 )
                 # Create a General session for each seeded user
                 self.db.execute_commit(
@@ -994,6 +1005,7 @@ class DashboardService:
         target: str | None = None,
         search: str | None = None,
         session_id: str | None = None,
+        user_id: str | None = None,
         limit: int = 500,
         offset: int = 0,
     ) -> list[dict]:
@@ -1002,6 +1014,9 @@ class DashboardService:
         if session_id:
             sql += " AND session_id = ?"
             params.append(session_id)
+        if user_id:
+            sql += " AND session_id IN (SELECT id FROM mc_chat_sessions WHERE user_id = ?)"
+            params.append(user_id)
         if sender:
             sql += " AND sender = ?"
             params.append(sender)
