@@ -94,6 +94,13 @@ TOOL_GROUPS_EXT: dict[str, set[str]] = {
     },
     "group:knowledge": {"update_knowledge"},
     "group:team_context": {"update_team_context"},
+    "group:browser": {
+        "browser_open",
+        "browser_screenshot",
+        "browser_click",
+        "browser_fill",
+        "browser_extract",
+    },
 }
 
 
@@ -123,6 +130,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:fs",            # read, write, edit, apply_patch, glob, grep
         "group:memory",        # memory_search, memory_get, memory_store
         "group:web",           # web_search, web_fetch
+        "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:runtime",       # exec, process, compact_context, switch_model, etc.
         "group:codeintel",     # code_search + serena symbol tools
@@ -137,6 +145,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     "research": frozenset(_expand_groups(
         "group:memory",        # memory_search, memory_get, memory_store
         "group:web",           # web_search, web_fetch
+        "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:fs",            # read, write, edit, glob, grep (for reports)
         "group:knowledge",     # update_knowledge

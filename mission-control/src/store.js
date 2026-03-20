@@ -1,6 +1,6 @@
 // ============================================================
 // Mission Control Data Store
-// Static constants only — all data now lives in BOMBA SR runtime.
+// Static constants only — all data now lives in SAI runtime.
 // ============================================================
 
 export const TASK_STATUSES = ['backlog', 'in_progress', 'in_review', 'done'];

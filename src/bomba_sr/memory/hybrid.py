@@ -659,16 +659,21 @@ class HybridMemoryStore:
         self.db.commit()
         return next_turn
 
-    def get_recent_turn_records(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, Any]]:
+    def get_recent_turn_records(self, tenant_id: str, session_id: str, limit: int = 5, user_id: str | None = None) -> list[dict[str, Any]]:
+        where = "WHERE tenant_id = ? AND session_id = ?"
+        params: list[Any] = [tenant_id, session_id]
+        if user_id is not None:
+            where += " AND user_id = ?"
+            params.append(user_id)
         rows = self.db.execute(
-            """
+            f"""
             SELECT turn_number, turn_id, user_message, assistant_message, created_at
             FROM conversation_turns
-            WHERE tenant_id = ? AND session_id = ?
+            {where}
             ORDER BY turn_number DESC
             LIMIT ?
             """,
-            (tenant_id, session_id, max(1, limit)),
+            (*params, max(1, limit)),
         ).fetchall()
         ordered = list(reversed(rows))
         return [
@@ -682,9 +687,9 @@ class HybridMemoryStore:
             for row in ordered
         ]
 
-    def get_recent_turns(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, str]]:
+    def get_recent_turns(self, tenant_id: str, session_id: str, limit: int = 5, user_id: str | None = None) -> list[dict[str, str]]:
         out: list[dict[str, str]] = []
-        for row in self.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=limit):
+        for row in self.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=limit, user_id=user_id):
             out.append({"role": "user", "content": row["user_message"]})
             out.append({"role": "assistant", "content": row["assistant_message"]})
         return out
@@ -696,6 +701,7 @@ class HybridMemoryStore:
         covers_through_turn: int,
         recent_window: int = 5,
         limit: int = 200,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         latest = self.db.execute(
             """
@@ -710,18 +716,22 @@ class HybridMemoryStore:
         if summary_cutoff <= covers_through_turn:
             return []
 
+        where = "WHERE tenant_id = ? AND session_id = ?"
+        params: list[Any] = [tenant_id, session_id]
+        if user_id is not None:
+            where += " AND user_id = ?"
+            params.append(user_id)
         rows = self.db.execute(
-            """
+            f"""
             SELECT turn_number, user_message, assistant_message
             FROM conversation_turns
-            WHERE tenant_id = ? AND session_id = ?
+            {where}
               AND turn_number > ? AND turn_number <= ?
             ORDER BY turn_number ASC
             LIMIT ?
             """,
             (
-                tenant_id,
-                session_id,
+                *params,
                 int(covers_through_turn),
                 summary_cutoff,
                 max(1, limit),

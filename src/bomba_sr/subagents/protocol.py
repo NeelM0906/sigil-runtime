@@ -208,8 +208,8 @@ class SubAgentProtocol:
         except sqlite3.IntegrityError:
             # Idempotent replay: return existing run.
             row = self.db.execute(
-                "SELECT run_id FROM subagent_runs WHERE parent_turn_id = ? AND idempotency_key = ?",
-                (parent_turn_id, task.idempotency_key),
+                "SELECT run_id FROM subagent_runs WHERE tenant_id = ? AND parent_turn_id = ? AND idempotency_key = ?",
+                (task.tenant_id, parent_turn_id, task.idempotency_key),
             ).fetchone()
             if row is None:
                 raise
