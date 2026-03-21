@@ -111,6 +111,25 @@ def create_app() -> FastAPI:
     def health():
         return {"status": "ok"}
 
+    # ── Serve mission-control frontend (SPA with fallback) ───────────
+    MC_DIST = Path(__file__).resolve().parent.parent.parent.parent / "mission-control" / "dist"
+    if MC_DIST.is_dir():
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+
+        # Serve /assets/* directly
+        assets_dir = MC_DIST / "assets"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+        # SPA fallback: any non-API, non-asset path serves index.html
+        @app.get("/{full_path:path}")
+        def spa_fallback(full_path: str):
+            file_path = MC_DIST / full_path
+            if full_path and file_path.is_file() and ".." not in full_path:
+                return FileResponse(str(file_path))
+            return FileResponse(str(MC_DIST / "index.html"))
+
     return app
 
 
