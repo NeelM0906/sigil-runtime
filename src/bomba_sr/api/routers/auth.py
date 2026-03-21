@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from bomba_sr.api.deps import get_current_user, get_dashboard_svc
@@ -198,10 +198,15 @@ def update_me(
 
 
 @router.post("/logout")
-def logout(auth: dict = Depends(get_current_user), dashboard_svc=Depends(get_dashboard_svc)):
-    # Delete the current session token
+def logout(
+    request: Request,
+    auth: dict = Depends(get_current_user),
+    dashboard_svc=Depends(get_dashboard_svc),
+):
+    # Delete the specific token (not all user sessions)
+    raw_token = request.headers.get("Authorization", "")[7:]
     dashboard_svc.db.execute_commit(
-        "DELETE FROM mc_sessions_auth WHERE user_id = ?", (auth["user_id"],)
+        "DELETE FROM mc_sessions_auth WHERE token = ?", (raw_token,)
     )
     return {"ok": True}
 

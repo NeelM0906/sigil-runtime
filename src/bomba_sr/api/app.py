@@ -1,4 +1,4 @@
-"""FastAPI application — Phase 1 skeleton alongside the legacy ThreadingHTTPServer."""
+"""FastAPI application — coexists with the legacy ThreadingHTTPServer."""
 from __future__ import annotations
 
 import logging
@@ -10,36 +10,12 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from bomba_sr.api.routers import auth as auth_router
-
 logger = logging.getLogger(__name__)
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
-
-def _load_dotenv(path: Path, *, override: bool = True) -> None:
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        raw = line.strip()
-        if not raw or raw.startswith("#"):
-            continue
-        if raw.startswith("export "):
-            raw = raw[len("export "):].strip()
-        if "=" not in raw:
-            continue
-        key, value = raw.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip("'").strip('"')
-        if key and (override or key not in os.environ or not os.environ.get(key)):
-            os.environ[key] = value
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize bridge, dashboard_svc, project_svc on startup."""
-    _load_dotenv(PROJECT_ROOT / ".env")
-
     from bomba_sr.runtime.bridge import RuntimeBridge
 
     bridge = RuntimeBridge()
@@ -84,18 +60,16 @@ async def lifespan(app: FastAPI):
 
     yield  # app is running
 
-    # Shutdown — nothing to clean up yet
-
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Sigil Runtime API", lifespan=lifespan)
+    app = FastAPI(title="Bomba SR", version="0.1.0", lifespan=lifespan)
 
     # CORS — same env var as the legacy server
     origins = [
         o.strip()
         for o in os.getenv(
             "BOMBA_CORS_ALLOWED_ORIGINS",
-            "http://127.0.0.1:8787,http://localhost:8787,http://localhost:5173,http://127.0.0.1:5173",
+            "http://localhost:5173,http://127.0.0.1:5173",
         ).split(",")
         if o.strip()
     ]
@@ -108,10 +82,15 @@ def create_app() -> FastAPI:
     )
 
     # Routers
-    app.include_router(auth_router.router)
+    from bomba_sr.api.routers import auth, chat
+    app.include_router(auth.router)
+    app.include_router(chat.router)
 
     @app.get("/health")
-    async def health():
+    def health():
         return {"status": "ok"}
 
     return app
+
+
+app = create_app()

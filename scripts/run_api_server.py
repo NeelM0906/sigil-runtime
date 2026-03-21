@@ -1,47 +1,42 @@
 #!/usr/bin/env python3
-"""Run the FastAPI server (Phase 1 — coexists with the legacy ThreadingHTTPServer)."""
+"""FastAPI server for Bomba SR — runs alongside or instead of the legacy server."""
 from __future__ import annotations
 
 import argparse
 import os
-import sys
 from pathlib import Path
 
 # Load .env before any bomba_sr imports
-def _load_dotenv_early(path: Path, *, override: bool = True) -> None:
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
+env_path = Path(__file__).resolve().parent.parent / ".env"
+if env_path.exists():
+    for line in env_path.read_text(encoding="utf-8").splitlines():
         raw = line.strip()
         if not raw or raw.startswith("#"):
             continue
         if raw.startswith("export "):
-            raw = raw[len("export "):].strip()
-        if "=" not in raw:
-            continue
-        key, value = raw.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip("'").strip('"')
-        if key and (override or key not in os.environ or not os.environ.get(key)):
-            os.environ[key] = value
-
-_load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
-
-import uvicorn
-
-from bomba_sr.api.app import create_app
+            raw = raw[7:].strip()
+        if "=" in raw:
+            k, v = raw.split("=", 1)
+            k, v = k.strip(), v.strip().strip("'\"")
+            if k:
+                os.environ.setdefault(k, v)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Run Sigil Runtime FastAPI server")
+def main():
+    parser = argparse.ArgumentParser(description="Run Bomba SR FastAPI server")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8788)
+    parser.add_argument("--port", type=int, default=8787)
     args = parser.parse_args()
 
-    app = create_app()
-    uvicorn.run(app, host=args.host, port=args.port)
-    return 0
+    import uvicorn
+    uvicorn.run(
+        "bomba_sr.api.app:app",
+        host=args.host,
+        port=args.port,
+        reload=False,
+        log_level="info",
+    )
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
