@@ -9,6 +9,7 @@ import os
 import sys
 import hashlib
 import secrets
+import time
 
 import bcrypt
 import uuid
@@ -83,6 +84,36 @@ _MC_USERS: dict[str, dict] = {
         "password_hash": "$2b$12$//rJilsKeJkLud41fIPdiO7vETBHSMZDY/guF3XJN4AJKlkez4T8S",
     },
 }
+
+# ── Rate limiting (in-memory) ────────────────────────────────────────
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+_USER_REQUEST_COUNTS: dict[str, list[float]] = {}
+
+_LOGIN_RATE_WINDOW = 60.0
+_LOGIN_RATE_MAX = 5
+_USER_RATE_WINDOW = 60.0
+_USER_RATE_MAX = 120
+
+
+def _check_login_rate(email: str) -> bool:
+    """Return True if login rate limit exceeded for this email."""
+    now = time.time()
+    attempts = [t for t in _LOGIN_ATTEMPTS.get(email, []) if now - t < _LOGIN_RATE_WINDOW]
+    _LOGIN_ATTEMPTS[email] = attempts
+    return len(attempts) >= _LOGIN_RATE_MAX
+
+
+def _record_login_failure(email: str) -> None:
+    _LOGIN_ATTEMPTS.setdefault(email, []).append(time.time())
+
+
+def _check_user_write_rate(user_id: str) -> bool:
+    """Return True if write rate limit exceeded for this user."""
+    now = time.time()
+    reqs = [t for t in _USER_REQUEST_COUNTS.get(user_id, []) if now - t < _USER_RATE_WINDOW]
+    reqs.append(now)
+    _USER_REQUEST_COUNTS[user_id] = reqs
+    return len(reqs) > _USER_RATE_MAX
 
 
 def _load_openclaw_runtime_defaults(project_root: Path) -> None:
@@ -1736,6 +1767,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 _auth = self._require_auth()
                 if not _auth:
                     return
+                if _check_user_write_rate(_auth["user_id"]):
+                    self._write_cors(429, {"error": "Rate limit exceeded"})
+                    return
             else:
                 _auth = None
 
@@ -1764,7 +1798,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     result = dashboard_svc.orchestration_engine.start(
                         goal=body["goal"],
                         requester_session_id=body.get("session_id", "mc-chat-prime"),
-                        sender=body.get("sender", "user"),
+                        sender=_auth["user_id"],
                         tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(201, {"orchestration": result})
@@ -1790,21 +1824,27 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     if not _email or not _password:
                         self._write_cors(400, {"error": "Email and password required"})
                         return
+                    if _check_login_rate(_email):
+                        self._write_cors(429, {"error": "Too many login attempts. Try again later."})
+                        return
                     _row = dashboard_svc.db.execute(
                         "SELECT * FROM mc_users WHERE email = ?", (_email,)
                     ).fetchone()
                     if not _row:
+                        _record_login_failure(_email)
                         self._write_cors(401, {"error": "Invalid credentials"})
                         return
                     _user = dict(_row)
                     _stored_hash = _user.get("password_hash", "")
                     if _stored_hash.startswith("$2b$"):
                         if not bcrypt.checkpw(_password.encode(), _stored_hash.encode()):
+                            _record_login_failure(_email)
                             self._write_cors(401, {"error": "Invalid credentials"})
                             return
                     else:
                         # Legacy SHA-256 — verify then upgrade to bcrypt
                         if hashlib.sha256(_password.encode()).hexdigest() != _stored_hash:
+                            _record_login_failure(_email)
                             self._write_cors(401, {"error": "Invalid credentials"})
                             return
                         _new_hash = bcrypt.hashpw(_password.encode(), bcrypt.gensalt(rounds=12)).decode()
@@ -2000,6 +2040,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
             _auth = self._require_auth()
             if not _auth:
                 return
+            if _check_user_write_rate(_auth["user_id"]):
+                self._write_cors(429, {"error": "Rate limit exceeded"})
+                return
 
             try:
                 # PATCH /api/mc/auth/me
@@ -2079,6 +2122,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
             _auth = self._require_auth()
             if not _auth:
+                return
+            if _check_user_write_rate(_auth["user_id"]):
+                self._write_cors(429, {"error": "Rate limit exceeded"})
                 return
 
             try:
