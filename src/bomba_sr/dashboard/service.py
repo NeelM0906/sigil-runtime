@@ -1047,9 +1047,16 @@ class DashboardService:
         if session_id:
             sql += " AND session_id = ?"
             params.append(session_id)
-        if user_id:
-            sql += " AND session_id IN (SELECT id FROM mc_chat_sessions WHERE user_id = ?)"
-            params.append(user_id)
+        if user_id and not session_id:
+            # Only apply user-scoped session filter when no explicit session_id.
+            # When session_id is given, the caller already knows which session.
+            # Also include messages where user is sender/target (covers sessions
+            # not yet in mc_chat_sessions, e.g. auto-generated session IDs).
+            sql += (
+                " AND (session_id IN (SELECT id FROM mc_chat_sessions WHERE user_id = ?)"
+                " OR sender = ? OR targets LIKE ?)"
+            )
+            params.extend([user_id, user_id, f"%{user_id}%"])
         if sender:
             sql += " AND sender = ?"
             params.append(sender)
