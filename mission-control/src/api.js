@@ -118,12 +118,11 @@ export const chatApi = {
     })
   },
   // Sessions
-  sessions(userId) {
-    const qs = userId ? `?user_id=${userId}` : ''
-    return request(`/api/mc/chat/sessions${qs}`)
+  sessions() {
+    return request('/api/mc/chat/sessions')
   },
-  createSession(name, userId) {
-    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name, user_id: userId }) })
+  createSession(name) {
+    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name }) })
   },
   renameSession(id, name) {
     return request(`/api/mc/chat/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) })

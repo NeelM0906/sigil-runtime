@@ -965,19 +965,31 @@ class DashboardService:
             "title": str(record.get("title") or filename),
         }
 
-    def list_deliverables(self, task_id: str) -> list[dict]:
+    def list_deliverables(self, task_id: str, tenant_id: str = MC_TENANT) -> list[dict]:
+        # Verify task belongs to tenant before returning deliverables
+        if tenant_id:
+            row = self.db.execute(
+                "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                (task_id, tenant_id),
+            ).fetchone()
+            if not row:
+                return []
         rows = self.db.execute(
             "SELECT * FROM mc_deliverables WHERE task_id = ? ORDER BY created_at DESC",
             (task_id,),
         ).fetchall()
         items = [dict(r) for r in rows]
-        items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id))
+        items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id, tenant_id=tenant_id))
         return sorted(items, key=self._output_sort_key, reverse=True)
 
-    def list_all_deliverables(self, limit: int = 50) -> list[dict]:
+    def list_all_deliverables(self, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
+        # Scope deliverables to tasks owned by the tenant
         rows = self.db.execute(
-            "SELECT * FROM mc_deliverables ORDER BY created_at DESC LIMIT ?",
-            (limit,),
+            "SELECT d.* FROM mc_deliverables d "
+            "JOIN project_tasks t ON t.task_id = d.task_id "
+            "WHERE t.tenant_id = ? "
+            "ORDER BY d.created_at DESC LIMIT ?",
+            (tenant_id, limit),
         ).fetchall()
         items = [dict(r) for r in rows]
         store = getattr(self, "_artifact_store", None)
@@ -985,7 +997,7 @@ class DashboardService:
             try:
                 items.extend(
                     self._artifact_output_row(r.to_dict())
-                    for r in store.list_recent_artifacts(MC_TENANT, limit=limit)
+                    for r in store.list_recent_artifacts(tenant_id, limit=limit)
                 )
             except Exception:
                 pass
@@ -1610,13 +1622,13 @@ class DashboardService:
         """Set the artifact store reference for dashboard artifact tracking."""
         self._artifact_store = store
 
-    def list_task_artifacts(self, task_id: str) -> list[dict]:
+    def list_task_artifacts(self, task_id: str, tenant_id: str = MC_TENANT) -> list[dict]:
         """List artifacts attached to a task."""
         store = getattr(self, "_artifact_store", None)
         if not store:
             return []
         try:
-            records = store.list_task_artifacts(MC_TENANT, task_id)
+            records = store.list_task_artifacts(tenant_id, task_id)
             return [r.to_dict() for r in records]
         except Exception:
             return []
@@ -1719,6 +1731,7 @@ class DashboardService:
     def list_tasks(
         self,
         project_service: Any,
+        tenant_id: str = MC_TENANT,
         assignee: str | None = None,
         priority: str | None = None,
         status: str | None = None,
@@ -1727,7 +1740,7 @@ class DashboardService:
         top_level_only: bool = False,
     ) -> list[dict]:
         tasks = project_service.list_tasks(
-            MC_TENANT, MC_PROJECT_ID, status=status,
+            tenant_id, MC_PROJECT_ID, status=status,
             top_level_only=top_level_only,
         )
         if priority:
@@ -1749,8 +1762,8 @@ class DashboardService:
             tasks = [t for t in tasks if t.get("created_at", "") <= to_date]
         return [self._normalize_task(t) for t in tasks]
 
-    def get_task(self, project_service: Any, task_id: str) -> dict:
-        task = project_service.get_task(MC_TENANT, task_id)
+    def get_task(self, project_service: Any, task_id: str, tenant_id: str = MC_TENANT) -> dict:
+        task = project_service.get_task(tenant_id, task_id)
         rows = self.db.execute(
             "SELECT being_id FROM mc_task_assignments WHERE task_id = ?",
             (task_id,),
@@ -1760,12 +1773,12 @@ class DashboardService:
         task["steps"] = self.get_task_steps(task_id)
         return self._normalize_task(task)
 
-    def clean_casual_tasks(self, project_service: Any) -> int:
+    def clean_casual_tasks(self, project_service: Any, tenant_id: str = MC_TENANT) -> int:
         """Delete auto-created tasks that were casual messages (not real tasks).
 
         Returns the number of tasks deleted.
         """
-        tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID)
+        tasks = project_service.list_tasks(tenant_id, MC_PROJECT_ID)
         deleted = 0
         for t in tasks:
             desc = t.get("description", "")
@@ -1776,7 +1789,7 @@ class DashboardService:
             # Check if the title looks like a casual message
             if _NOT_TASK_PATTERNS.match(title.rstrip("...")):
                 tid = t["task_id"]
-                self.delete_task(project_service, tid)
+                self.delete_task(project_service, tid, tenant_id=tenant_id)
                 deleted += 1
         return deleted
 
@@ -1821,9 +1834,10 @@ class DashboardService:
         assignees: list[str] | None = None,
         owner_agent_id: str | None = None,
         parent_task_id: str | None = None,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
         task = project_service.create_task(
-            tenant_id=MC_TENANT,
+            tenant_id=tenant_id,
             project_id=MC_PROJECT_ID,
             title=title,
             description=description,
@@ -1858,6 +1872,7 @@ class DashboardService:
         assignees: list[str] | None = None,
         title: str | None = None,
         description: str | None = None,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
         changes: dict[str, Any] = {}
         if status:
@@ -1867,7 +1882,7 @@ class DashboardService:
 
         # ProjectService.update_task only handles status/priority/owner
         task = project_service.update_task(
-            tenant_id=MC_TENANT,
+            tenant_id=tenant_id,
             task_id=task_id,
             status=status,
             priority=priority,
@@ -1889,12 +1904,12 @@ class DashboardService:
             sets.append("updated_at = ?")
             params.append(self._now())
             params.append(task_id)
-            params.append(MC_TENANT)
+            params.append(tenant_id)
             self.db.execute_commit(
                 f"UPDATE project_tasks SET {', '.join(sets)} WHERE task_id = ? AND tenant_id = ?",
                 params,
             )
-            task = project_service.get_task(MC_TENANT, task_id)
+            task = project_service.get_task(tenant_id, task_id)
 
         if assignees is not None:
             with self.db.transaction() as conn:
@@ -1917,15 +1932,15 @@ class DashboardService:
         self._emit_event("task_update", {"action": "updated", "task": normalized})
         return normalized
 
-    def delete_task(self, project_service: Any, task_id: str) -> bool:
+    def delete_task(self, project_service: Any, task_id: str, tenant_id: str = MC_TENANT) -> bool:
         try:
-            project_service.get_task(MC_TENANT, task_id)
+            project_service.get_task(tenant_id, task_id)
         except ValueError:
             return False
         with self.db.transaction() as conn:
             conn.execute(
                 "DELETE FROM project_tasks WHERE tenant_id = ? AND task_id = ?",
-                (MC_TENANT, task_id),
+                (tenant_id, task_id),
             )
             conn.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
         self._log_task_history(task_id, "deleted", {})
@@ -1965,23 +1980,23 @@ class DashboardService:
     # Orchestration — parent/child task views
     # ------------------------------------------------------------------
 
-    def get_task_children(self, task_id: str) -> list[str]:
+    def get_task_children(self, task_id: str, tenant_id: str = MC_TENANT) -> list[str]:
         """Return child task IDs that have this task as parent_task_id."""
         rows = self.db.execute(
             """SELECT task_id FROM project_tasks
                WHERE parent_task_id = ? AND tenant_id = ?
                ORDER BY created_at ASC""",
-            (task_id, MC_TENANT),
+            (task_id, tenant_id),
         ).fetchall()
         return [str(r["task_id"]) for r in rows]
 
-    def get_task_parent(self, task_id: str) -> str | None:
+    def get_task_parent(self, task_id: str, tenant_id: str = MC_TENANT) -> str | None:
         """Return the parent task ID if this task has one."""
         row = self.db.execute(
             """SELECT parent_task_id FROM project_tasks
                WHERE task_id = ? AND tenant_id = ?
                LIMIT 1""",
-            (task_id, MC_TENANT),
+            (task_id, tenant_id),
         ).fetchone()
         if row is None:
             return None
@@ -1992,16 +2007,17 @@ class DashboardService:
         self,
         project_service: Any,
         task_id: str,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
         """Get a task enriched with orchestration data (children, parent, orch log)."""
-        task = self.get_task(project_service, task_id)
+        task = self.get_task(project_service, task_id, tenant_id=tenant_id)
         # Add parent/child info
-        task["parent_task_id"] = self.get_task_parent(task_id)
-        child_ids = self.get_task_children(task_id)
+        task["parent_task_id"] = self.get_task_parent(task_id, tenant_id=tenant_id)
+        child_ids = self.get_task_children(task_id, tenant_id=tenant_id)
         task["children"] = []
         for cid in child_ids:
             try:
-                child = self.get_task(project_service, cid)
+                child = self.get_task(project_service, cid, tenant_id=tenant_id)
                 task["children"].append(child)
             except Exception:
                 task["children"].append({"id": cid, "status": "unknown"})
@@ -2109,12 +2125,14 @@ class DashboardService:
     # Sub-agents
     # ------------------------------------------------------------------
 
-    def list_subagent_runs(self) -> list[dict]:
-        """Query subagent_runs table if it exists."""
+    def list_subagent_runs(self, tenant_id: str = MC_TENANT) -> list[dict]:
+        """Query subagent_runs table if it exists, scoped to tenant."""
         try:
             rows = self.db.execute(
                 """SELECT * FROM subagent_runs
-                   ORDER BY created_at DESC LIMIT 50"""
+                   WHERE tenant_id = ?
+                   ORDER BY created_at DESC LIMIT 50""",
+                (tenant_id,),
             ).fetchall()
             return [dict(r) for r in rows]
         except Exception:

@@ -50,7 +50,7 @@ function Dashboard() {
           {activeTab === 'chat' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
-                <ChatWindow userId={user?.id} />
+                <ChatWindow />
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <OrchestrationTracker />

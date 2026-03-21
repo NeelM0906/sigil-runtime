@@ -391,6 +391,7 @@ class OrchestrationEngine:
         requester_session_id: str,
         sender: str = "user",
         chat_session_id: str = "general",
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Kick off an orchestrated task. Returns immediately with task info.
 
@@ -400,6 +401,9 @@ class OrchestrationEngine:
         orch_session = orchestration_session_id(task_id)
 
         # Create parent task on the board
+        _create_kwargs: dict[str, Any] = {}
+        if tenant_id:
+            _create_kwargs["tenant_id"] = tenant_id
         parent_task = self.dashboard.create_task(
             self.project_svc,
             title=goal[:120],
@@ -408,6 +412,7 @@ class OrchestrationEngine:
             priority="high",
             assignees=["prime"],
             owner_agent_id="prime",
+            **_create_kwargs,
         )
         actual_task_id = parent_task.get("id") or parent_task.get("task_id") or task_id
 

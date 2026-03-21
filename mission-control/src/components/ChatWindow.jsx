@@ -507,7 +507,7 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 // ── Main Chat Window ─────────────────────────────────────────
 
-export function ChatWindow({ userId }) {
+export function ChatWindow() {
   const { beings, getBeingById, openBeingDetail } = useBeings()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -531,11 +531,11 @@ export function ChatWindow({ userId }) {
 
   // Load sessions on mount (scoped to user)
   useEffect(() => {
-    chatApi.sessions(userId).then(({ sessions: s }) => {
+    chatApi.sessions().then(({ sessions: s }) => {
       setSessions(s)
       if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
     }).catch(() => {})
-  }, [userId])
+  }, [])
 
   // Load messages from API
   const isInitialLoad = useRef(true)
@@ -587,7 +587,7 @@ export function ChatWindow({ userId }) {
   // Session CRUD handlers
   const handleCreateSession = async (name) => {
     try {
-      const { session } = await chatApi.createSession(name, userId)
+      const { session } = await chatApi.createSession(name)
       setSessions(prev => [session, ...prev])
       setActiveSessionId(session.id)
     } catch (err) {
@@ -652,7 +652,7 @@ export function ChatWindow({ userId }) {
         if (activeSessionRef.current === data.session_id) setActiveSessionId('general')
       } else {
         // Refresh sessions list on create/update
-        chatApi.sessions(userId).then(({ sessions: s }) => setSessions(s)).catch(() => {})
+        chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
       }
     },
   })
@@ -708,12 +708,10 @@ export function ChatWindow({ userId }) {
     try {
       // POST returns the saved user message; LLM responses arrive via SSE
       const { message: saved } = await chatApi.send({
-        sender: 'user',
         targets: tempMsg.targets,
         content,
         mode,
         session_id: activeSessionId,
-        user_id: userId,
       })
 
       // Replace temp message with the persisted one

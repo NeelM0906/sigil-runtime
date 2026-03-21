@@ -1481,6 +1481,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     top_level_only = query.get("top_level_only", ["true"])[0].lower() != "false"
                     tasks = dashboard_svc.list_tasks(
                         project_svc,
+                        tenant_id=_auth["tenant_id"],
                         assignee=query.get("assignee", [None])[0],
                         priority=query.get("priority", [None])[0],
                         status=query.get("status", [None])[0],
@@ -1497,38 +1498,46 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/artifacts"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    artifacts = dashboard_svc.list_task_artifacts(tid)
+                    artifacts = dashboard_svc.list_task_artifacts(tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"artifacts": artifacts})
                     return
                 if path == "/api/mc/tasks/cleanup":
-                    deleted = dashboard_svc.clean_casual_tasks(project_svc)
+                    deleted = dashboard_svc.clean_casual_tasks(project_svc, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"deleted": deleted})
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/orchestration"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    task = dashboard_svc.get_task_with_orchestration(project_svc, tid)
+                    task = dashboard_svc.get_task_with_orchestration(project_svc, tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"task": task})
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/children"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    child_ids = dashboard_svc.get_task_children(tid)
+                    child_ids = dashboard_svc.get_task_children(tid, tenant_id=_auth["tenant_id"])
                     children = []
                     for cid in child_ids:
                         try:
-                            children.append(dashboard_svc.get_task(project_svc, cid))
+                            children.append(dashboard_svc.get_task(project_svc, cid, tenant_id=_auth["tenant_id"]))
                         except Exception:
                             children.append({"id": cid, "status": "unknown"})
                     self._write_cors(200, {"children": children, "parent_task_id": tid})
                     return
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    task = dashboard_svc.get_task(project_svc, tid)
+                    task = dashboard_svc.get_task(project_svc, tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"task": task})
                     return
 
                 # --- Orchestration ---
                 if path.startswith("/api/mc/orchestration/") and path.endswith("/status"):
                     oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    # Verify orchestration task belongs to this tenant
+                    _orch_task = dashboard_svc.db.execute(
+                        "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                        (oid, _auth["tenant_id"]),
+                    ).fetchone()
+                    if not _orch_task:
+                        self._write_cors(404, {"error": "orchestration not found"})
+                        return
                     status = dashboard_svc.get_orchestration_status(oid)
                     if status is None:
                         self._write_cors(404, {"error": "orchestration not found"})
@@ -1537,6 +1546,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     return
                 if path.startswith("/api/mc/orchestration/") and path.endswith("/log"):
                     oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    _orch_task = dashboard_svc.db.execute(
+                        "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                        (oid, _auth["tenant_id"]),
+                    ).fetchone()
+                    if not _orch_task:
+                        self._write_cors(404, {"error": "orchestration not found"})
+                        return
                     log_entries = dashboard_svc.get_orchestration_log(oid)
                     self._write_cors(200, {"log": log_entries})
                     return
@@ -1625,15 +1641,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 if path == "/api/mc/deliverables":
                     task_id = query.get("task_id", [None])[0]
                     if task_id:
-                        deliverables = dashboard_svc.list_deliverables(task_id)
+                        deliverables = dashboard_svc.list_deliverables(task_id, tenant_id=_auth["tenant_id"])
                     else:
-                        deliverables = dashboard_svc.list_all_deliverables()
+                        deliverables = dashboard_svc.list_all_deliverables(tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"deliverables": deliverables})
                     return
 
                 # --- Sub-agents ---
                 if path == "/api/mc/subagents":
-                    runs = dashboard_svc.list_subagent_runs()
+                    runs = dashboard_svc.list_subagent_runs(tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"runs": runs})
                     return
 
@@ -1735,6 +1751,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         assignees=body.get("assignees"),
                         owner_agent_id=body.get("owner_agent_id"),
                         parent_task_id=body.get("parent_task_id"),
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(201, {"task": task})
                     return
@@ -1748,12 +1765,16 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         goal=body["goal"],
                         requester_session_id=body.get("session_id", "mc-chat-prime"),
                         sender=body.get("sender", "user"),
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(201, {"orchestration": result})
                     return
 
                 # --- Dream Cycle ---
                 if path == "/api/mc/dream-cycle":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Admin role required"})
+                        return
                     being_id = body.get("being_id")
                     result = bridge.dream_cycle_run_once(
                         being_id=being_id,
@@ -2036,6 +2057,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         assignees=body.get("assignees"),
                         title=body.get("title"),
                         description=body.get("description"),
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(200, {"task": task})
                     return
@@ -2063,7 +2085,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # DELETE /api/mc/tasks/:id
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    ok = dashboard_svc.delete_task(project_svc, tid)
+                    ok = dashboard_svc.delete_task(project_svc, tid, tenant_id=_auth["tenant_id"])
                     if not ok:
                         self._write_cors(404, {"error": "task not found"})
                         return
