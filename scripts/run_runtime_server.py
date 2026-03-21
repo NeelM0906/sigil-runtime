@@ -1930,6 +1930,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         "INSERT INTO mc_users (id, email, name, password_hash, role, tenant_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
                         (_uid, _email, _name, _hash, "operator", _tenant_id, _now, _now),
                     )
+                    # Initialize tenant directory structure
+                    from bomba_sr.runtime.tenancy import TenantRegistry
+                    _registry = TenantRegistry(Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")))
+                    _registry.ensure_tenant(tenant_id=_tenant_id)
                     # Defensive: clear any stale tokens for this user
                     dashboard_svc.db.execute_commit(
                         "DELETE FROM mc_sessions_auth WHERE user_id = ?", (_uid,),

@@ -137,6 +137,14 @@ def register(body: RegisterRequest, dashboard_svc=Depends(get_dashboard_svc)):
         (uid, email, name, pw_hash, "operator", tenant_id, now, now),
     )
 
+    # Initialize tenant directory structure
+    import os
+    from pathlib import Path
+    from bomba_sr.runtime.tenancy import TenantRegistry
+    runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
+    registry = TenantRegistry(runtime_home)
+    registry.ensure_tenant(tenant_id=tenant_id)
+
     # Issue token
     dashboard_svc.db.execute_commit(
         "DELETE FROM mc_sessions_auth WHERE user_id = ?", (uid,)
