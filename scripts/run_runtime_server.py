@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# DEPRECATED: Use scripts/run_api_server.py (FastAPI + uvicorn) instead.
+# This legacy server is kept for backward compatibility during migration.
+# It will be removed in a future release.
 from __future__ import annotations
 
 import argparse

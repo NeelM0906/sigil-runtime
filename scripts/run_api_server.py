@@ -26,6 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run Bomba SR FastAPI server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument("--workers", type=int, default=1)
     args = parser.parse_args()
 
     import uvicorn
@@ -33,6 +34,7 @@ def main():
         "bomba_sr.api.app:app",
         host=args.host,
         port=args.port,
+        workers=args.workers,
         reload=False,
         log_level="info",
     )

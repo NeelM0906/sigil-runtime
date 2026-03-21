@@ -14,5 +14,11 @@ for automatic HTTPS via Let's Encrypt.
 Start the runtime on all interfaces (required for remote access):
 
 ```bash
-PYTHONPATH=src python scripts/run_runtime_server.py --host 0.0.0.0 --port 8787
+PYTHONPATH=src python scripts/run_api_server.py --host 0.0.0.0 --port 8787
+```
+
+For multi-process concurrency (recommended for production):
+
+```bash
+PYTHONPATH=src python scripts/run_api_server.py --host 0.0.0.0 --port 8787 --workers 4
 ```
