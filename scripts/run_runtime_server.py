@@ -1791,9 +1791,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                             "UPDATE mc_users SET password_hash = ? WHERE id = ?",
                             (_new_hash, _user["id"]),
                         )
+                    # Single-session: invalidate any existing tokens
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?", (_user["id"],),
+                    )
                     _token = secrets.token_urlsafe(32)
                     _now_ts = datetime.now(timezone.utc).isoformat()
-                    _expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                    _expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
                     dashboard_svc.db.execute_commit(
                         "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
                         (_token, _user["id"], _now_ts, _expires),
@@ -1833,8 +1837,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         "INSERT INTO mc_users (id, email, name, password_hash, role, tenant_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
                         (_uid, _email, _name, _hash, "operator", _tenant_id, _now, _now),
                     )
+                    # Defensive: clear any stale tokens for this user
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?", (_uid,),
+                    )
                     _token = secrets.token_urlsafe(32)
-                    _expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+                    _expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
                     dashboard_svc.db.execute_commit(
                         "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
                         (_token, _uid, _now, _expires),
@@ -2203,6 +2211,13 @@ def main() -> int:
         artifact_store = ArtifactStore(mc_db, artifacts_root)
         dashboard_svc.set_artifact_store(artifact_store)
         artifact_store.set_on_created(dashboard_svc.notify_artifact_created)
+        # Purge expired auth tokens on startup
+        _purged = mc_db.execute_commit(
+            "DELETE FROM mc_sessions_auth WHERE expires_at < ?",
+            (datetime.now(timezone.utc).isoformat(),),
+        ).rowcount
+        if _purged:
+            print(f"mission control: purged {_purged} expired auth token(s)")
         loaded = dashboard_svc.load_beings_from_configs()
         dashboard_svc.init_orchestration(project_svc)
         print(f"mission control: loaded {loaded} beings from configs")
