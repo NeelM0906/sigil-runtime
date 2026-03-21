@@ -17,17 +17,6 @@ def _memory_search_factory(memory: HybridMemoryStore):
     return run
 
 
-def _memory_get_factory(memory: HybridMemoryStore):
-    def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-        query = str(arguments.get("query") or "").strip()
-        if not query:
-            raise ValueError("query is required")
-        limit = int(arguments.get("limit") or 10)
-        return memory.recall(user_id=context.user_id, query=query, limit=limit)
-
-    return run
-
-
 def _memory_store_factory(memory: HybridMemoryStore):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         key = str(arguments.get("key") or "").strip()
@@ -74,22 +63,6 @@ def builtin_memory_tools(memory: HybridMemoryStore) -> list[ToolDefinition]:
             risk_level="low",
             action_type="read",
             execute=_memory_search_factory(memory),
-        ),
-        ToolDefinition(
-            name="memory_get",
-            description="Retrieve memory items relevant to a query.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer"},
-                },
-                "required": ["query"],
-                "additionalProperties": False,
-            },
-            risk_level="low",
-            action_type="read",
-            execute=_memory_get_factory(memory),
         ),
         ToolDefinition(
             name="memory_store",

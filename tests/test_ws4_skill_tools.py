@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.skills.eligibility import EligibilityEngine
 from bomba_sr.skills.loader import SkillLoader
 from bomba_sr.skills.registry import SkillRegistry
@@ -52,7 +51,7 @@ class SkillToolsTests(unittest.TestCase):
             executor = ToolExecutor(governance=governance, pipeline=pipeline)
             executor.register_many(builtin_skill_tools(loader, registry))
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-skill-tools"),
+                ToolPolicyContext(tenant_id="tenant-skill-tools"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

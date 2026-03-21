@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.llm.providers import ChatMessage, LLMResponse
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
 from bomba_sr.storage.db import RuntimeDB
@@ -59,7 +58,7 @@ class AgenticLoopBasicTests(unittest.TestCase):
             pipeline = PolicyPipeline(governance)
             executor = ToolExecutor(governance, pipeline)
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-loop"),
+                ToolPolicyContext(tenant_id="tenant-loop"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

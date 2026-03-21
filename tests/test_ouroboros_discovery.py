@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolDefinition, ToolExecutor
 from bomba_sr.tools.builtin_discovery import builtin_discovery_tools
@@ -81,7 +80,7 @@ class OuroborosDiscoveryTests(unittest.TestCase):
                 )
             )
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.MINIMAL, tenant_id="tenant-disc"),
+                ToolPolicyContext(tenant_id="tenant-disc"),
                 available_tools=executor.known_tool_names(),
             )
             schemas = executor.available_tool_schemas_with_overrides(

@@ -192,7 +192,6 @@ class RuntimeBridge:
             if parsed is not None:
                 command_policy = runtime.policy_pipeline.resolve(
                     ToolPolicyContext(
-                        profile=self.config.tool_profile,
                         tenant_id=request.tenant_id,
                         provider_name=self.provider.provider_name,
                     ),
@@ -828,7 +827,6 @@ class RuntimeBridge:
             )
             resolved_policy = runtime.policy_pipeline.resolve(
                 ToolPolicyContext(
-                    profile=self.config.tool_profile,
                     tenant_id=request.tenant_id,
                     provider_name=self.provider.provider_name,
                 ),
@@ -1232,7 +1230,6 @@ class RuntimeBridge:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         policy = runtime.policy_pipeline.resolve(
             ToolPolicyContext(
-                profile=self.config.tool_profile,
                 tenant_id=tenant_id,
                 provider_name=self.provider.provider_name,
             ),
@@ -2324,7 +2321,6 @@ class RuntimeBridge:
             try:
                 policy = runtime.policy_pipeline.resolve(
                     ToolPolicyContext(
-                        profile=self.config.tool_profile,
                         tenant_id=tenant_id,
                         provider_name=self.provider.provider_name,
                     ),

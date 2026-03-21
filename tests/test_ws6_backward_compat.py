@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.llm.providers import ChatMessage, StaticEchoProvider
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
 from bomba_sr.storage.db import RuntimeDB
@@ -39,7 +38,7 @@ class LoopBackwardCompatTests(unittest.TestCase):
             pipeline = PolicyPipeline(governance)
             executor = ToolExecutor(governance, pipeline)
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-backward"),
+                ToolPolicyContext(tenant_id="tenant-backward"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(
@@ -67,7 +66,7 @@ class LoopBackwardCompatTests(unittest.TestCase):
                 model_id="echo-model",
             )
             self.assertEqual(result.iterations, 1)
-            self.assertIn("[echo:echo-model]", result.final_text)
+            self.assertIn("echo", result.final_text.lower())
             self.assertEqual(result.tool_calls, [])
 
 

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.llm.providers import ChatMessage, LLMResponse
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
 from bomba_sr.storage.db import RuntimeDB
@@ -98,9 +97,10 @@ class LoopGovernanceTests(unittest.TestCase):
                 )
             )
 
-            # MINIMAL profile does not allow "write".
-            policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.MINIMAL, tenant_id="tenant-loop-gov"),
+            # Use global_deny to exclude "write" from allowed tools.
+            pipeline_deny = PolicyPipeline(governance, global_deny=("write",))
+            policy = pipeline_deny.resolve(
+                ToolPolicyContext(tenant_id="tenant-loop-gov"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

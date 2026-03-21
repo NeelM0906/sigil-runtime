@@ -88,7 +88,6 @@ class RuntimeConfig:
     plugin_paths: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_PLUGIN_PATHS")))
     plugin_allow: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_PLUGIN_ALLOW")))
     plugin_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_PLUGIN_DENY")))
-    tool_profile: str = os.getenv("BOMBA_TOOL_PROFILE", "full").lower()
     tool_allow: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_ALLOW")))
     tool_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_DENY")))
     max_loop_iterations: int = int(os.getenv("BOMBA_MAX_LOOP_ITERATIONS", "25"))

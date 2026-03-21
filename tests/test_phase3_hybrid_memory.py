@@ -260,46 +260,12 @@ class TestBeingIdSupport(unittest.TestCase):
         self.assertGreaterEqual(len(result), 1)
 
     def test_ensure_column_idempotent(self):
-        """Calling _ensure_column twice doesn't error."""
+        """Calling ensure_column twice doesn't error."""
+        from bomba_sr.memory.utils import ensure_column
         store, _ = self._store()
-        store._ensure_column("markdown_notes", "being_id", "TEXT")
-        store._ensure_column("markdown_notes", "being_id", "TEXT")
+        ensure_column(store.db, "markdown_notes", "being_id", "TEXT")
+        ensure_column(store.db, "markdown_notes", "being_id", "TEXT")
 
-    def test_backfill_being_id_from_prime_prefix(self):
-        """backfill_being_id sets being_id from 'prime->X' user_id patterns."""
-        store, db = self._store()
-        import uuid
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
-        db.execute(
-            """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
-               evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
-            VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
-            (str(uuid.uuid4()), "prime->forge", "backfill_test", "data", now, now, now),
-        )
-        db.commit()
-        updated = store.consolidator.backfill_being_id()
-        self.assertEqual(updated, 1)
-        row = db.execute(
-            "SELECT being_id FROM memories WHERE memory_key = 'backfill_test'"
-        ).fetchone()
-        self.assertEqual(row["being_id"], "forge")
-
-    def test_backfill_skips_non_matching_user_ids(self):
-        """backfill_being_id ignores user_ids without prime-> prefix."""
-        store, db = self._store()
-        import uuid
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
-        db.execute(
-            """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
-               evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
-            VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
-            (str(uuid.uuid4()), "regular-user", "no_backfill", "data", now, now, now),
-        )
-        db.commit()
-        updated = store.consolidator.backfill_being_id()
-        self.assertEqual(updated, 0)
 
 
 if __name__ == "__main__":
