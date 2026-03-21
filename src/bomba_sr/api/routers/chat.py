@@ -25,7 +25,7 @@ class RenameSessionRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str = ""
     targets: list[str] = []
-    mode: str = "auto"
+    mode: Optional[str] = "auto"
     taskRef: Optional[str] = None
     session_id: Optional[str] = None
 
@@ -139,7 +139,7 @@ def send_message(
         content=body.content,
         targets=targets,
         msg_type=msg_type,
-        mode=body.mode,
+        mode=body.mode or "auto",
         task_ref=body.taskRef,
         session_id=session_id,
         tenant_id=auth["tenant_id"],

@@ -18,7 +18,7 @@ class StartOrchestrationRequest(BaseModel):
     beings: Optional[list[str]] = None
 
 
-@router.post("/", status_code=201)
+@router.post("", status_code=201)
 def start_orchestration(
     body: StartOrchestrationRequest,
     auth: dict = Depends(get_current_user),

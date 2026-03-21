@@ -8,7 +8,7 @@ from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 router = APIRouter(prefix="/api/mc/projects", tags=["projects"])
 
 
-@router.get("/")
+@router.get("")
 def list_projects(
     auth: dict = Depends(get_current_user),
     dashboard_svc=Depends(get_dashboard_svc),

@@ -54,7 +54,7 @@ def cleanup_tasks(
     return {"deleted": deleted}
 
 
-@router.get("/")
+@router.get("")
 def list_tasks(
     assignee: Optional[str] = Query(None),
     priority: Optional[str] = Query(None),
@@ -82,7 +82,7 @@ def list_tasks(
 
 # ── Create ───────────────────────────────────────────────────────────
 
-@router.post("/", status_code=201)
+@router.post("", status_code=201)
 def create_task(
     body: CreateTaskRequest,
     auth: dict = Depends(get_current_user),

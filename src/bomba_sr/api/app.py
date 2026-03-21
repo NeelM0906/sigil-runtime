@@ -98,6 +98,15 @@ def create_app() -> FastAPI:
     app.include_router(subagents.router)
     app.include_router(tasks.router)
 
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.responses import JSONResponse
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request, exc):
+        body = await request.body()
+        logger.error("422 on %s %s — body=%s errors=%s", request.method, request.url.path, body[:500], exc.errors())
+        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
     @app.get("/health")
     def health():
         return {"status": "ok"}

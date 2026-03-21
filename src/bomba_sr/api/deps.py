@@ -46,7 +46,8 @@ def get_current_user(request: Request) -> dict[str, Any]:
     ).fetchone()
     if not row:
         raise HTTPException(401, "Unauthorized")
-    if row["expires_at"] < datetime.now(timezone.utc).isoformat():
+    expires = row["expires_at"]
+    if expires and expires < datetime.now(timezone.utc).isoformat():
         raise HTTPException(401, "Token expired")
     return {"user_id": row["user_id"], "tenant_id": row["tenant_id"], "role": row["role"]}
 

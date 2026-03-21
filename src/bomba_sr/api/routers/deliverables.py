@@ -10,7 +10,7 @@ from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 router = APIRouter(prefix="/api/mc/deliverables", tags=["deliverables"])
 
 
-@router.get("/")
+@router.get("")
 def list_deliverables(
     task_id: Optional[str] = Query(None),
     auth: dict = Depends(get_current_user),

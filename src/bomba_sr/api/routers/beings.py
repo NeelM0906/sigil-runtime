@@ -10,7 +10,7 @@ from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 router = APIRouter(prefix="/api/mc/beings", tags=["beings"])
 
 
-@router.get("/")
+@router.get("")
 def list_beings(
     type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),

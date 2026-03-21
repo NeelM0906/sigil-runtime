@@ -19,10 +19,13 @@ async function request(path, opts = {}) {
     ...opts,
   })
 
-  // On 401 force re-login
+  // On 401 force re-login (debounced to avoid reload loops)
   if (res.status === 401) {
-    localStorage.removeItem('mc_auth')
-    window.location.reload()
+    if (!window._mc_reloading) {
+      window._mc_reloading = true
+      localStorage.removeItem('mc_auth')
+      window.location.reload()
+    }
     throw new Error('Session expired')
   }
 
