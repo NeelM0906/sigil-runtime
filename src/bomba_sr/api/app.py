@@ -27,11 +27,11 @@ async def lifespan(app: FastAPI):
         from bomba_sr.artifacts.store import ArtifactStore
         from bomba_sr.dashboard.service import DashboardService
         from bomba_sr.projects.service import ProjectService
-        from bomba_sr.storage.db import RuntimeDB
+        from bomba_sr.storage.factory import create_shared_db
 
+        mc_db = create_shared_db()
         runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
         runtime_home.mkdir(parents=True, exist_ok=True)
-        mc_db = RuntimeDB(runtime_home / "bomba_runtime.db")
         project_svc = ProjectService(mc_db)
         dashboard_svc = DashboardService(db=mc_db, bridge=bridge)
         dashboard_svc.ensure_mc_project(project_svc)
