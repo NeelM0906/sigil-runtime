@@ -278,6 +278,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 return None
             return {"user_id": row["user_id"], "tenant_id": row["tenant_id"]}
 
+        def _require_auth(self) -> dict | None:
+            """Auth gate: validate token and return auth dict, or send 401 and return None."""
+            _auth = self._get_user_from_token()
+            if not _auth:
+                self._write_cors(401, {"error": "Unauthorized"})
+                return None
+            return _auth
+
         def _serve_static(self, rel_path: str) -> None:
             if ".." in rel_path or "\\" in rel_path:
                 self._write(403, {"error": "forbidden"})
@@ -1383,6 +1391,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self._write_cors(503, {"error": "dashboard service not initialized"})
                 return
 
+            # Auth gate — SSE endpoint is exempt (handles its own connection lifecycle)
+            if path != "/api/mc/events":
+                _auth = self._require_auth()
+                if not _auth:
+                    return
+            else:
+                _auth = None
+
             try:
                 # --- Beings ---
                 if path == "/api/mc/beings":
@@ -1572,20 +1588,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
 
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
-                    _auth = self._get_user_from_token()
-                    if not _auth:
-                        self._write_cors(401, {"error": "Unauthorized"})
-                        return
                     sessions = dashboard_svc.list_sessions(user_id=_auth["user_id"])
                     self._write_cors(200, {"sessions": sessions})
                     return
 
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
-                    _auth = self._get_user_from_token()
-                    if not _auth:
-                        self._write_cors(401, {"error": "Valid auth token required"})
-                        return
                     msgs = dashboard_svc.list_messages(
                         sender=query.get("sender", [None])[0],
                         target=query.get("target", [None])[0],
@@ -1691,6 +1699,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 body = self._read_json()
             except Exception:
                 return
+
+            # Auth gate — login/register are exempt
+            if path not in ("/api/mc/auth/login", "/api/mc/auth/register"):
+                _auth = self._require_auth()
+                if not _auth:
+                    return
+            else:
+                _auth = None
 
             try:
                 # --- Tasks ---
@@ -1872,6 +1888,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
             except Exception:
                 return
 
+            _auth = self._require_auth()
+            if not _auth:
+                return
+
             try:
                 # PATCH /api/mc/beings/:id
                 if path.startswith("/api/mc/beings/"):
@@ -1921,6 +1941,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 return
             if not self._is_origin_allowed():
                 self._write_cors(403, {"error": "origin_not_allowed"})
+                return
+
+            _auth = self._require_auth()
+            if not _auth:
                 return
 
             try:
