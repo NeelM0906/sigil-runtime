@@ -34,6 +34,29 @@ _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INDEX_CACHE_LOCK = threading.Lock()
 SAFE_INDEX_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
+# ── Per-tenant Pinecone routing ──────────────────────────────────────
+_TENANT_PINECONE_MAP: dict[str, dict] | None = None
+
+
+def _load_tenant_pinecone_map() -> dict[str, dict]:
+    global _TENANT_PINECONE_MAP
+    if _TENANT_PINECONE_MAP is not None:
+        return _TENANT_PINECONE_MAP
+    from pathlib import Path
+    map_path = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")) / "tenant_pinecone_map.json"
+    if map_path.exists():
+        _TENANT_PINECONE_MAP = json.loads(map_path.read_text(encoding="utf-8"))
+    else:
+        _TENANT_PINECONE_MAP = {}
+    return _TENANT_PINECONE_MAP
+
+
+def reload_tenant_pinecone_map() -> None:
+    """Force reload the tenant-pinecone map (e.g. after onboarding new users)."""
+    global _TENANT_PINECONE_MAP
+    _TENANT_PINECONE_MAP = None
+    _load_tenant_pinecone_map()
+
 
 def _http_json(
     method: str,
@@ -282,12 +305,16 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         query = str(arguments.get("query") or "").strip()
         if not query:
             raise ValueError("query is required")
-        index_name = _require_safe_index_name(str(arguments.get("index_name") or default_index))
+        # Tenant-specific index/namespace routing
+        tenant_cfg = _load_tenant_pinecone_map().get(context.tenant_id, {})
+        effective_index = tenant_cfg.get("index", default_index)
+        effective_ns = tenant_cfg.get("namespace", default_namespace)
+        index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (default_namespace or None)
+            else (effective_ns or None)
         )
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
         score_threshold = float(arguments.get("score_threshold") or 0.4)
@@ -405,12 +432,16 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
         if not isinstance(texts, list) or not texts:
             raise ValueError("texts is required and must be a non-empty array of strings")
         texts = [str(t) for t in texts]
-        index_name = _require_safe_index_name(str(arguments.get("index_name") or default_index))
+        # Tenant-specific index/namespace routing
+        tenant_cfg = _load_tenant_pinecone_map().get(context.tenant_id, {})
+        effective_index = tenant_cfg.get("index", default_index)
+        effective_ns = tenant_cfg.get("namespace", default_namespace)
+        index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (default_namespace or None)
+            else (effective_ns or None)
         )
         extra_metadata = arguments.get("metadata") or {}
         if not isinstance(extra_metadata, dict):
@@ -465,6 +496,9 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         if not isinstance(indexes, list) or not indexes:
             raise ValueError("indexes is required and must be a non-empty array")
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
+        # Tenant-specific default namespace
+        tenant_cfg = _load_tenant_pinecone_map().get(context.tenant_id, {})
+        effective_ns = tenant_cfg.get("namespace", default_namespace)
         score_threshold = float(arguments.get("score_threshold") or 0.4)
 
         vector = _embed_query(query)
@@ -477,7 +511,7 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
             ns_value = (
                 str(ns).strip()
                 if ns is not None and str(ns).strip()
-                else (default_namespace or None)
+                else (effective_ns or None)
             )
             api_key = _choose_pinecone_api_key(idx_name)
             host = _resolve_index_host(idx_name, api_key)
