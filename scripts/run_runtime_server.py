@@ -1636,6 +1636,35 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"sister_id": sid, "profile": profile})
                     return
 
+                # --- Audit Log (admin-only) ---
+                if path == "/api/mc/audit":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Admin role required"})
+                        return
+                    _a_tenant = query.get("tenant_id", [None])[0]
+                    _a_being = query.get("being_id", [None])[0]
+                    _a_tool = query.get("tool_name", [None])[0]
+                    _a_limit = int(query.get("limit", ["100"])[0])
+                    _sql = "SELECT * FROM tool_audit_log WHERE 1=1"
+                    _params: list = []
+                    if _a_tenant:
+                        _sql += " AND tenant_id = ?"
+                        _params.append(_a_tenant)
+                    if _a_being:
+                        _sql += " AND being_id = ?"
+                        _params.append(_a_being)
+                    if _a_tool:
+                        _sql += " AND tool_name = ?"
+                        _params.append(_a_tool)
+                    _sql += " ORDER BY created_at DESC LIMIT ?"
+                    _params.append(_a_limit)
+                    try:
+                        _rows = dashboard_svc.db.execute(_sql, _params).fetchall()
+                        self._write_cors(200, {"entries": [dict(r) for r in _rows]})
+                    except Exception:
+                        self._write_cors(200, {"entries": []})
+                    return
+
                 # --- Auth: Me ---
                 if path == "/api/mc/auth/me":
                     _user_row = dashboard_svc.db.execute(
@@ -1921,7 +1950,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     name = body.get("name", "New Chat")
-                    session = dashboard_svc.create_session(name, user_id=_auth["user_id"])
+                    session = dashboard_svc.create_session(name, user_id=_auth["user_id"], tenant_id=_auth["tenant_id"])
                     self._write_cors(201, {"session": session})
                     return
 
@@ -1947,6 +1976,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         targets=targets, msg_type=msg_type,
                         mode=mode, task_ref=task_ref,
                         session_id=session_id,
+                        tenant_id=_auth["tenant_id"],
                     )
 
                     # Route to each targeted being in background
@@ -2085,7 +2115,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     if not existing or existing.get("user_id") != _auth["user_id"]:
                         self._write_cors(403, {"error": "Forbidden"})
                         return
-                    session = dashboard_svc.rename_session(sid, body.get("name", ""))
+                    session = dashboard_svc.rename_session(sid, body.get("name", ""), tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"session": session})
                     return
 
@@ -2145,7 +2175,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     if not existing or existing.get("user_id") != _auth["user_id"]:
                         self._write_cors(403, {"error": "Forbidden"})
                         return
-                    ok = dashboard_svc.delete_session(sid)
+                    ok = dashboard_svc.delete_session(sid, tenant_id=_auth["tenant_id"])
                     if not ok:
                         self._write_cors(404, {"error": "session not found or is default"})
                         return
@@ -2207,7 +2237,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 self._write_cors(503, {"error": "dashboard service not initialized"})
                 return
 
-            client_id = dashboard_svc.subscribe_sse()
+            _auth = self._get_user_from_token()
+            if not _auth:
+                self._write_cors(401, {"error": "Unauthorized"})
+                return
+
+            client_id = dashboard_svc.subscribe_sse(tenant_id=_auth["tenant_id"])
             self.send_response(200)
             allowed_origin = self._cors_origin()
             if allowed_origin:

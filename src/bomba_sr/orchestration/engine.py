@@ -424,6 +424,7 @@ class OrchestrationEngine:
             "requester_session": requester_session_id,
             "sender": sender,
             "chat_session_id": chat_session_id,
+            "tenant_id": tenant_id,
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},      # being_id -> subtask task_id
@@ -446,7 +447,7 @@ class OrchestrationEngine:
             "task_id": actual_task_id,
             "status": STATUS_PLANNING,
             "goal": goal,
-        })
+        }, tenant_id=tenant_id)
 
         # Run the full orchestration flow in background
         t = threading.Thread(
@@ -587,7 +588,7 @@ class OrchestrationEngine:
             )
             self.dashboard._emit_event("orchestration_update", {
                 "task_id": task_id, "status": STATUS_FAILED, "error": str(exc),
-            })
+            }, tenant_id=self._get_orch_tenant(task_id))
 
             # Notify the user so they don't wait forever
             try:
@@ -710,7 +711,7 @@ class OrchestrationEngine:
             "task_id": task_id,
             "status": STATUS_PLANNING,
             "plan": plan.to_dict(),
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
         log.info("Orchestration plan for %s: %d sub-tasks", task_id[:8], len(plan.sub_tasks))
 
     def _phase_delegate(self, task_id: str) -> None:
@@ -1063,7 +1064,7 @@ class OrchestrationEngine:
                 "goal": state.get("goal", "")[:100],
                 "session_id": _session_id,
                 "session_name": _session_name,
-            })
+            }, tenant_id=self._get_orch_tenant(parent_task_id))
         except Exception as exc:
             log.warning("[ORCH-TRACKER] Failed to emit spawn event: %s", exc)
 
@@ -1151,7 +1152,7 @@ class OrchestrationEngine:
                 "output_preview": (output or "")[:200],
                 "session_id": _session_id,
                 "session_name": _session_name,
-            })
+            }, tenant_id=self._get_orch_tenant(parent_task_id))
         except Exception as exc:
             log.warning("[ORCH-TRACKER] Failed to emit completion event: %s", exc)
 
@@ -1225,7 +1226,7 @@ class OrchestrationEngine:
             "event": "subtask_completed",
             "being_id": sub.being_id,
             "output_preview": output[:200],
-        })
+        }, tenant_id=self._get_orch_tenant(parent_task_id))
 
     def _phase_review(self, task_id: str) -> None:
         """Review each being's output. Request revisions if needed."""
@@ -1290,7 +1291,7 @@ class OrchestrationEngine:
                     "event": "revision_requested",
                     "being_id": sub.being_id,
                     "round": revision_round + 1,
-                })
+                }, tenant_id=self._get_orch_tenant(task_id))
 
                 # Route revision through SubAgentProtocol for DB-backed state,
                 # crash detection, and idempotency.
@@ -1473,7 +1474,7 @@ class OrchestrationEngine:
             "task_id": task_id,
             "status": STATUS_COMPLETED,
             "output_preview": final_output[:300],
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
         log.info("Orchestration completed for task %s", task_id[:8])
 
         # Auto-trigger dream cycle every N completed tasks
@@ -1883,6 +1884,14 @@ class OrchestrationEngine:
             self._active.setdefault(task_id, state)
             return copy.deepcopy(self._active[task_id])
 
+    def _get_orch_tenant(self, task_id: str) -> str | None:
+        """Get tenant_id from active orchestration state."""
+        with self._lock:
+            state = self._active.get(task_id)
+            if state:
+                return state.get("tenant_id")
+        return None
+
     def _set_status(self, task_id: str, status: str) -> None:
         with self._lock:
             if task_id in self._active:
@@ -1890,7 +1899,7 @@ class OrchestrationEngine:
         self._db_update_status(task_id, status)
         self.dashboard._emit_event("orchestration_update", {
             "task_id": task_id, "status": status,
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
 
     def _prime_workspace(self) -> str:
         try:

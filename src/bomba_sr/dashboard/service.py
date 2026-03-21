@@ -213,7 +213,7 @@ class DashboardService:
         self.project_service: Any | None = None
         self.orchestration_engine: Any | None = None
         self.openclaw_sync: OpenClawSync | None = None
-        self._sse_clients: dict[str, queue.Queue] = {}
+        self._sse_clients: dict[str, dict] = {}  # client_id -> {"queue": Queue, "tenant_id": str}
         self._sse_lock = threading.Lock()
         self._ensure_schema()
         self._sanitize_stored_paths()
@@ -390,6 +390,27 @@ class DashboardService:
         self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-admin' WHERE id = 'user-admin' AND tenant_id IS NULL")
         self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-sai' WHERE id = 'user-sai' AND tenant_id IS NULL")
         self.db.commit()
+
+        # Tool audit log for compliance trail
+        self.db.script("""
+            CREATE TABLE IF NOT EXISTS tool_audit_log (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                being_id TEXT,
+                user_id TEXT,
+                session_id TEXT,
+                tool_name TEXT NOT NULL,
+                arguments_summary TEXT,
+                result_status TEXT NOT NULL,
+                error_message TEXT,
+                duration_ms INTEGER,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_tool_audit_tenant
+                ON tool_audit_log(tenant_id, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_tool_audit_being
+                ON tool_audit_log(being_id, created_at DESC);
+        """)
 
         # Seed default users if table is empty
         count = self.db.execute("SELECT COUNT(*) as c FROM mc_users").fetchone()["c"]
@@ -875,7 +896,7 @@ class DashboardService:
         ).fetchone()
         return dict(row) if row else None
 
-    def create_session(self, name: str, user_id: str | None = None) -> dict:
+    def create_session(self, name: str, user_id: str | None = None, tenant_id: str | None = None) -> dict:
         sid = f"sess-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
@@ -885,10 +906,10 @@ class DashboardService:
         session = dict(self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE id = ?", (sid,)
         ).fetchone())
-        self._emit_event("chat_session", {"action": "created", "session": session})
+        self._emit_event("chat_session", {"action": "created", "session": session}, tenant_id=tenant_id)
         return session
 
-    def rename_session(self, session_id: str, name: str) -> dict:
+    def rename_session(self, session_id: str, name: str, tenant_id: str | None = None) -> dict:
         now = self._now()
         self.db.execute_commit(
             "UPDATE mc_chat_sessions SET name = ?, updated_at = ? WHERE id = ?",
@@ -897,16 +918,16 @@ class DashboardService:
         session = dict(self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE id = ?", (session_id,)
         ).fetchone())
-        self._emit_event("chat_session", {"action": "updated", "session": session})
+        self._emit_event("chat_session", {"action": "updated", "session": session}, tenant_id=tenant_id)
         return session
 
-    def delete_session(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str, tenant_id: str | None = None) -> bool:
         if session_id == "general":
             return False
         self.db.execute_commit("DELETE FROM mc_messages WHERE session_id = ?", (session_id,))
         cur = self.db.execute_commit("DELETE FROM mc_chat_sessions WHERE id = ?", (session_id,))
         if cur.rowcount > 0:
-            self._emit_event("chat_session", {"action": "deleted", "session_id": session_id})
+            self._emit_event("chat_session", {"action": "deleted", "session_id": session_id}, tenant_id=tenant_id)
             return True
         return False
 
@@ -1053,6 +1074,7 @@ class DashboardService:
         task_ref: str | None = None,
         session_id: str = "",
         metadata: dict | None = None,
+        tenant_id: str | None = None,
     ) -> dict:
         if not session_id:
             session_id = f"sess-{uuid.uuid4().hex[:8]}"
@@ -1080,7 +1102,7 @@ class DashboardService:
                 "SELECT * FROM mc_messages WHERE id = ?", (msg_id,)
             ).fetchone()
         )
-        self._emit_event("chat_message", msg)
+        self._emit_event("chat_message", msg, tenant_id=tenant_id)
         return msg
 
     def create_system_message(
@@ -1859,7 +1881,7 @@ class DashboardService:
             task["assignees"] = []
 
         self._log_task_history(tid, "created", {"title": title, "status": status, "priority": priority})
-        self._emit_event("task_update", {"action": "created", "task": self._normalize_task(task)})
+        self._emit_event("task_update", {"action": "created", "task": self._normalize_task(task)}, tenant_id=tenant_id)
         return self._normalize_task(task)
 
     def update_task(
@@ -1929,7 +1951,7 @@ class DashboardService:
         if changes:
             self._log_task_history(task_id, "updated", changes)
         normalized = self._normalize_task(task)
-        self._emit_event("task_update", {"action": "updated", "task": normalized})
+        self._emit_event("task_update", {"action": "updated", "task": normalized}, tenant_id=tenant_id)
         return normalized
 
     def delete_task(self, project_service: Any, task_id: str, tenant_id: str = MC_TENANT) -> bool:
@@ -1944,7 +1966,7 @@ class DashboardService:
             )
             conn.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
         self._log_task_history(task_id, "deleted", {})
-        self._emit_event("task_update", {"action": "deleted", "task_id": task_id})
+        self._emit_event("task_update", {"action": "deleted", "task_id": task_id}, tenant_id=tenant_id)
         return True
 
     def task_history(self, task_id: str | None = None, limit: int = 50) -> list[dict]:
@@ -2142,11 +2164,11 @@ class DashboardService:
     # SSE
     # ------------------------------------------------------------------
 
-    def subscribe_sse(self) -> str:
-        """Create an SSE subscription.  Returns client_id."""
+    def subscribe_sse(self, tenant_id: str = "") -> str:
+        """Create an SSE subscription scoped to a tenant.  Returns client_id."""
         client_id = str(uuid.uuid4())
         with self._sse_lock:
-            self._sse_clients[client_id] = queue.Queue()
+            self._sse_clients[client_id] = {"queue": queue.Queue(), "tenant_id": tenant_id}
         return client_id
 
     def unsubscribe_sse(self, client_id: str) -> None:
@@ -2155,15 +2177,15 @@ class DashboardService:
 
     def poll_sse(self, client_id: str, timeout: float = 20.0) -> dict | None:
         """Block up to *timeout* seconds for the next event."""
-        q = self._sse_clients.get(client_id)
-        if q is None:
+        entry = self._sse_clients.get(client_id)
+        if entry is None:
             return None
         try:
-            return q.get(timeout=timeout)
+            return entry["queue"].get(timeout=timeout)
         except queue.Empty:
             return None
 
-    def _emit_event(self, event_type: str, payload: dict) -> None:
+    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None) -> None:
         now = self._now()
         # Persist
         self.db.execute_commit(
@@ -2171,13 +2193,15 @@ class DashboardService:
             (event_type, json.dumps(payload, default=str), now),
         )
 
-        # Fan-out
+        # Fan-out (scoped by tenant_id when provided, broadcast when None)
         evt = {"event": event_type, "data": payload, "ts": now}
         with self._sse_lock:
             dead: list[str] = []
-            for cid, q in self._sse_clients.items():
+            for cid, entry in self._sse_clients.items():
+                if tenant_id is not None and entry.get("tenant_id") and entry["tenant_id"] != tenant_id:
+                    continue
                 try:
-                    q.put_nowait(evt)
+                    entry["queue"].put_nowait(evt)
                 except queue.Full:
                     dead.append(cid)
             for cid in dead:

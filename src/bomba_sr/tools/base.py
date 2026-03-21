@@ -239,7 +239,7 @@ class ToolExecutor:
         try:
             payload = tool.execute(arguments, context)
         except Exception as exc:
-            return ToolCallResult(
+            result = ToolCallResult(
                 tool_call_id=call_id,
                 tool_name=canonical,
                 status="error",
@@ -247,8 +247,10 @@ class ToolExecutor:
                 risk_class=risk_class,
                 duration_ms=int((time.time() - start) * 1000),
             )
+            self._audit_log(context, canonical, arguments, result)
+            return result
 
-        return ToolCallResult(
+        result = ToolCallResult(
             tool_call_id=call_id,
             tool_name=canonical,
             status="executed",
@@ -259,6 +261,42 @@ class ToolExecutor:
             risk_class=risk_class,
             duration_ms=int((time.time() - start) * 1000),
         )
+        self._audit_log(context, canonical, arguments, result)
+        return result
+
+    def _audit_log(
+        self,
+        context: ToolContext,
+        tool_name: str,
+        arguments: dict[str, Any],
+        result: ToolCallResult,
+    ) -> None:
+        """Write a row to tool_audit_log. Must never cause a tool call to fail."""
+        try:
+            import uuid
+            from datetime import datetime, timezone
+            args_summary = json.dumps(arguments, default=str)[:500]
+            context.db.execute_commit(
+                "INSERT INTO tool_audit_log "
+                "(id, tenant_id, being_id, user_id, session_id, tool_name, "
+                "arguments_summary, result_status, error_message, duration_ms, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    str(uuid.uuid4()),
+                    context.tenant_id,
+                    None,  # being_id resolved from session pattern if needed
+                    context.user_id,
+                    context.session_id,
+                    tool_name,
+                    args_summary,
+                    result.status,
+                    str(result.output.get("error")) if result.status == "error" else None,
+                    result.duration_ms,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+        except Exception:
+            pass  # Audit logging must never break tool execution
 
     @staticmethod
     def _format_tool_schema(name: str, tool: ToolDefinition, format: str) -> dict[str, Any]:
