@@ -9,6 +9,8 @@ import os
 import sys
 import hashlib
 import secrets
+
+import bcrypt
 import uuid
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -51,33 +53,34 @@ def _load_dotenv_early(path: Path, *, override: bool = True) -> None:
 
 _load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
 
-# ── Mission Control users ─────────────────────────────────────────────
-# password_hash = sha256(password).hexdigest()
-# To add users: python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+# ── Mission Control seed users ────────────────────────────────────────
+# Seed users are INSERT OR IGNORE'd on first run only.
+# Passwords below are bcrypt-hashed defaults — change after first login.
+# To generate a new hash: python3 -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt(rounds=12)).decode())"
 _MC_USERS: dict[str, dict] = {
     "admin@sigil.ai": {
         "id": "user-admin",
         "name": "Admin",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"sigil2026").hexdigest(),
+        "password_hash": "$2b$12$W0osG4K9DWwVDyS9zNduOeNTdavleY6OLppfqs2XxeMUONK5s9AjO",
     },
     "neel@acti.ai": {
         "id": "user-neel",
         "name": "Neel",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"neel2026").hexdigest(),
+        "password_hash": "$2b$12$IhHRKAiHUiNtyqhxv.uA2eNppAd.dN.BIcb4Ez67M5VgK34o0UkoG",
     },
     "nadav@acti.ai": {
         "id": "user-nadav",
         "name": "Nadav",
         "role": "operator",
-        "password_hash": hashlib.sha256(b"nadav2026").hexdigest(),
+        "password_hash": "$2b$12$7bd/c1QU9OBSjHfRsGlYVO2K0CfThSyWzHP/gd9g62GoGwgVl3Wl.",
     },
     "sean@acti.ai": {
         "id": "user-sean",
         "name": "Sean",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"sean2026").hexdigest(),
+        "password_hash": "$2b$12$//rJilsKeJkLud41fIPdiO7vETBHSMZDY/guF3XJN4AJKlkez4T8S",
     },
 }
 
@@ -260,13 +263,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
             self.wfile.write(encoded)
 
         def _get_user_from_token(self) -> dict | None:
-            """Extract and validate Bearer token, return {user_id, tenant_id} or None."""
+            """Extract and validate Bearer token, return {user_id, tenant_id, role} or None."""
             auth = self.headers.get("Authorization", "")
             if not auth.startswith("Bearer "):
                 return None
             token = auth[7:]
             row = dashboard_svc.db.execute(
-                "SELECT s.user_id, s.expires_at, u.tenant_id "
+                "SELECT s.user_id, s.expires_at, u.tenant_id, u.role "
                 "FROM mc_sessions_auth s "
                 "JOIN mc_users u ON u.id = s.user_id "
                 "WHERE s.token = ?",
@@ -276,7 +279,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 return None
             if row["expires_at"] < datetime.now(timezone.utc).isoformat():
                 return None
-            return {"user_id": row["user_id"], "tenant_id": row["tenant_id"]}
+            return {"user_id": row["user_id"], "tenant_id": row["tenant_id"], "role": row["role"]}
 
         def _require_auth(self) -> dict | None:
             """Auth gate: validate token and return auth dict, or send 401 and return None."""
@@ -1586,6 +1589,18 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"sister_id": sid, "profile": profile})
                     return
 
+                # --- Auth: Me ---
+                if path == "/api/mc/auth/me":
+                    _user_row = dashboard_svc.db.execute(
+                        "SELECT id, email, name, role, tenant_id, created_at FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    if not _user_row:
+                        self._write_cors(404, {"error": "user not found"})
+                        return
+                    self._write_cors(200, {"user": dict(_user_row)})
+                    return
+
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     sessions = dashboard_svc.list_sessions(user_id=_auth["user_id"])
@@ -1754,14 +1769,28 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     if not _email or not _password:
                         self._write_cors(400, {"error": "Email and password required"})
                         return
-                    _hash = hashlib.sha256(_password.encode()).hexdigest()
                     _row = dashboard_svc.db.execute(
                         "SELECT * FROM mc_users WHERE email = ?", (_email,)
                     ).fetchone()
-                    if not _row or dict(_row).get("password_hash") != _hash:
+                    if not _row:
                         self._write_cors(401, {"error": "Invalid credentials"})
                         return
                     _user = dict(_row)
+                    _stored_hash = _user.get("password_hash", "")
+                    if _stored_hash.startswith("$2b$"):
+                        if not bcrypt.checkpw(_password.encode(), _stored_hash.encode()):
+                            self._write_cors(401, {"error": "Invalid credentials"})
+                            return
+                    else:
+                        # Legacy SHA-256 — verify then upgrade to bcrypt
+                        if hashlib.sha256(_password.encode()).hexdigest() != _stored_hash:
+                            self._write_cors(401, {"error": "Invalid credentials"})
+                            return
+                        _new_hash = bcrypt.hashpw(_password.encode(), bcrypt.gensalt(rounds=12)).decode()
+                        dashboard_svc.db.execute_commit(
+                            "UPDATE mc_users SET password_hash = ? WHERE id = ?",
+                            (_new_hash, _user["id"]),
+                        )
                     _token = secrets.token_urlsafe(32)
                     _now_ts = datetime.now(timezone.utc).isoformat()
                     _expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
@@ -1798,7 +1827,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                         return
                     _uid = f"user-{uuid.uuid4().hex[:8]}"
                     _tenant_id = f"tenant-{uuid.uuid4().hex[:8]}"
-                    _hash = hashlib.sha256(_password.encode()).hexdigest()
+                    _hash = bcrypt.hashpw(_password.encode(), bcrypt.gensalt(rounds=12)).decode()
                     _now = datetime.now(timezone.utc).isoformat()
                     dashboard_svc.db.execute_commit(
                         "INSERT INTO mc_users (id, email, name, password_hash, role, tenant_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -1823,15 +1852,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     name = body.get("name", "New Chat")
-                    _uid = body.get("user_id")
-                    session = dashboard_svc.create_session(name, user_id=_uid)
+                    session = dashboard_svc.create_session(name, user_id=_auth["user_id"])
                     self._write_cors(201, {"session": session})
                     return
 
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
                     content = body.get("content", "")
-                    sender = body.get("sender", "user")
+                    sender = _auth["user_id"]
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
@@ -1860,11 +1888,63 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     return
 
                 if path == "/api/mc/chat/system":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Forbidden: admin role required"})
+                        return
                     msg = dashboard_svc.create_system_message(
                         content=body.get("content", ""),
                         task_ref=body.get("taskRef"),
                     )
                     self._write_cors(201, {"message": msg})
+                    return
+
+                # --- Auth: Logout ---
+                if path == "/api/mc/auth/logout":
+                    _raw_token = self.headers.get("Authorization", "")[7:]
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE token = ?",
+                        (_raw_token,),
+                    )
+                    self._write_cors(200, {"ok": True})
+                    return
+
+                # --- Auth: Change Password ---
+                if path == "/api/mc/auth/change-password":
+                    _old_pw = body.get("old_password") or ""
+                    _new_pw = body.get("new_password") or ""
+                    if not _old_pw or not _new_pw:
+                        self._write_cors(400, {"error": "old_password and new_password required"})
+                        return
+                    if len(_new_pw) < 6:
+                        self._write_cors(400, {"error": "New password must be at least 6 characters"})
+                        return
+                    _row = dashboard_svc.db.execute(
+                        "SELECT password_hash FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    if not _row:
+                        self._write_cors(404, {"error": "user not found"})
+                        return
+                    _stored = dict(_row).get("password_hash", "")
+                    if _stored.startswith("$2b$"):
+                        if not bcrypt.checkpw(_old_pw.encode(), _stored.encode()):
+                            self._write_cors(401, {"error": "Invalid current password"})
+                            return
+                    else:
+                        if hashlib.sha256(_old_pw.encode()).hexdigest() != _stored:
+                            self._write_cors(401, {"error": "Invalid current password"})
+                            return
+                    _new_hash = bcrypt.hashpw(_new_pw.encode(), bcrypt.gensalt(rounds=12)).decode()
+                    dashboard_svc.db.execute_commit(
+                        "UPDATE mc_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                        (_new_hash, datetime.now(timezone.utc).isoformat(), _auth["user_id"]),
+                    )
+                    # Invalidate all sessions for this user
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?",
+                        (_auth["user_id"],),
+                    )
+                    self._write_cors(200, {"ok": True})
                     return
 
                 self._write_cors(404, {"error": "not_found"})
@@ -1893,6 +1973,29 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 return
 
             try:
+                # PATCH /api/mc/auth/me
+                if path == "/api/mc/auth/me":
+                    _updates = {}
+                    if "name" in body:
+                        _updates["name"] = body["name"]
+                    if "email" in body:
+                        _updates["email"] = (body["email"] or "").strip().lower()
+                    if not _updates:
+                        self._write_cors(400, {"error": "Nothing to update"})
+                        return
+                    _set_clauses = ", ".join(f"{k} = ?" for k in _updates)
+                    _vals = list(_updates.values()) + [datetime.now(timezone.utc).isoformat(), _auth["user_id"]]
+                    dashboard_svc.db.execute_commit(
+                        f"UPDATE mc_users SET {_set_clauses}, updated_at = ? WHERE id = ?",
+                        _vals,
+                    )
+                    _user_row = dashboard_svc.db.execute(
+                        "SELECT id, email, name, role, tenant_id, created_at FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    self._write_cors(200, {"user": dict(_user_row)})
+                    return
+
                 # PATCH /api/mc/beings/:id
                 if path.startswith("/api/mc/beings/"):
                     bid = path.split("/api/mc/beings/", 1)[1].split("/")[0]
@@ -1906,10 +2009,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # PATCH /api/mc/chat/sessions/:id
                 if path.startswith("/api/mc/chat/sessions/"):
                     sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
-                    session = dashboard_svc.rename_session(sid, body.get("name", ""))
-                    if not session:
-                        self._write_cors(404, {"error": "session not found"})
+                    existing = dashboard_svc.get_session(sid)
+                    if not existing or existing.get("user_id") != _auth["user_id"]:
+                        self._write_cors(403, {"error": "Forbidden"})
                         return
+                    session = dashboard_svc.rename_session(sid, body.get("name", ""))
                     self._write_cors(200, {"session": session})
                     return
 
@@ -1961,6 +2065,10 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # DELETE /api/mc/chat/sessions/:id
                 if path.startswith("/api/mc/chat/sessions/"):
                     sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
+                    existing = dashboard_svc.get_session(sid)
+                    if not existing or existing.get("user_id") != _auth["user_id"]:
+                        self._write_cors(403, {"error": "Forbidden"})
+                        return
                     ok = dashboard_svc.delete_session(sid)
                     if not ok:
                         self._write_cors(404, {"error": "session not found or is default"})
@@ -1971,6 +2079,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                 # DELETE /api/mc/chat/messages/:id
                 if path.startswith("/api/mc/chat/messages/"):
                     mid = path.split("/api/mc/chat/messages/", 1)[1].split("/")[0]
+                    msg_row = dashboard_svc.db.execute(
+                        "SELECT m.session_id FROM mc_messages m "
+                        "JOIN mc_chat_sessions s ON s.id = m.session_id "
+                        "WHERE m.id = ? AND s.user_id = ?",
+                        (mid, _auth["user_id"]),
+                    ).fetchone()
+                    if not msg_row:
+                        self._write_cors(403, {"error": "Forbidden"})
+                        return
                     ok = dashboard_svc.delete_message(mid)
                     if not ok:
                         self._write_cors(404, {"error": "message not found"})
