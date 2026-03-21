@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bomba-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bomba_mc
+      POSTGRES_USER: bomba
+      POSTGRES_PASSWORD: ${BOMBA_POSTGRES_PASSWORD:-bomba_secure_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - bomba_pg_data:/var/lib/postgresql/data
+
+volumes:
+  bomba_pg_data:
