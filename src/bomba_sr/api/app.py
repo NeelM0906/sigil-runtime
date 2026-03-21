@@ -82,9 +82,20 @@ def create_app() -> FastAPI:
     )
 
     # Routers
-    from bomba_sr.api.routers import auth, chat, tasks
+    from bomba_sr.api.routers import (
+        acti, admin, auth, beings, chat, deliverables,
+        events, orchestration, projects, subagents, tasks,
+    )
+    app.include_router(acti.router)
+    app.include_router(admin.router)
     app.include_router(auth.router)
+    app.include_router(beings.router)
     app.include_router(chat.router)
+    app.include_router(deliverables.router)
+    app.include_router(events.router)
+    app.include_router(orchestration.router)
+    app.include_router(projects.router)
+    app.include_router(subagents.router)
     app.include_router(tasks.router)
 
     @app.get("/health")
