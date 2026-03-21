@@ -17,6 +17,8 @@ dependencies = [
   "Pillow>=10.0",
   "pg8000>=1.31.2",
   "bcrypt>=4.0",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
 ]
 
 [tool.pytest.ini_options]
