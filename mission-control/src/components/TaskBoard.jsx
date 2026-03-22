@@ -852,6 +852,12 @@ export function TaskBoard({ fullWidth = false }) {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
+  // Periodic polling every 15s for task board freshness
+  useEffect(() => {
+    const interval = setInterval(fetchTasks, 15000)
+    return () => clearInterval(interval)
+  }, [fetchTasks])
+
   // Real-time task updates via SSE
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks

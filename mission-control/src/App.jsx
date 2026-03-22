@@ -25,12 +25,16 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [crossLinkTask, setCrossLinkTask] = useState(null)
 
+  // Use CSS display toggling instead of conditional rendering
+  // so components stay mounted (SSE connections persist, state preserved)
+  const show = (tab) => activeTab === tab ? {} : { display: 'none' }
+
   return (
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
         <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} user={user} onLogout={logout} />
         <main className="p-3 max-w-[1920px] mx-auto">
-          {activeTab === 'overview' && (
+          <div style={show('overview')}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
@@ -40,14 +44,14 @@ function Dashboard() {
                 <TaskBoard />
               </div>
             </div>
-          )}
-          {activeTab === 'tasks' && (
+          </div>
+          <div style={show('tasks')}>
             <TaskBoard fullWidth />
-          )}
-          {activeTab === 'projects' && (
+          </div>
+          <div style={show('projects')}>
             <ProjectsHub />
-          )}
-          {activeTab === 'chat' && (
+          </div>
+          <div style={show('chat')}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
                 <ChatWindow />
@@ -56,10 +60,10 @@ function Dashboard() {
                 <OrchestrationTracker />
               </div>
             </div>
-          )}
-          {activeTab === 'teams' && (
+          </div>
+          <div style={show('teams')}>
             <AgentTeams />
-          )}
+          </div>
         </main>
 
         <BeingDetail onOpenTask={(task) => {

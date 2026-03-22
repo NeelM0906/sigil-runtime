@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSSE } from '../hooks/useSSE'
 import { deliverablesApi } from '../api'
 
@@ -171,13 +171,18 @@ export function OrchestrationTracker() {
   const [deliverables, setDeliverables] = useState([])
   const [activeSection, setActiveSection] = useState('agents')
 
-  // Load existing deliverables from API on mount
-  useEffect(() => {
+  // Load deliverables on mount + periodic refresh
+  const loadDeliverables = useCallback(() => {
     deliverablesApi.list().then(data => {
       const items = Array.isArray(data) ? data : data?.deliverables || []
       setDeliverables(items)
     }).catch(() => {})
   }, [])
+  useEffect(() => { loadDeliverables() }, [loadDeliverables])
+  useEffect(() => {
+    const interval = setInterval(loadDeliverables, 20000)
+    return () => clearInterval(interval)
+  }, [loadDeliverables])
 
   useSSE({
     orchestration_spawn(data) {
