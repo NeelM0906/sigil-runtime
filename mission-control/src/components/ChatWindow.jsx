@@ -683,6 +683,42 @@ export function ChatWindow() {
     inputRef.current?.focus()
   }
 
+  const fileInputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // reset for re-upload of same file
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('being_id', targets[0] || 'prime')
+      const stored = localStorage.getItem('mc_auth')
+      const token = stored ? JSON.parse(stored).token : ''
+      const res = await fetch('/api/mc/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const result = await res.json()
+      // Send a system-style message about the upload
+      const summary = `[Uploaded: ${result.filename} — ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables extracted` : ''}${result.pinecone_vectors ? `, ${result.pinecone_vectors} vectors stored` : ''}]`
+      await chatApi.send({
+        targets: targets.length ? targets : ['prime'],
+        content: summary,
+        mode: 'auto',
+        session_id: activeSessionId,
+      })
+    } catch (err) {
+      console.error('Upload failed:', err)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSend = async () => {
     if (!input.trim()) return
 
@@ -893,6 +929,25 @@ export function ChatWindow() {
             placeholder="Message... (@ to mention a being)"
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.pptx,.xlsx,.txt,.md,.csv,.html,.png,.jpg,.jpeg"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="Upload document"
+            className="px-2 py-2 text-text-muted hover:text-accent-blue disabled:opacity-30 transition-colors"
+          >
+            {uploading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
+            )}
+          </button>
           <button
             onClick={handleSend}
             disabled={!input.trim()}

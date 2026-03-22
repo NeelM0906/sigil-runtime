@@ -84,7 +84,7 @@ def create_app() -> FastAPI:
     # Routers
     from bomba_sr.api.routers import (
         acti, admin, auth, beings, chat, deliverables,
-        events, orchestration, projects, subagents, tasks,
+        events, orchestration, projects, subagents, tasks, upload,
     )
     app.include_router(acti.router)
     app.include_router(admin.router)
@@ -97,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(projects.router)
     app.include_router(subagents.router)
     app.include_router(tasks.router)
+    app.include_router(upload.router)
 
     from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse

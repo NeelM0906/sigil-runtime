@@ -340,53 +340,44 @@ class DashboardService:
         """)
         self.db.commit()
 
+        # Helper: add column if not exists (Postgres needs rollback on failure)
+        def _add_column(table: str, col: str, col_type: str = "TEXT", default: str | None = None) -> None:
+            ddl = f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"
+            if default is not None:
+                ddl += f" DEFAULT '{default}'"
+            try:
+                self.db.execute(ddl)
+                self.db.commit()
+            except Exception:
+                # Postgres aborts the transaction on duplicate column — must rollback
+                try:
+                    self.db.conn.rollback()
+                except Exception:
+                    pass
+
         # Migration: add session_id to mc_messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN session_id TEXT DEFAULT 'general'")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "session_id", default="general")
         self.db.execute("CREATE INDEX IF NOT EXISTS idx_mc_messages_session ON mc_messages(session_id, timestamp DESC)")
         self.db.execute("UPDATE mc_messages SET session_id = 'general' WHERE session_id IS NULL")
         # Migration: add metadata column for outputs/agents attached to messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN metadata TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "metadata")
         # Migration: add user_id to mc_chat_sessions
-        try:
-            self.db.execute("ALTER TABLE mc_chat_sessions ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_chat_sessions", "user_id")
         self.db.execute("UPDATE mc_chat_sessions SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
         # Migration: add user_id to mc_messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "user_id")
         self.db.execute("UPDATE mc_messages SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
         # Migration: add user_id to mc_deliverables
-        try:
-            self.db.execute("ALTER TABLE mc_deliverables ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_deliverables", "user_id")
         self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
         # Migration: add tenant_id to mc_users
-        try:
-            self.db.execute("ALTER TABLE mc_users ADD COLUMN tenant_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_users", "tenant_id")
         self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-admin' WHERE id = 'user-admin' AND tenant_id IS NULL")
         self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-sai' WHERE id = 'user-sai' AND tenant_id IS NULL")
         self.db.commit()

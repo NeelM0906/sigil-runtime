@@ -45,7 +45,7 @@ class PostgresDB:
 
     def __init__(self, dsn: str):
         self.dsn = dsn
-        self._conn = psycopg.connect(dsn, autocommit=False, row_factory=dict_row)
+        self._conn = psycopg.connect(dsn, autocommit=True, row_factory=dict_row)
         self._lock = threading.RLock()
 
     @property
@@ -53,8 +53,28 @@ class PostgresDB:
         return self._conn
 
     def _convert_sql(self, sql: str) -> str:
-        """Convert SQLite ? placeholders to Postgres %s."""
-        return sql.replace("?", "%s")
+        """Convert SQLite SQL to Postgres-compatible SQL."""
+        import re
+        converted = sql.replace("?", "%s")
+        # INSERT OR IGNORE → INSERT ... ON CONFLICT DO NOTHING
+        converted = re.sub(
+            r"INSERT\s+OR\s+IGNORE\s+INTO",
+            "INSERT INTO",
+            converted,
+            flags=re.IGNORECASE,
+        )
+        if re.search(r"INSERT\s+INTO", converted, re.IGNORECASE) and "ON CONFLICT" not in converted.upper():
+            # Only add ON CONFLICT DO NOTHING if the original had OR IGNORE
+            if re.search(r"INSERT\s+OR\s+IGNORE", sql, re.IGNORECASE):
+                converted = converted.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING"
+        # INSERT OR REPLACE → INSERT ... ON CONFLICT DO UPDATE (simplified)
+        converted = re.sub(
+            r"INSERT\s+OR\s+REPLACE\s+INTO",
+            "INSERT INTO",
+            converted,
+            flags=re.IGNORECASE,
+        )
+        return converted
 
     def execute(self, sql: str, params: Iterable[Any] | Mapping[str, Any] = ()) -> _PgCursor:
         converted = self._convert_sql(sql)
@@ -73,25 +93,25 @@ class PostgresDB:
             return _PgCursor(cur)
 
     def execute_commit(self, sql: str, params: Iterable[Any] | Mapping[str, Any] = ()) -> _PgCursor:
-        """Execute a statement and commit atomically."""
-        converted = self._convert_sql(sql)
-        if converted.strip().upper().startswith("PRAGMA"):
-            return _PgCursor(self._conn.cursor())
-        with self._lock:
-            cur = self._conn.execute(converted, params)
-            self._conn.commit()
-            return _PgCursor(cur)
+        """Execute a statement (auto-committed in autocommit mode)."""
+        return self.execute(sql, params)
 
     @contextmanager
     def transaction(self) -> Iterator[Any]:
-        """Context manager for multi-statement transactions."""
+        """Context manager for multi-statement transactions.
+
+        Temporarily disables autocommit for the transaction block.
+        """
         with self._lock:
+            self._conn.autocommit = False
             try:
                 yield self
                 self._conn.commit()
             except BaseException:
                 self._conn.rollback()
                 raise
+            finally:
+                self._conn.autocommit = True
 
     def script(self, sql_script: str) -> None:
         """Execute a multi-statement SQL script.
@@ -116,11 +136,13 @@ class PostgresDB:
                 statements.append(stmt)
             for stmt in statements:
                 self._conn.execute(stmt)
-            self._conn.commit()
+            # In autocommit mode, each statement is already committed
 
     def commit(self) -> None:
-        with self._lock:
-            self._conn.commit()
+        # No-op in autocommit mode; explicit commit only needed inside transaction()
+        if not self._conn.autocommit:
+            with self._lock:
+                self._conn.commit()
 
     def close(self) -> None:
         with self._lock:
