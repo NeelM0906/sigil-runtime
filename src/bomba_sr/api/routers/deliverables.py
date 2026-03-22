@@ -1,15 +1,43 @@
 """Deliverables and artifacts router."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 
 router = APIRouter(prefix="/api/mc", tags=["deliverables"])
+
+
+def _auth_header_or_query(request: Request, token: Optional[str] = Query(None)) -> dict:
+    """Auth via Bearer header or ?token= query param (for browser downloads)."""
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        tok = auth_header[7:]
+    elif token:
+        tok = token
+    else:
+        raise HTTPException(401, "Unauthorized")
+    svc = request.app.state.dashboard_svc
+    if not svc:
+        raise HTTPException(503, "Dashboard service not initialized")
+    row = svc.db.execute(
+        "SELECT s.user_id, s.expires_at, u.tenant_id, u.role "
+        "FROM mc_sessions_auth s "
+        "JOIN mc_users u ON u.id = s.user_id "
+        "WHERE s.token = ?",
+        (tok,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(401, "Unauthorized")
+    expires = row["expires_at"]
+    if expires and expires < datetime.now(timezone.utc).isoformat():
+        raise HTTPException(401, "Token expired")
+    return {"user_id": row["user_id"], "tenant_id": row["tenant_id"], "role": row["role"]}
 
 
 @router.get("/deliverables")
@@ -28,7 +56,7 @@ def list_deliverables(
 @router.get("/artifacts/{artifact_id}/download")
 def download_artifact(
     artifact_id: str,
-    auth: dict = Depends(get_current_user),
+    auth: dict = Depends(_auth_header_or_query),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
     rec = dashboard_svc.get_artifact(artifact_id)
@@ -47,7 +75,7 @@ def download_artifact(
 @router.get("/artifacts/{artifact_id}/preview")
 def preview_artifact(
     artifact_id: str,
-    auth: dict = Depends(get_current_user),
+    auth: dict = Depends(_auth_header_or_query),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
     rec = dashboard_svc.get_artifact(artifact_id)
