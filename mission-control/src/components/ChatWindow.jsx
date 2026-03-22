@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
+import { useAuth } from '../context/AuthContext'
 import { chatApi, tasksApi, deliverablesApi } from '../api'
 import { useSharedSSE } from '../context/SSEContext'
 import { timeAgo } from '../store'
@@ -509,11 +510,14 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 export function ChatWindow() {
   const { beings, getBeingById, openBeingDetail } = useBeings()
+  const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  const [targets, setTargets] = useState([])
+  // Operator users default to recovery; admins broadcast to prime
+  const defaultTarget = user?.role === 'admin' ? [] : ['recovery']
+  const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
@@ -739,7 +743,7 @@ export function ChatWindow() {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
-    setTargets([])
+    setTargets(defaultTarget)
 
     try {
       // POST returns the saved user message; LLM responses arrive via SSE
