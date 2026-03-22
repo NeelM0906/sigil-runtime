@@ -53,13 +53,46 @@ def list_deliverables(
     return {"deliverables": deliverables}
 
 
+def _find_artifact(artifact_id: str, dashboard_svc, tenant_id: str | None = None):
+    """Find artifact in shared DB first, then fall back to per-tenant SQLite DBs."""
+    rec = dashboard_svc.get_artifact(artifact_id)
+    if rec:
+        return rec
+    # Fall back: search per-tenant DBs
+    import os
+    from bomba_sr.storage.db import RuntimeDB
+    tenants_dir = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")) / "tenants"
+    if not tenants_dir.is_dir():
+        return None
+    # If we know the tenant, check that one first
+    dirs = []
+    if tenant_id:
+        t = tenants_dir / tenant_id / "runtime" / "runtime.db"
+        if t.is_file():
+            dirs.append(t)
+    # Then check all tenants
+    for td in tenants_dir.iterdir():
+        db_path = td / "runtime" / "runtime.db"
+        if db_path.is_file() and db_path not in dirs:
+            dirs.append(db_path)
+    for db_path in dirs:
+        try:
+            db = RuntimeDB(db_path)
+            row = db.execute("SELECT * FROM artifacts WHERE artifact_id = ?", (artifact_id,)).fetchone()
+            if row:
+                return dict(row)
+        except Exception:
+            pass
+    return None
+
+
 @router.get("/artifacts/{artifact_id}/download")
 def download_artifact(
     artifact_id: str,
     auth: dict = Depends(_auth_header_or_query),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
-    rec = dashboard_svc.get_artifact(artifact_id)
+    rec = _find_artifact(artifact_id, dashboard_svc, auth.get("tenant_id"))
     if not rec:
         raise HTTPException(404, "Artifact not found")
     fpath = Path(rec["path"])
@@ -78,7 +111,7 @@ def preview_artifact(
     auth: dict = Depends(_auth_header_or_query),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
-    rec = dashboard_svc.get_artifact(artifact_id)
+    rec = _find_artifact(artifact_id, dashboard_svc, auth.get("tenant_id"))
     if not rec:
         raise HTTPException(404, "Artifact not found")
     fpath = Path(rec["path"])
