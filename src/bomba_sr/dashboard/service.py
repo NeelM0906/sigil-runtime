@@ -55,20 +55,27 @@ log = logging.getLogger(__name__)
 # ── Task classification ──────────────────────────────────────
 # Keep dashboard classification on the same model the bundled OpenClaw runtime uses
 # unless the caller explicitly overrides it.
-_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", os.getenv("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6"))
+_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", "anthropic/claude-haiku-4.5")
 
 _CLASSIFY_SYSTEM_PROMPT = """\
 You are a message classifier for a multi-agent command center.
 Given a user message sent to an AI being, classify it into exactly one category:
 
-- "not_task" — casual/conversational, greetings, questions about the being itself, \
-information requests with no concrete action required. Examples: "Hi", "How are you?", \
-"What's in your memory?", "Tell me about yourself."
-- "light_task" — needs a single action or lookup, no multi-step plan needed. \
-Examples: "Search Pinecone for X", "Summarize this document", "What's the status of Y."
-- "full_task" — needs multi-step execution that benefits from a tracked plan with sub-steps. \
-Examples: "Research X and write a report", "Audit all memory files and flag inconsistencies", \
-"Set up the integration for Recovery."
+- "not_task" — greetings, casual questions, status checks, simple info requests \
+that need no action. Examples: "Hi", "How are you?", "What's in your memory?", \
+"What did we discuss last time?", "Tell me about yourself."
+- "light_task" — single-step action: a lookup, a quick summary, a short answer \
+from memory or search. Done in one tool call. Examples: "Search Pinecone for \
+Hartford cases", "What's the fee schedule URL?", "Summarize the last call with Mark."
+- "full_task" — requires multiple steps, produces deliverables or artifacts, involves \
+research + synthesis, file creation, deep analysis, or multi-tool workflows. If the \
+being would need 3+ tool calls or produce a document/report/file, it's a full_task. \
+Examples: "Research X and write a report", "Draft the settlement brief for case Y", \
+"Analyze all WC contracts and flag issues", "Build a comparison of carrier EOB formats", \
+"Create a training document for the new extraction rules", \
+"Pull all Hartford case data and create a status summary."
+
+KEY RULE: If the request would produce a document, report, file, or artifact — classify as full_task.
 
 Respond with ONLY a JSON object: {"classification": "not_task"|"light_task"|"full_task"}
 Nothing else."""
@@ -1337,6 +1344,34 @@ class DashboardService:
                 "active": False,
             })
 
+        # Register artifacts as deliverables so they appear in the Outputs panel
+        if isinstance(result, dict):
+            for art in result.get("artifacts", []):
+                try:
+                    aid = art.get("artifact_id")
+                    if task_id:
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=art.get("title") or art.get("filename") or "output",
+                            file_type=art.get("type") or "file",
+                            file_path=art.get("path") or "",
+                            url=f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            line_count=0,
+                            byte_size=art.get("byte_size") or 0,
+                        )
+                    else:
+                        self._emit_event("deliverable_created", {
+                            "id": aid,
+                            "filename": art.get("title") or "output",
+                            "file_type": art.get("type") or "file",
+                            "url": f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            "byte_size": art.get("byte_size") or 0,
+                            "being_id": being_id,
+                        }, tenant_id=tenant_id)
+                except Exception as exc:
+                    log.debug("Failed to register artifact as deliverable: %s", exc)
+
         # Transition task to done (or back to backlog on error)
         if task_id:
             if error_occurred:
@@ -1533,15 +1568,16 @@ class DashboardService:
             )
             payload = _extract_json(resp.text)
             if payload:
-                classification = payload.get("classification", "not_task")
+                classification = payload.get("classification", "light_task")
                 if classification in ("not_task", "light_task", "full_task"):
+                    log.info('[TASK-CLASSIFY] "%.80s" → %s', stripped, classification)
                     return classification
         except Exception as exc:
-            log.debug("Task classification failed, defaulting to not_task: %s", exc)
+            log.info("Task classification failed, defaulting to light_task: %s", exc)
 
-        # Safe default: do NOT create a task when the classifier is uncertain.
-        # Creating spurious tasks is worse than missing a real one.
-        return "not_task"
+        # Default to light_task — missing a real task is worse than creating
+        # a light one that auto-completes.
+        return "light_task"
 
     def _generate_task_steps(self, content: str) -> list[str]:
         """Use LLM to break a full_task message into sub-steps."""
