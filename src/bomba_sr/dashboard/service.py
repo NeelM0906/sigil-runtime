@@ -1265,7 +1265,7 @@ class DashboardService:
             and self.orchestration_engine is not None
             and self.project_service is not None
         ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id)
+            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id, tenant_id=sender_tenant_id)
             return
 
         task_id: str | None = None
@@ -1427,6 +1427,7 @@ class DashboardService:
         sender: str,
         session_id: str,
         chat_session_id: str = "",
+        tenant_id: str = MC_TENANT,
     ) -> None:
         """Route a full_task to Prime's orchestration engine instead of direct LLM."""
         # Acknowledge in chat immediately
@@ -1455,6 +1456,7 @@ class DashboardService:
                 requester_session_id=session_id,
                 sender=sender,
                 chat_session_id=chat_session_id,
+                tenant_id=tenant_id,
             )
             log.info(
                 "Orchestration started: task=%s status=%s",
