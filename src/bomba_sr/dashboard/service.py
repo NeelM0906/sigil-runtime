@@ -1237,7 +1237,13 @@ class DashboardService:
             )
             return
 
-        tenant_id = being.get("tenant_id") or MC_TENANT
+        being_tenant_id = being.get("tenant_id") or MC_TENANT
+        # Resolve the human sender's tenant for task board scoping
+        sender_row = self.db.execute(
+            "SELECT tenant_id FROM mc_users WHERE id = ?", (sender,)
+        ).fetchone()
+        sender_tenant_id = (sender_row["tenant_id"] if sender_row else None) or MC_TENANT
+        tenant_id = being_tenant_id  # used for bridge.handle_turn (being's runtime context)
         session_id = self._runtime_chat_session_id(being_id, chat_session_id)
 
         # Resolve workspace: being's workspace relative to project root
@@ -1264,7 +1270,7 @@ class DashboardService:
 
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
-            task_id = self._auto_create_task(being_id, being, content, classification=classification)
+            task_id = self._auto_create_task(being_id, being, content, classification=classification, tenant_id=sender_tenant_id)
 
         # For full_task, generate and attach sub-steps
         if classification == "full_task" and task_id:
@@ -1488,6 +1494,7 @@ class DashboardService:
         content: str,
         *,
         classification: str,
+        tenant_id: str = MC_TENANT,
     ) -> str | None:
         """Auto-create a task on the board when a being receives a classified message.
 
@@ -1517,6 +1524,7 @@ class DashboardService:
                 priority="medium",
                 assignees=[being_id],
                 owner_agent_id=being_id,
+                tenant_id=tenant_id,
             )
             log.info('[CLASSIFY] Task created: id=%s classification=%s', task.get("id", "?")[:8], classification)
             return task.get("id")
@@ -1892,6 +1900,16 @@ class DashboardService:
         parent_task_id: str | None = None,
         tenant_id: str = MC_TENANT,
     ) -> dict:
+        # Ensure the MC project exists for this tenant
+        try:
+            project_service.get_project(tenant_id, MC_PROJECT_ID)
+        except ValueError:
+            project_service.create_project(
+                tenant_id=tenant_id,
+                name=MC_PROJECT_NAME,
+                workspace_root=str(Path.cwd()),
+                project_id=MC_PROJECT_ID,
+            )
         task = project_service.create_task(
             tenant_id=tenant_id,
             project_id=MC_PROJECT_ID,
