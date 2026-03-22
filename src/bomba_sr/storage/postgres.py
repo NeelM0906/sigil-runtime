@@ -27,10 +27,16 @@ class _PgCursor:
         return None  # Postgres doesn't expose lastrowid the same way
 
     def fetchone(self):
-        return self._cur.fetchone()
+        try:
+            return self._cur.fetchone()
+        except Exception:
+            return None
 
     def fetchall(self):
-        return self._cur.fetchall()
+        try:
+            return self._cur.fetchall()
+        except Exception:
+            return []
 
     def __iter__(self):
         return iter(self._cur)

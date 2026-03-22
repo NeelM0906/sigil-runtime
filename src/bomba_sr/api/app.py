@@ -53,7 +53,9 @@ async def lifespan(app: FastAPI):
         dashboard_svc.init_orchestration(project_svc)
         logger.info("mission control: loaded %d beings, orchestration ready", loaded)
     except Exception as exc:
+        import traceback
         logger.warning("mission control init failed (%s), MC endpoints disabled", exc)
+        logger.warning("".join(traceback.format_exception(exc)))
 
     app.state.dashboard_svc = dashboard_svc
     app.state.project_svc = project_svc
