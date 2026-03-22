@@ -1291,7 +1291,7 @@ class DashboardService:
 
         # Transition task to in_progress
         if task_id:
-            self._auto_update_task_status(task_id, "in_progress")
+            self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
 
         # Build step-advancing callback for real-time progress
         all_steps = self.get_task_steps(task_id) if task_id and classification == "full_task" else []
@@ -1381,14 +1381,14 @@ class DashboardService:
         # Transition task to done (or back to backlog on error)
         if task_id:
             if error_occurred:
-                self._auto_update_task_status(task_id, "backlog")
+                self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
             else:
                 # For full_task, complete all remaining steps
                 if classification == "full_task":
                     for step in self.get_task_steps(task_id):
                         if step["status"] != "done":
                             self.update_task_step(step["id"], "done")
-                self._auto_update_task_status(task_id, "done")
+                self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
 
         self.create_message(
             sender=being_id,
@@ -1531,7 +1531,7 @@ class DashboardService:
         except Exception:
             return None
 
-    def _auto_update_task_status(self, task_id: str, new_status: str) -> None:
+    def _auto_update_task_status(self, task_id: str, new_status: str, tenant_id: str = MC_TENANT) -> None:
         """Update task status and emit events for real-time board updates."""
         if not self.project_service:
             return
@@ -1540,6 +1540,7 @@ class DashboardService:
                 project_service=self.project_service,
                 task_id=task_id,
                 status=new_status,
+                tenant_id=tenant_id,
             )
         except Exception:
             pass

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 import { deliverablesApi } from '../api'
 
 const STATUS_CONFIG = {
@@ -184,7 +184,7 @@ export function OrchestrationTracker() {
     return () => clearInterval(interval)
   }, [loadDeliverables])
 
-  useSSE({
+  useSharedSSE({
     orchestration_spawn(data) {
       setSpawns(prev => {
         const key = `${data.task_id}:${data.being_id}`

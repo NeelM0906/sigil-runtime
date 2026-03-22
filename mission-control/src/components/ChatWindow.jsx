@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { chatApi, tasksApi, deliverablesApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -615,7 +615,7 @@ export function ChatWindow() {
   }
 
   // SSE: incoming LLM responses and system messages arrive here
-  useSSE({
+  useSharedSSE({
     chat_message(data) {
       if (data.sender === 'user') return
       setTypingBeings(prev => {

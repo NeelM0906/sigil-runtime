@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from './context/AuthContext'
 import { BeingsProvider } from './context/BeingsContext'
+import { SSEProvider } from './context/SSEContext'
 import { LoginPage } from './components/LoginPage'
 import { Header } from './components/Header'
 import { BeingsRegistry } from './components/BeingsRegistry'
@@ -30,6 +31,7 @@ function Dashboard() {
   const show = (tab) => activeTab === tab ? {} : { display: 'none' }
 
   return (
+    <SSEProvider>
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
         <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} user={user} onLogout={logout} />
@@ -72,6 +74,7 @@ function Dashboard() {
         }} />
       </div>
     </BeingsProvider>
+    </SSEProvider>
   )
 }
 
