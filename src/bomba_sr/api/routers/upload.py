@@ -54,13 +54,21 @@ def upload_file(
         # Extract text (fast — no ML models)
         extracted = extract_text(tmp_path)
         text = extracted.get("text", "")
-        if not text or text.startswith("[Could not extract") or text.startswith("[Binary file"):
+        can_native = extracted.get("can_send_native", False)
+
+        # Only reject if text extraction failed AND format can't be sent natively to LLM
+        if not can_native and (not text or text.startswith("[Could not extract") or text.startswith("[Binary file")):
             raise HTTPException(
                 422,
                 f"Could not extract text from {file.filename}. "
                 f"Format: {extracted.get('format', 'unknown')}. "
                 f"Detail: {text}",
             )
+
+        # Native-capable files with no extracted text (scanned PDFs, images)
+        if not text and can_native:
+            text = f"[Native document: {file.filename} — content readable by LLM via direct file access]"
+            extracted["text"] = text
 
         # Get tenant's memory store
         runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
