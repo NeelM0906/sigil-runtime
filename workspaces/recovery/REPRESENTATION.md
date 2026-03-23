@@ -1,45 +1,14 @@
 # Being Representation: SAI Recovery
-*Auto-maintained by SAI Memory. Last updated: 2023-10-01*
+*Auto-maintained by SAI Memory. Last updated: 2026-03-21*
 
 ## Task History Summary
-Total tasks completed: 12
-Recent tasks: Contributed to the Scale framework in the 90-day go-to-market roadmap for ACT-I.
+Total tasks completed: 18
+Recent tasks: Defined recovery-specific workflows and acceptance criteria for a recovery tracking system inspired by Aiko's project management tool (scored 0.5 — partial quality); previously produced a 21KB operational spec (RECOVERY_OPERATIONAL_SPEC_v1.md) covering case type taxonomy (7 types), workflow stages with transition rules, 7 KPIs with formulas, 4-tier prioritization matrix with auto-escalation, 8 automated alert triggers, and a 5-being assignment matrix — first successful deliverable in the Recovery tracker initiative (scored 0.78); previously defined recovery-specific tracking requirements for a project tracking and management system inspired by Aiko's project management tool (scored 0.0 — task failed quality review); previously delivered a comprehensive requirements document covering 7-stage pipeline, 60+ data fields, 6 dashboard views, 16 automation rules, integration points, and 20 KPIs for the same initiative.
 
 ## Performance Profile
-Average task quality: 0.3
-Strengths: Improved structural analysis of team capabilities; identified skill gaps across the ecosystem; contributed to go-to-market strategy development; demonstrated high transparency and integrity in task execution.
-Weaknesses: Requires task restructuring or prompt optimization to avoid technical failures; lacking in operational effectiveness review with actual performance data and client outcomes.
+Average task quality: 0.34
+Strengths: Improved structural analysis of team capabilities; identified skill gaps across the ecosystem; contributed to go-to-market strategy development; demonstrated high transparency and integrity in task execution; ability to adapt existing frameworks (e.g., project management systems) for recovery-specific purposes; consistent ability to translate general-purpose tools into recovery-oriented specifications; delivers developer-ready, highly structured requirements documents with strong specificity and actionable detail; good integrity signals such as grounding notes confirming absence of prior documentation; demonstrated resilience by producing a successful deliverable after four consecutive failures across multiple beings; capable of generating comprehensive operational specs that map 1:1 against acceptance criteria; strong internalization of mission identity ("Every file is a person").
+Weaknesses: Requires task restructuring or prompt optimization to avoid technical failures; lacking in operational effectiveness review with actual performance data and client outcomes; tendency to over-scope without prioritization tiers (e.g., must-have vs nice-to-have), which can overwhelm downstream builders; may default to domain-specific assumptions (e.g., healthcare/medical recovery) without first clarifying the breadth of the request or acknowledging multiple recovery domains; deliverables may lack inline detail for external verification — summaries report structure but full content not always included for independent audit; operational rigor of transition rules and dwell times not yet confirmed as beyond generic; recurring mediocre scores on workflow/acceptance-criteria tasks for the recovery tracker initiative suggest difficulty consistently meeting quality bar on this workstream.
 Most effective tool chains: (not yet determined)
 
-## Domain Expertise Map
-Topics this being has deep knowledge in, derived from task history:
-- Digital marketing campaign analysis
-- Resilience frameworks in marketing
-- Common failure modes in campaigns
-- Recovery operations coordination
-- Sales objection handling
-- Competitive intelligence and sales strategy
-- Legal tech market strategies
-- Go-to-market planning for legal firms
-- Team capability assessment and skill gap analysis
-- Operational effectiveness review
-- Go-to-market strategy development
-- Phase framework development for go-to-market strategies
-
-## Collaboration Profile
-Beings frequently worked with: SAI Scholar, SAI Sisters
-Best pairing: (not yet determined)
-Communication style notes: (none yet)
-
-## Evolution Log
-2023-10-01: Completed first task focused on digital marketing campaign analysis and resilience framework development.
-2023-10-01: Completed second task involving analysis of common failure modes in digital marketing campaigns.
-2023-10-01: Completed third task focused on recovery operations coordination and communication.
-2023-10-01: Completed task developing an objection handling framework for sales battlecard.
-2023-10-01: Collaborated with sisters on recovery operations.
-2023-10-01: Completed task building a sales battlecard for ACT-I, enhancing expertise in competitive intelligence and sales strategy.
-2023-10-01: Completed task building a go-to-market playbook for ACT-I targeting law firms, expanding expertise in legal tech market strategies and go-to-market planning.
-2023-10-01: Conducted an audit of the ACT-I ecosystem, assessing team capabilities and identifying skill gaps for future development.
-2023-10-01: Completed task assessing operational effectiveness of ecosystem with recommendations for improvements.
-2023-10-01: Contributed to the creation of a 90-day go-to-market roadmap for ACT-I, enhancing strategic planning expertise.
-2023-10-01: Contributed to the Scale framework for ACT-I's go-to-market strategy, reinforcing expertise in strategic development.
+## D

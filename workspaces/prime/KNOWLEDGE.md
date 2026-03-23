@@ -3,7 +3,46 @@
 
 ## Key Facts
 
+## Sigil Runtime Repo
+- **Repo:** `NeelM0906/sigil-runtime` (PUBLIC)
+- **Deployment branch:** `neel_dev`
+- **Local clone:** `/Users/studio2/Projects/sigil-runtime` (currently on `multi-tenant`)
+- **GitHub auth:** `samanthaaiko-collab` via fine-grained PAT (second token)
+- **23 branches** including `neel_dev`, `multi-tenant`, `main`, feature branches
+- **Latest neel_dev commit:** `71b13f79` — "Add Escape key handler to BeingDetail panel"
+- **Previous incorrect assumption:** SAI repo was at `samanthaaiko-collab/SAI` — WRONG. The correct and only repo is `NeelM0906/sigil-runtime`.
+
 ## Domain Expertise
+
+## Discussion Capture Pipeline Operations
+
+Designed the operational specification for a 4-hour recurring discussion capture pipeline across all ACT-I beings. Key patterns established:
+
+**No-DDnD Quality Gate Architecture:**
+- Three non-negotiable rules: No Deletion (every topic captured, no importance filtering), No Dilution (named entities, numbers, decisions preserved in summaries), No Distortion (verbatim excerpts, no editorializing)
+- Quality gate NEVER blocks inserts — it flags. Blocking = deletion, which violates the mandate.
+- Named entity check: ≥90% of entities from raw excerpt must appear in summary
+- Specificity scoring: auto-flag vague phrases like "discussed various topics"
+
+**Capture Cadence Design:**
+- 6 cycles/day at 4-hour intervals (cron: `0 0,4,8,12,16,20 * * *` UTC)
+- Each cycle captures the PRECEDING 4-hour window (fire at 08:00, capture 04:00-07:59:59)
+- Pipeline is idempotent via INSERT ON CONFLICT DO NOTHING (safe re-runs, safe backfills)
+
+**Failure Handling Pattern:**
+- 3-retry cascade with 5min/15min delays, then alert + manual backfill task
+- Local buffer at `/workspaces/prime/capture_buffer/` holds raw data between extraction and write
+- 7-day retention window for source data means backfills degrade after 1 week
+
+**Audit Trail Design:**
+- Per-cycle audit record with per-being topic counts, flags, retry counts
+- 4 completeness checks: session coverage, topic density sanity, shared memory cross-reference, zero-activity confirmation
+- Weekly aggregate report for trend analysis
+
+**Integration Points:**
+- Pairs with the-technologist's `discussion_log_schema.sql` (Postgres, dedup via SHA-256 hash)
+- Discovers beings dynamically via `sisters_list` — no hardcoded being list
+- Current beings: Prime, Forge, Recovery, SAI Memory, Scholar
 
 ## Legal Market Campaign Architecture
 
@@ -25,34 +64,11 @@ Successfully designed comprehensive 90-day go-to-market campaign framework for A
 - 75-day average sales cycle (vs 120 industry standard) through parallel processing
 - ROI framework: $275K investment targeting $2.5M closed revenue (900% ROI)
 
-**Project Management Framework:**
-- Critical path dependency mapping with risk mitigation protocols
-- Daily operational metrics with <4 hour response standards for high-value prospects
-- Weekly rhythm protocols with monthly strategic checkpoints
-
-**Legal Market Specialization:**
-- Am Law 100 targeting with practice area alignment (Corporate M&A, Complex Litigation, Securities)
-- Professional courtesy approach maintaining relationship integrity regardless of conversion
+**Legal Industry Intelligence:**
+- Am Law 100 targeting with practice area alignment
 - Competitive positioning against Harvey AI/Claude focusing on human actualization vs task automation
+- Professional courtesy approach maintaining relationship integrity regardless of conversion
 
 ## Legal Market Campaign Architecture
 
-**90-Day Framework Mastery**: Delivered comprehensive execution blueprint for law firm targeting including daily calendars, resource allocation (4.5→8.0 FTE scaling), project management with critical path dependencies, 100-point lead scoring system, 5-stage sales funnel with specific conversion targets, and success metrics framework targeting $2.5M closed revenue from $275K investment.
-
-**Revenue Operations Excellence**: Structured campaign for 900% ROI through tier-based prospect treatment (4-hour response for Am Law 50), pipeline velocity optimization (37% faster than industry), and conversion rate improvements (65% above benchmarks). Resource allocation across 3 phases with budget optimization and contingency planning.
-
-**Sales Process Engineering**: Created BANT+ qualification methodology, multi-tier treatment protocols, escalation procedures, and quality assurance standards. Mapped dependencies, milestones, and success gates for systematic execution and scale optimization.
-
-**Legal Industry Intelligence**: Applied market research and competitive positioning to create differentiated go-to-market approach leveraging ACT-I's human actualization focus versus traditional AI automation tools. Addressing industry-specific concerns around compliance, security, and professional development.
-
-## Legal Market Positioning Strategy
-
-### Key Strategic Framework
-- **Blue Ocean Opportunity:** Legal AI market focuses on task replacement - ACT-I's human development approach creates uncontested market space
-- **Primary Differentiation:** "We don't replace lawyers, we create better lawyers" - human actualization vs. task automation
-- **Pricing Strategy:** Three-tier approach ($50K-$200K+) with outcome-based options leveraging legal industry's high value per professional
-
-### Competitive Positioning
-- **vs. Harvey AI:** Human Development vs. Task Replacement - "While Harvey handles tasks, ACT-I transforms the professional"
-- **vs. Thomson Reuters:** Transformation vs. Information - "Thomson Reuters gives you information; ACT-I gives you influence"  
-- **vs. Anthropic Claude:** Specialized Methodolo
+Successfully designed comprehensive 90-day
