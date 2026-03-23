@@ -11,11 +11,52 @@ from typing import Any
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
+_BINARY_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"}
+
+
 def _read_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     path = context.guard_path(str(arguments["path"]))
     offset = int(arguments.get("offset") or 0)
     limit = int(arguments.get("limit") or 0)
-    text = path.read_text(encoding="utf-8")
+
+    # Binary files: parse with Docling instead of read_text
+    if path.suffix.lower() in _BINARY_EXTENSIONS:
+        try:
+            from bomba_sr.ingestion.parser import parse_document
+            parsed = parse_document(str(path))
+            text = parsed["markdown"]
+            meta = parsed["metadata"]
+            lines = text.splitlines()
+            if offset < 0:
+                offset = 0
+            if limit > 0:
+                sliced = lines[offset : offset + limit]
+            else:
+                sliced = lines[offset:]
+            return {
+                "path": str(path),
+                "content": "\n".join(sliced),
+                "lines": len(lines),
+                "returned_lines": len(sliced),
+                "format": meta.get("format", ""),
+                "pages": meta.get("page_count", 0),
+                "tables": len(parsed.get("tables", [])),
+                "parsed_with": "docling",
+            }
+        except Exception as exc:
+            return {
+                "path": str(path),
+                "error": f"Binary file ({path.suffix}) — Docling parse failed: {exc}",
+                "hint": "Use the parse_document tool for advanced document processing.",
+            }
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return {
+            "path": str(path),
+            "error": f"Binary file — cannot read as text. Use parse_document tool for {path.suffix} files.",
+        }
     lines = text.splitlines()
     if offset < 0:
         offset = 0
@@ -111,6 +152,33 @@ def _literal_grep_matches(pattern: str, root: Path, file_glob: str) -> list[dict
             if pattern in line:
                 matches.append({"path": str(path), "line": idx, "snippet": line.strip()})
     return matches
+
+
+def _parse_document_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    """Parse a document (PDF, DOCX, PPTX, XLSX, HTML, images) into structured text."""
+    path = context.guard_path(str(arguments["path"]))
+    if not path.is_file():
+        return {"error": f"File not found: {path}"}
+    try:
+        from bomba_sr.ingestion.parser import parse_document
+        parsed = parse_document(str(path))
+        result: dict[str, Any] = {
+            "path": str(path),
+            "markdown": parsed["markdown"][:30000],  # Cap for context window
+            "metadata": parsed["metadata"],
+            "chunks": len(parsed["chunks"]),
+            "tables": len(parsed.get("tables", [])),
+        }
+        # Include table data if present
+        for i, table in enumerate(parsed.get("tables", [])[:5]):
+            result[f"table_{i}"] = {
+                "headers": table.get("headers", []),
+                "rows": table.get("rows", 0),
+                "csv_preview": table.get("csv", "")[:2000],
+            }
+        return result
+    except Exception as exc:
+        return {"error": f"Document parsing failed: {exc}", "path": str(path)}
 
 
 def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
@@ -256,5 +324,24 @@ def builtin_fs_tools() -> list[ToolDefinition]:
             action_type="read",
             execute=_grep_tool,
             aliases=("grep_content",),
+        ),
+        ToolDefinition(
+            name="parse_document",
+            description=(
+                "Parse a document file (PDF, DOCX, PPTX, XLSX, HTML, images) into structured "
+                "markdown text with table extraction. Use this for binary documents that `read` "
+                "cannot handle. Returns markdown content, table data, and metadata."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the document file"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_parse_document_tool,
         ),
     ]

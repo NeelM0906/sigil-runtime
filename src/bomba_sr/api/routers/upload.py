@@ -89,6 +89,27 @@ async def upload_file(
             shutil.copy2(tmp_path, str(dest))
             result["saved_to"] = str(dest)
 
+        # Inject context into the being's memory so it knows the document was uploaded
+        summary_lines = parsed["markdown"][:500].replace("\n", " ").strip()
+        context_note = (
+            f"[DOCUMENT UPLOADED] {file.filename or 'unknown'} — "
+            f"{result['chunks']} chunks indexed into your semantic memory, "
+            f"{result['tables']} tables extracted. "
+            f"Content preview: {summary_lines[:200]}..."
+        )
+        try:
+            memory_store.append_working_note(
+                user_id=auth["user_id"],
+                session_id=f"upload-context-{result['doc_id']}",
+                title=f"Upload context: {file.filename}",
+                content=context_note,
+                tags=["upload", "context", file.filename or "unknown"],
+                confidence=1.0,
+                being_id=being_id,
+            )
+        except Exception:
+            pass  # Non-critical
+
         return result
     finally:
         os.unlink(tmp_path)
