@@ -11,6 +11,7 @@ import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { ProjectsHub } from './components/ProjectsHub'
+import { CodeWorkspace } from './components/CodeWorkspace'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
   { id: 'teams', label: 'Agent Teams' },
+  { id: 'code', label: 'Code' },
 ]
 
 function Dashboard() {
@@ -59,6 +61,9 @@ function Dashboard() {
           )}
           {activeTab === 'teams' && (
             <AgentTeams />
+          )}
+          {activeTab === 'code' && (
+            <CodeWorkspace />
           )}
         </main>
 

@@ -201,3 +201,34 @@ export const actiApi = {
     return request(`/api/mc/acti/sisters/${id}`)
   },
 }
+
+// ── Code Agent API (Pi Bridge) ─────────────────────────────
+
+export const codeApi = {
+  health() {
+    return request('/api/mc/code/health')
+  },
+  sessions() {
+    return request('/api/mc/code/sessions')
+  },
+  createSession(title = 'New session') {
+    return request('/api/mc/code/sessions', { method: 'POST', body: JSON.stringify({ title }) })
+  },
+  deleteSession(id) {
+    return request(`/api/mc/code/sessions/${id}`, { method: 'DELETE' })
+  },
+  prompt(sessionId, message) {
+    return request(`/api/mc/code/sessions/${sessionId}/prompt`, {
+      method: 'POST', body: JSON.stringify({ message }),
+    })
+  },
+  abort(sessionId) {
+    return request(`/api/mc/code/sessions/${sessionId}/abort`, { method: 'POST' })
+  },
+  messages(sessionId) {
+    return request(`/api/mc/code/sessions/${sessionId}/messages`)
+  },
+  state() {
+    return request('/api/mc/code/state')
+  },
+}
