@@ -208,7 +208,7 @@ def _resolve_sisters_tenant(
     return tenant_id, workspace_root
 
 
-def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
+def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi_bridge=None):
     class Handler(BaseHTTPRequestHandler):
         def _cors_origin(self) -> str | None:
             origin = str(self.headers.get("Origin") or "").strip()
@@ -1644,6 +1644,46 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self.wfile.write(fpath.read_bytes())
                     return
 
+                # --- Code (Pi Bridge) GET ---
+                if path == "/api/mc/code/health":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    self._write_cors(200, pi_bridge.health())
+                    return
+
+                if path == "/api/mc/code/sessions":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    self._write_cors(200, {"sessions": pi_bridge.list_sessions()})
+                    return
+
+                if path.startswith("/api/mc/code/sessions/") and path.endswith("/messages"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    sid = path.split("/api/mc/code/sessions/", 1)[1].split("/")[0]
+                    result = pi_bridge.get_messages(sid)
+                    self._write_cors(200, result)
+                    return
+
+                if path.startswith("/api/mc/code/sessions/") and path.endswith("/events"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    sid = path.split("/api/mc/code/sessions/", 1)[1].split("/")[0]
+                    self._mc_code_sse_stream(sid)
+                    return
+
+                if path == "/api/mc/code/state":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    result = pi_bridge.get_state()
+                    self._write_cors(200, result)
+                    return
+
                 # --- SSE ---
                 if path == "/api/mc/events":
                     self._mc_sse_stream()
@@ -1813,6 +1853,45 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(201, {"message": msg})
                     return
 
+                # --- Code (Pi Bridge) POST ---
+                if path == "/api/mc/code/sessions":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    title = body.get("title", "New session")
+                    session = pi_bridge.create_session(title=title)
+                    self._write_cors(201, {
+                        "session": {
+                            "id": session.id,
+                            "title": session.title,
+                            "workspace_root": session.workspace_root,
+                            "created_at": session.created_at,
+                        },
+                    })
+                    return
+
+                if path.startswith("/api/mc/code/sessions/") and path.endswith("/prompt"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    sid = path.split("/api/mc/code/sessions/", 1)[1].split("/prompt")[0]
+                    message = body.get("message", "")
+                    if not message:
+                        self._write_cors(400, {"error": "message is required"})
+                        return
+                    result = pi_bridge.send_prompt(sid, message)
+                    self._write_cors(200, {"ok": True, "result": result})
+                    return
+
+                if path.startswith("/api/mc/code/sessions/") and path.endswith("/abort"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    sid = path.split("/api/mc/code/sessions/", 1)[1].split("/abort")[0]
+                    result = pi_bridge.abort(sid)
+                    self._write_cors(200, {"ok": True, "result": result})
+                    return
+
                 self._write_cors(404, {"error": "not_found"})
             except KeyError as exc:
                 self._write_cors(400, {"error": f"missing field: {exc}"})
@@ -1916,6 +1995,19 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
                     self._write_cors(200, {"ok": True})
                     return
 
+                # DELETE /api/mc/code/sessions/:id
+                if path.startswith("/api/mc/code/sessions/"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    sid = path.split("/api/mc/code/sessions/", 1)[1].split("/")[0]
+                    ok = pi_bridge.delete_session(sid)
+                    if not ok:
+                        self._write_cors(404, {"error": "session not found"})
+                        return
+                    self._write_cors(200, {"ok": True})
+                    return
+
                 self._write_cors(404, {"error": "not_found"})
             except Exception as exc:
                 self._write_cors(500, {"error": str(exc)})
@@ -1945,6 +2037,49 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(data)
+
+        def _mc_code_sse_stream(self, session_id: str) -> None:
+            """SSE endpoint for Code tab — streams Pi agent events for a session."""
+            if not pi_bridge:
+                self._write_cors(503, {"error": "code agent not configured"})
+                return
+
+            sub_id, event_queue = pi_bridge.subscribe(session_id)
+            self.send_response(200)
+            allowed_origin = self._cors_origin()
+            if allowed_origin:
+                self.send_header("Access-Control-Allow-Origin", allowed_origin)
+                self.send_header("Vary", "Origin")
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+
+            try:
+                while True:
+                    try:
+                        evt = event_queue.get(timeout=20.0)
+                    except Exception:
+                        # keepalive
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+                        continue
+                    # Filter to requested session
+                    if evt.session_id != session_id:
+                        continue
+                    data = json.dumps({
+                        "session_id": evt.session_id,
+                        "event_type": evt.event_type,
+                        "data": evt.data,
+                        "timestamp": evt.timestamp,
+                    }, default=str)
+                    self.wfile.write(f"event: {evt.event_type}\n".encode())
+                    self.wfile.write(f"data: {data}\n\n".encode())
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                pi_bridge.unsubscribe(sub_id)
 
         def _mc_sse_stream(self) -> None:
             """SSE endpoint — holds connection open, pushes events."""
@@ -2031,9 +2166,45 @@ def main() -> int:
     except Exception as exc:
         print(f"mission control: init failed ({exc}), MC endpoints disabled")
 
+    # Bootstrap Pi coding agent bridge (Code tab)
+    pi_bridge = None
+    try:
+        from bomba_sr.dashboard.pi_bridge import PiBridge
+
+        _pi_model = os.getenv("BOMBA_PI_MODEL", "openrouter/anthropic/claude-sonnet-4")
+        _pi_tools = os.getenv("BOMBA_PI_TOOLS", "read,bash,edit,write,grep,find,ls")
+        _pi_thinking = os.getenv("BOMBA_PI_THINKING", "off")
+        _pi_enabled = os.getenv("BOMBA_PI_ENABLED", "true").lower() in ("1", "true", "yes")
+
+        if _pi_enabled:
+            _workspace = str(Path(__file__).resolve().parent.parent)
+            _env_file = Path(_workspace) / ".env"
+
+            def _pi_event_to_sse(evt):
+                """Forward Pi events to dashboard SSE for global listeners."""
+                if dashboard_svc:
+                    dashboard_svc._emit_event(evt.event_type, {
+                        "session_id": evt.session_id,
+                        **evt.data,
+                    })
+
+            pi_bridge = PiBridge(
+                workspace_root=_workspace,
+                model=_pi_model,
+                tools=_pi_tools,
+                thinking=_pi_thinking,
+                env_file=str(_env_file) if _env_file.exists() else None,
+                on_event=_pi_event_to_sse,
+            )
+            print(f"mission control: code agent ready (model={_pi_model})")
+        else:
+            print("mission control: code agent disabled (BOMBA_PI_ENABLED=false)")
+    except Exception as exc:
+        print(f"mission control: code agent init failed ({exc}), Code tab disabled")
+
     server = ThreadingHTTPServer(
         (args.host, args.port),
-        make_handler(bridge, dashboard_svc=dashboard_svc, project_svc=project_svc),
+        make_handler(bridge, dashboard_svc=dashboard_svc, project_svc=project_svc, pi_bridge=pi_bridge),
     )
     print(f"runtime server listening on http://{args.host}:{args.port}")
     print(f"mission control dashboard: http://127.0.0.1:5173  (start with: cd mission-control && npx vite)")
