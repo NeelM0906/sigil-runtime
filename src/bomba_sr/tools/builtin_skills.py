@@ -142,7 +142,81 @@ def builtin_skill_tools(
             "description": description,
         }
 
+    def skill_list(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        status_filter = str(arguments.get("status") or "").strip() or None
+        if status_filter == "all":
+            status_filter = None
+        skills = registry.list_skills(context.tenant_id, status=status_filter)
+        return {
+            "skills": [
+                {
+                    "skill_id": s.skill_id,
+                    "name": s.name,
+                    "description": s.description,
+                    "version": s.version,
+                    "status": s.status,
+                    "source": s.source,
+                }
+                for s in skills
+            ],
+            "count": len(skills),
+        }
+
+    def skill_search_catalog(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        if skills_ecosystem is None:
+            return {"error": "Skill catalog not available", "results": []}
+        query = str(arguments.get("query") or "").strip().lower()
+        source = str(arguments.get("source") or "").strip() or None
+        catalog = skills_ecosystem.list_catalog_skills(source=source)
+        if query:
+            catalog = [
+                s for s in catalog
+                if query in s.name.lower() or query in s.description.lower()
+            ]
+        return {
+            "results": [
+                {
+                    "source": s.source,
+                    "skill_id": s.skill_id,
+                    "name": s.name,
+                    "description": s.description,
+                }
+                for s in catalog[:20]
+            ],
+            "count": len(catalog),
+        }
+
     tools: list[ToolDefinition] = [
+        ToolDefinition(
+            name="skill_list",
+            description="List all installed skills for this tenant. Optionally filter by status (active, draft, validated, or all).",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["active", "draft", "validated", "all"]},
+                },
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=skill_list,
+        ),
+        ToolDefinition(
+            name="skill_search_catalog",
+            description="Search the shared skill catalog (ClawHub and Anthropic Skills) by keyword.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Keyword to search for"},
+                    "source": {"type": "string", "enum": ["clawhub", "anthropic_skills"]},
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=skill_search_catalog,
+        ),
         ToolDefinition(
             name="skill_create",
             description="Create a SKILL.md skill in workspace/skills and register it for the tenant.",

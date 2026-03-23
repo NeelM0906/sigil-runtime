@@ -86,7 +86,7 @@ def create_app() -> FastAPI:
     # Routers
     from bomba_sr.api.routers import (
         acti, admin, auth, beings, chat, deliverables,
-        events, orchestration, projects, subagents, tasks, upload,
+        events, orchestration, projects, skills, subagents, tasks, upload,
     )
     app.include_router(acti.router)
     app.include_router(admin.router)
@@ -97,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(events.router)
     app.include_router(orchestration.router)
     app.include_router(projects.router)
+    app.include_router(skills.router)
     app.include_router(subagents.router)
     app.include_router(tasks.router)
     app.include_router(upload.router)
