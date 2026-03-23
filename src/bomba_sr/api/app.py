@@ -60,17 +60,6 @@ async def lifespan(app: FastAPI):
     app.state.dashboard_svc = dashboard_svc
     app.state.project_svc = project_svc
 
-    # Preload Docling models in background so first upload is fast
-    import threading
-    def _preload_docling():
-        try:
-            from bomba_sr.ingestion.parser import get_converter
-            get_converter()
-            logger.info("Docling document converter preloaded")
-        except Exception as exc:
-            logger.debug("Docling preload skipped: %s", exc)
-    threading.Thread(target=_preload_docling, daemon=True).start()
-
     yield  # app is running
 
 

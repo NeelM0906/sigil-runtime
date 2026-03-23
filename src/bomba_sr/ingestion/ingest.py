@@ -1,47 +1,45 @@
-"""Ingest a parsed document into memory stores + optionally Pinecone."""
+"""Ingest extracted document text into memory stores + optionally Pinecone."""
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
+from datetime import datetime, timezone
 
 log = logging.getLogger(__name__)
 
 
-def ingest_document(
-    parsed: dict,
+def ingest_to_memory(
+    extracted: dict,
     tenant_id: str,
     user_id: str,
     being_id: str,
     filename: str,
     memory_store,
     consolidator,
-    pinecone_index: str | None = None,
-    pinecone_namespace: str | None = None,
 ) -> dict:
-    """Store parsed document in local memory + optionally Pinecone.
-
-    Returns summary of what was stored.
-    """
+    """Store extracted document text in local memory. Returns summary."""
+    from bomba_sr.ingestion.parser import chunk_text
     from bomba_sr.memory.consolidation import MemoryCandidate
 
-    now = _utc_now()
+    now = datetime.now(timezone.utc).isoformat()
     doc_id = uuid.uuid4().hex[:12]
-    stored_chunks = 0
-    stored_pinecone = 0
+    text = extracted.get("text") or ""
 
-    # 1. Store full document as a markdown note
+    # Store full document as a working note
     memory_store.append_working_note(
         user_id=user_id,
         session_id=f"upload-{doc_id}",
         title=f"Uploaded: {filename}",
-        content=parsed["markdown"][:50000],
-        tags=["upload", parsed["metadata"]["format"], filename],
+        content=text[:50000],
+        tags=["upload", extracted.get("format", ""), filename],
         confidence=1.0,
         being_id=being_id,
     )
 
-    # 2. Store each chunk as a semantic memory
-    for i, chunk in enumerate(parsed["chunks"]):
+    # Chunk and store as semantic memories
+    chunks = chunk_text(text)
+    for i, chunk in enumerate(chunks):
         consolidator.upsert(MemoryCandidate(
             user_id=f"{user_id}->prime->{being_id}",
             key=f"doc::{doc_id}::chunk-{i}",
@@ -51,72 +49,68 @@ def ingest_document(
             recency_ts=now,
             being_id=being_id,
         ))
-        stored_chunks += 1
 
-    # 3. Store tables as separate semantic memories
-    for i, table in enumerate(parsed.get("tables", [])):
-        consolidator.upsert(MemoryCandidate(
-            user_id=f"{user_id}->prime->{being_id}",
-            key=f"doc::{doc_id}::table-{i}",
-            content=f"Table from {filename}:\n{table['csv'][:5000]}",
-            tier="semantic",
-            evidence_refs=(f"upload://{filename}#table-{i}",),
-            recency_ts=now,
-            being_id=being_id,
-        ))
-
-    # Commit local memory writes
     try:
         consolidator.db.commit()
     except Exception:
         pass
 
-    # 4. Optionally embed chunks into Pinecone
-    if pinecone_index and pinecone_namespace:
+    return {
+        "doc_id": doc_id,
+        "filename": filename,
+        "text_length": len(text),
+        "chunks": len(chunks),
+        "format": extracted.get("format", ""),
+    }
+
+
+def ingest_to_pinecone_background(
+    text: str,
+    doc_id: str,
+    tenant_id: str,
+    being_id: str,
+    filename: str,
+    index: str,
+    namespace: str,
+) -> None:
+    """Spawn background thread to chunk, embed, and upsert to Pinecone."""
+    def _run():
         try:
+            from bomba_sr.ingestion.parser import chunk_text
             from bomba_sr.tools.builtin_pinecone import (
                 _choose_pinecone_api_key,
                 _embed_batch,
                 _http_json,
                 _resolve_index_host,
             )
-            api_key = _choose_pinecone_api_key(pinecone_index)
-            host = _resolve_index_host(pinecone_index, api_key)
 
-            texts = parsed["chunks"]
-            if texts:
-                vectors = _embed_batch(texts)
-                pinecone_vectors = []
-                for j, (text, vec) in enumerate(zip(texts, vectors)):
-                    pinecone_vectors.append({
-                        "id": f"doc-{doc_id}-{j}",
-                        "values": vec,
-                        "metadata": {
-                            "text": text,
-                            "tenant_id": tenant_id,
-                            "being_id": being_id,
-                            "source": f"upload://{filename}",
-                            "chunk_index": j,
-                        },
-                    })
+            chunks = chunk_text(text)
+            if not chunks:
+                return
 
-                payload = {"vectors": pinecone_vectors, "namespace": pinecone_namespace}
-                url = f"https://{host}/vectors/upsert"
-                resp = _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
-                stored_pinecone = resp.get("upsertedCount", len(pinecone_vectors))
+            api_key = _choose_pinecone_api_key(index)
+            host = _resolve_index_host(index, api_key)
+            vectors_data = _embed_batch(chunks)
+
+            pinecone_vectors = []
+            for j, (chunk, vec) in enumerate(zip(chunks, vectors_data)):
+                pinecone_vectors.append({
+                    "id": f"doc-{doc_id}-{j}",
+                    "values": vec,
+                    "metadata": {
+                        "text": chunk,
+                        "tenant_id": tenant_id,
+                        "being_id": being_id,
+                        "source": f"upload://{filename}",
+                        "chunk_index": j,
+                    },
+                })
+
+            payload = {"vectors": pinecone_vectors, "namespace": namespace}
+            url = f"https://{host}/vectors/upsert"
+            _http_json("POST", url, headers={"Api-Key": api_key}, payload=payload)
+            log.info("Pinecone: upserted %d vectors for %s", len(pinecone_vectors), filename)
         except Exception as exc:
-            log.warning("Pinecone upsert failed: %s", exc)
+            log.warning("Pinecone background ingest failed: %s", exc)
 
-    return {
-        "doc_id": doc_id,
-        "filename": filename,
-        "chunks": stored_chunks,
-        "tables": len(parsed.get("tables", [])),
-        "pinecone_vectors": stored_pinecone,
-        "markdown_length": len(parsed["markdown"]),
-    }
-
-
-def _utc_now() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
+    threading.Thread(target=_run, daemon=True).start()

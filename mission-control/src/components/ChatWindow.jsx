@@ -247,7 +247,7 @@ function MarkdownSegment({ content, getBeingById }) {
         code: ({ children, className }) => {
           const isBlock = className?.includes('language-')
           if (isBlock) {
-            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto">{children}</code>
+            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-w-full">{children}</code>
           }
           return <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
         },
@@ -931,13 +931,15 @@ export function ChatWindow() {
               beings={beings}
             />
           )}
-          <input
+          <textarea
             ref={inputRef}
             value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message... (@ to mention a being)"
-            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
+            onChange={(e) => { handleInputChange(e); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px' }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleKeyDown(e) } else { handleKeyDown(e) } }}
+            placeholder="Message... (@ to mention a being, Shift+Enter for newline)"
+            rows={1}
+            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors resize-none overflow-hidden"
+            style={{ minHeight: '38px', maxHeight: '200px' }}
           />
           <input
             ref={fileInputRef}
