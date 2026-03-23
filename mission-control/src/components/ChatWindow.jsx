@@ -689,6 +689,7 @@ export function ChatWindow() {
 
   const fileInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState(null) // staged upload result
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -698,7 +699,7 @@ export function ChatWindow() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('being_id', targets[0] || 'prime')
+      formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
       const stored = localStorage.getItem('mc_auth')
       const token = stored ? JSON.parse(stored).token : ''
       const res = await fetch('/api/mc/upload', {
@@ -706,16 +707,21 @@ export function ChatWindow() {
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       })
-      if (!res.ok) throw new Error('Upload failed')
+      if (res.status === 401) {
+        // Don't trigger reload loop — just show error
+        setUploadedFile(null)
+        return
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('Upload failed:', err)
+        return
+      }
       const result = await res.json()
-      // Send a system-style message about the upload
-      const summary = `[Uploaded: ${result.filename} — ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables extracted` : ''}${result.pinecone_vectors ? `, ${result.pinecone_vectors} vectors stored` : ''}]`
-      await chatApi.send({
-        targets: targets.length ? targets : ['prime'],
-        content: summary,
-        mode: 'auto',
-        session_id: activeSessionId,
-      })
+      // Stage the upload — don't send yet. User hits Enter to send with context.
+      setUploadedFile(result)
+      const hint = `[${result.filename}: ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables` : ''}] `
+      setInput(prev => hint + prev)
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {

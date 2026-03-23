@@ -14,7 +14,7 @@ from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/mc/upload", tags=["upload"])
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".html", ".txt", ".md", ".csv", ".png", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".xls", ".html", ".txt", ".md", ".csv", ".png", ".jpg", ".jpeg"}
 MAX_SIZE = 50 * 1024 * 1024  # 50MB
 
 
