@@ -28,7 +28,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
     "group:web": {"web_search", "web_fetch"},
     "group:sessions": {"sessions_list", "sessions_send", "sessions_spawn", "sessions_poll", "session_status"},
     "group:approvals": {"list_approvals", "decide_approval"},
-    "group:skills": {"skill_create", "skill_update", "skill_install_request", "skill_install_apply", "skill_list", "skill_search_catalog"},
+    "group:skills": {"skill_create", "skill_update", "skill_list"},
 }
 
 

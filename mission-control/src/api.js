@@ -165,26 +165,6 @@ export const skillsApi = {
   get(id) {
     return request(`/api/mc/skills/${id}`)
   },
-  catalog(source) {
-    const qs = source ? `?source=${source}` : ''
-    return request(`/api/mc/skills/catalog${qs}`)
-  },
-  searchCatalog(q) {
-    return request(`/api/mc/skills/catalog/search?q=${encodeURIComponent(q)}`)
-  },
-  install(source, skillId, reason) {
-    return request('/api/mc/skills/install', {
-      method: 'POST',
-      body: JSON.stringify({ source, skill_id: skillId, reason }),
-    })
-  },
-  applyInstall(requestId) {
-    return request(`/api/mc/skills/install/${requestId}/apply`, { method: 'POST' })
-  },
-  installRequests(status) {
-    const qs = status ? `?status=${status}` : ''
-    return request(`/api/mc/skills/install${qs}`)
-  },
   executions(limit = 50) {
     return request(`/api/mc/skills/executions?limit=${limit}`)
   },

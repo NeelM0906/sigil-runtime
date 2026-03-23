@@ -134,7 +134,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:runtime",       # exec, process, compact_context, switch_model, etc.
         "group:codeintel",     # code_search + serena symbol tools
-        "group:skills",        # skill_create, skill_update, skill_install_*
+        "group:skills",        # skill_create, skill_update, skill_list
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
         "group:media",         # fal video generation + request tracking
@@ -160,7 +160,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:fs",            # read, write, edit, glob, grep, parse_document (for case files)
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
-        "group:skills",        # skill_create, skill_update, skill_list, skill_search_catalog, skill_install_*
+        "group:skills",        # skill_create, skill_update, skill_list
     )),
 
     # Memory — memory specialist + Pinecone

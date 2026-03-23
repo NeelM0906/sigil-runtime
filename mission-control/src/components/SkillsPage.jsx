@@ -9,10 +9,9 @@ const STATUS_BADGE = {
 }
 
 const SOURCE_BADGE = {
-  clawhub: 'bg-accent-purple/15 text-accent-purple border-accent-purple/30',
-  anthropic_skills: 'bg-accent-blue/15 text-accent-blue border-accent-blue/30',
   database: 'bg-text-muted/15 text-text-muted border-text-muted/30',
   filesystem: 'bg-accent-amber/15 text-accent-amber border-accent-amber/30',
+  workspace: 'bg-accent-purple/15 text-accent-purple border-accent-purple/30',
 }
 
 const RISK_COLOR = {
@@ -132,103 +131,6 @@ function InstalledTab() {
   )
 }
 
-// ── Catalog Tab ──────────────────────────────────────────────
-
-function CatalogTab() {
-  const [catalog, setCatalog] = useState([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [installing, setInstalling] = useState(null)
-  const [sourceFilter, setSourceFilter] = useState('')
-
-  const fetchCatalog = useCallback(async () => {
-    try {
-      const { skills: s } = await skillsApi.catalog(sourceFilter || undefined)
-      setCatalog(s || [])
-    } catch (err) {
-      console.error('Failed to fetch catalog:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [sourceFilter])
-
-  useEffect(() => { fetchCatalog() }, [fetchCatalog])
-
-  const filtered = catalog.filter(s =>
-    !search || s.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.description?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const handleInstall = async (skill) => {
-    setInstalling(skill.skill_id)
-    try {
-      await skillsApi.install(skill.source, skill.skill_id, `Installing ${skill.name} from catalog`)
-      alert(`Install request created for ${skill.name}. It may require approval.`)
-    } catch (err) {
-      alert('Install failed: ' + err.message)
-    } finally {
-      setInstalling(null)
-    }
-  }
-
-  if (loading) return <div className="text-text-muted text-sm p-4">Loading catalog...</div>
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search skill catalog..."
-          className="flex-1 px-3 py-2 bg-bg-card border border-border rounded text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue"
-        />
-        <select
-          value={sourceFilter}
-          onChange={e => { setSourceFilter(e.target.value); setLoading(true) }}
-          className="px-2 py-2 bg-bg-card border border-border rounded text-xs text-text-primary"
-        >
-          <option value="">All Sources</option>
-          <option value="clawhub">ClawHub</option>
-          <option value="anthropic_skills">Anthropic Skills</option>
-        </select>
-        <span className="text-xs text-text-muted">{filtered.length} available</span>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-text-muted">
-          <p className="text-sm">No catalog skills found.</p>
-          <p className="text-xs mt-1">Check your BOMBA_SKILL_CATALOG_SOURCES configuration.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filtered.map(skill => (
-            <div key={`${skill.source}-${skill.skill_id}`} className="bg-bg-card border border-border rounded-lg p-3 hover:border-border-bright transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold truncate">{skill.name}</h3>
-                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded border ${SOURCE_BADGE[skill.source] || SOURCE_BADGE.clawhub}`}>
-                  {skill.source === 'anthropic_skills' ? 'ANTHROPIC' : 'CLAWHUB'}
-                </span>
-              </div>
-              <p className="text-xs text-text-secondary line-clamp-3 mb-3">{skill.description}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-text-muted font-mono truncate max-w-[60%]">{skill.skill_id}</span>
-                <button
-                  onClick={() => handleInstall(skill)}
-                  disabled={installing === skill.skill_id}
-                  className="px-3 py-1 text-xs font-medium bg-accent-purple/15 text-accent-purple border border-accent-purple/30 rounded hover:bg-accent-purple/25 disabled:opacity-40 transition-colors"
-                >
-                  {installing === skill.skill_id ? 'Installing...' : 'Install'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Create Tab ──────────────────────────────────────────────
 
 function CreateTab({ onCreated }) {
@@ -240,30 +142,24 @@ function CreateTab({ onCreated }) {
     disable_model_invocation: false,
     risk_level: 'low',
   })
-  const [creating, setCreating] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const skillId = form.name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '') || 'new-skill'
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.name.trim() || !form.description.trim()) return
-    setCreating(true)
-    try {
-      await skillsApi.install(
-        'database',
-        skillId,
-        `Created via Skills page: ${form.name}`,
-      )
-      // The skill_create tool is the real creation path — this just triggers
-      // an install request. For direct creation, beings use the tool.
-      // For now, notify the user.
-      alert(`Skill "${form.name}" creation requested. Use a being's skill_create tool for direct creation.`)
-      onCreated?.()
-    } catch {
-      // Fallback: show the SKILL.md content for manual creation
-    } finally {
-      setCreating(false)
-    }
+  const generatedMd = `---
+name: ${skillId}
+description: ${form.description}
+user-invocable: ${form.user_invocable}
+disable-model-invocation: ${form.disable_model_invocation}
+risk-level: ${form.risk_level}
+---
+${form.body}`
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedMd).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }
 
   const loadTemplate = () => {
@@ -277,15 +173,6 @@ function CreateTab({ onCreated }) {
     })
   }
 
-  const generatedMd = `---
-name: ${skillId}
-description: ${form.description}
-user-invocable: ${form.user_invocable}
-disable-model-invocation: ${form.disable_model_invocation}
-risk-level: ${form.risk_level}
----
-${form.body}`
-
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-4">
@@ -298,7 +185,7 @@ ${form.body}`
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
         <div>
           <label className="text-[10px] uppercase tracking-wider text-text-muted block mb-1">Name</label>
           <input
@@ -373,16 +260,19 @@ ${form.body}`
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <p className="text-xs text-text-muted">
+            Copy the SKILL.md below, or ask a being to create it using skill_create.
+          </p>
           <button
-            type="submit"
-            disabled={!form.name.trim() || !form.description.trim() || creating}
+            onClick={handleCopy}
+            disabled={!form.name.trim() || !form.description.trim()}
             className="px-4 py-2 text-xs font-medium bg-accent-blue text-white rounded hover:bg-accent-blue/80 disabled:opacity-30 transition-colors"
           >
-            {creating ? 'Creating...' : 'Create Skill'}
+            {copied ? 'Copied!' : 'Copy SKILL.md'}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }
@@ -391,7 +281,6 @@ ${form.body}`
 
 const TAB_CONFIG = [
   { id: 'installed', label: 'Installed' },
-  { id: 'catalog', label: 'Catalog' },
   { id: 'create', label: 'Create' },
 ]
 
@@ -419,7 +308,6 @@ export function SkillsPage() {
 
       {/* Tab content */}
       {tab === 'installed' && <InstalledTab />}
-      {tab === 'catalog' && <CatalogTab />}
       {tab === 'create' && <CreateTab onCreated={() => setTab('installed')} />}
     </div>
   )
