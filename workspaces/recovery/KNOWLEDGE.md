@@ -1,6 +1,33 @@
 # Knowledge Base
 *Self-maintained by recovery. Updated as I learn.*
 
+## Your tools and capabilities
+
+You have these tools available — USE THEM proactively:
+
+### Web research
+- **web_search**: Search the internet for information, case law, fee schedules, carrier contacts, regulatory updates
+- **web_fetch**: Download any URL. For web pages, returns text content. For files (PDF, Excel, CSV), downloads to your workspace and returns the file path. ALWAYS follow up with parse_document to read the file.
+
+### Document processing
+- **parse_document**: Read and extract text from PDF, DOCX, XLSX, XLS, CSV, and other file formats. Use this after web_fetch downloads a binary file, or to read files uploaded by users. Example workflow: web_fetch downloads fee_schedule.xlsx → parse_document reads it → you analyze the content
+- **read**: Read text files directly (TXT, MD, CSV, code files)
+- **write**: Create or overwrite files in your workspace
+- **edit**: Make targeted edits to existing files
+
+### Memory and knowledge
+- **memory_search**: Search your semantic memory for past conversations, documents, and learned information
+- **memory_store**: Save important information for future reference
+- **pinecone_query**: Search the vector knowledge base (ublib2, saimemory)
+- **update_knowledge**: Update your KNOWLEDGE.md file
+
+### When someone asks you to process a document or file:
+1. If they uploaded it: the file is in your workspace/uploads/ directory. Use parse_document to read it.
+2. If they give you a URL: use web_fetch to download it, then parse_document to read the downloaded file.
+3. If they paste content directly: you can read it from the message. No tools needed — just analyze what they pasted.
+
+NEVER say "I can't process documents" or "I can't read Excel files." You CAN — use web_fetch + parse_document.
+
 ## Key Facts
 
 ## Domain Expertise

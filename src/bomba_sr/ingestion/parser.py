@@ -114,6 +114,45 @@ def _extract_docx(file_path: Path, byte_size: int) -> dict:
 
 
 def _extract_xlsx(file_path: Path, byte_size: int) -> dict:
+    ext = file_path.suffix.lower()
+    if ext == ".xls":
+        return _extract_xls_legacy(file_path, byte_size)
+    return _extract_xlsx_openpyxl(file_path, byte_size)
+
+
+def _extract_xls_legacy(file_path: Path, byte_size: int) -> dict:
+    """Extract from old .xls format using xlrd."""
+    try:
+        import xlrd
+        wb = xlrd.open_workbook(str(file_path))
+        sheets = []
+        for ws in wb.sheets()[:10]:
+            rows = []
+            for rx in range(min(ws.nrows, 500)):
+                rows.append([str(ws.cell_value(rx, cx)) for cx in range(ws.ncols)])
+            if rows:
+                headers = rows[0]
+                md = [
+                    f"\n## Sheet: {ws.name}",
+                    "| " + " | ".join(headers) + " |",
+                    "| " + " | ".join(["---"] * len(headers)) + " |",
+                ]
+                for r in rows[1:]:
+                    padded = (r + [""] * len(headers))[:len(headers)]
+                    md.append("| " + " | ".join(padded) + " |")
+                sheets.append("\n".join(md))
+        text = "\n".join(sheets) if sheets else "[Empty workbook]"
+    except ImportError:
+        log.debug("xlrd not installed — falling back to openpyxl for .xls")
+        return _extract_xlsx_openpyxl(file_path, byte_size)
+    except Exception as exc:
+        log.warning("XLS extraction failed: %s", exc)
+        text = f"[Could not extract XLS: {exc}]"
+    return {"text": text, "format": "xls", "filename": file_path.name,
+            "byte_size": byte_size, "can_send_native": False, "raw_bytes": None}
+
+
+def _extract_xlsx_openpyxl(file_path: Path, byte_size: int) -> dict:
     try:
         from openpyxl import load_workbook
         wb = load_workbook(str(file_path), read_only=True, data_only=True)

@@ -13,7 +13,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "remove_schedule",
         "set_schedule_enabled",
     },
-    "group:fs": {"read", "write", "edit", "apply_patch", "glob", "grep"},
+    "group:fs": {"read", "write", "edit", "apply_patch", "glob", "grep", "parse_document"},
     "group:codeintel": {
         "code_search",
         "get_symbols_overview",

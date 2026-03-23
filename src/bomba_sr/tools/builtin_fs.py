@@ -316,9 +316,10 @@ def builtin_fs_tools() -> list[ToolDefinition]:
         ToolDefinition(
             name="parse_document",
             description=(
-                "Parse a document file (PDF, DOCX, PPTX, XLSX, HTML, images) into structured "
-                "markdown text with table extraction. Use this for binary documents that `read` "
-                "cannot handle. Returns markdown content, table data, and metadata."
+                "Parse and extract text from document files: PDF, DOCX, XLSX, XLS, CSV, PPTX, "
+                "HTML, and images. Returns structured markdown with tables preserved. Use this "
+                "after web_fetch downloads a binary file, or to process files in the "
+                "workspace/uploads/ directory. For Excel files, returns all sheets as markdown tables."
             ),
             parameters={
                 "type": "object",
