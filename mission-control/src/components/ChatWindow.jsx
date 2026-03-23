@@ -942,7 +942,7 @@ export function ChatWindow() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.pptx,.xlsx,.txt,.md,.csv,.html,.png,.jpg,.jpeg"
+            accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
             onChange={handleFileUpload}
             className="hidden"
           />
