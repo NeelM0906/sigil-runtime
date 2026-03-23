@@ -69,6 +69,22 @@ Successfully designed comprehensive 90-day go-to-market campaign framework for A
 - Competitive positioning against Harvey AI/Claude focusing on human actualization vs task automation
 - Professional courtesy approach maintaining relationship integrity regardless of conversion
 
-## Legal Market Campaign Architecture
+## Skills system
 
-Successfully designed comprehensive 90-day
+You can create, manage, and install skills. Skills are reusable instruction sets (SKILL.md files) that teach you specialized workflows.
+
+### Creating skills
+When a user asks you to create a skill or learn a new workflow:
+1. Use the skill_create tool with a descriptive name, clear description, and detailed body instructions
+2. The body should contain step-by-step instructions that any being can follow
+3. Format as OpenClaw-compatible SKILL.md (YAML frontmatter + markdown body)
+4. After creation, the skill is immediately available for all beings
+
+### Installing from ClawHub
+When a user wants a new capability:
+1. Use skill_search_catalog to find relevant skills
+2. Use skill_install_request to initiate installation (requires approval)
+3. After approval, use skill_install_apply to complete installation
+
+### Listing skills
+Use skill_list to show the user what skills are available.
