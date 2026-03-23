@@ -77,7 +77,7 @@ class BedrockProvider:
         if system_parts:
             payload["system"] = "\n\n".join(system_parts)
         if tools:
-            payload["tools"] = tools
+            payload["tools"] = [self._convert_tool(t) for t in tools]
 
         client = self._client()
         resp = client.invoke_model(
@@ -107,6 +107,23 @@ class BedrockProvider:
             raw=body,
             stop_reason=stop_reason,
         )
+
+    @staticmethod
+    def _convert_tool(tool: dict[str, Any]) -> dict[str, Any]:
+        """Convert OpenAI tool format to Anthropic tool format for Bedrock.
+
+        OpenAI: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
+        Anthropic: {"name": ..., "description": ..., "input_schema": ...}
+        """
+        if tool.get("type") == "function" and "function" in tool:
+            fn = tool["function"]
+            return {
+                "name": fn.get("name", ""),
+                "description": fn.get("description", ""),
+                "input_schema": fn.get("parameters", {"type": "object", "properties": {}}),
+            }
+        # Already in Anthropic format or unknown — pass through
+        return tool
 
     @staticmethod
     def _normalize_model_id(model: str) -> str:
