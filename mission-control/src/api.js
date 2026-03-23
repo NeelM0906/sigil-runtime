@@ -59,6 +59,9 @@ export const tasksApi = {
   delete(id) {
     return request(`/api/mc/tasks/${id}`, { method: 'DELETE' })
   },
+  cancel(id) {
+    return request(`/api/mc/tasks/${id}/cancel`, { method: 'POST' })
+  },
   history(taskId) {
     return request(`/api/mc/tasks/history${taskId ? `?taskId=${taskId}` : ''}`)
   },

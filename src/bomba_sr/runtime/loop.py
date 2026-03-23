@@ -233,6 +233,9 @@ class AgenticLoop:
             if on_iteration is not None:
                 try:
                     on_iteration(state.iteration, state)
+                except InterruptedError:
+                    state.stopped_reason = "cancelled"
+                    break
                 except Exception:
                     pass
 
