@@ -96,6 +96,7 @@ class TurnRequest:
     task_id: str | None = None
     max_loop_iterations: int | None = None
     on_iteration: Any = None
+    on_progress: Any = None
     disable_tools: bool = False
     include_representation: bool = False
 
@@ -882,6 +883,7 @@ class RuntimeBridge:
                     budget_limit_usd=effective_budget_limit,
                     budget_hard_stop_pct=effective_budget_stop_pct,
                     parallel_read_tools=effective_parallel_reads,
+                    progress_callback=request.on_progress,
                 ),
             )
             loop_result = loop.run(

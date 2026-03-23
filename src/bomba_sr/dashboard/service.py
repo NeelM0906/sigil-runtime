@@ -195,6 +195,29 @@ def _extract_json(text: str) -> dict | None:
             return payload
     return None
 
+_FRIENDLY_TOOL_NAMES = {
+    "web_search": "Searching the web",
+    "web_fetch": "Reading webpage",
+    "read": "Reading file",
+    "write": "Writing file",
+    "exec": "Running command",
+    "memory_search": "Searching memory",
+    "memory_store": "Storing to memory",
+    "pinecone_query": "Querying knowledge base",
+    "pinecone_upsert": "Updating knowledge base",
+    "glob": "Scanning files",
+    "grep": "Searching in files",
+    "edit": "Editing file",
+    "code_search": "Searching code",
+}
+
+_PROGRESS_SKIP_TOOLS = frozenset({"compact_context", "session_status"})
+
+
+def _friendly_tool_name(tool_name: str) -> str:
+    return _FRIENDLY_TOOL_NAMES.get(tool_name, tool_name.replace("_", " ").title())
+
+
 _BEING_COLS = (
     "id", "name", "role", "avatar", "status", "description", "type",
     "tools", "skills", "color", "model_id", "workspace", "tenant_id",
@@ -1304,6 +1327,30 @@ class DashboardService:
             self.advance_task_step(task_id)
             step_cursor[0] += 1
 
+        def _on_progress(event_type, data):
+            """Send progress messages to chat during tool execution."""
+            if event_type == "tool_result":
+                tool_name = data.get("tool_name", "")
+                status = data.get("status", "")
+                summary = data.get("summary", "")[:150]
+                if tool_name in _PROGRESS_SKIP_TOOLS:
+                    return
+                if status == "success":
+                    progress_text = f"\u26a1 {_friendly_tool_name(tool_name)}"
+                    if summary:
+                        progress_text += f": {summary[:100]}"
+                elif status == "error":
+                    progress_text = f"\u26a0\ufe0f {_friendly_tool_name(tool_name)} failed"
+                else:
+                    return
+                self._emit_event("being_progress", {
+                    "being_id": being_id,
+                    "being_name": being.get("name", being_id),
+                    "session_id": chat_session_id,
+                    "text": progress_text,
+                    "iteration": data.get("iteration", 0),
+                }, tenant_id=tenant_id)
+
         error_occurred = False
         try:
             from bomba_sr.runtime.bridge import TurnRequest
@@ -1323,6 +1370,7 @@ class DashboardService:
                 project_id=MC_PROJECT_ID,
                 profile=_profile,
                 on_iteration=_on_loop_iteration if all_steps else None,
+                on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
             result = self.bridge.handle_turn(req)

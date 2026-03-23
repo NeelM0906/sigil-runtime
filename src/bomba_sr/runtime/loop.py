@@ -45,6 +45,7 @@ class LoopConfig:
     budget_hard_stop_pct: float = 0.9
     parallel_read_tools: bool = True
     max_parallel_workers: int = 4
+    progress_callback: Any = None
 
 
 @dataclass(frozen=True)
@@ -216,6 +217,18 @@ class AgenticLoop:
                 resolved_policy=resolved_policy,
             )
             state.tool_calls_history.extend(results)
+
+            if self.config.progress_callback is not None:
+                for tc_result in results:
+                    try:
+                        self.config.progress_callback("tool_result", {
+                            "iteration": state.iteration,
+                            "tool_name": tc_result.tool_name,
+                            "status": tc_result.status,
+                            "summary": str(tc_result.output)[:200] if tc_result.output else "",
+                        })
+                    except Exception:
+                        pass
 
             if on_iteration is not None:
                 try:

@@ -46,6 +46,16 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
 
+  // Progress messages (real-time tool execution feedback)
+  if (msg._isProgress || msg.type === 'progress') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary animate-pulse">
+        <span className="w-1.5 h-1.5 bg-accent-blue rounded-full animate-ping" />
+        <span>{msg.content}</span>
+      </div>
+    )
+  }
+
   // System messages
   if (isSystem) {
     return (
@@ -632,8 +642,31 @@ export function ChatWindow() {
       if (msgSession !== activeSessionRef.current) return
       setAwaitingReplySince(null)
       setMessages(prev => {
-        if (prev.some(m => m.id === data.id)) return prev
-        return [...prev, data]
+        // Remove progress placeholder when final response arrives
+        const without = prev.filter(m => m.id !== `progress-${data.sender}`)
+        if (without.some(m => m.id === data.id)) return without
+        return [...without, data]
+      })
+    },
+    being_progress(data) {
+      if (data.session_id && data.session_id !== activeSessionRef.current) return
+      setMessages(prev => {
+        const progressId = `progress-${data.being_id}`
+        const progressMsg = {
+          id: progressId,
+          sender: data.being_id,
+          content: data.text,
+          timestamp: new Date().toISOString(),
+          type: 'progress',
+          _isProgress: true,
+        }
+        const existing = prev.findIndex(m => m.id === progressId)
+        if (existing >= 0) {
+          const next = [...prev]
+          next[existing] = progressMsg
+          return next
+        }
+        return [...prev, progressMsg]
       })
     },
     being_typing(data) {
