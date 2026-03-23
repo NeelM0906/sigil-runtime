@@ -1,4 +1,4 @@
-# CLAUDE.md -- BOMBA SR Runtime
+# CLAUDE.md -- SAI Runtime (Sigil Runtime Engine)
 
 ## PRIME DIRECTIVE
 **READ source code BEFORE attempting any fix or guess.** Do not hypothesize about behavior -- open the file, read the function, then act. This single rule would have prevented the majority of past session failures.

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolDefinition, ToolExecutor
 
@@ -57,15 +56,16 @@ class PolicyGovernanceIntegrationTests(unittest.TestCase):
                 guard_path=_guard(root),
             )
 
-            minimal_policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.MINIMAL, tenant_id="tenant-z"),
+            deny_pipeline = PolicyPipeline(governance, global_deny=("write",))
+            deny_policy = deny_pipeline.resolve(
+                ToolPolicyContext(tenant_id="tenant-z"),
                 available_tools=executor.known_tool_names(),
             )
-            denied = executor.execute("write", {}, context=context, policy=minimal_policy, confidence=1.0)
+            denied = executor.execute("write", {}, context=context, policy=deny_policy, confidence=1.0)
             self.assertEqual(denied.status, "denied")
 
             full_policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-z"),
+                ToolPolicyContext(tenant_id="tenant-z"),
                 available_tools=executor.known_tool_names(),
             )
             needs_approval = executor.execute("write", {}, context=context, policy=full_policy, confidence=0.1)

@@ -94,6 +94,13 @@ TOOL_GROUPS_EXT: dict[str, set[str]] = {
     },
     "group:knowledge": {"update_knowledge"},
     "group:team_context": {"update_team_context"},
+    "group:browser": {
+        "browser_open",
+        "browser_screenshot",
+        "browser_click",
+        "browser_fill",
+        "browser_extract",
+    },
 }
 
 
@@ -121,8 +128,9 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
     # Forge — creative + code + production
     "creative": frozenset(_expand_groups(
         "group:fs",            # read, write, edit, apply_patch, glob, grep
-        "group:memory",        # memory_search, memory_get, memory_store
+        "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
+        "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:runtime",       # exec, process, compact_context, switch_model, etc.
         "group:codeintel",     # code_search + serena symbol tools
@@ -135,8 +143,9 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
 
     # Scholar — research + retrieval
     "research": frozenset(_expand_groups(
-        "group:memory",        # memory_search, memory_get, memory_store
+        "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
+        "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:fs",            # read, write, edit, glob, grep (for reports)
         "group:knowledge",     # update_knowledge
@@ -144,7 +153,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
 
     # Recovery — CRM + outreach + voice + memory
     "revenue": frozenset(_expand_groups(
-        "group:memory",        # memory_search, memory_get, memory_store
+        "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:voice",         # voice_list_calls, voice_get_transcript, voice_make_call, voice_list_pathways
@@ -155,7 +164,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
 
     # Memory — memory specialist + Pinecone
     "memory_specialist": frozenset(_expand_groups(
-        "group:memory",        # memory_search, memory_get, memory_store — core domain
+        "group:memory",        # memory_search, memory_store — core domain
         "group:pinecone",      # ALL pinecone tools — Memory's signature move
         "group:fs",            # read, write, edit, glob, grep (for memory files)
         "group:web",           # web_search (for grounding in current facts)

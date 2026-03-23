@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.llm.providers import ChatMessage, LLMResponse
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
 from bomba_sr.storage.db import RuntimeDB
@@ -107,7 +106,7 @@ class OuroborosModelSwitchTests(unittest.TestCase):
             executor = ToolExecutor(governance, pipeline)
             executor.register_many(builtin_model_switch_tools())
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-switch"),
+                ToolPolicyContext(tenant_id="tenant-switch"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

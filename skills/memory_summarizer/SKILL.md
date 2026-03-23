@@ -8,7 +8,7 @@ risk-level: low
 # memory_summarizer
 
 ## Purpose
-Summarize BOMBA SR's latest memories (last 2 days) into a concise digest of **10 lines or less**.
+Summarize Sai's latest memories (last 2 days) into a concise digest of **10 lines or less**.
 
 ## Steps
 
@@ -41,8 +41,8 @@ Summarize BOMBA SR's latest memories (last 2 days) into a concise digest of **10
 ## 🧠 Memory Summary (Last 2 Days)
 
 1. User (Zidane) introduced themselves and tested initial connectivity.
-2. BOMBA SR architecture was analyzed — skills folder and workspace structure reviewed.
-3. User's core goal recorded: make BOMBA SR "AGI-like" (general, autonomous, adaptive).
+2. Sai architecture was analyzed — skills folder and workspace structure reviewed.
+3. User's core goal recorded: make Sai "AGI-like" (general, autonomous, adaptive).
 4. Learned not to create markdown artifacts for simple Q&A responses.
 5. Pending approvals system was explored — no active approvals found at that time.
 6. memory_summarizer skill created for quick memory digests.

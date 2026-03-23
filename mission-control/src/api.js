@@ -1,12 +1,34 @@
 /**
- * Mission Control API client — routes through BOMBA SR runtime via /api/mc/*
+ * Mission Control API client — routes through SAI runtime via /api/mc/*
  */
 
 async function request(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' }
+
+  // Attach auth token if available
+  try {
+    const stored = localStorage.getItem('mc_auth')
+    if (stored) {
+      const { token } = JSON.parse(stored)
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+  } catch { /* ignore parse errors */ }
+
   const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...opts,
   })
+
+  // On 401 force re-login (debounced to avoid reload loops)
+  if (res.status === 401) {
+    if (!window._mc_reloading) {
+      window._mc_reloading = true
+      localStorage.removeItem('mc_auth')
+      window.location.reload()
+    }
+    throw new Error('Session expired')
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(err.error || 'Request failed')
@@ -128,6 +150,27 @@ export const subagentsApi = {
   list() {
     return request('/api/mc/subagents')
   },
+}
+
+// ── ACT-I Architecture API ──────────────────────────────────
+
+// ── Auth API ────────────────────────────────────────────────
+
+export const authApi = {
+  login: (email, password) => request('/api/mc/auth/login', {
+    method: 'POST', body: JSON.stringify({ email, password })
+  }),
+  register: (email, password, name) => request('/api/mc/auth/register', {
+    method: 'POST', body: JSON.stringify({ email, password, name })
+  }),
+  logout: () => request('/api/mc/auth/logout', { method: 'POST' }),
+  me: () => request('/api/mc/auth/me'),
+  updateProfile: (data) => request('/api/mc/auth/me', {
+    method: 'PATCH', body: JSON.stringify(data)
+  }),
+  changePassword: (old_password, new_password) => request('/api/mc/auth/change-password', {
+    method: 'POST', body: JSON.stringify({ old_password, new_password })
+  }),
 }
 
 // ── ACT-I Architecture API ──────────────────────────────────

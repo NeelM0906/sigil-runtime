@@ -12,6 +12,7 @@ from typing import Any, TYPE_CHECKING
 
 from bomba_sr.memory.consolidation import MemoryCandidate, MemoryConsolidator
 from bomba_sr.memory.embeddings import EmbeddingProvider
+from bomba_sr.memory.utils import ensure_column, lexical_score, utc_now_iso
 from bomba_sr.storage.db import RuntimeDB
 
 if TYPE_CHECKING:
@@ -42,10 +43,6 @@ def resolve_being_id(session_id: str | None, user_id: str | None = None) -> str 
         if user_id.startswith("prime->"):
             return user_id[len("prime->"):]
     return None
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def slugify(text: str) -> str:
@@ -162,15 +159,7 @@ class HybridMemoryStore:
         )
         self.db.commit()
         # Add being_id column to markdown_notes (migration)
-        self._ensure_column("markdown_notes", "being_id", "TEXT")
-
-    def _ensure_column(self, table: str, column: str, definition: str) -> None:
-        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
-        existing = {str(row["name"]) for row in rows}
-        if column in existing:
-            return
-        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-        self.db.commit()
+        ensure_column(self.db, "markdown_notes", "being_id", "TEXT")
 
     def append_working_note(
         self,
@@ -414,15 +403,15 @@ class HybridMemoryStore:
     def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
         return self.consolidator.recall_procedural(user_id=user_id, query=query, limit=limit)
 
-    def recall(
+    def _recall_impl(
         self,
-        user_id: str,
+        semantic_fn: Any,
+        markdown_fn: Any,
         query: str,
         limit: int = 10,
     ) -> dict[str, Any]:
-        semantic = self.consolidator.retrieve(user_id=user_id, query=query, limit=max(1, limit // 2))
-        markdown = self._recall_markdown(user_id=user_id, query=query, limit=max(1, limit - len(semantic)))
-
+        semantic = semantic_fn(query=query, limit=max(1, limit // 2))
+        markdown = markdown_fn(query=query, limit=max(1, limit - len(semantic)))
         return {
             "semantic": [
                 {
@@ -439,54 +428,47 @@ class HybridMemoryStore:
             "markdown": markdown,
         }
 
-    def recall_by_being(
-        self,
-        being_id: str,
-        query: str,
-        limit: int = 10,
-    ) -> dict[str, Any]:
+    def recall(self, user_id: str, query: str, limit: int = 10) -> dict[str, Any]:
+        return self._recall_impl(
+            semantic_fn=lambda query, limit: self.consolidator.retrieve(user_id=user_id, query=query, limit=limit),
+            markdown_fn=lambda query, limit: self._recall_markdown(user_id=user_id, query=query, limit=limit),
+            query=query,
+            limit=limit,
+        )
+
+    def recall_by_being(self, being_id: str, query: str, limit: int = 10) -> dict[str, Any]:
         """Recall memories scoped by being_id (cross-context access)."""
-        semantic = self.consolidator.retrieve_by_being(being_id=being_id, query=query, limit=max(1, limit // 2))
-        markdown = self._recall_markdown_by_being(being_id=being_id, query=query, limit=max(1, limit - len(semantic)))
-
-        return {
-            "semantic": [
-                {
-                    "memory_id": m.memory_id,
-                    "key": m.key,
-                    "content": m.content,
-                    "score": m.score,
-                    "recency_boost": m.recency_boost,
-                    "recency_ts": m.recency_ts,
-                    "source": f"memory://semantic/{m.memory_id}",
-                }
-                for m in semantic
-            ],
-            "markdown": markdown,
-        }
+        return self._recall_impl(
+            semantic_fn=lambda query, limit: self.consolidator.retrieve_by_being(being_id=being_id, query=query, limit=limit),
+            markdown_fn=lambda query, limit: self._recall_markdown_by_being(being_id=being_id, query=query, limit=limit),
+            query=query,
+            limit=limit,
+        )
 
     def recall_procedural_by_being(self, being_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Recall procedural memories scoped by being_id."""
         return self.consolidator.recall_procedural_by_being(being_id=being_id, query=query, limit=limit)
 
-    def _recall_markdown(self, user_id: str, query: str, limit: int) -> list[dict[str, Any]]:
+    def _recall_markdown_impl(
+        self, scope_col: str, scope_val: str, query: str, limit: int,
+        embedding_fn: Any,
+    ) -> list[dict[str, Any]]:
         rows = self.db.execute(
-            """
+            f"""
             SELECT note_id, relative_path, title, confidence, created_at
             FROM markdown_notes
-            WHERE user_id = ?
+            WHERE {scope_col} = ?
             ORDER BY created_at DESC
             LIMIT 300
             """,
-            (user_id,),
+            (scope_val,),
         ).fetchall()
 
         if not rows:
             return []
 
         scores: dict[str, float] = {}
-        embedding_scores = self._embedding_scores(user_id=user_id, query=query)
-        for note_id, score in embedding_scores.items():
+        for note_id, score in embedding_fn(query).items():
             scores[note_id] = score
 
         for row in rows:
@@ -494,7 +476,7 @@ class HybridMemoryStore:
             if note_id in scores:
                 continue
             text = self._read_note_body(str(row["relative_path"]))
-            scores[note_id] = self._lexical_score(query, text)
+            scores[note_id] = lexical_score(query, text)
 
         ranked = sorted(rows, key=lambda r: scores.get(str(r["note_id"]), 0.0), reverse=True)
         out: list[dict[str, Any]] = []
@@ -515,55 +497,22 @@ class HybridMemoryStore:
                 }
             )
         return out
+
+    def _recall_markdown(self, user_id: str, query: str, limit: int) -> list[dict[str, Any]]:
+        return self._recall_markdown_impl(
+            "user_id", user_id, query, limit,
+            lambda q: self._embedding_scores(user_id=user_id, query=q),
+        )
 
     def _recall_markdown_by_being(self, being_id: str, query: str, limit: int) -> list[dict[str, Any]]:
         """Recall markdown notes scoped by being_id."""
-        rows = self.db.execute(
-            """
-            SELECT note_id, relative_path, title, confidence, created_at
-            FROM markdown_notes
-            WHERE being_id = ?
-            ORDER BY created_at DESC
-            LIMIT 300
-            """,
-            (being_id,),
-        ).fetchall()
+        return self._recall_markdown_impl(
+            "being_id", being_id, query, limit,
+            lambda q: self._embedding_scores_by_being(being_id=being_id, query=q),
+        )
 
-        if not rows:
-            return []
-
-        scores: dict[str, float] = {}
-        embedding_scores = self._embedding_scores_by_being(being_id=being_id, query=query)
-        for note_id, score in embedding_scores.items():
-            scores[note_id] = score
-
-        for row in rows:
-            note_id = str(row["note_id"])
-            if note_id in scores:
-                continue
-            text = self._read_note_body(str(row["relative_path"]))
-            scores[note_id] = self._lexical_score(query, text)
-
-        ranked = sorted(rows, key=lambda r: scores.get(str(r["note_id"]), 0.0), reverse=True)
-        out: list[dict[str, Any]] = []
-        for row in ranked[:limit]:
-            note_id = str(row["note_id"])
-            rel_path = str(row["relative_path"])
-            body = self._read_note_body(rel_path)
-            out.append(
-                {
-                    "note_id": note_id,
-                    "title": str(row["title"]),
-                    "path": str((self.memory_root / rel_path).resolve()),
-                    "score": float(scores.get(note_id, 0.0)),
-                    "confidence": float(row["confidence"]),
-                    "created_at": str(row["created_at"]),
-                    "snippet": body[:280],
-                    "source": f"memory://markdown/{note_id}",
-                }
-            )
-        return out
-
+    # NOTE: _embedding_scores and _embedding_scores_by_being are kept separate
+    # because they use structurally different queries (direct WHERE vs JOIN).
     def _embedding_scores(self, user_id: str, query: str) -> dict[str, float]:
         if self.embedding_provider is None:
             return {}
@@ -659,16 +608,21 @@ class HybridMemoryStore:
         self.db.commit()
         return next_turn
 
-    def get_recent_turn_records(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, Any]]:
+    def get_recent_turn_records(self, tenant_id: str, session_id: str, limit: int = 5, user_id: str | None = None) -> list[dict[str, Any]]:
+        where = "WHERE tenant_id = ? AND session_id = ?"
+        params: list[Any] = [tenant_id, session_id]
+        if user_id is not None:
+            where += " AND user_id = ?"
+            params.append(user_id)
         rows = self.db.execute(
-            """
+            f"""
             SELECT turn_number, turn_id, user_message, assistant_message, created_at
             FROM conversation_turns
-            WHERE tenant_id = ? AND session_id = ?
+            {where}
             ORDER BY turn_number DESC
             LIMIT ?
             """,
-            (tenant_id, session_id, max(1, limit)),
+            (*params, max(1, limit)),
         ).fetchall()
         ordered = list(reversed(rows))
         return [
@@ -682,9 +636,9 @@ class HybridMemoryStore:
             for row in ordered
         ]
 
-    def get_recent_turns(self, tenant_id: str, session_id: str, limit: int = 5) -> list[dict[str, str]]:
+    def get_recent_turns(self, tenant_id: str, session_id: str, limit: int = 5, user_id: str | None = None) -> list[dict[str, str]]:
         out: list[dict[str, str]] = []
-        for row in self.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=limit):
+        for row in self.get_recent_turn_records(tenant_id=tenant_id, session_id=session_id, limit=limit, user_id=user_id):
             out.append({"role": "user", "content": row["user_message"]})
             out.append({"role": "assistant", "content": row["assistant_message"]})
         return out
@@ -696,6 +650,7 @@ class HybridMemoryStore:
         covers_through_turn: int,
         recent_window: int = 5,
         limit: int = 200,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         latest = self.db.execute(
             """
@@ -710,18 +665,22 @@ class HybridMemoryStore:
         if summary_cutoff <= covers_through_turn:
             return []
 
+        where = "WHERE tenant_id = ? AND session_id = ?"
+        params: list[Any] = [tenant_id, session_id]
+        if user_id is not None:
+            where += " AND user_id = ?"
+            params.append(user_id)
         rows = self.db.execute(
-            """
+            f"""
             SELECT turn_number, user_message, assistant_message
             FROM conversation_turns
-            WHERE tenant_id = ? AND session_id = ?
+            {where}
               AND turn_number > ? AND turn_number <= ?
             ORDER BY turn_number ASC
             LIMIT ?
             """,
             (
-                tenant_id,
-                session_id,
+                *params,
                 int(covers_through_turn),
                 summary_cutoff,
                 max(1, limit),
@@ -864,14 +823,6 @@ class HybridMemoryStore:
         if len(parts) >= 3:
             return parts[2].strip()
         return text.strip()
-
-    @staticmethod
-    def _lexical_score(query: str, content: str) -> float:
-        q_terms = {t for t in re.findall(r"[a-zA-Z0-9_]+", query.lower()) if len(t) >= 2}
-        c_terms = {t for t in re.findall(r"[a-zA-Z0-9_]+", content.lower()) if len(t) >= 2}
-        if not q_terms:
-            return 0.0
-        return len(q_terms & c_terms) / len(q_terms)
 
     @staticmethod
     def _cosine(a: list[float], b: list[float]) -> float:

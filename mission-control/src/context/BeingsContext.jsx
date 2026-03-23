@@ -1,20 +1,25 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { beingsApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from './SSEContext'
+import { useAuth } from './AuthContext'
 
 const BeingsContext = createContext(null)
 
+// Operators only see these beings. Admins see all.
+const OPERATOR_ALLOWED_BEINGS = new Set(['prime', 'recovery'])
+
 export function BeingsProvider({ children }) {
-  const [beings, setBeings] = useState([])
+  const [allBeings, setAllBeings] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedBeingId, setSelectedBeingId] = useState(null)
   const [beingDetail, setBeingDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const { user } = useAuth()
 
   const fetchBeings = useCallback(async () => {
     try {
       const { beings: fetched } = await beingsApi.list()
-      setBeings(fetched)
+      setAllBeings(fetched)
     } catch (err) {
       console.error('Failed to fetch beings:', err)
     } finally {
@@ -25,15 +30,21 @@ export function BeingsProvider({ children }) {
   useEffect(() => { fetchBeings() }, [fetchBeings])
 
   // SSE: live being status updates
-  useSSE({
+  useSharedSSE({
     being_status(data) {
-      setBeings(prev =>
+      setAllBeings(prev =>
         prev.map(b =>
           b.id === data.being_id ? { ...b, status: data.status } : b
         )
       )
     },
   })
+
+  // Role-based filtering: operators see only prime + recovery
+  const beings = useMemo(() => {
+    if (user?.role === 'admin') return allBeings
+    return allBeings.filter(b => OPERATOR_ALLOWED_BEINGS.has(b.id))
+  }, [allBeings, user?.role])
 
   const getBeingById = useCallback((id) => {
     return beings.find(b => b.id === id) || null
@@ -42,7 +53,7 @@ export function BeingsProvider({ children }) {
   const updateBeingStatus = useCallback(async (id, status) => {
     try {
       const { being } = await beingsApi.update(id, { status })
-      setBeings(prev => prev.map(b => b.id === id ? being : b))
+      setAllBeings(prev => prev.map(b => b.id === id ? being : b))
     } catch (err) {
       console.error('Failed to update being status:', err)
     }

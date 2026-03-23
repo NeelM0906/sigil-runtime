@@ -1,14 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
-
-
-class ToolProfile(Enum):
-    MINIMAL = "minimal"
-    CODING = "coding"
-    RESEARCH = "research"
-    FULL = "full"
-
 
 TOOL_GROUPS: dict[str, set[str]] = {
     "group:runtime": {
@@ -33,7 +24,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "insert_after_symbol",
         "rename_symbol",
     },
-    "group:memory": {"memory_search", "memory_get", "memory_store"},
+    "group:memory": {"memory_search", "memory_store"},
     "group:web": {"web_search", "web_fetch"},
     "group:sessions": {"sessions_list", "sessions_send", "sessions_spawn", "sessions_poll", "session_status"},
     "group:approvals": {"list_approvals", "decide_approval"},
@@ -65,29 +56,3 @@ def _expand(*items: str) -> set[str]:
             continue
         out.add(item)
     return out
-
-
-PROFILE_TOOLS: dict[ToolProfile, set[str] | None] = {
-    ToolProfile.MINIMAL: {"session_status"},
-    ToolProfile.CODING: _expand(
-        "group:fs",
-        "group:runtime",
-        "group:codeintel",
-        "group:memory",
-        "group:sessions",
-        "group:approvals",
-        "group:skills",
-    ),
-    ToolProfile.RESEARCH: _expand("group:web", "group:memory", "group:fs") - {"write", "edit", "apply_patch"},
-    ToolProfile.FULL: None,
-}
-
-
-def profile_from_value(value: str | ToolProfile) -> ToolProfile:
-    if isinstance(value, ToolProfile):
-        return value
-    normalized = str(value).strip().lower()
-    for profile in ToolProfile:
-        if profile.value == normalized:
-            return profile
-    return ToolProfile.FULL

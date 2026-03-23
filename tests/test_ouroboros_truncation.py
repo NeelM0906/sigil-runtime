@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolDefinition, ToolExecutor, truncate_output
 from bomba_sr.tools.builtin_exec import builtin_exec_tools
@@ -55,7 +54,7 @@ class OuroborosTruncationTests(unittest.TestCase):
                 )
             )
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-trunc"),
+                ToolPolicyContext(tenant_id="tenant-trunc"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(
@@ -82,7 +81,7 @@ class OuroborosTruncationTests(unittest.TestCase):
             executor = ToolExecutor(governance, pipeline, tool_result_max_chars=15000)
             executor.register_many(builtin_exec_tools(default_max_output_chars=200))
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-shell-trunc"),
+                ToolPolicyContext(tenant_id="tenant-shell-trunc"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

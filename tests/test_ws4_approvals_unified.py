@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.memory.hybrid import HybridMemoryStore
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolExecutor
@@ -66,7 +65,7 @@ class UnifiedApprovalsTests(unittest.TestCase):
             executor = ToolExecutor(governance=governance, pipeline=pipeline)
             executor.register_many(builtin_approval_tools(governance, memory))
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-a"),
+                ToolPolicyContext(tenant_id="tenant-a"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

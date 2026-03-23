@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { subagentsApi } from '../api'
 import { useBeings } from '../context/BeingsContext'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 
 const STATUS_CONFIG = {
   running: { label: 'Running', color: 'text-accent-blue', dot: 'bg-accent-blue', animate: true },
@@ -100,7 +100,7 @@ export function SubAgentTracker() {
   useEffect(() => { fetchAgents() }, [fetchAgents])
 
   // SSE: live sub-agent updates
-  useSSE({
+  useSharedSSE({
     subagent_event(data) {
       setAgents(prev => {
         const id = data.run_id || data.id

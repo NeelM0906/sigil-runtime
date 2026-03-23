@@ -58,7 +58,7 @@ class OpenAICompatibleProvider:
             },
         )
         try:
-            with urlopen(req, timeout=60) as response:
+            with urlopen(req) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             details = ""
@@ -177,7 +177,7 @@ class AnthropicProvider:
             },
         )
         try:
-            with urlopen(req, timeout=60) as response:
+            with urlopen(req) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             details = ""
@@ -223,7 +223,7 @@ class StaticEchoProvider:
                 else:
                     last_user = json.dumps(message.content)
                 break
-        response = f"[echo:{model}] {last_user[:500]}"
+        response = f"[SAI echo — no LLM key configured] {last_user[:500]}"
         return LLMResponse(
             text=response,
             model=model,
@@ -235,6 +235,23 @@ class StaticEchoProvider:
 
 def provider_from_env() -> LLMProvider:
     priority = os.getenv("BOMBA_LLM_PROVIDER_PRIORITY", "openrouter_first").strip().lower()
+
+    # Bedrock: HIPAA-compliant AWS endpoint
+    if priority == "bedrock" or (
+        priority not in {"openrouter", "openrouter_first", "anthropic_first"}
+        and os.getenv("AWS_ACCESS_KEY_ID")
+        and os.getenv("AWS_SECRET_ACCESS_KEY")
+        and os.getenv("BOMBA_LLM_PROVIDER_PRIORITY", "").strip().lower() == "bedrock"
+    ):
+        ak = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+        sk = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
+        if ak and sk:
+            from bomba_sr.llm.bedrock import BedrockProvider
+            return BedrockProvider(
+                access_key=ak,
+                secret_key=sk,
+                region=os.getenv("AWS_REGION", "us-east-1"),
+            )
 
     # OpenRouter first by default. This matches OpenClaw-style model IDs
     # such as "anthropic/claude-opus-4.6" and still leaves an escape hatch:

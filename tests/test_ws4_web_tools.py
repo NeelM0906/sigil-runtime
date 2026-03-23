@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolExecutor
 from bomba_sr.tools.builtin_web import builtin_web_tools
@@ -36,7 +35,7 @@ class WebToolsTests(unittest.TestCase):
             executor = ToolExecutor(governance=governance, pipeline=pipeline)
             executor.register_many(builtin_web_tools(brave_api_key=None))
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.RESEARCH, tenant_id="tenant-web"),
+                ToolPolicyContext(tenant_id="tenant-web"),
                 available_tools=executor.known_tool_names(),
             )
 
@@ -74,7 +73,7 @@ class WebToolsTests(unittest.TestCase):
             executor = ToolExecutor(governance=governance, pipeline=pipeline)
             executor.register_many(builtin_web_tools(brave_api_key=None))
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.RESEARCH, tenant_id="tenant-web"),
+                ToolPolicyContext(tenant_id="tenant-web"),
                 available_tools=executor.known_tool_names(),
             )
 

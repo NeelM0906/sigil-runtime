@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { TASK_STATUSES, timeAgo } from '../store'
 import { useBeings } from '../context/BeingsContext'
 import { tasksApi, actiApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 
 const STATUS_CONFIG = {
   backlog: { label: 'Backlog', color: 'text-text-muted', dot: 'bg-text-muted' },
@@ -852,11 +852,17 @@ export function TaskBoard({ fullWidth = false }) {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
+  // Periodic polling every 15s for task board freshness
+  useEffect(() => {
+    const interval = setInterval(fetchTasks, 15000)
+    return () => clearInterval(interval)
+  }, [fetchTasks])
+
   // Real-time task updates via SSE
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
 
-  useSSE({
+  useSharedSSE({
     task_update(evt) {
       const { action, task, task_id } = evt
       if (action === 'created' && task) {

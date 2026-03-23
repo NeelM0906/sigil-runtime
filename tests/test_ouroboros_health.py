@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.llm.providers import ChatMessage, LLMResponse
 from bomba_sr.runtime.health import build_health_snapshot
 from bomba_sr.runtime.loop import AgenticLoop, LoopConfig
@@ -103,7 +102,7 @@ class OuroborosHealthTests(unittest.TestCase):
             pipeline = PolicyPipeline(governance)
             executor = ToolExecutor(governance, pipeline)
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-health"),
+                ToolPolicyContext(tenant_id="tenant-health"),
                 available_tools=executor.known_tool_names(),
             )
             context = ToolContext(

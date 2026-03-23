@@ -6,7 +6,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 from bomba_sr.tools.base import ToolContext, ToolExecutor
 from bomba_sr.tools.builtin_fs import builtin_fs_tools
@@ -40,7 +39,7 @@ class ToolExecutorTests(unittest.TestCase):
             executor.register_many(builtin_fs_tools())
 
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-tools"),
+                ToolPolicyContext(tenant_id="tenant-tools"),
                 available_tools=executor.known_tool_names(),
             )
             openai_schemas = executor.available_tool_schemas(policy, format="openai")

@@ -34,6 +34,53 @@ _PROJECT_ROOT = Path(
     os.environ.get("BOMBA_PROJECT_ROOT", str(Path(__file__).resolve().parents[3]))
 )
 
+_URL_RE = re.compile(r'https?://[^\s<>\'")\]]+')
+
+
+def _build_message_metadata(
+    content: str,
+    subtasks: list[dict] | None = None,
+    deliverable_files: list[str] | None = None,
+) -> dict | None:
+    """Build structured metadata (outputs + agents) for a dashboard message."""
+    outputs: list[dict] = []
+    agents: list[dict] = []
+
+    # Extract links from content
+    seen: set[str] = set()
+    for url in _URL_RE.findall(content):
+        url_clean = url.rstrip(".,;:!?")
+        if url_clean not in seen:
+            seen.add(url_clean)
+            outputs.append({"type": "link", "title": url_clean[:80], "path": url_clean})
+
+    # Deliverable files saved during orchestration
+    for fp in (deliverable_files or []):
+        ext = Path(fp).suffix.lstrip(".").lower()
+        type_map = {"py": "code", "js": "code", "ts": "code", "md": "markdown",
+                    "pdf": "pdf", "csv": "csv", "json": "json", "html": "html"}
+        outputs.append({
+            "type": type_map.get(ext, "file"),
+            "title": Path(fp).name,
+            "path": fp,
+        })
+
+    # Sub-tasks as agents
+    for st in (subtasks or []):
+        agents.append({
+            "type": "sister",
+            "agent_id": st.get("being_id"),
+            "goal": st.get("title", ""),
+            "status": st.get("status", "unknown"),
+        })
+
+    if not outputs and not agents:
+        return None
+    return {
+        "outputs": outputs or None,
+        "agents": agents or None,
+    }
+
 # ---------------------------------------------------------------------------
 # Session ID helpers
 # ---------------------------------------------------------------------------
@@ -344,6 +391,7 @@ class OrchestrationEngine:
         requester_session_id: str,
         sender: str = "user",
         chat_session_id: str = "general",
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Kick off an orchestrated task. Returns immediately with task info.
 
@@ -353,6 +401,9 @@ class OrchestrationEngine:
         orch_session = orchestration_session_id(task_id)
 
         # Create parent task on the board
+        _create_kwargs: dict[str, Any] = {}
+        if tenant_id:
+            _create_kwargs["tenant_id"] = tenant_id
         parent_task = self.dashboard.create_task(
             self.project_svc,
             title=goal[:120],
@@ -361,6 +412,7 @@ class OrchestrationEngine:
             priority="high",
             assignees=["prime"],
             owner_agent_id="prime",
+            **_create_kwargs,
         )
         actual_task_id = parent_task.get("id") or parent_task.get("task_id") or task_id
 
@@ -372,6 +424,7 @@ class OrchestrationEngine:
             "requester_session": requester_session_id,
             "sender": sender,
             "chat_session_id": chat_session_id,
+            "tenant_id": tenant_id,
             "status": STATUS_PLANNING,
             "plan": None,
             "subtask_ids": {},      # being_id -> subtask task_id
@@ -394,7 +447,7 @@ class OrchestrationEngine:
             "task_id": actual_task_id,
             "status": STATUS_PLANNING,
             "goal": goal,
-        })
+        }, tenant_id=tenant_id)
 
         # Run the full orchestration flow in background
         t = threading.Thread(
@@ -535,7 +588,7 @@ class OrchestrationEngine:
             )
             self.dashboard._emit_event("orchestration_update", {
                 "task_id": task_id, "status": STATUS_FAILED, "error": str(exc),
-            })
+            }, tenant_id=self._get_orch_tenant(task_id))
 
             # Notify the user so they don't wait forever
             try:
@@ -658,7 +711,7 @@ class OrchestrationEngine:
             "task_id": task_id,
             "status": STATUS_PLANNING,
             "plan": plan.to_dict(),
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
         log.info("Orchestration plan for %s: %d sub-tasks", task_id[:8], len(plan.sub_tasks))
 
     def _phase_delegate(self, task_id: str) -> None:
@@ -1011,7 +1064,7 @@ class OrchestrationEngine:
                 "goal": state.get("goal", "")[:100],
                 "session_id": _session_id,
                 "session_name": _session_name,
-            })
+            }, tenant_id=self._get_orch_tenant(parent_task_id))
         except Exception as exc:
             log.warning("[ORCH-TRACKER] Failed to emit spawn event: %s", exc)
 
@@ -1099,7 +1152,7 @@ class OrchestrationEngine:
                 "output_preview": (output or "")[:200],
                 "session_id": _session_id,
                 "session_name": _session_name,
-            })
+            }, tenant_id=self._get_orch_tenant(parent_task_id))
         except Exception as exc:
             log.warning("[ORCH-TRACKER] Failed to emit completion event: %s", exc)
 
@@ -1120,13 +1173,15 @@ class OrchestrationEngine:
                     parent_task_id, output, being_id=sub.being_id,
                 )
                 preview = cleaned_output[:1500] + ("..." if len(cleaned_output) > 1500 else "")
+                _completion_content = f"Completed: **{sub.title}**\n\n{preview}"
                 self.dashboard.create_message(
                     sender=sub.being_id,
-                    content=f"Completed: **{sub.title}**\n\n{preview}",
+                    content=_completion_content,
                     targets=[state.get("sender", "user")],
                     msg_type="direct",
                     task_ref=parent_task_id,
                     session_id=_cs,
+                    metadata=_build_message_metadata(_completion_content),
                 )
             else:
                 self.dashboard.create_message(
@@ -1171,7 +1226,7 @@ class OrchestrationEngine:
             "event": "subtask_completed",
             "being_id": sub.being_id,
             "output_preview": output[:200],
-        })
+        }, tenant_id=self._get_orch_tenant(parent_task_id))
 
     def _phase_review(self, task_id: str) -> None:
         """Review each being's output. Request revisions if needed."""
@@ -1236,7 +1291,7 @@ class OrchestrationEngine:
                     "event": "revision_requested",
                     "being_id": sub.being_id,
                     "round": revision_round + 1,
-                })
+                }, tenant_id=self._get_orch_tenant(task_id))
 
                 # Route revision through SubAgentProtocol for DB-backed state,
                 # crash detection, and idempotency.
@@ -1383,6 +1438,16 @@ class OrchestrationEngine:
         self._register_mentioned_files(task_id, final_output)
 
         # Post final output back to user's chat
+        # Build metadata with all sub-tasks as agents + outputs from final text
+        _plan = state.get("plan")
+        _subtask_info = []
+        if _plan and hasattr(_plan, "sub_tasks"):
+            for _st in _plan.sub_tasks:
+                _subtask_info.append({
+                    "being_id": _st.being_id,
+                    "title": _st.title,
+                    "status": "completed",
+                })
         self.dashboard.create_message(
             sender="prime",
             content=final_output,
@@ -1390,6 +1455,11 @@ class OrchestrationEngine:
             msg_type="direct",
             task_ref=task_id,
             session_id=state.get("chat_session_id", "general"),
+            metadata=_build_message_metadata(
+                final_output,
+                subtasks=_subtask_info,
+                deliverable_files=[str(f) for f in (saved_files or [])],
+            ),
         )
 
         # Mark parent task as done
@@ -1404,7 +1474,7 @@ class OrchestrationEngine:
             "task_id": task_id,
             "status": STATUS_COMPLETED,
             "output_preview": final_output[:300],
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
         log.info("Orchestration completed for task %s", task_id[:8])
 
         # Auto-trigger dream cycle every N completed tasks
@@ -1605,7 +1675,7 @@ class OrchestrationEngine:
         if not blocks:
             return text, saved
 
-        deliverables_dir = _PROJECT_ROOT / "deliverables" / task_id[:12]
+        deliverables_dir = _PROJECT_ROOT / "projects" / "deliverables" / task_id[:12]
         file_counter = 0
         result = text
 
@@ -1678,45 +1748,84 @@ class OrchestrationEngine:
         re.IGNORECASE,
     )
 
+    # Regex for bare filenames like `hn_top5_summary.md` or "report.html"
+    _BARE_FILENAME_RE = re.compile(
+        r'(?<![/\\])(?:`|"|\'|\b)([\w.\-]+\.(?:html?|css|js|jsx|tsx?|py|json|md|txt|pdf|csv|sql|svg|png|jpg|jpeg|yaml|yml))(?:`|"|\'|\b)',
+        re.IGNORECASE,
+    )
+
     # Extensions worth serving via browser
     _SERVABLE_EXTS = {
         ".html", ".htm", ".css", ".js", ".jsx", ".tsx", ".ts",
         ".py", ".json", ".md", ".txt", ".pdf", ".csv", ".sql",
-        ".svg", ".png", ".jpg", ".yaml", ".yml",
+        ".svg", ".png", ".jpg", ".jpeg", ".yaml", ".yml",
     }
 
     def _register_mentioned_files(
         self, task_id: str, text: str, being_id: str | None = None,
     ) -> None:
         """Scan output text for file paths written by tools and register as deliverables."""
-        matches = self._FILE_PATH_RE.findall(text)
-        if not matches:
-            return
+        import shutil
 
-        seen: set[str] = set()
-        for raw_path in matches:
-            # Normalize
+        existing = self.dashboard.list_deliverables(task_id)
+        existing_paths = {d.get("file_path") for d in existing}
+        existing_names = {d.get("filename") for d in existing}
+
+        resolved_paths: list[Path] = []
+
+        # 1) Absolute paths
+        for raw_path in self._FILE_PATH_RE.findall(text):
             fpath = Path(raw_path.strip().strip('"').strip("'").rstrip("`"))
-            if str(fpath) in seen:
-                continue
-            seen.add(str(fpath))
+            if fpath.exists() and fpath.is_file():
+                resolved_paths.append(fpath)
 
-            if not fpath.exists() or not fpath.is_file():
+        # 2) Bare filenames — resolve against workspace dirs
+        search_dirs = [
+            _PROJECT_ROOT / "projects",
+            _PROJECT_ROOT / "projects" / "screenshots",
+            _PROJECT_ROOT / "projects" / "deliverables",
+        ]
+        # Add all workspace dirs
+        ws_dir = _PROJECT_ROOT / "workspaces"
+        if ws_dir.exists():
+            for child in ws_dir.iterdir():
+                if child.is_dir():
+                    search_dirs.append(child)
+
+        for m in self._BARE_FILENAME_RE.finditer(text):
+            fname = m.group(1)
+            for d in search_dirs:
+                candidate = d / fname
+                if candidate.exists() and candidate.is_file():
+                    resolved_paths.append(candidate)
+                    break
+                # Also check one level deep
+                for sub in d.iterdir() if d.exists() else []:
+                    if sub.is_dir():
+                        candidate = sub / fname
+                        if candidate.exists() and candidate.is_file():
+                            resolved_paths.append(candidate)
+                            break
+
+        # Deduplicate and register
+        seen: set[str] = set()
+        for fpath in resolved_paths:
+            fpath = fpath.resolve()
+            key = str(fpath)
+            if key in seen:
                 continue
+            seen.add(key)
+
             if fpath.suffix.lower() not in self._SERVABLE_EXTS:
                 continue
-
-            # Skip if already registered as a deliverable (from code block extraction)
-            existing = self.dashboard.list_deliverables(task_id)
-            if any(d.get("file_path") == str(fpath) for d in existing):
+            if key in existing_paths or fpath.name in existing_names:
                 continue
 
             # Copy to deliverables dir so it's servable via /deliverables/ URL
-            deliverables_dir = _PROJECT_ROOT / "deliverables" / task_id[:12]
+            deliverables_dir = _PROJECT_ROOT / "projects" / "deliverables" / task_id[:12]
             deliverables_dir.mkdir(parents=True, exist_ok=True)
             dest = deliverables_dir / fpath.name
             try:
-                import shutil
                 shutil.copy2(str(fpath), str(dest))
             except Exception as exc:
                 log.warning("Failed to copy deliverable %s: %s", fpath, exc)
@@ -1752,10 +1861,9 @@ class OrchestrationEngine:
         if not session_id or session_id == "general":
             return "General"
         try:
-            sessions = self.dashboard.list_sessions()
-            for s in sessions:
-                if s.get("id") == session_id:
-                    return s.get("name") or session_id
+            s = self.dashboard.get_session(session_id)
+            if s:
+                return s.get("name") or session_id
         except Exception:
             pass
         return session_id
@@ -1776,6 +1884,14 @@ class OrchestrationEngine:
             self._active.setdefault(task_id, state)
             return copy.deepcopy(self._active[task_id])
 
+    def _get_orch_tenant(self, task_id: str) -> str | None:
+        """Get tenant_id from active orchestration state."""
+        with self._lock:
+            state = self._active.get(task_id)
+            if state:
+                return state.get("tenant_id")
+        return None
+
     def _set_status(self, task_id: str, status: str) -> None:
         with self._lock:
             if task_id in self._active:
@@ -1783,7 +1899,7 @@ class OrchestrationEngine:
         self._db_update_status(task_id, status)
         self.dashboard._emit_event("orchestration_update", {
             "task_id": task_id, "status": status,
-        })
+        }, tenant_id=self._get_orch_tenant(task_id))
 
     def _prime_workspace(self) -> str:
         try:

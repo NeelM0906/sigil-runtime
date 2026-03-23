@@ -212,10 +212,10 @@ class DreamCycle:
             return {"skipped": True, "reason": "no_data"}
 
         # Phase 2: Consolidate
-        consolidation = self._phase_consolidate(being_id, being_name, gathered)
+        consolidation = self._phase_consolidate(being_id, being_name, gathered, tenant_id)
 
         # Phase 3: Derive
-        derived = self._phase_derive(being_id, being_name, gathered)
+        derived = self._phase_derive(being_id, being_name, gathered, tenant_id)
 
         # Phase 4: Prune
         pruned = self._phase_prune(being_id, tenant_id)
@@ -381,6 +381,7 @@ class DreamCycle:
         being_id: str,
         being_name: str,
         gathered: dict[str, Any],
+        tenant_id: str = "",
     ) -> dict[str, Any]:
         """Identify duplicates, contradictions, and stale entries via LLM."""
         # Build a compact data summary for the LLM
@@ -416,7 +417,7 @@ class DreamCycle:
         # Apply consolidation actions
         actions = {"duplicates": 0, "contradictions": 0, "stale": 0}
         try:
-            tenant_id = f"tenant-{being_id}"
+            tenant_id = tenant_id or f"tenant-{being_id}"
             runtime = self.bridge._tenant_runtime(tenant_id)
 
             # Remove duplicates
@@ -453,6 +454,7 @@ class DreamCycle:
         being_id: str,
         being_name: str,
         gathered: dict[str, Any],
+        tenant_id: str = "",
     ) -> list[dict[str, Any]]:
         """Derive new insights from consolidated memories."""
         data_parts = []
@@ -488,7 +490,7 @@ class DreamCycle:
         # Store derived insights as semantic memories
         stored: list[dict[str, Any]] = []
         try:
-            tenant_id = f"tenant-{being_id}"
+            tenant_id = tenant_id or f"tenant-{being_id}"
             runtime = self.bridge._tenant_runtime(tenant_id)
             for insight in insights[:5]:
                 key = insight.get("key", f"derived::{uuid.uuid4().hex[:8]}")

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
+import { useAuth } from '../context/AuthContext'
 import { chatApi, tasksApi, deliverablesApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -509,11 +510,14 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 export function ChatWindow() {
   const { beings, getBeingById, openBeingDetail } = useBeings()
+  const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  const [targets, setTargets] = useState([])
+  // Operator users default to recovery; admins broadcast to prime
+  const defaultTarget = user?.role === 'admin' ? [] : ['recovery']
+  const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
@@ -523,34 +527,44 @@ export function ChatWindow() {
 
   // Session state
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState('general')
+  const [activeSessionId, setActiveSessionId] = useState(null)
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Load sessions on mount
+  // Load sessions on mount (scoped to user)
   useEffect(() => {
-    chatApi.sessions().then(({ sessions: s }) => setSessions(s)).catch(() => {})
+    chatApi.sessions().then(({ sessions: s }) => {
+      setSessions(s)
+      if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
+    }).catch(() => {})
   }, [])
 
   // Load messages from API
+  const isInitialLoad = useRef(true)
   const fetchMessages = useCallback(async () => {
-    setLoading(true)
+    if (isInitialLoad.current) setLoading(true)
     try {
       const apiFilters = { session_id: activeSessionId }
       if (filters.search) apiFilters.search = filters.search
       if (filters.sender) apiFilters.sender = filters.sender
       if (filters.target) apiFilters.target = filters.target
       const { messages: fetched } = await chatApi.list(apiFilters)
-      setMessages(fetched)
+      setMessages(prev => {
+        if (prev.length === fetched.length && prev.length > 0 && prev[prev.length - 1]?.id === fetched[fetched.length - 1]?.id) return prev
+        return fetched
+      })
       if (awaitingReplySince && fetched.some(msg => msg.sender !== 'user' && msg.timestamp > awaitingReplySince)) {
         setAwaitingReplySince(null)
       }
     } catch (err) {
       console.error('Failed to load messages:', err)
     } finally {
-      setLoading(false)
+      if (isInitialLoad.current) {
+        setLoading(false)
+        isInitialLoad.current = false
+      }
     }
   }, [filters, activeSessionId, awaitingReplySince])
 
@@ -605,7 +619,7 @@ export function ChatWindow() {
   }
 
   // SSE: incoming LLM responses and system messages arrive here
-  useSSE({
+  useSharedSSE({
     chat_message(data) {
       if (data.sender === 'user') return
       setTypingBeings(prev => {
@@ -673,6 +687,48 @@ export function ChatWindow() {
     inputRef.current?.focus()
   }
 
+  const fileInputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState(null) // staged upload result
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // reset for re-upload of same file
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
+      const stored = localStorage.getItem('mc_auth')
+      const token = stored ? JSON.parse(stored).token : ''
+      const res = await fetch('/api/mc/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.status === 401) {
+        // Don't trigger reload loop — just show error
+        setUploadedFile(null)
+        return
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('Upload failed:', err)
+        return
+      }
+      const result = await res.json()
+      // Stage the upload — don't send yet. User hits Enter to send with context.
+      setUploadedFile(result)
+      const hint = `[${result.filename}: ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables` : ''}] `
+      setInput(prev => hint + prev)
+    } catch (err) {
+      console.error('Upload failed:', err)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSend = async () => {
     if (!input.trim()) return
 
@@ -693,12 +749,11 @@ export function ChatWindow() {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
-    setTargets([])
+    setTargets(defaultTarget)
 
     try {
       // POST returns the saved user message; LLM responses arrive via SSE
       const { message: saved } = await chatApi.send({
-        sender: 'user',
         targets: tempMsg.targets,
         content,
         mode,
@@ -884,6 +939,25 @@ export function ChatWindow() {
             placeholder="Message... (@ to mention a being)"
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="Upload document"
+            className="px-2 py-2 text-text-muted hover:text-accent-blue disabled:opacity-30 transition-colors"
+          >
+            {uploading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
+            )}
+          </button>
           <button
             onClick={handleSend}
             disabled={!input.trim()}

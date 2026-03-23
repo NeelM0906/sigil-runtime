@@ -68,7 +68,7 @@
       ],
       "color": "#3b82f6",
       "model_id": "anthropic/claude-opus-4.6",
-      "workspace": ".",
+      "workspace": "workspaces/prime",
       "tenant_id": "tenant-local",
       "auto_start": true,
       "metrics": {

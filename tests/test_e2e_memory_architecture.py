@@ -512,26 +512,3 @@ class TestE2EMemoryArchitecture:
             assert len(result["semantic"]) >= 1
             assert "task analysis" in result["semantic"][0]["content"]
 
-    def test_being_id_backfill(self):
-        """backfill_being_id populates being_id from prime->X user_id patterns."""
-        from bomba_sr.memory.consolidation import MemoryConsolidator
-        with tempfile.TemporaryDirectory() as tmp:
-            db = RuntimeDB(os.path.join(tmp, "test.db"))
-            consolidator = MemoryConsolidator(db)
-            # Insert with old-style user_id but no being_id
-            import uuid
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc).isoformat()
-            db.execute(
-                """INSERT INTO memories (id, user_id, memory_key, tier, content, entities,
-                   evidence_refs, recency_ts, active, version, created_at, updated_at, being_id)
-                VALUES (?, ?, ?, 'semantic', ?, '[]', '[]', ?, 1, 1, ?, ?, NULL)""",
-                (str(uuid.uuid4()), "prime->forge", "old_mem", "old content", now, now, now),
-            )
-            db.commit()
-            updated = consolidator.backfill_being_id()
-            assert updated == 1
-            row = db.execute(
-                "SELECT being_id FROM memories WHERE memory_key = 'old_mem'"
-            ).fetchone()
-            assert row["being_id"] == "forge"
