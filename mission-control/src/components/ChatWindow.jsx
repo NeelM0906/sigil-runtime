@@ -540,6 +540,7 @@ export function ChatWindow({ userId }) {
   // Load messages from API
   const isInitialLoad = useRef(true)
   const fetchMessages = useCallback(async () => {
+    if (!activeSessionId) return
     if (isInitialLoad.current) setLoading(true)
     try {
       const apiFilters = { session_id: activeSessionId }
