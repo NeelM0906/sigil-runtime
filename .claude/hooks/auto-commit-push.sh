@@ -24,6 +24,9 @@ git add --ignore-errors \
   'docs/**' \
   'contracts/**' \
   'skills/**' \
+  '.claude/commands/**' \
+  '.claude/settings.json' \
+  '.mcp.json' \
   'workspaces/*/SOUL.md' \
   'workspaces/*/IDENTITY.md' \
   'workspaces/*/MISSION.md' \
