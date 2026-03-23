@@ -30,7 +30,7 @@ def _get(path: str, params: dict[str, str]) -> dict[str, Any]:
         "x-api-key": _api_key(),
         "Accept": "application/json",
     })
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, timeout=45) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
