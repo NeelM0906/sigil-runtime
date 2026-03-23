@@ -1892,6 +1892,19 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     self._write_cors(200, {"ok": True, "result": result})
                     return
 
+                if path.startswith("/api/mc/code/sessions/") and path.endswith("/respond-ui"):
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    request_id = body.get("request_id", "")
+                    if not request_id:
+                        self._write_cors(400, {"error": "request_id is required"})
+                        return
+                    response = body.get("response", {})
+                    pi_bridge.respond_ui(request_id, response)
+                    self._write_cors(200, {"ok": True})
+                    return
+
                 self._write_cors(404, {"error": "not_found"})
             except KeyError as exc:
                 self._write_cors(400, {"error": f"missing field: {exc}"})

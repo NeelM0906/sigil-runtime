@@ -25,16 +25,37 @@ function ToolBadge({ name, status }) {
   )
 }
 
+// ── Diff Line ───────────────────────────────────────────────
+
+function DiffLine({ type, content, lineNum }) {
+  const styles = {
+    add: 'bg-accent-green/10 text-accent-green/90',
+    remove: 'bg-accent-red/10 text-accent-red/90',
+    context: 'text-text-secondary',
+  }
+  const prefix = { add: '+', remove: '-', context: ' ' }
+  return (
+    <div className={`flex font-mono text-[11px] leading-5 ${styles[type]}`}>
+      <span className="w-8 text-right pr-2 text-text-muted/50 select-none flex-shrink-0">{lineNum || ''}</span>
+      <span className="w-4 text-center select-none flex-shrink-0 opacity-60">{prefix[type]}</span>
+      <span className="whitespace-pre-wrap break-all flex-1">{content}</span>
+    </div>
+  )
+}
+
 // ── Diff Block ──────────────────────────────────────────────
 
 function DiffBlock({ toolName, args, result }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
 
-  // Parse edit tool args to show diff-like view
   const isEdit = toolName === 'edit'
   const isWrite = toolName === 'write'
   const isRead = toolName === 'read'
   const isBash = toolName === 'bash'
+  const isGrep = toolName === 'grep'
+  const isFind = toolName === 'find'
+  const isLs = toolName === 'ls'
+  const isReadOnly = isRead || isGrep || isFind || isLs
 
   let parsedArgs = {}
   try {
@@ -43,39 +64,99 @@ function DiffBlock({ toolName, args, result }) {
 
   const filePath = parsedArgs.path || parsedArgs.file_path || ''
 
+  const toolColors = {
+    edit: { label: 'EDIT', color: 'text-accent-amber', border: 'border-accent-amber/30', icon: 'M' },
+    write: { label: 'WRITE', color: 'text-accent-green', border: 'border-accent-green/30', icon: '+' },
+    read: { label: 'READ', color: 'text-accent-blue', border: 'border-accent-blue/30', icon: 'R' },
+    bash: { label: 'BASH', color: 'text-accent-purple', border: 'border-accent-purple/30', icon: '$' },
+    grep: { label: 'GREP', color: 'text-accent-cyan', border: 'border-accent-cyan/30', icon: '?' },
+    find: { label: 'FIND', color: 'text-accent-cyan', border: 'border-accent-cyan/30', icon: '/' },
+    ls: { label: 'LS', color: 'text-accent-cyan', border: 'border-accent-cyan/30', icon: 'D' },
+  }
+  const tc = toolColors[toolName] || { label: toolName.toUpperCase(), color: 'text-text-secondary', border: 'border-border', icon: '>' }
+
+  // Build diff lines for edit tool
+  const diffLines = []
+  if (isEdit && parsedArgs.old_string) {
+    const oldLines = (parsedArgs.old_string || '').split('\n')
+    const newLines = (parsedArgs.new_string || '').split('\n')
+    oldLines.forEach((l, i) => diffLines.push({ type: 'remove', content: l, lineNum: i + 1 }))
+    newLines.forEach((l, i) => diffLines.push({ type: 'add', content: l, lineNum: i + 1 }))
+  }
+
   return (
-    <div className="my-1 rounded border border-border bg-bg-primary">
+    <div className={`my-1.5 rounded border ${tc.border} bg-bg-primary overflow-hidden`}>
+      {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-mono hover:bg-bg-hover transition-colors"
+        className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-mono hover:bg-bg-hover/50 transition-colors"
       >
-        <span className={`${expanded ? 'rotate-90' : ''} transition-transform text-text-muted`}>&#9654;</span>
-        {isEdit && <span className="text-accent-amber">EDIT</span>}
-        {isWrite && <span className="text-accent-green">WRITE</span>}
-        {isRead && <span className="text-accent-blue">READ</span>}
-        {isBash && <span className="text-accent-purple">BASH</span>}
-        {!isEdit && !isWrite && !isRead && !isBash && <span className="text-text-secondary">{toolName}</span>}
-        {filePath && <span className="text-text-secondary truncate">{filePath}</span>}
-        {isBash && parsedArgs.command && <span className="text-text-secondary truncate">$ {parsedArgs.command}</span>}
+        <span className={`${expanded ? 'rotate-90' : ''} transition-transform text-text-muted text-[9px]`}>&#9654;</span>
+        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${tc.color} bg-current/10`}>
+          {tc.label}
+        </span>
+        {filePath && <span className="text-text-primary truncate">{filePath}</span>}
+        {isBash && parsedArgs.command && (
+          <span className="text-text-secondary truncate">$ {parsedArgs.command}</span>
+        )}
+        {isEdit && (
+          <span className="ml-auto text-[9px] text-text-muted">
+            <span className="text-accent-red">-{(parsedArgs.old_string || '').split('\n').length}</span>
+            {' '}
+            <span className="text-accent-green">+{(parsedArgs.new_string || '').split('\n').length}</span>
+          </span>
+        )}
       </button>
+
+      {/* Content */}
       {expanded && (
-        <div className="border-t border-border px-2 py-1 text-[11px] font-mono overflow-x-auto max-h-64 overflow-y-auto">
-          {isEdit && parsedArgs.old_string && (
-            <div>
-              <div className="text-accent-red/80 whitespace-pre-wrap">- {parsedArgs.old_string}</div>
-              <div className="text-accent-green/80 whitespace-pre-wrap">+ {parsedArgs.new_string}</div>
+        <div className="border-t border-border/50">
+          {/* Edit: unified diff view */}
+          {isEdit && diffLines.length > 0 && (
+            <div className="max-h-80 overflow-y-auto">
+              {diffLines.map((line, i) => (
+                <DiffLine key={i} type={line.type} content={line.content} lineNum={line.lineNum} />
+              ))}
             </div>
           )}
+
+          {/* Write: all-green (new file) */}
           {isWrite && parsedArgs.content && (
-            <pre className="text-accent-green/80 whitespace-pre-wrap">{parsedArgs.content.slice(0, 2000)}</pre>
+            <div className="max-h-80 overflow-y-auto">
+              {parsedArgs.content.slice(0, 3000).split('\n').map((line, i) => (
+                <DiffLine key={i} type="add" content={line} lineNum={i + 1} />
+              ))}
+            </div>
           )}
-          {result && (
-            <pre className="text-text-secondary whitespace-pre-wrap mt-1">{
-              typeof result === 'string' ? result.slice(0, 2000) : JSON.stringify(result, null, 2).slice(0, 2000)
-            }</pre>
+
+          {/* Bash: command + output */}
+          {isBash && (
+            <div className="max-h-80 overflow-y-auto">
+              {parsedArgs.command && (
+                <div className="px-3 py-1 bg-accent-purple/5 text-[11px] font-mono text-accent-purple/80 border-b border-border/30">
+                  $ {parsedArgs.command}
+                </div>
+              )}
+              {result && (
+                <pre className="px-3 py-1 text-[11px] font-mono text-text-secondary whitespace-pre-wrap">
+                  {typeof result === 'string' ? result.slice(0, 3000) : JSON.stringify(result, null, 2).slice(0, 3000)}
+                </pre>
+              )}
+            </div>
           )}
-          {!isEdit && !isWrite && !result && (
-            <pre className="text-text-muted whitespace-pre-wrap">{JSON.stringify(parsedArgs, null, 2).slice(0, 1000)}</pre>
+
+          {/* Read-only tools: show result */}
+          {isReadOnly && result && (
+            <pre className="px-3 py-1 text-[11px] font-mono text-text-secondary whitespace-pre-wrap max-h-80 overflow-y-auto">
+              {typeof result === 'string' ? result.slice(0, 3000) : JSON.stringify(result, null, 2).slice(0, 3000)}
+            </pre>
+          )}
+
+          {/* Fallback: raw args */}
+          {!isEdit && !isWrite && !isBash && !isReadOnly && (
+            <pre className="px-3 py-1 text-[11px] font-mono text-text-muted whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {JSON.stringify(parsedArgs, null, 2).slice(0, 1500)}
+            </pre>
           )}
         </div>
       )}
@@ -254,50 +335,214 @@ function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAb
   )
 }
 
-// ── Activity Panel (right side) ─────────────────────────────
+// ── Changes & Activity Panel (right side) ───────────────────
 
-function CodeActivityPanel({ tools, usage }) {
+function CodeActivityPanel({ tools, usage, streaming }) {
+  const [activeTab, setActiveTab] = useState('changes')
+
+  // Group tools by file for Changes view
+  const fileChanges = []
+  const seenFiles = new Set()
+  for (const t of tools) {
+    let parsedArgs = {}
+    try { parsedArgs = typeof t.args === 'string' ? JSON.parse(t.args) : (t.args || {}) } catch { /* */ }
+    const filePath = parsedArgs.path || parsedArgs.file_path || ''
+    if (filePath && (t.name === 'edit' || t.name === 'write')) {
+      if (!seenFiles.has(filePath)) {
+        seenFiles.add(filePath)
+        fileChanges.push({ path: filePath, edits: [] })
+      }
+      fileChanges.find(f => f.path === filePath)?.edits.push(t)
+    }
+  }
+
+  // Separate write-tools (bash, non-file) for Activity tab
+  const activities = tools.filter(t => {
+    let parsedArgs = {}
+    try { parsedArgs = typeof t.args === 'string' ? JSON.parse(t.args) : (t.args || {}) } catch { /* */ }
+    return t.name === 'bash' || t.name === 'read' || t.name === 'grep' || t.name === 'find' || t.name === 'ls'
+  })
+
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-border">
-        <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">Activity</span>
+      {/* Tab bar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border">
+        {['changes', 'activity', 'usage'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+              activeTab === tab
+                ? 'bg-accent-blue/20 text-accent-blue'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            {tab === 'changes' && `Changes${fileChanges.length ? ` (${fileChanges.length})` : ''}`}
+            {tab === 'activity' && `Activity${tools.length ? ` (${tools.length})` : ''}`}
+            {tab === 'usage' && 'Usage'}
+          </button>
+        ))}
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-2">
-        {tools.length === 0 && (
-          <div className="text-text-muted text-[11px] text-center py-8">
-            Tool calls will appear here
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Changes tab: file-grouped diffs */}
+        {activeTab === 'changes' && (
+          <div className="px-2 py-1">
+            {fileChanges.length === 0 && !streaming && (
+              <div className="text-text-muted text-[11px] text-center py-8">
+                No file changes yet
+              </div>
+            )}
+            {streaming && fileChanges.length === 0 && (
+              <div className="flex items-center gap-2 text-text-muted text-[11px] py-4 justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" />
+                Waiting for file changes...
+              </div>
+            )}
+            {fileChanges.map((fc, i) => (
+              <div key={i} className="mb-2">
+                {/* File header */}
+                <div className="flex items-center gap-2 px-1 py-1 text-[11px]">
+                  <span className="text-accent-amber">M</span>
+                  <span className="font-mono text-text-primary truncate">{fc.path.split('/').pop()}</span>
+                  <span className="text-text-muted font-mono truncate text-[9px] ml-auto">{fc.path}</span>
+                </div>
+                {/* Diffs for this file */}
+                {fc.edits.map((edit, ei) => (
+                  <DiffBlock key={ei} toolName={edit.name} args={edit.args} result={edit.result} />
+                ))}
+              </div>
+            ))}
           </div>
         )}
-        {tools.map((t, i) => (
-          <div key={i} className="mb-2 rounded border border-border bg-bg-primary p-2">
-            <div className="flex items-center gap-2">
-              <ToolBadge name={t.name} status={t.status} />
-              {t.file && <span className="text-[10px] text-text-muted font-mono truncate">{t.file}</span>}
-            </div>
-            {t.result_preview && (
-              <pre className="text-[10px] text-text-secondary font-mono mt-1 max-h-20 overflow-hidden">
-                {t.result_preview.slice(0, 500)}
-              </pre>
+
+        {/* Activity tab: all tool calls */}
+        {activeTab === 'activity' && (
+          <div className="px-2 py-1">
+            {tools.length === 0 && (
+              <div className="text-text-muted text-[11px] text-center py-8">
+                Tool calls will appear here
+              </div>
+            )}
+            {[...tools].reverse().map((t, i) => {
+              let parsedArgs = {}
+              try { parsedArgs = typeof t.args === 'string' ? JSON.parse(t.args) : (t.args || {}) } catch { /* */ }
+              const filePath = parsedArgs.path || parsedArgs.file_path || ''
+              const cmd = parsedArgs.command || ''
+
+              return (
+                <div key={i} className="flex items-center gap-2 px-1 py-1 border-b border-border/30 text-[11px]">
+                  <ToolBadge name={t.name} status={t.status} />
+                  <span className="text-text-secondary font-mono truncate text-[10px]">
+                    {filePath || cmd || ''}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Usage tab */}
+        {activeTab === 'usage' && (
+          <div className="px-3 py-3">
+            {!usage ? (
+              <div className="text-text-muted text-[11px] text-center py-8">
+                No usage data yet
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="rounded border border-border bg-bg-primary p-2 text-center">
+                    <div className="text-text-muted text-[9px] uppercase mb-1">Input</div>
+                    <div className="text-text-primary font-mono font-medium">{usage.input_tokens?.toLocaleString() || 0}</div>
+                  </div>
+                  <div className="rounded border border-border bg-bg-primary p-2 text-center">
+                    <div className="text-text-muted text-[9px] uppercase mb-1">Output</div>
+                    <div className="text-text-primary font-mono font-medium">{usage.output_tokens?.toLocaleString() || 0}</div>
+                  </div>
+                </div>
+                {usage.cost > 0 && (
+                  <div className="rounded border border-border bg-bg-primary p-2 text-center text-[11px]">
+                    <div className="text-text-muted text-[9px] uppercase mb-1">Cost</div>
+                    <div className="text-accent-green font-mono font-medium">${usage.cost.toFixed(4)}</div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        ))}
+        )}
+      </div>
+    </div>
+  )
+}
 
-        {/* Usage stats */}
-        {usage && (
-          <div className="mt-4 pt-3 border-t border-border">
-            <div className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Usage</div>
-            <div className="grid grid-cols-2 gap-1 text-[11px]">
-              <div className="text-text-secondary">Input</div>
-              <div className="text-text-primary font-mono">{usage.input_tokens?.toLocaleString() || 0}</div>
-              <div className="text-text-secondary">Output</div>
-              <div className="text-text-primary font-mono">{usage.output_tokens?.toLocaleString() || 0}</div>
-              {usage.cost > 0 && <>
-                <div className="text-text-secondary">Cost</div>
-                <div className="text-text-primary font-mono">${usage.cost.toFixed(4)}</div>
-              </>}
-            </div>
+// ── Approval Dialog ─────────────────────────────────────────
+
+function ApprovalDialog({ request, onRespond }) {
+  if (!request) return null
+
+  const { request_id, method, title, message, options } = request
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-bg-card border border-accent-amber/40 rounded-lg p-4 max-w-md w-full mx-4 shadow-xl">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-full bg-accent-amber/20 flex items-center justify-center text-accent-amber text-sm">
+            ?
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">{title || 'Permission Required'}</h3>
+            {message && <p className="text-xs text-text-secondary mt-0.5">{message}</p>}
+          </div>
+        </div>
+
+        {/* Select method: show options as buttons */}
+        {method === 'select' && options && options.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {options.map((opt, i) => {
+              const isAllow = /allow|approve|yes/i.test(opt)
+              const isDeny = /deny|reject|block|no/i.test(opt)
+              const color = isAllow ? 'bg-accent-green/20 text-accent-green hover:bg-accent-green/30 border-accent-green/30'
+                : isDeny ? 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30 border-accent-red/30'
+                : 'bg-bg-hover text-text-primary hover:bg-bg-hover/80 border-border'
+              return (
+                <button
+                  key={i}
+                  onClick={() => onRespond(request_id, { value: opt })}
+                  className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${color}`}
+                >
+                  {opt}
+                </button>
+              )
+            })}
           </div>
         )}
+
+        {/* Confirm method: yes/no */}
+        {method === 'confirm' && (
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => onRespond(request_id, { confirmed: true })}
+              className="flex-1 px-3 py-1.5 rounded text-xs font-medium bg-accent-green/20 text-accent-green hover:bg-accent-green/30 border border-accent-green/30 transition-colors"
+            >
+              Allow
+            </button>
+            <button
+              onClick={() => onRespond(request_id, { confirmed: false })}
+              className="flex-1 px-3 py-1.5 rounded text-xs font-medium bg-accent-red/20 text-accent-red hover:bg-accent-red/30 border border-accent-red/30 transition-colors"
+            >
+              Deny
+            </button>
+          </div>
+        )}
+
+        {/* Fallback: cancel */}
+        <button
+          onClick={() => onRespond(request_id, { cancelled: true })}
+          className="mt-2 w-full px-3 py-1 rounded text-[10px] text-text-muted hover:text-text-secondary transition-colors"
+        >
+          Dismiss
+        </button>
       </div>
     </div>
   )
@@ -316,6 +561,7 @@ export function CodeWorkspace() {
   const [usage, setUsage] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [healthy, setHealthy] = useState(null)
+  const [pendingApproval, setPendingApproval] = useState(null)
 
   // Check health on mount
   useEffect(() => {
@@ -403,6 +649,16 @@ export function CodeWorkspace() {
         }
       })
     },
+    code_approval_required: (data) => {
+      const d = data.data || data
+      setPendingApproval({
+        request_id: d.request_id,
+        method: d.method,
+        title: d.title,
+        message: d.message,
+        options: d.options || [],
+      })
+    },
   })
 
   const handleCreateSession = useCallback(async () => {
@@ -474,6 +730,16 @@ export function CodeWorkspace() {
     }
   }, [activeSessionId])
 
+  const handleApprovalRespond = useCallback(async (requestId, response) => {
+    if (!activeSessionId) return
+    setPendingApproval(null)
+    try {
+      await codeApi.respondUi(activeSessionId, requestId, response)
+    } catch (err) {
+      console.error('Approval response failed:', err)
+    }
+  }, [activeSessionId])
+
   // Not configured state
   if (healthy === false) {
     return (
@@ -488,7 +754,10 @@ export function CodeWorkspace() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] rounded-lg border border-border bg-bg-card overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] rounded-lg border border-border bg-bg-card overflow-hidden relative">
+      {/* Approval Dialog */}
+      <ApprovalDialog request={pendingApproval} onRespond={handleApprovalRespond} />
+
       {/* Session Sidebar */}
       {sidebarOpen && (
         <div className="w-52 flex-shrink-0 border-r border-border bg-bg-secondary">
@@ -570,7 +839,7 @@ export function CodeWorkspace() {
             </div>
             {/* Activity panel */}
             <div className="w-64 flex-shrink-0 border-l border-border bg-bg-secondary">
-              <CodeActivityPanel tools={allTools} usage={usage} />
+              <CodeActivityPanel tools={allTools} usage={usage} streaming={streaming} />
             </div>
           </div>
         )}

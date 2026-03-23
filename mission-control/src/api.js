@@ -231,4 +231,9 @@ export const codeApi = {
   state() {
     return request('/api/mc/code/state')
   },
+  respondUi(sessionId, requestId, response) {
+    return request(`/api/mc/code/sessions/${sessionId}/respond-ui`, {
+      method: 'POST', body: JSON.stringify({ request_id: requestId, response }),
+    })
+  },
 }

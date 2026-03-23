@@ -24,6 +24,7 @@ export function useCodeSSE(sessionId, handlers) {
       'code_tool_call_start', 'code_tool_call_delta', 'code_tool_call_end',
       'code_tool_exec_start', 'code_tool_exec_end',
       'code_thinking_start', 'code_thinking_delta', 'code_thinking_end',
+      'code_approval_required', 'code_notification',
     ]
 
     for (const type of eventTypes) {

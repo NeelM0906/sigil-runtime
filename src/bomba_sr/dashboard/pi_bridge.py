@@ -281,6 +281,30 @@ class PiBridge:
         return self._send_command({"type": "get_state"}, timeout=5)
 
     # ------------------------------------------------------------------
+    # Extension UI (approval flow)
+    # ------------------------------------------------------------------
+
+    def respond_ui(self, request_id: str, response: dict) -> None:
+        """Send an extension_ui_response to Pi (for approval dialogs).
+
+        ``response`` should be one of:
+        - ``{"value": "Allow"}`` for select dialogs
+        - ``{"confirmed": True}`` for confirm dialogs
+        - ``{"cancelled": True}`` to dismiss
+        """
+        msg = {"type": "extension_ui_response", "id": request_id, **response}
+        with self._lock:
+            proc = self._proc
+        if not proc or proc.poll() is not None:
+            raise RuntimeError("Pi process is not running")
+        try:
+            raw = json.dumps(msg) + "\n"
+            proc.stdin.write(raw)
+            proc.stdin.flush()
+        except (BrokenPipeError, OSError) as exc:
+            raise RuntimeError(f"Failed to write UI response: {exc}") from exc
+
+    # ------------------------------------------------------------------
     # Event subscription
     # ------------------------------------------------------------------
 
@@ -462,6 +486,30 @@ class PiBridge:
 
         session_id = self._active_session_id or "unknown"
         session = self._sessions.get(session_id)
+
+        # Extension UI requests (approval flow)
+        if event_type == "extension_ui_request":
+            method = obj.get("method", "")
+            req_id = obj.get("id", "")
+            # Dialog methods that need a response
+            if method in ("select", "confirm", "input", "editor"):
+                self._emit(PiEvent(session_id, "code_approval_required", {
+                    "request_id": req_id,
+                    "method": method,
+                    "title": obj.get("title", ""),
+                    "message": obj.get("message", ""),
+                    "options": obj.get("options", []),
+                    "timeout": obj.get("timeout"),
+                }))
+            # Fire-and-forget: notify, setStatus, etc.
+            elif method in ("notify", "setStatus"):
+                self._emit(PiEvent(session_id, "code_notification", {
+                    "method": method,
+                    "title": obj.get("title", ""),
+                    "message": obj.get("message", ""),
+                    "level": obj.get("level", "info"),
+                }))
+            return
 
         # Agent lifecycle events
         if event_type == "agent_start":

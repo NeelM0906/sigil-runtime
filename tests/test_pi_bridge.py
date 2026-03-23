@@ -275,6 +275,72 @@ class TestPiBridgeEventDispatch:
         assert result["success"] is True
 
 
+class TestPiBridgeApprovalFlow:
+    def test_extension_ui_request_dispatches_approval(self):
+        collected: list[PiEvent] = []
+        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge._active_session_id = "sess-1"
+        bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
+
+        bridge._dispatch_event({
+            "type": "extension_ui_request",
+            "id": "req-123",
+            "method": "select",
+            "title": "Allow write?",
+            "message": "Agent wants to write /tmp/foo.txt",
+            "options": ["Allow", "Deny", "Allow for session"],
+        })
+
+        assert len(collected) == 1
+        assert collected[0].event_type == "code_approval_required"
+        assert collected[0].data["request_id"] == "req-123"
+        assert collected[0].data["method"] == "select"
+        assert collected[0].data["title"] == "Allow write?"
+        assert "Allow" in collected[0].data["options"]
+
+    def test_extension_ui_confirm_dispatches_approval(self):
+        collected: list[PiEvent] = []
+        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge._active_session_id = "sess-1"
+        bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
+
+        bridge._dispatch_event({
+            "type": "extension_ui_request",
+            "id": "req-456",
+            "method": "confirm",
+            "title": "Clear session?",
+            "message": "All messages will be lost.",
+        })
+
+        assert len(collected) == 1
+        assert collected[0].event_type == "code_approval_required"
+        assert collected[0].data["method"] == "confirm"
+
+    def test_fire_and_forget_dispatches_notification(self):
+        collected: list[PiEvent] = []
+        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge._active_session_id = "sess-1"
+        bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
+
+        bridge._dispatch_event({
+            "type": "extension_ui_request",
+            "id": "req-789",
+            "method": "notify",
+            "title": "Info",
+            "message": "Task completed",
+            "level": "info",
+        })
+
+        assert len(collected) == 1
+        assert collected[0].event_type == "code_notification"
+        assert collected[0].data["message"] == "Task completed"
+
+    def test_respond_ui_not_running(self):
+        bridge = PiBridge(workspace_root="/tmp/test")
+        with pytest.raises(RuntimeError, match="not running"):
+            bridge.respond_ui("req-1", {"confirmed": True})
+
+
 class TestPiBridgeSubscription:
     def test_subscribe_and_receive(self):
         bridge = PiBridge(workspace_root="/tmp/test")
