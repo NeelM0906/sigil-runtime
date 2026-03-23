@@ -29,6 +29,11 @@ TOOL_GROUPS: dict[str, set[str]] = {
     "group:sessions": {"sessions_list", "sessions_send", "sessions_spawn", "sessions_poll", "session_status"},
     "group:approvals": {"list_approvals", "decide_approval"},
     "group:skills": {"skill_create", "skill_update", "skill_list"},
+    "group:seo": {
+        "seo_people_also_ask", "seo_autocomplete", "seo_reddit_quora",
+        "seo_keyword_clusters", "seo_content_explorer", "seo_semantic_keywords",
+        "seo_ai_assistant", "seo_full_research",
+    },
 }
 
 

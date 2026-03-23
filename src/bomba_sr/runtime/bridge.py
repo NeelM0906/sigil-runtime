@@ -77,6 +77,7 @@ from bomba_sr.tools.builtin_data_access import builtin_data_access_tools
 from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 from bomba_sr.tools.builtin_browser import builtin_browser_tools
+from bomba_sr.tools.builtin_seo import builtin_seo_tools
 
 logger = logging.getLogger(__name__)
 
@@ -2639,6 +2640,7 @@ class RuntimeBridge:
             if self.config.web_search_enabled:
                 tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
                 tool_executor.register_many(builtin_browser_tools())
+            tool_executor.register_many(builtin_seo_tools())
             if self.config.pinecone_enabled:
                 tool_executor.register_many(
                     builtin_pinecone_tools(

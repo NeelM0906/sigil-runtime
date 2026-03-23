@@ -138,6 +138,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
         "group:media",         # fal video generation + request tracking
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:colosseum",     # colosseum tools — Forge's core domain
     )),
 
@@ -148,6 +149,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:fs",            # read, write, edit, glob, grep (for reports)
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:knowledge",     # update_knowledge
     )),
 
@@ -161,6 +163,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
         "group:skills",        # skill_create, skill_update, skill_list
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
     )),
 
     # Memory — memory specialist + Pinecone
