@@ -1194,6 +1194,50 @@ class DashboardService:
                 return group[0]
         return None
 
+    def _inject_upload_context(self, content: str, being_id: str) -> str:
+        """If the message references an uploaded file, inject its full text."""
+        match = re.search(r'\[([^]]+?):\s*\d+\s*chunks?\s*indexed[^]]*\]', content)
+        if not match:
+            return content
+
+        filename = match.group(1).strip()
+        being = self.get_being(being_id) or {}
+        ws = self._resolve_workspace_path(being.get("workspace"))
+        if not ws:
+            return content
+
+        upload_path = ws / "uploads" / filename
+        if not upload_path.exists():
+            uploads_dir = ws / "uploads"
+            if uploads_dir.exists():
+                for f in uploads_dir.iterdir():
+                    if f.name.lower() == filename.lower():
+                        upload_path = f
+                        break
+
+        if not upload_path.exists():
+            return content
+
+        try:
+            from bomba_sr.ingestion.parser import extract_text
+            extracted = extract_text(str(upload_path))
+            doc_text = extracted.get("text", "")
+            if not doc_text:
+                return content
+
+            if len(doc_text) > 100_000:
+                doc_text = doc_text[:100_000] + "\n\n[... document truncated at 100K chars ...]"
+
+            return (
+                f'<uploaded_document filename="{filename}" format="{extracted.get("format", "")}">\n'
+                f"{doc_text}\n"
+                f"</uploaded_document>\n\n"
+                f"{content}"
+            )
+        except Exception as exc:
+            log.debug("Failed to inject upload context for %s: %s", filename, exc)
+            return content
+
     def _effective_user_message(self, being_id: str, content: str, chat_session_id: str) -> str:
         if not self._is_short_confirmation(content):
             return content
@@ -1370,6 +1414,7 @@ class DashboardService:
             from bomba_sr.runtime.bridge import TurnRequest
             from bomba_sr.context.policy import TurnProfile
             effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
             _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
             # Use deep context (TASK_EXECUTION) only for actual tasks;
             # casual chat stays lean with just SOUL + IDENTITY.
@@ -1533,6 +1578,7 @@ class DashboardService:
             from bomba_sr.context.policy import TurnProfile
 
             effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
             _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
             req = TurnRequest(
                 tenant_id=tenant_id,

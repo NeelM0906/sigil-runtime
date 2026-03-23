@@ -53,6 +53,14 @@ def upload_file(
     try:
         # Extract text (fast — no ML models)
         extracted = extract_text(tmp_path)
+        text = extracted.get("text", "")
+        if not text or text.startswith("[Could not extract") or text.startswith("[Binary file"):
+            raise HTTPException(
+                422,
+                f"Could not extract text from {file.filename}. "
+                f"Format: {extracted.get('format', 'unknown')}. "
+                f"Detail: {text}",
+            )
 
         # Get tenant's memory store
         runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))

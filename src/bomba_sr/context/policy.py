@@ -262,12 +262,29 @@ class ContextPolicyEngine:
 
     @staticmethod
     def _summarize(text: str, max_tokens: int) -> str:
+        import re as _re
         if max_tokens <= 8:
             return ""
         max_chars = max_tokens * 4
         clean = text.strip()
         if len(clean) <= max_chars:
             return clean
+
+        # Preserve <uploaded_document> blocks — user-provided content
+        if "<uploaded_document" in clean:
+            doc_blocks = list(_re.finditer(
+                r'<uploaded_document[^>]*>.*?</uploaded_document>',
+                clean, _re.DOTALL,
+            ))
+            if doc_blocks:
+                doc_text = "\n\n".join(m.group(0) for m in doc_blocks)
+                non_doc = clean
+                for m in reversed(doc_blocks):
+                    non_doc = non_doc[:m.start()] + non_doc[m.end():]
+                remaining_chars = max(200, max_chars - len(doc_text))
+                non_doc = non_doc[:remaining_chars]
+                return non_doc.strip() + "\n\n" + doc_text
+
         head = clean[: max_chars // 2]
         tail = clean[-(max_chars // 3) :]
         return f"{head}\n...[summary-compression]...\n{tail}"
