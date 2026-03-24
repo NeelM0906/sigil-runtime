@@ -10,21 +10,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/mc/events': {
+      '/api/mc': {
         target: 'http://localhost:8787',
         changeOrigin: true,
-        // SSE needs no buffering
-        configure: (proxy) => {
-          proxy.on('proxyRes', (proxyRes) => {
-            proxyRes.headers['cache-control'] = 'no-cache'
-            proxyRes.headers['x-accel-buffering'] = 'no'
-          })
-        },
-      },
-      '/api/mc/code': {
-        target: 'http://localhost:8787',
-        changeOrigin: true,
-        // Code SSE streams also need no buffering
+        // All SSE endpoints need no buffering (events, code sessions)
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {
             if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
@@ -33,10 +22,6 @@ export default defineConfig({
             }
           })
         },
-      },
-      '/api/mc': {
-        target: 'http://localhost:8787',
-        changeOrigin: true,
       },
       '/api': {
         target: 'http://localhost:8787',

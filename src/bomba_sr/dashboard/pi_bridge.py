@@ -25,6 +25,15 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 @dataclass
+class PiMessage:
+    """A single message in a coding session."""
+    role: str           # "user" or "assistant"
+    content: str        # text content
+    tools: list = field(default_factory=list)  # [{name, args, result}]
+    timestamp: float = field(default_factory=time.time)
+
+
+@dataclass
 class PiSession:
     """Tracks one logical coding session inside the Pi process."""
     id: str
@@ -34,6 +43,9 @@ class PiSession:
     message_count: int = 0
     is_streaming: bool = False
     last_activity: float = field(default_factory=time.time)
+    messages: list = field(default_factory=list)  # list[PiMessage]
+    _current_text: str = ""       # accumulates streaming text for current turn
+    _current_tools: list = field(default_factory=list)  # accumulates tool calls for current turn
 
 
 @dataclass
@@ -254,6 +266,10 @@ class PiBridge:
         session.message_count += 1
         session.is_streaming = True
         session.last_activity = time.time()
+        session._current_text = ""
+        session._current_tools = []
+        # Record user message
+        session.messages.append(PiMessage(role="user", content=message))
 
         resp = self._send_command({
             "type": "prompt",
@@ -271,10 +287,21 @@ class PiBridge:
         return resp
 
     def get_messages(self, session_id: str) -> dict:
-        """Retrieve conversation messages from the Pi agent."""
-        if session_id != self._active_session_id:
-            return {"messages": [], "note": "Session not active in Pi process"}
-        return self._send_command({"type": "get_messages"}, timeout=10)
+        """Retrieve conversation messages from local session history."""
+        session = self._sessions.get(session_id)
+        if not session:
+            return {"messages": []}
+        return {
+            "messages": [
+                {
+                    "role": m.role,
+                    "content": m.content,
+                    "tools": m.tools,
+                    "timestamp": m.timestamp,
+                }
+                for m in session.messages
+            ],
+        }
 
     def get_state(self) -> dict:
         """Get current Pi agent state."""
@@ -515,12 +542,24 @@ class PiBridge:
         if event_type == "agent_start":
             if session:
                 session.is_streaming = True
+                session._current_text = ""
+                session._current_tools = []
             self._emit(PiEvent(session_id, "code_agent_start"))
             return
 
         if event_type == "agent_end":
             if session:
                 session.is_streaming = False
+                # Save accumulated assistant message
+                if session._current_text or session._current_tools:
+                    session.messages.append(PiMessage(
+                        role="assistant",
+                        content=session._current_text,
+                        tools=list(session._current_tools),
+                    ))
+                    session.message_count += 1
+                    session._current_text = ""
+                    session._current_tools = []
             self._emit(PiEvent(session_id, "code_agent_end"))
             return
 
@@ -561,7 +600,6 @@ class PiBridge:
                         "cost": usage.get("cost", {}).get("total", 0),
                     }
                 if session:
-                    session.message_count += 1
                     session.last_activity = time.time()
             self._emit(pi_event)
             return
@@ -577,6 +615,9 @@ class PiBridge:
             if "result" in obj:
                 result_str = str(obj["result"])
                 data["result_preview"] = result_str[:2000]
+                # Attach result to last tool call in session
+                if session and event_type == "tool_execution_end" and session._current_tools:
+                    session._current_tools[-1]["result"] = result_str[:2000]
             self._emit(PiEvent(session_id, mc_type, data))
             return
 
@@ -591,18 +632,42 @@ class PiBridge:
             data = {}
             if atype == "text_delta":
                 data["delta"] = assistant_evt.get("delta", "")
+                if session:
+                    session._current_text += data["delta"]
             elif atype == "text_end":
                 data["content"] = assistant_evt.get("content", "")
             elif atype == "text_start":
                 pass  # just a signal
             elif atype == "toolcall_start":
-                data["tool_name"] = assistant_evt.get("toolName", "")
+                # Tool name can be in toolName or nested in partial.content[].name
+                tool_name = assistant_evt.get("toolName", "")
+                if not tool_name:
+                    for block in assistant_evt.get("partial", {}).get("content", []):
+                        if isinstance(block, dict) and block.get("type") == "toolCall":
+                            tool_name = block.get("name", "")
+                            break
+                data["tool_name"] = tool_name
                 data["tool_call_id"] = assistant_evt.get("toolCallId", "")
             elif atype == "toolcall_delta":
                 data["delta"] = assistant_evt.get("delta", "")
             elif atype == "toolcall_end":
-                data["tool_name"] = assistant_evt.get("toolName", "")
-                data["arguments"] = assistant_evt.get("arguments", "")
+                tool_name = assistant_evt.get("toolName", "")
+                args_str = assistant_evt.get("arguments", "")
+                if not tool_name or not args_str:
+                    for block in assistant_evt.get("partial", {}).get("content", []):
+                        if isinstance(block, dict) and block.get("type") == "toolCall":
+                            tool_name = tool_name or block.get("name", "")
+                            if not args_str:
+                                raw_args = block.get("arguments", {})
+                                args_str = json.dumps(raw_args) if isinstance(raw_args, dict) else str(raw_args)
+                            break
+                data["tool_name"] = tool_name
+                data["arguments"] = args_str
+                if session:
+                    session._current_tools.append({
+                        "name": tool_name,
+                        "args": args_str,
+                    })
             elif atype == "thinking_delta":
                 data["delta"] = assistant_evt.get("delta", "")
             elif atype == "thinking_end":

@@ -188,7 +188,7 @@ function CodeSessionSidebar({ sessions, activeId, onSelect, onCreate, onDelete }
           <button
             key={s.id}
             onClick={() => onSelect(s.id)}
-            className={`w-full text-left px-3 py-2 text-xs border-b border-border/50 transition-colors group ${
+            className={`w-full text-left px-3 py-2 text-xs border-b border-border/50 transition-colors group relative ${
               activeId === s.id
                 ? 'bg-accent-blue/10 border-l-2 border-l-accent-blue'
                 : 'hover:bg-bg-hover border-l-2 border-l-transparent'
@@ -341,7 +341,7 @@ function FileViewer({ filePath, content, size, truncated, onClose }) {
 
 // ── Chat Panel ──────────────────────────────────────────────
 
-function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAbort }) {
+function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAbort, sseError }) {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -360,6 +360,18 @@ function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAb
 
   return (
     <div className="flex flex-col h-full">
+      {/* I6: SSE error banner */}
+      {sseError && (
+        <div className="px-3 py-1.5 bg-accent-red/10 border-b border-accent-red/20 text-[11px] text-accent-red flex items-center gap-2">
+          <span>Connection to code agent lost. Responses may not stream live.</span>
+          <button
+            onClick={() => window.location.reload()}
+            className="underline hover:no-underline"
+          >
+            Reload
+          </button>
+        </div>
+      )}
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         {messages.length === 0 && !streaming && (
@@ -687,6 +699,11 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
   const [fileTreeLoading, setFileTreeLoading] = useState(false)
   const [touchedFiles, setTouchedFiles] = useState(new Set())
   const [viewingFile, setViewingFile] = useState(null) // {path, content, size, truncated}
+  const [sseError, setSseError] = useState(false)
+
+  // I2 fix: ref for allTools so closures always read current value
+  const allToolsRef = useRef([])
+  useEffect(() => { allToolsRef.current = allTools }, [allTools])
 
   // Handle cross-tab initial prompt
   useEffect(() => {
@@ -731,27 +748,53 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
       .catch(() => {})
   }, [])
 
-  // SSE event handlers
+  // I1+I6 fix: enhanced SSE hook with error tracking
   useCodeSSE(activeSessionId, {
     code_agent_start: () => {
       setStreaming(true)
       setStreamingText('')
       setActiveTools([])
+      setSseError(false)
     },
     code_agent_end: () => {
       setStreaming(false)
-      // Finalize streaming text into messages
+      // I2 fix: use ref for current allTools value (avoids stale closure)
+      const currentTools = allToolsRef.current
       setStreamingText(prev => {
         if (prev) {
           setMessages(msgs => [...msgs, {
             role: 'assistant',
             content: prev,
-            tools: [...allTools],
+            tools: [...currentTools],
           }])
         }
         return ''
       })
       setActiveTools([])
+      // I1 fix: always refresh from backend to catch any missed SSE events
+      if (activeSessionId) {
+        codeApi.messages(activeSessionId)
+          .then(data => {
+            const msgs = data.messages || []
+            if (msgs.length > 0) {
+              const parsed = msgs.map(m => ({
+                role: m.role || 'assistant',
+                content: m.content || '',
+                tools: m.tools || [],
+              }))
+              setMessages(parsed)
+              // Rebuild allTools from full history
+              const tools = []
+              for (const m of parsed) {
+                for (const t of (m.tools || [])) {
+                  tools.push({ name: t.name, args: t.args, result: t.result, status: 'done' })
+                }
+              }
+              setAllTools(tools)
+            }
+          })
+          .catch(() => {})
+      }
       // Refresh sessions list for updated message counts
       codeApi.sessions().then(({ sessions: s }) => setSessions(s || [])).catch(() => {})
     },
@@ -821,7 +864,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
         options: d.options || [],
       })
     },
-  })
+  }, () => setSseError(true))
 
   const handleCreateSession = useCallback(async () => {
     try {
@@ -858,15 +901,27 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     setActiveTools([])
     setAllTools([])
     setUsage(null)
-    // Load history for this session
+    setViewingFile(null)
+    // Load history for this session from bridge-local storage
     codeApi.messages(id)
       .then(data => {
         const msgs = data.messages || []
-        setMessages(msgs.map(m => ({
+        const parsed = msgs.map(m => ({
           role: m.role || 'assistant',
-          content: typeof m.content === 'string' ? m.content :
-            (m.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n'),
-        })))
+          content: m.content || '',
+          tools: m.tools || [],
+        }))
+        setMessages(parsed)
+        // Rebuild allTools from message history
+        const tools = []
+        for (const m of parsed) {
+          if (m.tools) {
+            for (const t of m.tools) {
+              tools.push({ name: t.name, args: t.args, result: t.result, status: 'done' })
+            }
+          }
+        }
+        setAllTools(tools)
       })
       .catch(() => {})
   }, [])
@@ -875,7 +930,8 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     if (!activeSessionId) return
     // Add user message immediately
     setMessages(prev => [...prev, { role: 'user', content: text }])
-    setAllTools([])
+    setAllTools([])  // Reset for this turn — will be rebuilt from backend on agent_end
+    setSseError(false)
     try {
       await codeApi.prompt(activeSessionId, text)
     } catch (err) {
@@ -1032,6 +1088,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
                 tools={activeTools}
                 onSend={handleSend}
                 onAbort={handleAbort}
+                sseError={sseError}
               />
             </div>
             {/* Activity panel */}
