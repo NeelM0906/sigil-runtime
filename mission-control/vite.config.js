@@ -21,6 +21,19 @@ export default defineConfig({
           })
         },
       },
+      '/api/mc/code': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+        // Code SSE streams also need no buffering
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+              proxyRes.headers['cache-control'] = 'no-cache'
+              proxyRes.headers['x-accel-buffering'] = 'no'
+            }
+          })
+        },
+      },
       '/api/mc': {
         target: 'http://localhost:8787',
         changeOrigin: true,

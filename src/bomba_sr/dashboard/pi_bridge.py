@@ -611,6 +611,83 @@ class PiBridge:
             self._emit(PiEvent(session_id, mc_type, data))
             return
 
+    # ------------------------------------------------------------------
+    # File browsing (workspace filesystem)
+    # ------------------------------------------------------------------
+
+    # Directories to skip in file tree
+    _SKIP_DIRS = frozenset({
+        ".git", ".venv", "__pycache__", "node_modules", ".runtime",
+        ".pytest_cache", "dist", "build", ".mypy_cache", ".ruff_cache",
+        ".pi", ".openclaw", ".portable-home", "portable-openclaw",
+    })
+
+    def file_tree(self, max_depth: int = 3) -> list[dict]:
+        """Return a file/dir tree of the workspace for the sidebar."""
+        root = Path(self.workspace_root)
+        if not root.is_dir():
+            return []
+        return self._scan_dir(root, root, 0, max_depth)
+
+    def _scan_dir(self, base: Path, directory: Path, depth: int, max_depth: int) -> list[dict]:
+        if depth > max_depth:
+            return []
+        entries: list[dict] = []
+        try:
+            items = sorted(directory.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+        except OSError:
+            return []
+        for item in items:
+            name = item.name
+            if name.startswith(".") and depth == 0:
+                continue
+            if item.is_dir():
+                if name in self._SKIP_DIRS:
+                    continue
+                children = self._scan_dir(base, item, depth + 1, max_depth) if depth < max_depth else []
+                entries.append({
+                    "name": name,
+                    "type": "dir",
+                    "path": str(item.relative_to(base)),
+                    "children": children,
+                })
+            elif item.is_file():
+                try:
+                    size = item.stat().st_size
+                except OSError:
+                    size = 0
+                entries.append({
+                    "name": name,
+                    "type": "file",
+                    "path": str(item.relative_to(base)),
+                    "size": size,
+                })
+        return entries
+
+    def read_file(self, rel_path: str, max_bytes: int = 100_000) -> dict:
+        """Read a file from the workspace. Returns {content, path, size, truncated}."""
+        root = Path(self.workspace_root)
+        target = (root / rel_path).resolve()
+        # Path traversal guard
+        if not str(target).startswith(str(root.resolve())):
+            raise ValueError("Path traversal not allowed")
+        if not target.is_file():
+            raise FileNotFoundError(f"File not found: {rel_path}")
+        size = target.stat().st_size
+        truncated = size > max_bytes
+        try:
+            content = target.read_text(encoding="utf-8", errors="replace")
+            if truncated:
+                content = content[:max_bytes]
+        except UnicodeDecodeError:
+            content = f"[Binary file, {size} bytes]"
+        return {
+            "path": rel_path,
+            "content": content,
+            "size": size,
+            "truncated": truncated,
+        }
+
     def _emit(self, event: PiEvent) -> None:
         """Fan out event to subscribers and optional callback."""
         # Callback (for dashboard SSE integration)

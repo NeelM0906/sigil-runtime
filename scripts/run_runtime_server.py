@@ -1684,6 +1684,32 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     self._write_cors(200, result)
                     return
 
+                if path == "/api/mc/code/files":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    depth = int(query.get("depth", [3])[0])
+                    tree = pi_bridge.file_tree(max_depth=min(depth, 5))
+                    self._write_cors(200, {"tree": tree})
+                    return
+
+                if path == "/api/mc/code/files/read":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    file_path_param = query.get("path", [None])[0]
+                    if not file_path_param:
+                        self._write_cors(400, {"error": "path query param required"})
+                        return
+                    try:
+                        result = pi_bridge.read_file(file_path_param)
+                        self._write_cors(200, result)
+                    except FileNotFoundError as exc:
+                        self._write_cors(404, {"error": str(exc)})
+                    except ValueError as exc:
+                        self._write_cors(403, {"error": str(exc)})
+                    return
+
                 # --- SSE ---
                 if path == "/api/mc/events":
                     self._mc_sse_stream()

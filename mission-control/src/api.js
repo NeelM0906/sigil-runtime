@@ -236,4 +236,10 @@ export const codeApi = {
       method: 'POST', body: JSON.stringify({ request_id: requestId, response }),
     })
   },
+  files(depth = 3) {
+    return request(`/api/mc/code/files?depth=${depth}`)
+  },
+  readFile(filePath) {
+    return request(`/api/mc/code/files/read?path=${encodeURIComponent(filePath)}`)
+  },
 }

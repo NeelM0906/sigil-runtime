@@ -218,6 +218,127 @@ function CodeSessionSidebar({ sessions, activeId, onSelect, onCreate, onDelete }
   )
 }
 
+// ── File Tree ───────────────────────────────────────────────
+
+function FileTreeNode({ node, depth, touchedFiles, onFileClick }) {
+  const [expanded, setExpanded] = useState(depth < 1)
+  const isTouched = touchedFiles.has(node.path)
+
+  if (node.type === 'dir') {
+    return (
+      <div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center gap-1 px-1 py-0.5 text-[11px] hover:bg-bg-hover/50 transition-colors"
+          style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        >
+          <span className={`text-[8px] text-text-muted transition-transform ${expanded ? 'rotate-90' : ''}`}>&#9654;</span>
+          <span className="text-accent-amber/70 text-[10px]">&#128193;</span>
+          <span className="text-text-secondary truncate">{node.name}</span>
+        </button>
+        {expanded && node.children && node.children.map((child, i) => (
+          <FileTreeNode key={i} node={child} depth={depth + 1} touchedFiles={touchedFiles} onFileClick={onFileClick} />
+        ))}
+      </div>
+    )
+  }
+
+  // File extension icon
+  const ext = node.name.split('.').pop()?.toLowerCase()
+  const iconColors = {
+    py: 'text-accent-blue', js: 'text-accent-amber', jsx: 'text-accent-amber',
+    ts: 'text-accent-blue', tsx: 'text-accent-blue', json: 'text-accent-green',
+    md: 'text-text-muted', css: 'text-accent-pink', html: 'text-accent-red',
+    sql: 'text-accent-cyan', yaml: 'text-accent-purple', yml: 'text-accent-purple',
+    toml: 'text-accent-green', txt: 'text-text-muted', sh: 'text-accent-purple',
+  }
+  const iconColor = iconColors[ext] || 'text-text-muted'
+
+  return (
+    <button
+      onClick={() => onFileClick(node.path)}
+      className={`w-full flex items-center gap-1 px-1 py-0.5 text-[11px] hover:bg-bg-hover/50 transition-colors ${
+        isTouched ? 'bg-accent-amber/5' : ''
+      }`}
+      style={{ paddingLeft: `${depth * 12 + 4}px` }}
+      title={node.path}
+    >
+      <span className={`text-[10px] ${iconColor}`}>&#128196;</span>
+      <span className={`truncate ${isTouched ? 'text-accent-amber font-medium' : 'text-text-primary'}`}>
+        {node.name}
+      </span>
+      {isTouched && <span className="ml-auto text-[8px] text-accent-amber">M</span>}
+    </button>
+  )
+}
+
+function CodeFileTree({ tree, touchedFiles, onFileClick, loading }) {
+  const [collapsed, setCollapsed] = useState(false)
+
+  return (
+    <div className="flex flex-col border-t border-border">
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center justify-between px-3 py-1.5 hover:bg-bg-hover/30 transition-colors"
+      >
+        <span className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Files</span>
+        <span className={`text-[8px] text-text-muted transition-transform ${collapsed ? '' : 'rotate-90'}`}>&#9654;</span>
+      </button>
+      {!collapsed && (
+        <div className="overflow-y-auto max-h-[40vh]">
+          {loading && (
+            <div className="px-3 py-3 text-[10px] text-text-muted text-center">Loading...</div>
+          )}
+          {!loading && tree.length === 0 && (
+            <div className="px-3 py-3 text-[10px] text-text-muted text-center">No files</div>
+          )}
+          {tree.map((node, i) => (
+            <FileTreeNode key={i} node={node} depth={0} touchedFiles={touchedFiles} onFileClick={onFileClick} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── File Viewer (replaces chat when viewing a file) ─────────
+
+function FileViewer({ filePath, content, size, truncated, onClose }) {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+  const lineCount = content ? content.split('\n').length : 0
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-bg-secondary">
+        <button
+          onClick={onClose}
+          className="text-text-muted hover:text-text-primary text-xs"
+          title="Back to chat"
+        >
+          &#8592;
+        </button>
+        <span className="text-xs font-mono text-text-primary truncate">{filePath}</span>
+        <span className="ml-auto text-[10px] text-text-muted">
+          {lineCount} lines | {size > 1024 ? `${(size / 1024).toFixed(1)}KB` : `${size}B`}
+          {truncated && ' (truncated)'}
+        </span>
+      </div>
+      {/* Content */}
+      <div className="flex-1 overflow-auto bg-bg-primary">
+        <pre className="text-[11px] font-mono leading-5">
+          {content.split('\n').map((line, i) => (
+            <div key={i} className="flex hover:bg-bg-hover/30">
+              <span className="w-10 text-right pr-3 text-text-muted/40 select-none flex-shrink-0">{i + 1}</span>
+              <span className="text-text-primary whitespace-pre-wrap break-all">{line}</span>
+            </div>
+          ))}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
 // ── Chat Panel ──────────────────────────────────────────────
 
 function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAbort }) {
@@ -562,6 +683,19 @@ export function CodeWorkspace() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [healthy, setHealthy] = useState(null)
   const [pendingApproval, setPendingApproval] = useState(null)
+  const [fileTree, setFileTree] = useState([])
+  const [fileTreeLoading, setFileTreeLoading] = useState(false)
+  const [touchedFiles, setTouchedFiles] = useState(new Set())
+  const [viewingFile, setViewingFile] = useState(null) // {path, content, size, truncated}
+
+  // Load file tree on mount
+  useEffect(() => {
+    setFileTreeLoading(true)
+    codeApi.files(3)
+      .then(({ tree }) => setFileTree(tree || []))
+      .catch(() => {})
+      .finally(() => setFileTreeLoading(false))
+  }, [])
 
   // Check health on mount
   useEffect(() => {
@@ -621,6 +755,14 @@ export function CodeWorkspace() {
         prev.map(t => t.name === name && t.status === 'running' ? { ...t, status: 'done', args } : t)
       )
       setAllTools(prev => [...prev, { name, args, status: 'done' }])
+      // Track touched files
+      if (name === 'edit' || name === 'write' || name === 'read') {
+        try {
+          const parsed = typeof args === 'string' ? JSON.parse(args) : (args || {})
+          const fp = parsed.path || parsed.file_path || ''
+          if (fp) setTouchedFiles(prev => new Set([...prev, fp]))
+        } catch { /* ignore */ }
+      }
     },
     code_tool_exec_start: (data) => {
       const name = data.data?.tool_name || data.tool_name || 'tool'
@@ -740,6 +882,15 @@ export function CodeWorkspace() {
     }
   }, [activeSessionId])
 
+  const handleFileClick = useCallback(async (filePath) => {
+    try {
+      const result = await codeApi.readFile(filePath)
+      setViewingFile(result)
+    } catch (err) {
+      console.error('Failed to read file:', err)
+    }
+  }, [])
+
   // Not configured state
   if (healthy === false) {
     return (
@@ -758,15 +909,21 @@ export function CodeWorkspace() {
       {/* Approval Dialog */}
       <ApprovalDialog request={pendingApproval} onRespond={handleApprovalRespond} />
 
-      {/* Session Sidebar */}
+      {/* Session Sidebar + File Tree */}
       {sidebarOpen && (
-        <div className="w-52 flex-shrink-0 border-r border-border bg-bg-secondary">
+        <div className="w-56 flex-shrink-0 border-r border-border bg-bg-secondary flex flex-col">
           <CodeSessionSidebar
             sessions={sessions}
             activeId={activeSessionId}
             onSelect={handleSelectSession}
             onCreate={handleCreateSession}
             onDelete={handleDeleteSession}
+          />
+          <CodeFileTree
+            tree={fileTree}
+            touchedFiles={touchedFiles}
+            onFileClick={handleFileClick}
+            loading={fileTreeLoading}
           />
         </div>
       )}
@@ -783,7 +940,17 @@ export function CodeWorkspace() {
             {sidebarOpen ? '\u2630' : '\u2630'}
           </button>
           <div className="w-px h-4 bg-border" />
-          {activeSessionId ? (
+          {viewingFile ? (
+            <>
+              <button
+                onClick={() => setViewingFile(null)}
+                className="text-[10px] text-accent-blue hover:underline"
+              >
+                &#8592; Chat
+              </button>
+              <span className="text-xs font-mono text-text-primary truncate">{viewingFile.path}</span>
+            </>
+          ) : activeSessionId ? (
             <>
               <span className="text-xs font-medium text-text-primary">
                 {sessions.find(s => s.id === activeSessionId)?.title || 'Session'}
@@ -823,6 +990,16 @@ export function CodeWorkspace() {
                 Start New Session
               </button>
             </div>
+          </div>
+        ) : viewingFile ? (
+          <div className="flex-1 min-h-0">
+            <FileViewer
+              filePath={viewingFile.path}
+              content={viewingFile.content}
+              size={viewingFile.size}
+              truncated={viewingFile.truncated}
+              onClose={() => setViewingFile(null)}
+            />
           </div>
         ) : (
           <div className="flex-1 flex min-h-0">

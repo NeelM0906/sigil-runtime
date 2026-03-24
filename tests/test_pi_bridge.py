@@ -362,6 +362,52 @@ class TestPiBridgeSubscription:
         assert sub_id not in bridge._subscribers
 
 
+class TestPiBridgeFileBrowsing:
+    def test_file_tree_returns_entries(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        tree = bridge.file_tree(max_depth=1)
+        assert isinstance(tree, list)
+        assert len(tree) > 0
+        # Should contain src/ and pyproject.toml at minimum
+        names = [e["name"] for e in tree]
+        assert "src" in names
+        assert "pyproject.toml" in names
+
+    def test_file_tree_skips_hidden_and_venv(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        tree = bridge.file_tree(max_depth=1)
+        names = [e["name"] for e in tree]
+        assert ".git" not in names
+        assert ".venv" not in names
+        assert "node_modules" not in names
+
+    def test_file_tree_has_children(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        tree = bridge.file_tree(max_depth=2)
+        src = next((e for e in tree if e["name"] == "src"), None)
+        assert src is not None
+        assert src["type"] == "dir"
+        assert len(src["children"]) > 0
+
+    def test_read_file_success(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        result = bridge.read_file("pyproject.toml")
+        assert "content" in result
+        assert "bomba" in result["content"].lower()
+        assert result["size"] > 0
+        assert result["truncated"] is False
+
+    def test_read_file_not_found(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        with pytest.raises(FileNotFoundError):
+            bridge.read_file("nonexistent_file_xyz.txt")
+
+    def test_read_file_path_traversal(self):
+        bridge = PiBridge(workspace_root=WORKSPACE)
+        with pytest.raises(ValueError, match="traversal"):
+            bridge.read_file("../../etc/passwd")
+
+
 class TestPiBridgeCrashRecovery:
     def test_crash_cooldown(self):
         bridge = PiBridge(workspace_root="/tmp/test")
