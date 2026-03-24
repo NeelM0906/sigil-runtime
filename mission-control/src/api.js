@@ -211,8 +211,10 @@ export const codeApi = {
   sessions() {
     return request('/api/mc/code/sessions')
   },
-  createSession(title = 'New session') {
-    return request('/api/mc/code/sessions', { method: 'POST', body: JSON.stringify({ title }) })
+  createSession(title = 'New session', workspaceRoot = null) {
+    const body = { title }
+    if (workspaceRoot) body.workspace_root = workspaceRoot
+    return request('/api/mc/code/sessions', { method: 'POST', body: JSON.stringify(body) })
   },
   deleteSession(id) {
     return request(`/api/mc/code/sessions/${id}`, { method: 'DELETE' })
@@ -236,10 +238,14 @@ export const codeApi = {
       method: 'POST', body: JSON.stringify({ request_id: requestId, response }),
     })
   },
-  files(depth = 3) {
-    return request(`/api/mc/code/files?depth=${depth}`)
+  files(depth = 3, workspace = null) {
+    const params = new URLSearchParams({ depth })
+    if (workspace) params.set('workspace', workspace)
+    return request(`/api/mc/code/files?${params}`)
   },
-  readFile(filePath) {
-    return request(`/api/mc/code/files/read?path=${encodeURIComponent(filePath)}`)
+  readFile(filePath, workspace = null) {
+    const params = new URLSearchParams({ path: filePath })
+    if (workspace) params.set('workspace', workspace)
+    return request(`/api/mc/code/files/read?${params}`)
   },
 }

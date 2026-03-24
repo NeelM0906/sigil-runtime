@@ -88,14 +88,14 @@ class TestPiSession:
 
 class TestPiBridgeInit:
     def test_defaults(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
-        assert bridge.workspace_root == "/tmp/test"
+        bridge = PiBridge(workspace_root="/tmp")
+        assert bridge.workspace_root == "/tmp"
         assert bridge.model == "openrouter/anthropic/claude-sonnet-4"
         assert bridge.tools == "read,bash,edit,write,grep,find,ls"
         assert bridge.running is False
 
     def test_health_not_running(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         h = bridge.health()
         assert h["running"] is False
         assert h["session_count"] == 0
@@ -103,7 +103,7 @@ class TestPiBridgeInit:
 
 class TestPiBridgeSessions:
     def test_create_session(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         # Mock the subprocess so ensure_running doesn't fail
         bridge._proc = FakeProc()
         bridge._reader_thread = threading.Thread(target=lambda: None)
@@ -114,7 +114,7 @@ class TestPiBridgeSessions:
         assert bridge._active_session_id == session.id
 
     def test_list_sessions(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         bridge._proc = FakeProc()
         bridge._reader_thread = threading.Thread(target=lambda: None)
 
@@ -126,7 +126,7 @@ class TestPiBridgeSessions:
         assert sessions[0]["title"] == "Session 2"
 
     def test_delete_session(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         bridge._proc = FakeProc()
         bridge._reader_thread = threading.Thread(target=lambda: None)
 
@@ -135,7 +135,7 @@ class TestPiBridgeSessions:
         assert bridge.delete_session("nonexistent") is False
 
     def test_send_prompt_unknown_session(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         with pytest.raises(ValueError, match="Unknown session"):
             bridge.send_prompt("nonexistent", "hello")
 
@@ -143,7 +143,7 @@ class TestPiBridgeSessions:
 class TestPiBridgeEventDispatch:
     def test_text_delta_dispatch(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -162,7 +162,7 @@ class TestPiBridgeEventDispatch:
 
     def test_text_end_dispatch(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -180,7 +180,7 @@ class TestPiBridgeEventDispatch:
 
     def test_tool_call_events(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -208,7 +208,7 @@ class TestPiBridgeEventDispatch:
 
     def test_agent_lifecycle_events(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -223,7 +223,7 @@ class TestPiBridgeEventDispatch:
 
     def test_tool_execution_events(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -237,7 +237,7 @@ class TestPiBridgeEventDispatch:
 
     def test_message_end_extracts_usage(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -256,7 +256,7 @@ class TestPiBridgeEventDispatch:
         assert collected[0].data["usage"]["cost"] == 0.001
 
     def test_response_correlation(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
 
         # Simulate pending command
         evt = threading.Event()
@@ -278,7 +278,7 @@ class TestPiBridgeEventDispatch:
 class TestPiBridgeApprovalFlow:
     def test_extension_ui_request_dispatches_approval(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -300,7 +300,7 @@ class TestPiBridgeApprovalFlow:
 
     def test_extension_ui_confirm_dispatches_approval(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -318,7 +318,7 @@ class TestPiBridgeApprovalFlow:
 
     def test_fire_and_forget_dispatches_notification(self):
         collected: list[PiEvent] = []
-        bridge = PiBridge(workspace_root="/tmp/test", on_event=collected.append)
+        bridge = PiBridge(workspace_root="/tmp", on_event=collected.append)
         bridge._active_session_id = "sess-1"
         bridge._sessions["sess-1"] = PiSession(id="sess-1", title="t", workspace_root="/tmp")
 
@@ -336,14 +336,14 @@ class TestPiBridgeApprovalFlow:
         assert collected[0].data["message"] == "Task completed"
 
     def test_respond_ui_not_running(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         with pytest.raises(RuntimeError, match="not running"):
             bridge.respond_ui("req-1", {"confirmed": True})
 
 
 class TestPiBridgeSubscription:
     def test_subscribe_and_receive(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         sub_id, q = bridge.subscribe()
 
         bridge._active_session_id = "sess-1"
@@ -360,6 +360,43 @@ class TestPiBridgeSubscription:
 
         bridge.unsubscribe(sub_id)
         assert sub_id not in bridge._subscribers
+
+
+class TestPiBridgeMultiWorkspace:
+    def test_create_session_with_custom_workspace(self):
+        bridge = PiBridge(workspace_root="/tmp")
+        bridge._proc = FakeProc()
+        bridge._reader_thread = threading.Thread(target=lambda: None)
+
+        session = bridge.create_session("Custom ws", workspace_root="/tmp")
+        assert session.workspace_root == "/private/tmp" or session.workspace_root == "/tmp"
+
+    def test_create_session_invalid_workspace(self):
+        bridge = PiBridge(workspace_root="/tmp")
+        bridge._proc = FakeProc()
+        bridge._reader_thread = threading.Thread(target=lambda: None)
+
+        with pytest.raises(ValueError, match="Workspace not found"):
+            bridge.create_session("Bad ws", workspace_root="/nonexistent/path/xyz")
+
+    def test_workspace_change_tracked(self):
+        bridge = PiBridge(workspace_root="/tmp")
+        bridge._proc = FakeProc()
+        bridge._reader_thread = threading.Thread(target=lambda: None)
+
+        s1 = bridge.create_session("Session 1")
+        assert bridge._active_workspace == s1.workspace_root
+
+    def test_file_tree_accepts_workspace_override(self):
+        bridge = PiBridge(workspace_root="/tmp")
+        tree = bridge.file_tree(max_depth=1, workspace=WORKSPACE)
+        names = [e["name"] for e in tree]
+        assert "src" in names
+
+    def test_read_file_with_workspace_override(self):
+        bridge = PiBridge(workspace_root="/tmp")
+        result = bridge.read_file("pyproject.toml", workspace=WORKSPACE)
+        assert "bomba" in result["content"].lower()
 
 
 class TestPiBridgeFileBrowsing:
@@ -410,7 +447,7 @@ class TestPiBridgeFileBrowsing:
 
 class TestPiBridgeCrashRecovery:
     def test_crash_cooldown(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         now = time.time()
         bridge._crash_times = [now - 10, now - 5, now - 1]
 
@@ -420,7 +457,7 @@ class TestPiBridgeCrashRecovery:
         assert bridge._cooldown_until > now
 
     def test_old_crashes_ignored(self):
-        bridge = PiBridge(workspace_root="/tmp/test")
+        bridge = PiBridge(workspace_root="/tmp")
         old = time.time() - CRASH_WINDOW_S - 10
         bridge._crash_times = [old, old, old]
 

@@ -205,6 +205,11 @@ function CodeSessionSidebar({ sessions, activeId, onSelect, onCreate, onDelete }
             <div className="text-[10px] text-text-muted mt-0.5">
               {s.message_count || 0} messages
             </div>
+            {s.workspace_root && (
+              <div className="text-[9px] text-text-muted/60 font-mono truncate mt-0.5">
+                {s.workspace_root.replace(/^\/Users\/[^/]+/, '~')}
+              </div>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(s.id) }}
               className="hidden group-hover:block absolute right-2 top-2 text-text-muted hover:text-accent-red text-[10px]"
@@ -609,6 +614,78 @@ function CodeActivityPanel({ tools, usage, streaming }) {
   )
 }
 
+// ── New Session Dialog ───────────────────────────────────────
+
+function NewSessionDialog({ open, onClose, onCreate }) {
+  const [title, setTitle] = useState('Code session')
+  const [workspace, setWorkspace] = useState('')
+  const [error, setError] = useState('')
+
+  if (!open) return null
+
+  const handleCreate = () => {
+    setError('')
+    const ws = workspace.trim() || null
+    onCreate(title.trim() || 'Code session', ws)
+    setTitle('Code session')
+    setWorkspace('')
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-bg-card border border-border rounded-lg p-4 max-w-md w-full mx-4 shadow-xl">
+        <h3 className="text-sm font-semibold text-text-primary mb-3">New Code Session</h3>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] text-text-muted uppercase tracking-wider block mb-1">Session Name</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full bg-bg-primary border border-border rounded px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent-blue/50"
+              placeholder="Code session"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] text-text-muted uppercase tracking-wider block mb-1">
+              Workspace Folder
+              <span className="text-text-muted/50 ml-1">(leave empty for current project)</span>
+            </label>
+            <input
+              value={workspace}
+              onChange={e => { setWorkspace(e.target.value); setError('') }}
+              className="w-full bg-bg-primary border border-border rounded px-3 py-1.5 text-sm text-text-primary font-mono focus:outline-none focus:border-accent-blue/50"
+              placeholder="~/projects/my-app"
+            />
+            {error && <p className="text-[10px] text-accent-red mt-1">{error}</p>}
+            <p className="text-[9px] text-text-muted mt-1">
+              The coding agent will operate in this folder. It can read, edit, and create files there.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={handleCreate}
+            className="flex-1 px-3 py-1.5 rounded bg-accent-blue text-white text-xs font-medium hover:bg-accent-blue/80 transition-colors"
+          >
+            Create Session
+          </button>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded bg-bg-hover text-text-secondary text-xs font-medium hover:bg-bg-hover/80 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Approval Dialog ─────────────────────────────────────────
 
 function ApprovalDialog({ request, onRespond }) {
@@ -700,10 +777,14 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
   const [touchedFiles, setTouchedFiles] = useState(new Set())
   const [viewingFile, setViewingFile] = useState(null) // {path, content, size, truncated}
   const [sseError, setSseError] = useState(false)
+  const [showNewSession, setShowNewSession] = useState(false)
 
   // I2 fix: ref for allTools so closures always read current value
   const allToolsRef = useRef([])
   useEffect(() => { allToolsRef.current = allTools }, [allTools])
+
+  // Get active session's workspace for scoped file operations
+  const activeWorkspace = sessions.find(s => s.id === activeSessionId)?.workspace_root || null
 
   // Handle cross-tab initial prompt
   useEffect(() => {
@@ -725,14 +806,15 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     run()
   }, [initialPrompt, onConsumePrompt])
 
-  // Load file tree on mount
+  // Load file tree scoped to active session's workspace
   useEffect(() => {
+    if (!activeSessionId || !activeWorkspace) { setFileTree([]); return }
     setFileTreeLoading(true)
-    codeApi.files(3)
+    codeApi.files(3, activeWorkspace)
       .then(({ tree }) => setFileTree(tree || []))
       .catch(() => {})
       .finally(() => setFileTreeLoading(false))
-  }, [])
+  }, [activeSessionId, activeWorkspace])
 
   // Check health on mount
   useEffect(() => {
@@ -866,9 +948,9 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     },
   }, () => setSseError(true))
 
-  const handleCreateSession = useCallback(async () => {
+  const handleCreateSession = useCallback(async (title = 'Code session', workspaceRoot = null) => {
     try {
-      const { session } = await codeApi.createSession('Code session')
+      const { session } = await codeApi.createSession(title, workspaceRoot)
       setSessions(prev => [session, ...prev])
       setActiveSessionId(session.id)
       setMessages([])
@@ -876,6 +958,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
       setActiveTools([])
       setAllTools([])
       setUsage(null)
+      setTouchedFiles(new Set())
     } catch (err) {
       console.error('Failed to create session:', err)
     }
@@ -960,12 +1043,12 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
 
   const handleFileClick = useCallback(async (filePath) => {
     try {
-      const result = await codeApi.readFile(filePath)
+      const result = await codeApi.readFile(filePath, activeWorkspace)
       setViewingFile(result)
     } catch (err) {
       console.error('Failed to read file:', err)
     }
-  }, [])
+  }, [activeWorkspace])
 
   // Not configured state
   if (healthy === false) {
@@ -984,6 +1067,11 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     <div className="flex h-[calc(100vh-4rem)] rounded-lg border border-border bg-bg-card overflow-hidden relative">
       {/* Approval Dialog */}
       <ApprovalDialog request={pendingApproval} onRespond={handleApprovalRespond} />
+      <NewSessionDialog
+        open={showNewSession}
+        onClose={() => setShowNewSession(false)}
+        onCreate={handleCreateSession}
+      />
 
       {/* Session Sidebar + File Tree */}
       {sidebarOpen && (
@@ -992,7 +1080,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
             sessions={sessions}
             activeId={activeSessionId}
             onSelect={handleSelectSession}
-            onCreate={handleCreateSession}
+            onCreate={() => setShowNewSession(true)}
             onDelete={handleDeleteSession}
           />
           <CodeFileTree
@@ -1031,6 +1119,11 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
               <span className="text-xs font-medium text-text-primary">
                 {sessions.find(s => s.id === activeSessionId)?.title || 'Session'}
               </span>
+              {activeWorkspace && (
+                <span className="text-[9px] text-text-muted font-mono truncate max-w-[200px]">
+                  {activeWorkspace.replace(/^\/Users\/[^/]+/, '~')}
+                </span>
+              )}
               {streaming && (
                 <span className="flex items-center gap-1 text-[10px] text-accent-green">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
@@ -1060,7 +1153,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
               <h3 className="text-sm font-semibold text-text-secondary mb-2">Code Workspace</h3>
               <p className="text-xs text-text-muted mb-4">AI-powered coding agent with file editing, shell access, and more.</p>
               <button
-                onClick={handleCreateSession}
+                onClick={() => setShowNewSession(true)}
                 className="px-4 py-2 rounded bg-accent-blue text-white text-xs font-medium hover:bg-accent-blue/80 transition-colors"
               >
                 Start New Session

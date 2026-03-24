@@ -1689,7 +1689,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(503, {"error": "code agent not configured"})
                         return
                     depth = int(query.get("depth", [3])[0])
-                    tree = pi_bridge.file_tree(max_depth=min(depth, 5))
+                    ws = query.get("workspace", [None])[0]  # optional per-session workspace
+                    tree = pi_bridge.file_tree(max_depth=min(depth, 5), workspace=ws)
                     self._write_cors(200, {"tree": tree})
                     return
 
@@ -1698,11 +1699,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(503, {"error": "code agent not configured"})
                         return
                     file_path_param = query.get("path", [None])[0]
+                    ws = query.get("workspace", [None])[0]
                     if not file_path_param:
                         self._write_cors(400, {"error": "path query param required"})
                         return
                     try:
-                        result = pi_bridge.read_file(file_path_param)
+                        result = pi_bridge.read_file(file_path_param, workspace=ws)
                         self._write_cors(200, result)
                     except FileNotFoundError as exc:
                         self._write_cors(404, {"error": str(exc)})
@@ -1885,7 +1887,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(503, {"error": "code agent not configured"})
                         return
                     title = body.get("title", "New session")
-                    session = pi_bridge.create_session(title=title)
+                    workspace = body.get("workspace_root")  # optional: any folder path
+                    session = pi_bridge.create_session(title=title, workspace_root=workspace)
                     self._write_cors(201, {
                         "session": {
                             "id": session.id,
@@ -2213,6 +2216,7 @@ def main() -> int:
         _pi_model = os.getenv("BOMBA_PI_MODEL", "openrouter/anthropic/claude-sonnet-4")
         _pi_tools = os.getenv("BOMBA_PI_TOOLS", "read,bash,edit,write,grep,find,ls")
         _pi_thinking = os.getenv("BOMBA_PI_THINKING", "off")
+        _pi_identity = os.getenv("BOMBA_PI_IDENTITY", "true").lower() in ("1", "true", "yes")
         _pi_enabled = os.getenv("BOMBA_PI_ENABLED", "true").lower() in ("1", "true", "yes")
 
         if _pi_enabled:
@@ -2234,8 +2238,10 @@ def main() -> int:
                 thinking=_pi_thinking,
                 env_file=str(_env_file) if _env_file.exists() else None,
                 on_event=_pi_event_to_sse,
+                identity_enabled=_pi_identity,
             )
-            print(f"mission control: code agent ready (model={_pi_model})")
+            _identity_status = "SAI Prime identity" if _pi_identity else "generic"
+            print(f"mission control: code agent ready (model={_pi_model}, persona={_identity_status})")
         else:
             print("mission control: code agent disabled (BOMBA_PI_ENABLED=false)")
     except Exception as exc:

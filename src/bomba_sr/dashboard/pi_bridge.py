@@ -96,6 +96,9 @@ class PiBridge:
         bridge.stop()
     """
 
+    # Identity files to inject as system prompt (SAI Prime persona)
+    _IDENTITY_FILES = ("SOUL.md", "IDENTITY.md", "MISSION.md")
+
     def __init__(
         self,
         workspace_root: str | Path,
@@ -105,6 +108,7 @@ class PiBridge:
         session_dir: str | None = None,
         env_file: str | Path | None = None,
         on_event: Callable[[PiEvent], None] | None = None,
+        identity_enabled: bool = True,
     ):
         self.workspace_root = str(workspace_root)
         self.model = model
@@ -112,6 +116,7 @@ class PiBridge:
         self.thinking = thinking
         self.session_dir = session_dir
         self.env_file = str(env_file) if env_file else None
+        self.identity_enabled = identity_enabled
         self._on_event = on_event
 
         self._proc: subprocess.Popen | None = None
@@ -122,6 +127,7 @@ class PiBridge:
         # Session tracking
         self._sessions: dict[str, PiSession] = {}
         self._active_session_id: str | None = None
+        self._active_workspace: str = str(workspace_root)  # current Pi process workspace
 
         # Event subscribers: id → Queue
         self._subscribers: dict[str, queue.Queue[PiEvent]] = {}
@@ -205,22 +211,36 @@ class PiBridge:
     # Sessions
     # ------------------------------------------------------------------
 
-    def create_session(self, title: str = "New session") -> PiSession:
+    def create_session(self, title: str = "New session", workspace_root: str | None = None) -> PiSession:
         """Create a new logical session.
 
-        If Pi is mid-session, sends a ``new_session`` RPC command to reset
-        the conversation context.
+        If *workspace_root* differs from the running Pi's workspace, Pi is
+        restarted with the new cwd so file operations target the right folder.
         """
+        ws = workspace_root or self.workspace_root
+        # Resolve and validate
+        ws_path = Path(ws).expanduser().resolve()
+        if not ws_path.is_dir():
+            raise ValueError(f"Workspace not found: {ws}")
+        ws = str(ws_path)
+
+        # If workspace changed, restart Pi with new cwd
+        if self.running and ws != self._active_workspace:
+            log.info("Workspace changed: %s → %s, restarting Pi", self._active_workspace, ws)
+            self.stop()
+
+        self._active_workspace = ws
         self.ensure_running()
+
         sid = f"code-{uuid.uuid4().hex[:12]}"
         session = PiSession(
             id=sid,
             title=title,
-            workspace_root=self.workspace_root,
+            workspace_root=ws,
         )
         self._sessions[sid] = session
 
-        # If there was a previous active session, tell Pi to start fresh
+        # If there was a previous active session in the same Pi process, reset context
         if self._active_session_id is not None:
             self._send_command({"type": "new_session"})
 
@@ -256,6 +276,13 @@ class PiBridge:
         session = self._sessions.get(session_id)
         if not session:
             raise ValueError(f"Unknown session: {session_id}")
+
+        # Restart Pi if session targets a different workspace
+        if session.workspace_root != self._active_workspace:
+            log.info("Session workspace differs, restarting Pi: %s", session.workspace_root)
+            self.stop()
+            self._active_workspace = session.workspace_root
+
         self.ensure_running()
 
         # Switch active session if needed
@@ -381,7 +408,15 @@ class PiBridge:
         else:
             cmd.append("--no-session")
 
-        log.info("Starting Pi RPC: %s (cwd=%s)", " ".join(cmd), self.workspace_root)
+        # Inject SAI identity as appended system prompt
+        if self.identity_enabled:
+            identity_text = self._load_identity()
+            if identity_text:
+                cmd.extend(["--append-system-prompt", identity_text])
+                log.info("Pi identity loaded (%d chars from %s)", len(identity_text), ", ".join(self._IDENTITY_FILES))
+
+        cwd = self._active_workspace
+        log.info("Starting Pi RPC: %s (cwd=%s)", " ".join(cmd[:8]) + "...", cwd)
 
         self._stop.clear()
         self._proc = subprocess.Popen(
@@ -390,7 +425,7 @@ class PiBridge:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd=self.workspace_root,
+            cwd=cwd,
             env=env,
         )
 
@@ -433,6 +468,25 @@ class PiBridge:
                 # Mark all sessions as not streaming
                 for s in self._sessions.values():
                     s.is_streaming = False
+
+    def _load_identity(self) -> str:
+        """Load SAI identity files from workspace to use as system prompt."""
+        ws = Path(self.workspace_root)
+        # Look in workspaces/prime/ first, then workspace root
+        search_dirs = [ws / "workspaces" / "prime", ws]
+        parts = []
+        for identity_file in self._IDENTITY_FILES:
+            for d in search_dirs:
+                p = d / identity_file
+                if p.is_file():
+                    try:
+                        text = p.read_text(encoding="utf-8").strip()
+                        if text:
+                            parts.append(text)
+                    except OSError:
+                        pass
+                    break  # found this file, move to next
+        return "\n\n".join(parts) if parts else ""
 
     def _drain_stderr(self) -> None:
         """Log stderr output from Pi."""
@@ -687,9 +741,9 @@ class PiBridge:
         ".pi", ".openclaw", ".portable-home", "portable-openclaw",
     })
 
-    def file_tree(self, max_depth: int = 3) -> list[dict]:
+    def file_tree(self, max_depth: int = 3, workspace: str | None = None) -> list[dict]:
         """Return a file/dir tree of the workspace for the sidebar."""
-        root = Path(self.workspace_root)
+        root = Path(workspace or self._active_workspace)
         if not root.is_dir():
             return []
         return self._scan_dir(root, root, 0, max_depth)
@@ -729,9 +783,9 @@ class PiBridge:
                 })
         return entries
 
-    def read_file(self, rel_path: str, max_bytes: int = 100_000) -> dict:
+    def read_file(self, rel_path: str, max_bytes: int = 100_000, workspace: str | None = None) -> dict:
         """Read a file from the workspace. Returns {content, path, size, truncated}."""
-        root = Path(self.workspace_root)
+        root = Path(workspace or self._active_workspace)
         target = (root / rel_path).resolve()
         # Path traversal guard
         if not str(target).startswith(str(root.resolve())):

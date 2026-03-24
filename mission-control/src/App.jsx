@@ -10,14 +10,12 @@ import { ChatWindow } from './components/ChatWindow'
 import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
-import { ProjectsHub } from './components/ProjectsHub'
 import { CodeWorkspace } from './components/CodeWorkspace'
 import { CodeStatusCard } from './components/CodeStatusCard'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Task Board' },
-  { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
   { id: 'teams', label: 'Agent Teams' },
   { id: 'code', label: 'Code' },
@@ -53,9 +51,6 @@ function Dashboard() {
           )}
           {activeTab === 'tasks' && (
             <TaskBoard fullWidth onOpenInCode={openInCode} />
-          )}
-          {activeTab === 'projects' && (
-            <ProjectsHub />
           )}
           {activeTab === 'chat' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
