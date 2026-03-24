@@ -248,4 +248,10 @@ export const codeApi = {
     if (workspace) params.set('workspace', workspace)
     return request(`/api/mc/code/files/read?${params}`)
   },
+  diff(workspace = null) {
+    const params = new URLSearchParams()
+    if (workspace) params.set('workspace', workspace)
+    const qs = params.toString()
+    return request(`/api/mc/code/diff${qs ? `?${qs}` : ''}`)
+  },
 }

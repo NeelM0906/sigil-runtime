@@ -1712,6 +1712,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(403, {"error": str(exc)})
                     return
 
+                if path == "/api/mc/code/diff":
+                    if not pi_bridge:
+                        self._write_cors(503, {"error": "code agent not configured"})
+                        return
+                    ws = query.get("workspace", [None])[0]
+                    result = pi_bridge.git_diff(workspace=ws)
+                    self._write_cors(200, result)
+                    return
+
                 # --- SSE ---
                 if path == "/api/mc/events":
                     self._mc_sse_stream()

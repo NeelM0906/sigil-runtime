@@ -807,6 +807,130 @@ class PiBridge:
             "truncated": truncated,
         }
 
+    def git_diff(self, workspace: str | None = None) -> dict:
+        """Run git diff in the workspace and return structured results.
+
+        Returns {files: [{path, status, hunks: [{header, lines: [{type, content, old_num, new_num}]}]}]}
+        """
+        ws = workspace or self._active_workspace
+        ws_path = Path(ws)
+        if not (ws_path / ".git").is_dir():
+            return {"files": [], "error": "Not a git repository"}
+
+        try:
+            # Get both staged and unstaged diff with context
+            result = subprocess.run(
+                ["git", "diff", "HEAD", "--unified=3", "--no-color"],
+                cwd=ws, capture_output=True, text=True, timeout=10,
+            )
+            raw_diff = result.stdout
+
+            # Also get untracked files
+            untracked_result = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                cwd=ws, capture_output=True, text=True, timeout=5,
+            )
+            untracked = [f.strip() for f in untracked_result.stdout.splitlines() if f.strip()]
+
+            # Parse unified diff into structured format
+            files = self._parse_unified_diff(raw_diff)
+
+            # Add untracked files
+            for f in untracked:
+                fp = ws_path / f
+                if fp.is_file():
+                    try:
+                        content = fp.read_text(encoding="utf-8", errors="replace")[:5000]
+                        lines = [{"type": "add", "content": l, "new_num": i + 1}
+                                 for i, l in enumerate(content.splitlines())]
+                        files.append({
+                            "path": f,
+                            "status": "new",
+                            "hunks": [{"header": "@@ new file @@", "lines": lines}],
+                        })
+                    except OSError:
+                        pass
+
+            return {"files": files, "raw": raw_diff[:50000]}
+        except subprocess.TimeoutExpired:
+            return {"files": [], "error": "git diff timed out"}
+        except Exception as exc:
+            return {"files": [], "error": str(exc)}
+
+    @staticmethod
+    def _parse_unified_diff(raw: str) -> list[dict]:
+        """Parse unified diff output into structured file entries."""
+        files: list[dict] = []
+        current_file: dict | None = None
+        current_hunk: dict | None = None
+        old_num = new_num = 0
+
+        for line in raw.splitlines():
+            # New file header
+            if line.startswith("diff --git"):
+                if current_file:
+                    files.append(current_file)
+                current_file = {"path": "", "status": "modified", "hunks": []}
+                current_hunk = None
+                continue
+
+            if not current_file:
+                continue
+
+            # File paths
+            if line.startswith("+++ b/"):
+                current_file["path"] = line[6:]
+            elif line.startswith("--- a/"):
+                pass  # old path, skip
+            elif line.startswith("--- /dev/null"):
+                current_file["status"] = "new"
+            elif line.startswith("+++ /dev/null"):
+                current_file["status"] = "deleted"
+
+            # Hunk header
+            elif line.startswith("@@"):
+                # Parse @@ -old_start,old_count +new_start,new_count @@
+                parts = line.split("@@")
+                header = parts[1].strip() if len(parts) >= 2 else ""
+                try:
+                    ranges = header.split()
+                    old_range = ranges[0]  # -start,count
+                    new_range = ranges[1]  # +start,count
+                    old_num = int(old_range.split(",")[0].lstrip("-"))
+                    new_num = int(new_range.split(",")[0].lstrip("+"))
+                except (IndexError, ValueError):
+                    old_num = new_num = 1
+                func_context = parts[2].strip() if len(parts) >= 3 else ""
+                current_hunk = {"header": line, "func": func_context, "lines": []}
+                current_file["hunks"].append(current_hunk)
+
+            # Diff lines
+            elif current_hunk is not None:
+                if line.startswith("+"):
+                    current_hunk["lines"].append({
+                        "type": "add", "content": line[1:],
+                        "new_num": new_num,
+                    })
+                    new_num += 1
+                elif line.startswith("-"):
+                    current_hunk["lines"].append({
+                        "type": "remove", "content": line[1:],
+                        "old_num": old_num,
+                    })
+                    old_num += 1
+                elif line.startswith(" "):
+                    current_hunk["lines"].append({
+                        "type": "context", "content": line[1:],
+                        "old_num": old_num, "new_num": new_num,
+                    })
+                    old_num += 1
+                    new_num += 1
+
+        if current_file:
+            files.append(current_file)
+
+        return files
+
     def _emit(self, event: PiEvent) -> None:
         """Fan out event to subscribers and optional callback."""
         # Callback (for dashboard SSE integration)

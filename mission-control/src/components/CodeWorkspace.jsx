@@ -475,8 +475,65 @@ function CodeChatPanel({ messages, streaming, streamingText, tools, onSend, onAb
 
 // ── Changes & Activity Panel (right side) ───────────────────
 
-function CodeActivityPanel({ tools, usage, streaming }) {
-  const [activeTab, setActiveTab] = useState('changes')
+// ── Git Diff File View ──────────────────────────────────────
+
+function GitDiffFile({ file }) {
+  const [expanded, setExpanded] = useState(true)
+  const statusColors = {
+    modified: { label: 'M', color: 'text-accent-amber' },
+    new: { label: 'A', color: 'text-accent-green' },
+    deleted: { label: 'D', color: 'text-accent-red' },
+  }
+  const sc = statusColors[file.status] || statusColors.modified
+  const additions = file.hunks.reduce((n, h) => n + h.lines.filter(l => l.type === 'add').length, 0)
+  const deletions = file.hunks.reduce((n, h) => n + h.lines.filter(l => l.type === 'remove').length, 0)
+
+  return (
+    <div className="mb-2 rounded border border-border bg-bg-primary overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-mono hover:bg-bg-hover/50 transition-colors"
+      >
+        <span className={`text-[8px] text-text-muted transition-transform ${expanded ? 'rotate-90' : ''}`}>&#9654;</span>
+        <span className={`font-bold ${sc.color}`}>{sc.label}</span>
+        <span className="text-text-primary truncate">{file.path}</span>
+        <span className="ml-auto flex gap-1.5 text-[9px]">
+          {additions > 0 && <span className="text-accent-green">+{additions}</span>}
+          {deletions > 0 && <span className="text-accent-red">-{deletions}</span>}
+        </span>
+      </button>
+      {expanded && file.hunks.map((hunk, hi) => (
+        <div key={hi} className="border-t border-border/30">
+          <div className="px-2 py-0.5 bg-accent-blue/5 text-[9px] font-mono text-accent-blue/60">
+            {hunk.header}
+          </div>
+          {hunk.lines.map((line, li) => {
+            const bg = line.type === 'add' ? 'bg-accent-green/8' :
+                       line.type === 'remove' ? 'bg-accent-red/8' : ''
+            const fg = line.type === 'add' ? 'text-accent-green/90' :
+                       line.type === 'remove' ? 'text-accent-red/90' : 'text-text-secondary'
+            const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '
+            const oldNum = line.old_num || ''
+            const newNum = line.new_num || ''
+            return (
+              <div key={li} className={`flex font-mono text-[11px] leading-5 ${bg}`}>
+                <span className="w-8 text-right text-text-muted/30 select-none flex-shrink-0 pr-0.5">{oldNum}</span>
+                <span className="w-8 text-right text-text-muted/30 select-none flex-shrink-0 pr-1">{newNum}</span>
+                <span className={`w-3 text-center select-none flex-shrink-0 ${fg} opacity-60`}>{prefix}</span>
+                <span className={`whitespace-pre-wrap break-all flex-1 ${fg}`}>{line.content}</span>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Activity Panel (right side) ─────────────────────────────
+
+function CodeActivityPanel({ tools, usage, streaming, diffFiles, diffLoading, onRefreshDiff }) {
+  const [activeTab, setActiveTab] = useState('diff')
 
   // Group tools by file for Changes view
   const fileChanges = []
@@ -494,18 +551,11 @@ function CodeActivityPanel({ tools, usage, streaming }) {
     }
   }
 
-  // Separate write-tools (bash, non-file) for Activity tab
-  const activities = tools.filter(t => {
-    let parsedArgs = {}
-    try { parsedArgs = typeof t.args === 'string' ? JSON.parse(t.args) : (t.args || {}) } catch { /* */ }
-    return t.name === 'bash' || t.name === 'read' || t.name === 'grep' || t.name === 'find' || t.name === 'ls'
-  })
-
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border">
-        {['changes', 'activity', 'usage'].map(tab => (
+        {['diff', 'changes', 'activity', 'usage'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -515,6 +565,7 @@ function CodeActivityPanel({ tools, usage, streaming }) {
                 : 'text-text-muted hover:text-text-secondary'
             }`}
           >
+            {tab === 'diff' && `Diff${diffFiles.length ? ` (${diffFiles.length})` : ''}`}
             {tab === 'changes' && `Changes${fileChanges.length ? ` (${fileChanges.length})` : ''}`}
             {tab === 'activity' && `Activity${tools.length ? ` (${tools.length})` : ''}`}
             {tab === 'usage' && 'Usage'}
@@ -523,7 +574,33 @@ function CodeActivityPanel({ tools, usage, streaming }) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Changes tab: file-grouped diffs */}
+        {/* Diff tab: git diff view */}
+        {activeTab === 'diff' && (
+          <div className="px-2 py-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-text-muted uppercase tracking-wider">
+                Git Diff {diffFiles.length > 0 && `(${diffFiles.length} files)`}
+              </span>
+              <button
+                onClick={onRefreshDiff}
+                disabled={diffLoading}
+                className="text-[9px] text-accent-blue hover:underline disabled:opacity-50"
+              >
+                {diffLoading ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            {diffFiles.length === 0 && !diffLoading && (
+              <div className="text-text-muted text-[11px] text-center py-8">
+                No uncommitted changes
+              </div>
+            )}
+            {diffFiles.map((file, i) => (
+              <GitDiffFile key={i} file={file} />
+            ))}
+          </div>
+        )}
+
+        {/* Changes tab: per-tool diffs */}
         {activeTab === 'changes' && (
           <div className="px-2 py-1">
             {fileChanges.length === 0 && !streaming && (
@@ -539,13 +616,11 @@ function CodeActivityPanel({ tools, usage, streaming }) {
             )}
             {fileChanges.map((fc, i) => (
               <div key={i} className="mb-2">
-                {/* File header */}
                 <div className="flex items-center gap-2 px-1 py-1 text-[11px]">
                   <span className="text-accent-amber">M</span>
                   <span className="font-mono text-text-primary truncate">{fc.path.split('/').pop()}</span>
                   <span className="text-text-muted font-mono truncate text-[9px] ml-auto">{fc.path}</span>
                 </div>
-                {/* Diffs for this file */}
                 {fc.edits.map((edit, ei) => (
                   <DiffBlock key={ei} toolName={edit.name} args={edit.args} result={edit.result} />
                 ))}
@@ -554,7 +629,7 @@ function CodeActivityPanel({ tools, usage, streaming }) {
           </div>
         )}
 
-        {/* Activity tab: all tool calls */}
+        {/* Activity tab */}
         {activeTab === 'activity' && (
           <div className="px-2 py-1">
             {tools.length === 0 && (
@@ -567,7 +642,6 @@ function CodeActivityPanel({ tools, usage, streaming }) {
               try { parsedArgs = typeof t.args === 'string' ? JSON.parse(t.args) : (t.args || {}) } catch { /* */ }
               const filePath = parsedArgs.path || parsedArgs.file_path || ''
               const cmd = parsedArgs.command || ''
-
               return (
                 <div key={i} className="flex items-center gap-2 px-1 py-1 border-b border-border/30 text-[11px]">
                   <ToolBadge name={t.name} status={t.status} />
@@ -778,6 +852,8 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
   const [viewingFile, setViewingFile] = useState(null) // {path, content, size, truncated}
   const [sseError, setSseError] = useState(false)
   const [showNewSession, setShowNewSession] = useState(false)
+  const [diffFiles, setDiffFiles] = useState([])
+  const [diffLoading, setDiffLoading] = useState(false)
 
   // I2 fix: ref for allTools so closures always read current value
   const allToolsRef = useRef([])
@@ -879,6 +955,8 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
       }
       // Refresh sessions list for updated message counts
       codeApi.sessions().then(({ sessions: s }) => setSessions(s || [])).catch(() => {})
+      // Auto-refresh git diff after agent finishes
+      refreshDiff()
     },
     code_text_delta: (data) => {
       setStreamingText(prev => prev + (data.data?.delta || data.delta || ''))
@@ -959,6 +1037,15 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
       setAllTools([])
       setUsage(null)
       setTouchedFiles(new Set())
+      // Immediately load file tree for the new session's workspace
+      const ws = session.workspace_root
+      if (ws) {
+        setFileTreeLoading(true)
+        codeApi.files(3, ws)
+          .then(({ tree }) => setFileTree(tree || []))
+          .catch(() => {})
+          .finally(() => setFileTreeLoading(false))
+      }
     } catch (err) {
       console.error('Failed to create session:', err)
     }
@@ -985,6 +1072,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
     setAllTools([])
     setUsage(null)
     setViewingFile(null)
+    setTouchedFiles(new Set())
     // Load history for this session from bridge-local storage
     codeApi.messages(id)
       .then(data => {
@@ -1007,7 +1095,16 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
         setAllTools(tools)
       })
       .catch(() => {})
-  }, [])
+    // Load file tree for this session's workspace
+    const sessionWs = sessions.find(s => s.id === id)?.workspace_root
+    if (sessionWs) {
+      setFileTreeLoading(true)
+      codeApi.files(3, sessionWs)
+        .then(({ tree }) => setFileTree(tree || []))
+        .catch(() => {})
+        .finally(() => setFileTreeLoading(false))
+    }
+  }, [sessions])
 
   const handleSend = useCallback(async (text) => {
     if (!activeSessionId) return
@@ -1040,6 +1137,19 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
       console.error('Approval response failed:', err)
     }
   }, [activeSessionId])
+
+  const refreshDiff = useCallback(async () => {
+    if (!activeWorkspace) return
+    setDiffLoading(true)
+    try {
+      const result = await codeApi.diff(activeWorkspace)
+      setDiffFiles(result.files || [])
+    } catch {
+      setDiffFiles([])
+    } finally {
+      setDiffLoading(false)
+    }
+  }, [activeWorkspace])
 
   const handleFileClick = useCallback(async (filePath) => {
     try {
@@ -1186,7 +1296,10 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
             </div>
             {/* Activity panel */}
             <div className="w-64 flex-shrink-0 border-l border-border bg-bg-secondary">
-              <CodeActivityPanel tools={allTools} usage={usage} streaming={streaming} />
+              <CodeActivityPanel
+                tools={allTools} usage={usage} streaming={streaming}
+                diffFiles={diffFiles} diffLoading={diffLoading} onRefreshDiff={refreshDiff}
+              />
             </div>
           </div>
         )}
