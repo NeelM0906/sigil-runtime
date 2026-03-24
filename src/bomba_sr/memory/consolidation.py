@@ -31,6 +31,7 @@ class MemoryCandidate:
     evidence_refs: tuple[str, ...] = ()
     recency_ts: str | None = None
     being_id: str | None = None
+    session_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -100,8 +101,9 @@ class MemoryConsolidator:
             """
         )
         self.db.commit()
-        # Add being_id column to existing tables (migration)
+        # Add being_id and session_id columns to existing tables (migration)
         ensure_column(self.db, "memories", "being_id", "TEXT")
+        ensure_column(self.db, "memories", "session_id", "TEXT")
         ensure_column(self.db, "procedural_memories", "being_id", "TEXT")
         ensure_column(self.db, "memory_archive", "being_id", "TEXT")
 
@@ -123,8 +125,8 @@ class MemoryConsolidator:
                 """
                 INSERT INTO memories (
                   id, user_id, memory_key, tier, content, entities, evidence_refs,
-                  recency_ts, active, version, created_at, updated_at, being_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)
+                  recency_ts, active, version, created_at, updated_at, being_id, session_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -138,6 +140,7 @@ class MemoryConsolidator:
                     now,
                     now,
                     candidate.being_id,
+                    candidate.session_id,
                 ),
             )
             self.db.commit()
@@ -214,11 +217,15 @@ class MemoryConsolidator:
         limit: int = 10,
         recency_half_life_days: float = 14.0,
         recency_weight: float = 0.15,
+        session_id: str | None = None,
     ) -> list[RetrievedMemory]:
         rows = self.db.execute(
             f"SELECT * FROM memories WHERE {scope_col} = ? AND active = 1 AND tier = 'semantic'",
             (scope_val,),
         ).fetchall()
+
+        # Session boost: memories from the current session get a score bonus
+        _SESSION_BOOST = 0.3
 
         scored: list[RetrievedMemory] = []
         for row in rows:
@@ -233,6 +240,16 @@ class MemoryConsolidator:
                 weight=recency_weight,
             )
             score = lex + recency_boost
+
+            # Boost memories from the current session
+            row_session = None
+            try:
+                row_session = row["session_id"]
+            except (IndexError, KeyError):
+                pass
+            if session_id and row_session == session_id:
+                score += _SESSION_BOOST
+
             scored.append(
                 RetrievedMemory(
                     memory_id=str(row["id"]),
@@ -255,8 +272,9 @@ class MemoryConsolidator:
         limit: int = 10,
         recency_half_life_days: float = 14.0,
         recency_weight: float = 0.15,
+        session_id: str | None = None,
     ) -> list[RetrievedMemory]:
-        return self._retrieve_scored("user_id", user_id, query, limit, recency_half_life_days, recency_weight)
+        return self._retrieve_scored("user_id", user_id, query, limit, recency_half_life_days, recency_weight, session_id=session_id)
 
     def learn_procedural(
         self,

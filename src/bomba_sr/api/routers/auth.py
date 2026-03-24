@@ -96,7 +96,7 @@ def login(body: LoginRequest, dashboard_svc=Depends(get_dashboard_svc)):
     )
     token = secrets.token_urlsafe(32)
     now_ts = datetime.now(timezone.utc).isoformat()
-    expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    expires = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
     dashboard_svc.db.execute_commit(
         "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
         (token, user["id"], now_ts, expires),
@@ -150,7 +150,7 @@ def register(body: RegisterRequest, dashboard_svc=Depends(get_dashboard_svc)):
         "DELETE FROM mc_sessions_auth WHERE user_id = ?", (uid,)
     )
     token = secrets.token_urlsafe(32)
-    expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    expires = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
     dashboard_svc.db.execute_commit(
         "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
         (token, uid, now, expires),

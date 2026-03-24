@@ -1,7 +1,7 @@
 """FastAPI dependencies — auth, service accessors."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request
@@ -47,8 +47,23 @@ def get_current_user(request: Request) -> dict[str, Any]:
     if not row:
         raise HTTPException(401, "Unauthorized")
     expires = row["expires_at"]
-    if expires and expires < datetime.now(timezone.utc).isoformat():
+    now = datetime.now(timezone.utc)
+    if expires and expires < now.isoformat():
         raise HTTPException(401, "Token expired")
+    # Auto-renew: if token expires within 7 days, extend by 30 days
+    if expires:
+        try:
+            exp_dt = datetime.fromisoformat(expires)
+            if exp_dt.tzinfo is None:
+                exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+            if (exp_dt - now).days < 7:
+                new_expires = (now + timedelta(days=30)).isoformat()
+                svc.db.execute_commit(
+                    "UPDATE mc_sessions_auth SET expires_at = ? WHERE token = ?",
+                    (new_expires, token),
+                )
+        except (ValueError, TypeError):
+            pass
     return {"user_id": row["user_id"], "tenant_id": row["tenant_id"], "role": row["role"]}
 
 

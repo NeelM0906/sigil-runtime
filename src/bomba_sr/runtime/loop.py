@@ -46,6 +46,7 @@ class LoopConfig:
     parallel_read_tools: bool = True
     max_parallel_workers: int = 4
     progress_callback: Any = None
+    model_context_length: int = 200_000
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,7 @@ class AgenticLoop:
         while state.iteration < self.config.max_iterations:
             state.iteration += 1
             self._inject_health_as_message(state, model_id)
+            self._auto_compact_if_needed(state)
 
             effective_schemas = self._effective_tool_schemas(
                 base_tool_schemas=tool_schemas,
@@ -452,6 +454,77 @@ class AgenticLoop:
         ]
         messages.append(ChatMessage(role="user", content=tool_blocks))
         return messages
+
+    def _auto_compact_if_needed(self, state: LoopState) -> None:
+        """Compact older messages when context usage exceeds 75% of model limit."""
+        total_chars = sum(
+            len(m.content) if isinstance(m.content, str) else len(json.dumps(m.content))
+            for m in state.messages
+        )
+        estimated_tokens = total_chars // 4
+        ctx_limit = self.config.model_context_length
+
+        if estimated_tokens <= int(ctx_limit * 0.75):
+            return
+        if len(state.messages) < 8:
+            return
+
+        # Keep: system message (first), last 6 messages (recent context)
+        system_msg = state.messages[0] if state.messages[0].role == "system" else None
+        tail_count = min(6, len(state.messages) - 1)
+        tail = state.messages[-tail_count:]
+        middle = state.messages[1:-tail_count] if system_msg else state.messages[:-tail_count]
+
+        if len(middle) < 4:
+            return
+
+        condensed_parts = []
+        for msg in middle:
+            content = msg.content if isinstance(msg.content, str) else json.dumps(msg.content)
+            if msg.role == "user":
+                condensed_parts.append(f"User: {content[:500]}")
+            elif msg.role == "assistant":
+                condensed_parts.append(f"Assistant: {content[:500]}")
+            elif msg.role == "tool":
+                condensed_parts.append(f"Tool result: {content[:300]}")
+
+        compacted_text = (
+            "<compacted_history>\n"
+            "The following is a condensed summary of earlier conversation turns. "
+            "Recent messages follow after this block.\n\n"
+            + "\n".join(condensed_parts)
+            + "\n</compacted_history>"
+        )
+
+        # Cap the compacted text to 25% of context
+        target_chars = int(ctx_limit * 0.25) * 4
+        if len(compacted_text) > target_chars:
+            compacted_text = compacted_text[:target_chars] + "\n[...earlier history truncated...]\n</compacted_history>"
+
+        compacted_msg = ChatMessage(role="user", content=compacted_text)
+
+        new_messages = []
+        if system_msg:
+            new_messages.append(system_msg)
+        new_messages.append(compacted_msg)
+        new_messages.extend(tail)
+
+        old_count = len(state.messages)
+        state.messages = new_messages
+        log.info(
+            "[loop] Auto-compacted: %d messages → %d (compacted %d middle messages)",
+            old_count, len(state.messages), len(middle),
+        )
+
+        if self.config.progress_callback:
+            try:
+                self.config.progress_callback("compaction", {
+                    "old_messages": old_count,
+                    "new_messages": len(state.messages),
+                    "compacted_middle": len(middle),
+                })
+            except Exception:
+                pass
 
     def _detect_loop(self, state: LoopState) -> bool:
         window = self.config.loop_detection_window

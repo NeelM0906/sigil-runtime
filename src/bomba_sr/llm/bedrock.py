@@ -2,11 +2,27 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from typing import Any
 
 from bomba_sr.llm.providers import ChatMessage, LLMResponse
+
+log = logging.getLogger(__name__)
+
+# Model context windows (input tokens). Conservative estimates.
+_MODEL_CONTEXT_LIMITS: dict[str, int] = {
+    "claude-opus-4": 200_000,
+    "claude-sonnet-4": 200_000,
+    "claude-haiku-4": 200_000,
+    "claude-3-5-sonnet": 200_000,
+    "claude-3-haiku": 200_000,
+}
+
+_DEFAULT_CONTEXT_LIMIT = 200_000
+_CHARS_PER_TOKEN = 4  # conservative estimate
 
 
 _BEDROCK_MODEL_ALIASES: dict[str, str] = {
@@ -29,21 +45,45 @@ class BedrockProvider:
     """LLM provider for Amazon Bedrock via boto3.
 
     Uses cross-region inference profiles (us.anthropic.* model IDs).
+    Includes retry with exponential backoff for throttling.
     """
 
     access_key: str
     secret_key: str
     region: str = "us-east-1"
     provider_name: str = "bedrock"
+    max_output_tokens: int = 8192
+    max_retries: int = 3
+    _client_cache: Any = field(default=None, repr=False)
 
     def _client(self):
-        import boto3
-        return boto3.client(
-            "bedrock-runtime",
-            region_name=self.region,
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-        )
+        if self._client_cache is None:
+            import boto3
+            from botocore.config import Config
+            self._client_cache = boto3.client(
+                "bedrock-runtime",
+                region_name=self.region,
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+                config=Config(
+                    retries={"max_attempts": 0},  # we handle retries ourselves
+                    read_timeout=120,
+                    connect_timeout=10,
+                ),
+            )
+        return self._client_cache
+
+    def _estimate_input_tokens(self, payload: dict) -> int:
+        """Rough estimate of input token count from payload."""
+        raw = json.dumps(payload)
+        return len(raw) // _CHARS_PER_TOKEN
+
+    def _context_limit_for_model(self, model_id: str) -> int:
+        """Get the context window limit for a model."""
+        for prefix, limit in _MODEL_CONTEXT_LIMITS.items():
+            if prefix in model_id:
+                return limit
+        return _DEFAULT_CONTEXT_LIMIT
 
     def generate(
         self,
@@ -51,7 +91,6 @@ class BedrockProvider:
         messages: list[ChatMessage],
         tools: list[dict[str, Any]] | None = None,
     ) -> LLMResponse:
-        # Normalize model ID: add us. prefix for cross-region inference
         model_id = self._normalize_model_id(model)
 
         # Build Anthropic Messages API payload
@@ -69,9 +108,13 @@ class BedrockProvider:
                 entry["tool_calls"] = msg.tool_calls
             api_messages.append(entry)
 
+        # Determine max_tokens: use configured value, capped by context limit
+        context_limit = self._context_limit_for_model(model_id)
+        max_tokens = self.max_output_tokens
+
         payload: dict[str, Any] = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4096,
+            "max_tokens": max_tokens,
             "messages": api_messages if api_messages else [{"role": "user", "content": ""}],
         }
         if system_parts:
@@ -79,33 +122,92 @@ class BedrockProvider:
         if tools:
             payload["tools"] = [self._convert_tool(t) for t in tools]
 
+        # Pre-flight: estimate input size and warn/truncate if too large
+        est_input = self._estimate_input_tokens(payload)
+        if est_input + max_tokens > context_limit:
+            log.warning(
+                "[bedrock] Input estimate %d + max_tokens %d exceeds context %d for %s. "
+                "Reducing max_tokens to fit.",
+                est_input, max_tokens, context_limit, model_id,
+            )
+            max_tokens = max(256, context_limit - est_input - 1000)  # 1K safety margin
+            payload["max_tokens"] = max_tokens
+            if max_tokens <= 256:
+                log.error(
+                    "[bedrock] Prompt too large (%d est tokens) for %s context (%d). "
+                    "Truncating messages.",
+                    est_input, model_id, context_limit,
+                )
+                # Truncate from the middle: keep first 2 and last 3 messages
+                if len(api_messages) > 5:
+                    payload["messages"] = api_messages[:2] + api_messages[-3:]
+                    payload["max_tokens"] = 4096
+
+        # Invoke with retry + exponential backoff for throttling
         client = self._client()
-        resp = client.invoke_model(
-            modelId=model_id,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps(payload),
-        )
-        body = json.loads(resp["body"].read())
+        last_exc: Exception | None = None
 
-        # Parse Anthropic Messages response
-        text = ""
-        for item in body.get("content") or []:
-            if isinstance(item, dict) and item.get("type") == "text":
-                text += str(item.get("text") or "")
-        stop_reason = str(body.get("stop_reason")) if body.get("stop_reason") else None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                resp = client.invoke_model(
+                    modelId=model_id,
+                    contentType="application/json",
+                    accept="application/json",
+                    body=json.dumps(payload),
+                )
+                body = json.loads(resp["body"].read())
 
-        usage = body.get("usage") if isinstance(body.get("usage"), dict) else None
-        usage_dict = None
-        if usage:
-            usage_dict = {k: int(v) for k, v in usage.items() if isinstance(v, (int, float))}
+                # Parse Anthropic Messages response
+                text = ""
+                for item in body.get("content") or []:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        text += str(item.get("text") or "")
+                stop_reason = str(body.get("stop_reason")) if body.get("stop_reason") else None
 
-        return LLMResponse(
-            text=text,
-            model=model_id,
-            usage=usage_dict,
-            raw=body,
-            stop_reason=stop_reason,
+                usage = body.get("usage") if isinstance(body.get("usage"), dict) else None
+                usage_dict = None
+                if usage:
+                    usage_dict = {k: int(v) for k, v in usage.items() if isinstance(v, (int, float))}
+
+                if attempt > 1:
+                    log.info("[bedrock] Succeeded on attempt %d for %s", attempt, model_id)
+
+                return LLMResponse(
+                    text=text,
+                    model=model_id,
+                    usage=usage_dict,
+                    raw=body,
+                    stop_reason=stop_reason,
+                )
+
+            except Exception as exc:
+                last_exc = exc
+                exc_type = type(exc).__name__
+                exc_str = str(exc)
+
+                # Identify retryable errors
+                is_throttle = "ThrottlingException" in exc_type or "ThrottlingException" in exc_str
+                is_timeout = "ReadTimeoutError" in exc_type or "timed out" in exc_str.lower()
+                is_service = "ServiceUnavailableException" in exc_type or "500" in exc_str
+                is_retryable = is_throttle or is_timeout or is_service
+
+                if not is_retryable or attempt == self.max_retries:
+                    log.error(
+                        "[bedrock] %s on attempt %d/%d for %s: %s",
+                        exc_type, attempt, self.max_retries, model_id, exc_str[:300],
+                    )
+                    break
+
+                # Exponential backoff: 2s, 4s, 8s
+                delay = 2 ** attempt
+                log.warning(
+                    "[bedrock] %s on attempt %d/%d for %s — retrying in %ds",
+                    exc_type, attempt, self.max_retries, model_id, delay,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(
+            f"Bedrock call failed after {self.max_retries} attempts for {model_id}: {last_exc}"
         )
 
     @staticmethod

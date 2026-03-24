@@ -68,7 +68,7 @@ Each being has embedded:
 | Actualizing | ACT-I | AI Integration Actualizer |
 
 ## File Location
-`./workspaces/prime/Projects/colosseum/v2/data/beings_ecosystem.json`
+`/Users/samantha/Projects/colosseum/v2/data/beings_ecosystem.json`
 
 ## Integration Notes
 - These beings are designed to work as a TEAM across the 6 roles

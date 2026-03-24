@@ -67,8 +67,8 @@ Expanded the ACT-I Colosseum from 9 judges to 19 judges. Created 10 new speciali
 - **Sean's Technique:** "A few things you said, I'm curious..." then name the pain word they used
 
 ## Output Files
-- **Source:** `./workspaces/prime/Projects/colosseum/v2/data/judges.json` (9 judges)
-- **Output:** `./workspaces/prime/Projects/colosseum/v2/data/judges_19.json` (19 judges)
+- **Source:** `/Users/samantha/Projects/colosseum/v2/data/judges.json` (9 judges)
+- **Output:** `/Users/samantha/Projects/colosseum/v2/data/judges_19.json` (19 judges)
 
 ## Technical Notes
 - All judges use consistent JSON return format with 0-9.9999 scoring (no 10 exists)

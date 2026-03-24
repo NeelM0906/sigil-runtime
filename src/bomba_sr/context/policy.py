@@ -37,20 +37,20 @@ class ContextAssemblyResult:
 
 PROFILE_WEIGHTS: dict[TurnProfile, dict[str, float]] = {
     TurnProfile.CHAT: {
-        "working_memory": 0.26,
+        "working_memory": 0.20,
         "world_state": 0.08,
-        "semantic": 0.24,
-        "recent_history": 0.34,
+        "semantic": 0.12,
+        "recent_history": 0.50,
         "procedural": 0.05,
-        "predictions": 0.03,
+        "predictions": 0.05,
     },
     TurnProfile.TASK_EXECUTION: {
-        "working_memory": 0.34,
+        "working_memory": 0.25,
         "world_state": 0.10,
-        "semantic": 0.18,
-        "recent_history": 0.20,
+        "semantic": 0.10,
+        "recent_history": 0.35,
         "procedural": 0.12,
-        "predictions": 0.06,
+        "predictions": 0.08,
     },
     TurnProfile.PLANNING: {
         "working_memory": 0.24,

@@ -251,6 +251,8 @@ def provider_from_env() -> LLMProvider:
                 access_key=ak,
                 secret_key=sk,
                 region=os.getenv("AWS_REGION", "us-east-1"),
+                max_output_tokens=int(os.getenv("BOMBA_BEDROCK_MAX_OUTPUT_TOKENS", "8192")),
+                max_retries=int(os.getenv("BOMBA_BEDROCK_MAX_RETRIES", "3")),
             )
 
     # OpenRouter first by default. This matches OpenClaw-style model IDs

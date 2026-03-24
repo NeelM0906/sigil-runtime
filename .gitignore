@@ -42,3 +42,4 @@ dist/
 
 # Claude Code local settings (not shared; .claude/settings.json IS shared)
 .claude/settings.local.json
+.env

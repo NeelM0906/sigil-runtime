@@ -98,5 +98,5 @@
 ---
 
 ## Files Modified
-- `./workspaces/prime/Projects/colosseum/v2/data/judges_19.json`
-- `./workspaces/prime/Projects/colosseum/v2/data/scenarios_expanded.json`
+- `/Users/samantha/Projects/colosseum/v2/data/judges_19.json`
+- `/Users/samantha/Projects/colosseum/v2/data/scenarios_expanded.json`

@@ -550,7 +550,7 @@ class RuntimeBridge:
                 for hit in search_pack.results[:8]
             ]
 
-        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8, session_id=request.session_id)
 
         # Unified peer identity: if we can resolve a being_id from the session,
         # also recall memories tagged with that being_id (cross-context access).
@@ -588,7 +588,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=3,  # Fewer turns for subtask context — keep it focused
+                limit=50,
             )
             recent_turn_messages = _strip_tool_blocks(raw_turns)
         else:
@@ -596,7 +596,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=5,
+                limit=500,  # Load full session — replay budget caps what actually fits
             )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,
@@ -737,14 +737,7 @@ class RuntimeBridge:
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
                 ],
                 "semantic_candidates": semantic_candidates,
-                "recent_history": [
-                    {"text": f"session_id={request.session_id}"},
-                    (
-                        {"text": f"session_summary={session_summary['summary_text']}"}
-                        if session_summary is not None
-                        else {"text": "session_summary=None"}
-                    ),
-                ],
+                "recent_history": [],  # Full transcript in replay_messages — no need to duplicate here
                 "procedural_candidates": procedural_candidates,
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
@@ -885,6 +878,7 @@ class RuntimeBridge:
                     budget_hard_stop_pct=effective_budget_stop_pct,
                     parallel_read_tools=effective_parallel_reads,
                     progress_callback=request.on_progress,
+                    model_context_length=capabilities.context_length,
                 ),
             )
             loop_result = loop.run(
@@ -1054,6 +1048,7 @@ class RuntimeBridge:
                 evidence_refs=[note["note_id"]],
                 reason=reason,
                 being_id=_being_id_for_write,
+                session_id=request.session_id,
             )
 
         identity_update = runtime.identity.ingest_turn(
