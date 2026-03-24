@@ -4,7 +4,7 @@
 
 ## Summary
 
-Reviewed the existing judges at `./workspaces/prime/Projects/colosseum/v2/data/judges.json`. Found that **both requested judges already exist** in the file:
+Reviewed the existing judges at `/Users/samantha/Projects/colosseum/v2/data/judges.json`. Found that **both requested judges already exist** in the file:
 
 ## 1. Ecosystem Merger Judge ✅
 

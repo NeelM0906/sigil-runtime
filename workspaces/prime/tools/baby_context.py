@@ -6,7 +6,7 @@ and get exactly the context they need, budgeted to a target size.
 
 Usage:
     # From a baby's task prompt:
-    cd ~/.openclaw/workspace/tools && .venv/bin/python3 baby_context.py --topic "colosseum scoring" --budget 4000
+    cd /Users/samantha/.openclaw/workspace/tools && .venv/bin/python3 baby_context.py --topic "colosseum scoring" --budget 4000
 
     # With specific sources:
     .venv/bin/python3 baby_context.py --topic "writer being scenarios" --budget 6000 --sources pinecone,postgres,files

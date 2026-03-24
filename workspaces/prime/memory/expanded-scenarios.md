@@ -3,7 +3,7 @@
 **Created by:** Sai Miner 4
 
 ## Summary
-Created **108 company-specific scenarios** for the Colosseum training system. Saved to `./workspaces/prime/Projects/colosseum/v2/data/scenarios_expanded.json`.
+Created **108 company-specific scenarios** for the Colosseum training system. Saved to `/Users/samantha/Projects/colosseum/v2/data/scenarios_expanded.json`.
 
 ## Breakdown by Company
 
@@ -88,5 +88,5 @@ Each scenario follows the original Colosseum format:
 - Difficulty levels enable progressive skill development
 
 ## Files
-- **Source:** `./workspaces/prime/Projects/colosseum/v2/data/scenarios_expanded.json`
-- **Existing:** `./workspaces/prime/Projects/colosseum/v2/data/scenarios.json`
+- **Source:** `/Users/samantha/Projects/colosseum/v2/data/scenarios_expanded.json`
+- **Existing:** `/Users/samantha/Projects/colosseum/v2/data/scenarios.json`
