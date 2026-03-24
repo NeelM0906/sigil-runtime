@@ -21,14 +21,18 @@ def default_embedding_api_key() -> str | None:
 def default_embedding_model() -> str:
     if os.getenv("OPENAI_EMBEDDING_MODEL"):
         return os.environ["OPENAI_EMBEDDING_MODEL"]
-    if os.getenv("OPENROUTER_API_KEY"):
-        return "openai/text-embedding-3-small"
+    # Use OpenAI model name directly (not openrouter-prefixed) since
+    # embeddings go to OpenAI API when OPENAI_API_KEY is set
     return "text-embedding-3-small"
 
 
 def default_embedding_api_base() -> str:
     if os.getenv("OPENAI_BASE_URL"):
         return os.environ["OPENAI_BASE_URL"]
+    # If we have an OpenAI key, use OpenAI directly for embeddings
+    # (OpenRouter doesn't reliably proxy embedding endpoints)
+    if os.getenv("OPENAI_API_KEY"):
+        return "https://api.openai.com/v1"
     if os.getenv("OPENROUTER_API_KEY"):
         return os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     return "https://api.openai.com/v1"
