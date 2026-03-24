@@ -550,7 +550,7 @@ class RuntimeBridge:
                 for hit in search_pack.results[:8]
             ]
 
-        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8, session_id=request.session_id)
 
         # Unified peer identity: if we can resolve a being_id from the session,
         # also recall memories tagged with that being_id (cross-context access).
@@ -1048,6 +1048,7 @@ class RuntimeBridge:
                 evidence_refs=[note["note_id"]],
                 reason=reason,
                 being_id=_being_id_for_write,
+                session_id=request.session_id,
             )
 
         identity_update = runtime.identity.ingest_turn(

@@ -263,6 +263,7 @@ class HybridMemoryStore:
         evidence_refs: list[str] | None = None,
         reason: str | None = None,
         being_id: str | None = None,
+        session_id: str | None = None,
     ) -> LearningDecision:
         if not content.strip():
             raise ValueError("content cannot be empty")
@@ -284,6 +285,7 @@ class HybridMemoryStore:
                     evidence_refs=tuple(evidence_refs or ()),
                     recency_ts=now,
                     being_id=being_id,
+                    session_id=session_id,
                 )
             )
 
@@ -428,9 +430,9 @@ class HybridMemoryStore:
             "markdown": markdown,
         }
 
-    def recall(self, user_id: str, query: str, limit: int = 10) -> dict[str, Any]:
+    def recall(self, user_id: str, query: str, limit: int = 10, session_id: str | None = None) -> dict[str, Any]:
         return self._recall_impl(
-            semantic_fn=lambda query, limit: self.consolidator.retrieve(user_id=user_id, query=query, limit=limit),
+            semantic_fn=lambda query, limit: self.consolidator.retrieve(user_id=user_id, query=query, limit=limit, session_id=session_id),
             markdown_fn=lambda query, limit: self._recall_markdown(user_id=user_id, query=query, limit=limit),
             query=query,
             limit=limit,
