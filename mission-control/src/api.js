@@ -59,6 +59,9 @@ export const tasksApi = {
   delete(id) {
     return request(`/api/mc/tasks/${id}`, { method: 'DELETE' })
   },
+  cancel(id) {
+    return request(`/api/mc/tasks/${id}/cancel`, { method: 'POST' })
+  },
   history(taskId) {
     return request(`/api/mc/tasks/history${taskId ? `?taskId=${taskId}` : ''}`)
   },
@@ -152,7 +155,20 @@ export const subagentsApi = {
   },
 }
 
-// ── ACT-I Architecture API ──────────────────────────────────
+// ── Skills API ──────────────────────────────────────────────
+
+export const skillsApi = {
+  list(status) {
+    const qs = status ? `?status=${status}` : ''
+    return request(`/api/mc/skills${qs}`)
+  },
+  get(id) {
+    return request(`/api/mc/skills/${id}`)
+  },
+  executions(limit = 50) {
+    return request(`/api/mc/skills/executions?limit=${limit}`)
+  },
+}
 
 // ── Auth API ────────────────────────────────────────────────
 

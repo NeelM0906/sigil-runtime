@@ -19,13 +19,12 @@ def _read_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
     offset = int(arguments.get("offset") or 0)
     limit = int(arguments.get("limit") or 0)
 
-    # Binary files: parse with Docling instead of read_text
+    # Binary files: extract text with lightweight parser
     if path.suffix.lower() in _BINARY_EXTENSIONS:
         try:
-            from bomba_sr.ingestion.parser import parse_document
-            parsed = parse_document(str(path))
-            text = parsed["markdown"]
-            meta = parsed["metadata"]
+            from bomba_sr.ingestion.parser import extract_text
+            extracted = extract_text(str(path))
+            text = extracted.get("text") or ""
             lines = text.splitlines()
             if offset < 0:
                 offset = 0
@@ -38,16 +37,13 @@ def _read_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
                 "content": "\n".join(sliced),
                 "lines": len(lines),
                 "returned_lines": len(sliced),
-                "format": meta.get("format", ""),
-                "pages": meta.get("page_count", 0),
-                "tables": len(parsed.get("tables", [])),
-                "parsed_with": "docling",
+                "format": extracted.get("format", ""),
             }
         except Exception as exc:
             return {
                 "path": str(path),
-                "error": f"Binary file ({path.suffix}) — Docling parse failed: {exc}",
-                "hint": "Use the parse_document tool for advanced document processing.",
+                "error": f"Binary file ({path.suffix}) — extraction failed: {exc}",
+                "hint": "Use the parse_document tool for document processing.",
             }
 
     try:
@@ -160,23 +156,15 @@ def _parse_document_tool(arguments: dict[str, Any], context: ToolContext) -> dic
     if not path.is_file():
         return {"error": f"File not found: {path}"}
     try:
-        from bomba_sr.ingestion.parser import parse_document
-        parsed = parse_document(str(path))
-        result: dict[str, Any] = {
+        from bomba_sr.ingestion.parser import extract_text
+        extracted = extract_text(str(path))
+        return {
             "path": str(path),
-            "markdown": parsed["markdown"][:30000],  # Cap for context window
-            "metadata": parsed["metadata"],
-            "chunks": len(parsed["chunks"]),
-            "tables": len(parsed.get("tables", [])),
+            "content": extracted["text"][:30000],
+            "format": extracted["format"],
+            "filename": extracted["filename"],
+            "byte_size": extracted["byte_size"],
         }
-        # Include table data if present
-        for i, table in enumerate(parsed.get("tables", [])[:5]):
-            result[f"table_{i}"] = {
-                "headers": table.get("headers", []),
-                "rows": table.get("rows", 0),
-                "csv_preview": table.get("csv", "")[:2000],
-            }
-        return result
     except Exception as exc:
         return {"error": f"Document parsing failed: {exc}", "path": str(path)}
 
@@ -328,9 +316,10 @@ def builtin_fs_tools() -> list[ToolDefinition]:
         ToolDefinition(
             name="parse_document",
             description=(
-                "Parse a document file (PDF, DOCX, PPTX, XLSX, HTML, images) into structured "
-                "markdown text with table extraction. Use this for binary documents that `read` "
-                "cannot handle. Returns markdown content, table data, and metadata."
+                "Parse and extract text from document files: PDF, DOCX, XLSX, XLS, CSV, PPTX, "
+                "HTML, and images. Returns structured markdown with tables preserved. Use this "
+                "after web_fetch downloads a binary file, or to process files in the "
+                "workspace/uploads/ directory. For Excel files, returns all sheets as markdown tables."
             ),
             parameters={
                 "type": "object",

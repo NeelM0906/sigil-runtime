@@ -5,7 +5,38 @@
 
 ## Domain Expertise
 
+### Pinecone Infrastructure State (March 22, 2026)
+- **18 total indexes**, only 4 have vectors: `uicontextualmemory` (222,788), `saimemory` (6,212), `seancallieupdates` (814), `seanmiracontextualmemory` (154)
+- **14 indexes are EMPTY (0 vectors)** — including `ublib2`, `athenacontextualmemory`, `stratablue`, `acti-judges` — these were documented as having data but have been reset/emptied
+- Previous KNOWLEDGE.md stated ublib2=41K, athenacontextualmemory=11K — **those numbers are now stale**
+- Default namespace used by runtime: `longterm`
+- All indexes: 1536-dim, cosine metric
+
+### Context Offloading System Design (March 22, 2026)
+- **Namespace strategy:** Use `offload` namespace within `saimemory` index (not a new index)
+- **Conflict avoidance:** 3-layer isolation — namespace separation (primary), metadata `offload_source` field (backup), query routing (application)
+- **Metadata schema:** source_file, being_id, section_heading, chunk_index, total_chunks, content_hash, file_hash, offloaded_at, version, content_type, offload_source
+- **Vector ID format:** `offload:{being_id}:{source_file_slug}:v{version}:c{chunk_index}`
+- **Chunking:** Section-aware (split on H2), max 2000 chars, 100 char overlap, min 200 chars
+- **Never offload:** IDENTITY.md, KNOWLEDGE.md, TEAM_CONTEXT.md, INDEX.md
+- **Scale threshold:** Migrate to dedicated index if offload vectors exceed 50K
+- Full plan: `memory/CONTEXT_OFFLOADING_INTEGRATION_PLAN.md`
+
+### SAI Memory Workspace Structure (March 22, 2026)
+- 14 core .md files in workspace root
+- 26 files in `memory/` (historical records, reports, audits)
+- 60+ files in `dream_logs/` (timestamped dream entries)
+- `recovery-task-system/` subproject with docs and templates
+- `skills/` and `tools/` directories for unblinded-translator
+
 ## Learned Patterns
+
+### Task Board Creation Pattern (March 22, 2026)
+- The `project_list` returns projects indexed from the file system, but `task_create` requires projects registered via `project_create` in the runtime DB (tenant-scoped).
+- File-system-discovered projects (like `main-deliverables`) are NOT the same as runtime-registered projects — they fail with "project not found" on task_create.
+- **Solution:** Always `project_create` first to register in the runtime DB, THEN `task_create` against that project_id.
+- Supabase has no `tasks` or `projects` table — task board is runtime-internal (Python backend with SQLite WAL).
+- Successfully created project `deliverables` and task `99bbb5ef-dcf3-4da2-8603-9c51950d70dd` under it.
 
 ## Ecosystem Inventory Data
 ## ACT-I Being Ecosystem Inventory (March 7, 2026)
@@ -40,56 +71,4 @@
 
 **Operational Health: 69% Active**
 - 9/13 fully operational
-- 3/13 limited visibility (cross-workspace constraints)
-- 1/13 unstable (Athena voice agent)
-
-**Master Being List:**
-**SAI Sisters:** Memory (active), Scholar (limited), Recovery (limited), Forge (limited), Prime (active)
-**Specialists:** The-Strategist, The-Researcher, The-Writer, The-Analyst, The-Agreement-Maker, The-Visual-Architect (all active)
-**Voice Agents:** Athena (unstable), Mira (operational)
-
-**Critical Infrastructure Status:**
-- Recovery Pipeline Dashboard: LIVE
-- Email Colosseum: 1,400+ simulated battles
-- Contact Database: 126K contacts ready
-- Real-world execution: BLOCKED (10DLC, contact reconciliation)
-
-**Evidence:** ACT-I ecosystem audit (March 4), team context data, infrastructure monitoring, sister operational reports.
-
-## Memory Architecture Audit Findings
-## Memory Architecture Audit - March 9, 2026
-
-**Critical Finding:** Major gap between memory architecture design and operational performance identified.
-
-**Infrastructure Status:**
-- 17 Pinecone indexes total, only 3 actively used (uicontextualmemory: 162K vectors, saimemory: 5.9K vectors, seancallieupdates: 814 vectors)
-- 82% of indexes completely empty - storage waste
-- Retrieval performance failing: test query "memory architecture performance audit" returned zero results above 0.75 threshold
-
-**Cross-Sister Synchronization Issues:**
-- Sister workspace memories isolated - rich local content not accessible across network
-- Evidence of rediscovery loops occurring despite anti-forgetting protocols
-- Memory capture gaps where completed work (competitive intelligence, ecosystem audits) not reaching central systems
-
-**Protocol vs Practice Gap:**
-- Excellent MEMORY_COMPOUNDING_PROTOCOL.md exists with comprehensive multi-index research requirements
-- But actual execution failing - protocols documented but not followed
-- Storage systems not working as designed
-
-**Priority Actions Required:**
-1. Fix core retrieval performance (critical - violates fundamental mission)
-2. Implement cross-sister memory synchronization mechanism  
-3. Optimize index architecture and storage distribution
-4. Create protocol enforcement and validation systems
-
-**Evidence:** Pinecone audit, retrieval testing, workspace analysis, completed task documentation review
-
-## ACT-I Strategy Materials Consolidation
-## ACT-I Strategy Materials Consolidation (March 9, 2026)
-
-**TASK COMPLETION:** Comprehensive inventory of existing ACT-I strategy materials completed. 
-
-### **EXISTING STRATEGIC MATERIALS FOUND:**
-
-**1. Master Marketing Plan (Feb 27, 2026)**
-- Source: `STRATEGY
+- 3/13 limited visibility (cross-workspace constrai

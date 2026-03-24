@@ -13,7 +13,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "remove_schedule",
         "set_schedule_enabled",
     },
-    "group:fs": {"read", "write", "edit", "apply_patch", "glob", "grep"},
+    "group:fs": {"read", "write", "edit", "apply_patch", "glob", "grep", "parse_document"},
     "group:codeintel": {
         "code_search",
         "get_symbols_overview",
@@ -28,7 +28,12 @@ TOOL_GROUPS: dict[str, set[str]] = {
     "group:web": {"web_search", "web_fetch"},
     "group:sessions": {"sessions_list", "sessions_send", "sessions_spawn", "sessions_poll", "session_status"},
     "group:approvals": {"list_approvals", "decide_approval"},
-    "group:skills": {"skill_create", "skill_update", "skill_install_request", "skill_install_apply"},
+    "group:skills": {"skill_create", "skill_update", "skill_list"},
+    "group:seo": {
+        "seo_people_also_ask", "seo_autocomplete", "seo_reddit_quora",
+        "seo_keyword_clusters", "seo_content_explorer", "seo_semantic_keywords",
+        "seo_ai_assistant", "seo_full_research",
+    },
 }
 
 

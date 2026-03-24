@@ -90,7 +90,7 @@ class RuntimeConfig:
     plugin_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_PLUGIN_DENY")))
     tool_allow: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_ALLOW")))
     tool_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_DENY")))
-    max_loop_iterations: int = int(os.getenv("BOMBA_MAX_LOOP_ITERATIONS", "25"))
+    max_loop_iterations: int = int(os.getenv("BOMBA_MAX_LOOP_ITERATIONS", "50"))
     loop_detection_window: int = int(os.getenv("BOMBA_LOOP_DETECTION_WINDOW", "5"))
     agentic_loop_enabled: bool = os.getenv("BOMBA_AGENTIC_LOOP_ENABLED", "true").lower() != "false"
     budget_limit_usd: float = float(os.getenv("BOMBA_BUDGET_LIMIT_USD", "2.0"))

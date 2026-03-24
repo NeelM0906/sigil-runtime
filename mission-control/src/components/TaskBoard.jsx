@@ -9,6 +9,7 @@ const STATUS_CONFIG = {
   in_progress: { label: 'In Progress', color: 'text-accent-blue', dot: 'bg-accent-blue' },
   in_review: { label: 'In Review', color: 'text-accent-amber', dot: 'bg-accent-amber' },
   done: { label: 'Done', color: 'text-accent-green', dot: 'bg-accent-green' },
+  cancelled: { label: 'Cancelled', color: 'text-text-muted', dot: 'bg-text-muted' },
 }
 
 const PRIORITY_CONFIG = {
@@ -332,7 +333,7 @@ function TaskModal({ task, onSave, onClose, beings }) {
 
 // ── Task Detail Slide-out ────────────────────────────────────
 
-function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, onBeingClick, onPreview }) {
+function TaskDetail({ task, history, onClose, onEdit, onDelete, onCancel, getBeingById, onBeingClick, onPreview }) {
   const config = STATUS_CONFIG[task.status]
   const prio = PRIORITY_CONFIG[task.priority]
 
@@ -359,6 +360,14 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {task.status === 'in_progress' && (
+              <button
+                onClick={() => { if (confirm('Cancel this running task?')) onCancel(task.id) }}
+                className="px-2 py-1 text-[10px] text-accent-amber hover:text-accent-red font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            )}
             <button
               onClick={() => onEdit(task)}
               className="px-2 py-1 text-[10px] text-text-secondary hover:text-accent-blue transition-colors"
@@ -994,6 +1003,16 @@ export function TaskBoard({ fullWidth = false }) {
     }
   }
 
+  const handleCancel = async (taskId) => {
+    try {
+      await tasksApi.cancel(taskId)
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'cancelled' } : t))
+      setDetailTask(null)
+    } catch (err) {
+      alert('Failed to cancel task: ' + err.message)
+    }
+  }
+
   // Detail view
   const openDetail = async (task) => {
     setDetailTask(task)
@@ -1081,6 +1100,7 @@ export function TaskBoard({ fullWidth = false }) {
           onClose={() => setDetailTask(null)}
           onEdit={(task) => { setDetailTask(null); setShowModal(task) }}
           onDelete={handleDelete}
+          onCancel={handleCancel}
           getBeingById={getBeingById}
           onBeingClick={openBeingDetail}
           onPreview={setPreviewArtifact}

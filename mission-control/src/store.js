@@ -3,7 +3,7 @@
 // Static constants only — all data now lives in SAI runtime.
 // ============================================================
 
-export const TASK_STATUSES = ['backlog', 'in_progress', 'in_review', 'done'];
+export const TASK_STATUSES = ['backlog', 'in_progress', 'in_review', 'done', 'cancelled'];
 
 // Helper to format relative time
 export function timeAgo(dateStr) {

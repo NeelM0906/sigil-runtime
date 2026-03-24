@@ -134,10 +134,11 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:runtime",       # exec, process, compact_context, switch_model, etc.
         "group:codeintel",     # code_search + serena symbol tools
-        "group:skills",        # skill_create, skill_update, skill_install_*
+        "group:skills",        # skill_create, skill_update, skill_list
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
         "group:media",         # fal video generation + request tracking
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:colosseum",     # colosseum tools — Forge's core domain
     )),
 
@@ -148,18 +149,21 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:browser",       # browser_open, browser_screenshot, browser_click, browser_fill, browser_extract
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:fs",            # read, write, edit, glob, grep (for reports)
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:knowledge",     # update_knowledge
     )),
 
-    # Recovery — CRM + outreach + voice + memory
+    # Recovery — CRM + outreach + voice + memory + skills
     "revenue": frozenset(_expand_groups(
         "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:voice",         # voice_list_calls, voice_get_transcript, voice_make_call, voice_list_pathways
-        "group:fs",            # read, write, edit, glob, grep (for case files)
+        "group:fs",            # read, write, edit, glob, grep, parse_document (for case files)
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
+        "group:skills",        # skill_create, skill_update, skill_list
+        "group:seo",           # SEO research tools (KeywordsPeopleUse)
     )),
 
     # Memory — memory specialist + Pinecone

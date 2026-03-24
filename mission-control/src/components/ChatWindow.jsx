@@ -46,6 +46,16 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
 
+  // Progress messages (real-time tool execution feedback)
+  if (msg._isProgress || msg.type === 'progress') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary animate-pulse">
+        <span className="w-1.5 h-1.5 bg-accent-blue rounded-full animate-ping" />
+        <span>{msg.content}</span>
+      </div>
+    )
+  }
+
   // System messages
   if (isSystem) {
     return (
@@ -247,7 +257,7 @@ function MarkdownSegment({ content, getBeingById }) {
         code: ({ children, className }) => {
           const isBlock = className?.includes('language-')
           if (isBlock) {
-            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto">{children}</code>
+            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-w-full">{children}</code>
           }
           return <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
         },
@@ -632,8 +642,31 @@ export function ChatWindow() {
       if (msgSession !== activeSessionRef.current) return
       setAwaitingReplySince(null)
       setMessages(prev => {
-        if (prev.some(m => m.id === data.id)) return prev
-        return [...prev, data]
+        // Remove progress placeholder when final response arrives
+        const without = prev.filter(m => m.id !== `progress-${data.sender}`)
+        if (without.some(m => m.id === data.id)) return without
+        return [...without, data]
+      })
+    },
+    being_progress(data) {
+      if (data.session_id && data.session_id !== activeSessionRef.current) return
+      setMessages(prev => {
+        const progressId = `progress-${data.being_id}`
+        const progressMsg = {
+          id: progressId,
+          sender: data.being_id,
+          content: data.text,
+          timestamp: new Date().toISOString(),
+          type: 'progress',
+          _isProgress: true,
+        }
+        const existing = prev.findIndex(m => m.id === progressId)
+        if (existing >= 0) {
+          const next = [...prev]
+          next[existing] = progressMsg
+          return next
+        }
+        return [...prev, progressMsg]
       })
     },
     being_typing(data) {
@@ -931,13 +964,15 @@ export function ChatWindow() {
               beings={beings}
             />
           )}
-          <input
+          <textarea
             ref={inputRef}
             value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message... (@ to mention a being)"
-            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
+            onChange={(e) => { handleInputChange(e); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px' }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleKeyDown(e) } else { handleKeyDown(e) } }}
+            placeholder="Message... (@ to mention a being, Shift+Enter for newline)"
+            rows={1}
+            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors resize-none overflow-hidden"
+            style={{ minHeight: '38px', maxHeight: '200px' }}
           />
           <input
             ref={fileInputRef}

@@ -166,6 +166,20 @@ def get_task(
     return {"task": task}
 
 
+# ── Cancel ───────────────────────────────────────────────────────────
+
+@router.post("/{task_id}/cancel")
+def cancel_task(
+    task_id: str,
+    auth: dict = Depends(get_current_user),
+    dashboard_svc=Depends(get_dashboard_svc),
+):
+    ok = dashboard_svc.cancel_task(task_id, tenant_id=auth["tenant_id"])
+    if not ok:
+        raise HTTPException(404, "Task not found")
+    return {"ok": True, "task_id": task_id}
+
+
 # ── Update ───────────────────────────────────────────────────────────
 
 @router.patch("/{task_id}")

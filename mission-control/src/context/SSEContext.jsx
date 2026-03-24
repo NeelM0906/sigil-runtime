@@ -20,8 +20,8 @@ export function SSEProvider({ children }) {
 
     const eventTypes = [
       'chat_message', 'being_status', 'task_update', 'task_steps_update',
-      'artifact_created', 'subagent_event', 'being_typing', 'chat_session',
-      'deliverable_created', 'orchestration_spawn',
+      'artifact_created', 'subagent_event', 'being_typing', 'being_progress',
+      'chat_session', 'deliverable_created', 'orchestration_spawn',
     ]
 
     for (const type of eventTypes) {

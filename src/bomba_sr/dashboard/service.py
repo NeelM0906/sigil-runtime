@@ -195,6 +195,29 @@ def _extract_json(text: str) -> dict | None:
             return payload
     return None
 
+_FRIENDLY_TOOL_NAMES = {
+    "web_search": "Searching the web",
+    "web_fetch": "Reading webpage",
+    "read": "Reading file",
+    "write": "Writing file",
+    "exec": "Running command",
+    "memory_search": "Searching memory",
+    "memory_store": "Storing to memory",
+    "pinecone_query": "Querying knowledge base",
+    "pinecone_upsert": "Updating knowledge base",
+    "glob": "Scanning files",
+    "grep": "Searching in files",
+    "edit": "Editing file",
+    "code_search": "Searching code",
+}
+
+_PROGRESS_SKIP_TOOLS = frozenset({"compact_context", "session_status"})
+
+
+def _friendly_tool_name(tool_name: str) -> str:
+    return _FRIENDLY_TOOL_NAMES.get(tool_name, tool_name.replace("_", " ").title())
+
+
 _BEING_COLS = (
     "id", "name", "role", "avatar", "status", "description", "type",
     "tools", "skills", "color", "model_id", "workspace", "tenant_id",
@@ -222,6 +245,7 @@ class DashboardService:
         self.openclaw_sync: OpenClawSync | None = None
         self._sse_clients: dict[str, dict] = {}  # client_id -> {"queue": Queue, "tenant_id": str}
         self._sse_lock = threading.Lock()
+        self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -1170,6 +1194,50 @@ class DashboardService:
                 return group[0]
         return None
 
+    def _inject_upload_context(self, content: str, being_id: str) -> str:
+        """If the message references an uploaded file, inject its full text."""
+        match = re.search(r'\[([^]]+?):\s*\d+\s*chunks?\s*indexed[^]]*\]', content)
+        if not match:
+            return content
+
+        filename = match.group(1).strip()
+        being = self.get_being(being_id) or {}
+        ws = self._resolve_workspace_path(being.get("workspace"))
+        if not ws:
+            return content
+
+        upload_path = ws / "uploads" / filename
+        if not upload_path.exists():
+            uploads_dir = ws / "uploads"
+            if uploads_dir.exists():
+                for f in uploads_dir.iterdir():
+                    if f.name.lower() == filename.lower():
+                        upload_path = f
+                        break
+
+        if not upload_path.exists():
+            return content
+
+        try:
+            from bomba_sr.ingestion.parser import extract_text
+            extracted = extract_text(str(upload_path))
+            doc_text = extracted.get("text", "")
+            if not doc_text:
+                return content
+
+            if len(doc_text) > 100_000:
+                doc_text = doc_text[:100_000] + "\n\n[... document truncated at 100K chars ...]"
+
+            return (
+                f'<uploaded_document filename="{filename}" format="{extracted.get("format", "")}">\n'
+                f"{doc_text}\n"
+                f"</uploaded_document>\n\n"
+                f"{content}"
+            )
+        except Exception as exc:
+            log.debug("Failed to inject upload context for %s: %s", filename, exc)
+            return content
+
     def _effective_user_message(self, being_id: str, content: str, chat_session_id: str) -> str:
         if not self._is_short_confirmation(content):
             return content
@@ -1272,14 +1340,37 @@ class DashboardService:
         if classification in ("light_task", "full_task"):
             task_id = self._auto_create_task(being_id, being, content, classification=classification, tenant_id=sender_tenant_id)
 
-        # For full_task, generate and attach sub-steps
+        # ── full_task: send immediate ack, then execute in this (already background) thread ──
         if classification == "full_task" and task_id:
             step_labels = self._generate_task_steps(content)
             if step_labels:
-                steps = self.create_task_steps(task_id, step_labels)
-                # Mark the first step as in_progress
-                if steps:
-                    self.update_task_step(steps[0]["id"], "in_progress")
+                self.create_task_steps(task_id, step_labels)
+
+            # Immediate acknowledgment so user can keep chatting
+            self.create_message(
+                sender=being_id,
+                content="Got it \u2014 working on this now. I'll update you as I make progress. You can track this on the Task Board.",
+                targets=[sender],
+                msg_type="direct",
+                task_ref=task_id,
+                session_id=chat_session_id,
+            )
+
+            self._execute_full_task_background(
+                being_id=being_id,
+                being=being,
+                content=content,
+                sender=sender,
+                tenant_id=tenant_id,
+                sender_tenant_id=sender_tenant_id,
+                session_id=session_id,
+                workspace=workspace,
+                chat_session_id=chat_session_id,
+                task_id=task_id,
+            )
+            return
+
+        # ── not_task / light_task: synchronous (fast enough) ──
 
         # Signal busy + typing before calling bridge
         self.update_being(being_id, {"status": "busy"})
@@ -1293,26 +1384,41 @@ class DashboardService:
         if task_id:
             self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
 
-        # Build step-advancing callback for real-time progress
-        all_steps = self.get_task_steps(task_id) if task_id and classification == "full_task" else []
-        step_cursor = [0]
-        num_steps = len(all_steps)
-
-        def _on_loop_iteration(iteration, loop_state):
-            if num_steps == 0 or step_cursor[0] >= num_steps - 1:
-                return
-            self.advance_task_step(task_id)
-            step_cursor[0] += 1
+        def _on_progress(event_type, data):
+            """Send progress messages to chat during tool execution."""
+            if event_type == "tool_result":
+                tool_name = data.get("tool_name", "")
+                status = data.get("status", "")
+                summary = data.get("summary", "")[:150]
+                if tool_name in _PROGRESS_SKIP_TOOLS:
+                    return
+                if status == "success":
+                    progress_text = f"\u26a1 {_friendly_tool_name(tool_name)}"
+                    if summary:
+                        progress_text += f": {summary[:100]}"
+                elif status == "error":
+                    progress_text = f"\u26a0\ufe0f {_friendly_tool_name(tool_name)} failed"
+                else:
+                    return
+                self._emit_event("being_progress", {
+                    "being_id": being_id,
+                    "being_name": being.get("name", being_id),
+                    "session_id": chat_session_id,
+                    "text": progress_text,
+                    "iteration": data.get("iteration", 0),
+                }, tenant_id=tenant_id)
 
         error_occurred = False
+        result = None
         try:
             from bomba_sr.runtime.bridge import TurnRequest
             from bomba_sr.context.policy import TurnProfile
             effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
             _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
             # Use deep context (TASK_EXECUTION) only for actual tasks;
             # casual chat stays lean with just SOUL + IDENTITY.
-            _profile = TurnProfile.TASK_EXECUTION if classification in ("light_task", "full_task") else TurnProfile.CHAT
+            _profile = TurnProfile.TASK_EXECUTION if classification == "light_task" else TurnProfile.CHAT
             req = TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -1322,7 +1428,7 @@ class DashboardService:
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
                 profile=_profile,
-                on_iteration=_on_loop_iteration if all_steps else None,
+                on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
             result = self.bridge.handle_turn(req)
@@ -1383,16 +1489,166 @@ class DashboardService:
             if error_occurred:
                 self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
             else:
-                # For full_task, complete all remaining steps
-                if classification == "full_task":
-                    for step in self.get_task_steps(task_id):
-                        if step["status"] != "done":
-                            self.update_task_step(step["id"], "done")
                 self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
 
         self.create_message(
             sender=being_id,
             content=reply or f"[{being_id} returned empty response]",
+            targets=[sender],
+            msg_type="direct",
+            task_ref=task_id,
+            session_id=chat_session_id,
+            metadata=msg_metadata,
+        )
+
+    def _execute_full_task_background(
+        self,
+        being_id: str,
+        being: dict,
+        content: str,
+        sender: str,
+        tenant_id: str,
+        sender_tenant_id: str,
+        session_id: str,
+        workspace: str,
+        chat_session_id: str,
+        task_id: str,
+    ) -> None:
+        """Execute a full_task with progress updates. Called from the already-background route thread."""
+        cancel_event = threading.Event()
+        self._cancel_events[task_id] = cancel_event
+
+        self.update_being(being_id, {"status": "busy"})
+        self._emit_event("being_typing", {
+            "being_id": being_id,
+            "being_name": being.get("name", being_id),
+            "active": True,
+        })
+        self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
+
+        all_steps = self.get_task_steps(task_id)
+        if all_steps:
+            self.update_task_step(all_steps[0]["id"], "in_progress")
+        step_cursor = [0]
+        num_steps = len(all_steps)
+
+        def _on_loop_iteration(iteration, loop_state):
+            if cancel_event.is_set():
+                loop_state.stopped_reason = "cancelled"
+                raise InterruptedError("Task cancelled by user")
+            if num_steps == 0 or step_cursor[0] >= num_steps - 1:
+                return
+            self.advance_task_step(task_id)
+            step_cursor[0] += 1
+
+        def _on_progress(event_type, data):
+            if event_type == "tool_result":
+                tool_name = data.get("tool_name", "")
+                status = data.get("status", "")
+                summary = data.get("summary", "")[:150]
+                if tool_name in _PROGRESS_SKIP_TOOLS:
+                    return
+                if status == "success":
+                    progress_text = f"\u26a1 {_friendly_tool_name(tool_name)}"
+                    if summary:
+                        progress_text += f": {summary[:100]}"
+                elif status == "error":
+                    progress_text = f"\u26a0\ufe0f {_friendly_tool_name(tool_name)} failed"
+                else:
+                    return
+                self._emit_event("being_progress", {
+                    "being_id": being_id,
+                    "being_name": being.get("name", being_id),
+                    "session_id": chat_session_id,
+                    "text": progress_text,
+                    "iteration": data.get("iteration", 0),
+                }, tenant_id=tenant_id)
+
+        error_occurred = False
+        cancelled = False
+        result = None
+        reply = ""
+        msg_metadata: dict | None = None
+        try:
+            # Check if already cancelled before starting
+            if cancel_event.is_set():
+                raise InterruptedError("Task cancelled by user")
+
+            from bomba_sr.runtime.bridge import TurnRequest
+            from bomba_sr.context.policy import TurnProfile
+
+            effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
+            _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
+            req = TurnRequest(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                user_id=sender,
+                user_message=effective_content,
+                workspace_root=workspace,
+                task_id=task_id,
+                project_id=MC_PROJECT_ID,
+                profile=TurnProfile.TASK_EXECUTION,
+                max_loop_iterations=50,
+                on_iteration=_on_loop_iteration if all_steps else None,
+                on_progress=_on_progress,
+                include_representation=_inc_rep,
+            )
+            result = self.bridge.handle_turn(req)
+            if isinstance(result, dict):
+                assistant = result.get("assistant")
+                if isinstance(assistant, dict):
+                    reply = assistant.get("text", "")
+                if not reply:
+                    reply = result.get("reply", result.get("response", ""))
+                msg_metadata = self._extract_message_metadata(result, tenant_id, session_id)
+
+                # Register artifacts as deliverables
+                for art in result.get("artifacts", []):
+                    try:
+                        aid = art.get("artifact_id")
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=art.get("title") or art.get("filename") or "output",
+                            file_type=art.get("type") or "file",
+                            file_path=art.get("path") or "",
+                            url=f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            line_count=0,
+                            byte_size=art.get("byte_size") or 0,
+                        )
+                    except Exception as exc:
+                        log.debug("Failed to register artifact as deliverable: %s", exc)
+        except InterruptedError:
+            reply = "[Task cancelled]"
+            cancelled = True
+        except Exception as exc:
+            reply = f"[Error: {exc}]"
+            error_occurred = True
+        finally:
+            self._cancel_events.pop(task_id, None)
+            self.update_being(being_id, {"status": "online"})
+            self._emit_event("being_typing", {
+                "being_id": being_id,
+                "being_name": being.get("name", being_id),
+                "active": False,
+            })
+
+        # Complete task
+        if cancelled:
+            self._auto_update_task_status(task_id, "cancelled", tenant_id=sender_tenant_id)
+        elif error_occurred:
+            self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+        else:
+            for step in self.get_task_steps(task_id):
+                if step["status"] != "done":
+                    self.update_task_step(step["id"], "done")
+            self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
+
+        # Send final result as chat message
+        self.create_message(
+            sender=being_id,
+            content=reply or f"[{being_id} completed the task]",
             targets=[sender],
             msg_type="direct",
             task_ref=task_id,
@@ -1546,6 +1802,14 @@ class DashboardService:
             )
         except Exception:
             pass
+
+    def cancel_task(self, task_id: str, tenant_id: str = MC_TENANT) -> bool:
+        """Cancel a running task. Signals the background thread and updates status."""
+        evt = self._cancel_events.get(task_id)
+        if evt:
+            evt.set()
+        self._auto_update_task_status(task_id, "cancelled", tenant_id=tenant_id)
+        return True
 
     # ------------------------------------------------------------------
     # Task classification

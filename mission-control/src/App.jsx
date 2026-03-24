@@ -12,6 +12,7 @@ import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { ProjectsHub } from './components/ProjectsHub'
+import { SkillsPage } from './components/SkillsPage'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
   { id: 'teams', label: 'Agent Teams' },
+  { id: 'skills', label: 'Skills' },
 ]
 
 function Dashboard() {
@@ -65,6 +67,9 @@ function Dashboard() {
           </div>
           <div style={show('teams')}>
             <AgentTeams />
+          </div>
+          <div style={show('skills')}>
+            <SkillsPage />
           </div>
         </main>
 
