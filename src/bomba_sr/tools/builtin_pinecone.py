@@ -311,10 +311,13 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         effective_ns = tenant_cfg.get("namespace", default_namespace)
         index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
+        # Only apply tenant namespace when querying the tenant's own index
+        # (querying a different index like ublib2 should use that index's default ns)
+        tenant_ns = effective_ns if index_name == effective_index else default_namespace
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (effective_ns or None)
+            else (tenant_ns or None)
         )
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
         score_threshold = float(arguments.get("score_threshold") or 0.4)
@@ -438,10 +441,11 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
         effective_ns = tenant_cfg.get("namespace", default_namespace)
         index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
+        tenant_ns = effective_ns if index_name == effective_index else default_namespace
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (effective_ns or None)
+            else (tenant_ns or None)
         )
         extra_metadata = arguments.get("metadata") or {}
         if not isinstance(extra_metadata, dict):
@@ -498,7 +502,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
         # Tenant-specific default namespace
         tenant_cfg = _load_tenant_pinecone_map().get(context.tenant_id, {})
-        effective_ns = tenant_cfg.get("namespace", default_namespace)
+        tenant_index = tenant_cfg.get("index", default_index)
+        tenant_ns = tenant_cfg.get("namespace", default_namespace)
         score_threshold = float(arguments.get("score_threshold") or 0.4)
 
         vector = _embed_query(query)
@@ -508,6 +513,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         def _query_one(spec: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
             idx_name = _require_safe_index_name(str(spec.get("index_name") or ""))
             ns = spec.get("namespace")
+            # Only apply tenant namespace for the tenant's own index
+            effective_ns = tenant_ns if idx_name == tenant_index else default_namespace
             ns_value = (
                 str(ns).strip()
                 if ns is not None and str(ns).strip()

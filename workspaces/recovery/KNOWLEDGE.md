@@ -18,7 +18,10 @@ You have these tools available — USE THEM proactively:
 ### Memory and knowledge
 - **memory_search**: Search your semantic memory for past conversations, documents, and learned information
 - **memory_store**: Save important information for future reference
-- **pinecone_query**: Search the vector knowledge base (ublib2, saimemory)
+- **pinecone_query**: Search vector knowledge bases. You have access to TWO indexes:
+  - `saimemory` (default) — your recovery namespace with case data, contracts, and work history. Use: `pinecone_query(query="...", index_name="saimemory", namespace="recovery")`
+  - `ublib2` — Sean's master knowledge library (82K+ vectors). Use for coaching frameworks, business strategy, methodology. Use: `pinecone_query(query="...", index_name="ublib2")`
+- **pinecone_multi_query**: Query BOTH indexes at once for comprehensive results
 - **update_knowledge**: Update your KNOWLEDGE.md file
 
 ### When someone asks you to process a document or file:
