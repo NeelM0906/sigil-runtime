@@ -220,7 +220,7 @@ class TestMultiQueryTenantScoping:
     """pinecone_multi_query must add tenant_id filter to each sub-query."""
 
     def _run_multi_query(self, context, indexes=None, match_response=None):
-        run = _pinecone_multi_query_factory(default_namespace="ns1")
+        run = _pinecone_multi_query_factory(default_index="test-index", default_namespace="ns1")
         captured_payloads: list[dict] = []
         default_resp = match_response or {"matches": [{"id": "v1", "score": 0.9, "metadata": {"text": "hit"}}]}
 
