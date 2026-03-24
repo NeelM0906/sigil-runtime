@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from './context/AuthContext'
 import { BeingsProvider } from './context/BeingsContext'
 import { LoginPage } from './components/LoginPage'
@@ -12,6 +12,7 @@ import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { ProjectsHub } from './components/ProjectsHub'
 import { CodeWorkspace } from './components/CodeWorkspace'
+import { CodeStatusCard } from './components/CodeStatusCard'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -26,6 +27,12 @@ function Dashboard() {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [crossLinkTask, setCrossLinkTask] = useState(null)
+  const [codeInitialPrompt, setCodeInitialPrompt] = useState(null)
+
+  const openInCode = useCallback((prompt) => {
+    setCodeInitialPrompt(prompt)
+    setActiveTab('code')
+  }, [])
 
   return (
     <BeingsProvider>
@@ -37,14 +44,15 @@ function Dashboard() {
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
                 <SubAgentTracker />
+                <CodeStatusCard onOpenCode={() => setActiveTab('code')} />
               </div>
               <div className="lg:col-span-8">
-                <TaskBoard />
+                <TaskBoard onOpenInCode={openInCode} />
               </div>
             </div>
           )}
           {activeTab === 'tasks' && (
-            <TaskBoard fullWidth />
+            <TaskBoard fullWidth onOpenInCode={openInCode} />
           )}
           {activeTab === 'projects' && (
             <ProjectsHub />
@@ -52,7 +60,7 @@ function Dashboard() {
           {activeTab === 'chat' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
-                <ChatWindow userId={user?.id} />
+                <ChatWindow userId={user?.id} onOpenInCode={openInCode} />
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <OrchestrationTracker />
@@ -63,7 +71,10 @@ function Dashboard() {
             <AgentTeams />
           )}
           {activeTab === 'code' && (
-            <CodeWorkspace />
+            <CodeWorkspace
+              initialPrompt={codeInitialPrompt}
+              onConsumePrompt={() => setCodeInitialPrompt(null)}
+            />
           )}
         </main>
 

@@ -507,7 +507,7 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 // ── Main Chat Window ─────────────────────────────────────────
 
-export function ChatWindow({ userId }) {
+export function ChatWindow({ userId, onOpenInCode = null }) {
   const { beings, getBeingById, openBeingDetail } = useBeings()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -896,6 +896,15 @@ export function ChatWindow({ userId }) {
             placeholder="Message... (@ to mention a being)"
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
           />
+          {onOpenInCode && input.trim() && (
+            <button
+              onClick={() => { onOpenInCode(input.trim()); setInput('') }}
+              className="px-3 py-2 bg-accent-purple/20 text-accent-purple text-xs font-medium rounded-lg hover:bg-accent-purple/30 transition-colors"
+              title="Send to Code agent instead"
+            >
+              Code
+            </button>
+          )}
           <button
             onClick={handleSend}
             disabled={!input.trim()}

@@ -671,7 +671,7 @@ function ApprovalDialog({ request, onRespond }) {
 
 // ── Main CodeWorkspace ──────────────────────────────────────
 
-export function CodeWorkspace() {
+export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) {
   const [sessions, setSessions] = useState([])
   const [activeSessionId, setActiveSessionId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -687,6 +687,26 @@ export function CodeWorkspace() {
   const [fileTreeLoading, setFileTreeLoading] = useState(false)
   const [touchedFiles, setTouchedFiles] = useState(new Set())
   const [viewingFile, setViewingFile] = useState(null) // {path, content, size, truncated}
+
+  // Handle cross-tab initial prompt
+  useEffect(() => {
+    if (!initialPrompt) return
+    const run = async () => {
+      try {
+        const { session } = await codeApi.createSession('Code session')
+        setSessions(prev => [session, ...prev])
+        setActiveSessionId(session.id)
+        setMessages([{ role: 'user', content: initialPrompt }])
+        setAllTools([])
+        setUsage(null)
+        await codeApi.prompt(session.id, initialPrompt)
+      } catch (err) {
+        console.error('Failed to run initial prompt:', err)
+      }
+      onConsumePrompt?.()
+    }
+    run()
+  }, [initialPrompt, onConsumePrompt])
 
   // Load file tree on mount
   useEffect(() => {
