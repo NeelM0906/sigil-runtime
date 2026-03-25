@@ -812,37 +812,29 @@ export function ChatWindow() {
 
   const fileInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState(null) // staged upload result
+  const [uploadedFiles, setUploadedFiles] = useState([])
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = '' // reset for re-upload of same file
+    const selectedFiles = Array.from(e.target.files || [])
+    if (!selectedFiles.length) return
+    e.target.value = ''
     setUploading(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      for (const f of selectedFiles) formData.append('files', f)
       formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
       const stored = localStorage.getItem('mc_auth')
       const token = stored ? JSON.parse(stored).token : ''
-      const res = await fetch('/api/mc/upload', {
+      const res = await fetch('/api/mc/upload/batch', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       })
-      if (res.status === 401) {
-        // Don't trigger reload loop — just show error
-        setUploadedFile(null)
-        return
-      }
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        console.error('Upload failed:', err)
-        return
-      }
-      const result = await res.json()
-      // Stage the upload — show as chip, don't inject into input text
-      setUploadedFile(result)
+      if (res.status === 401) { setUploadedFiles([]); return }
+      if (!res.ok) { console.error('Upload failed:', await res.json().catch(() => ({}))); return }
+      const data = await res.json()
+      if (data.results?.length > 0) setUploadedFiles(prev => [...prev, ...data.results])
+      if (data.errors?.length > 0) console.warn('Some files failed:', data.errors)
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {
@@ -851,13 +843,15 @@ export function ChatWindow() {
   }
 
   const handleSend = async () => {
-    if (!input.trim() && !uploadedFile) return
+    if (!input.trim() && uploadedFiles.length === 0) return
 
-    // Prepend file context tag if a file is attached
+    // Prepend file context tags if files are attached
     let content = input.trim()
-    if (uploadedFile) {
-      const tag = `[${uploadedFile.filename}: ${uploadedFile.chunks} chunks indexed${uploadedFile.tables ? `, ${uploadedFile.tables} tables` : ''}]`
-      content = content ? `${tag} ${content}` : tag
+    if (uploadedFiles.length > 0) {
+      const tags = uploadedFiles.map(f =>
+        `[${f.filename}: ${f.chunks} chunks indexed${f.tables ? `, ${f.tables} tables` : ''}]`
+      ).join(' ')
+      content = content ? `${tags} ${content}` : tags
     }
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
@@ -875,7 +869,7 @@ export function ChatWindow() {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
-    setUploadedFile(null)
+    setUploadedFiles([])
     setTargets(defaultTarget)
 
     try {
@@ -1061,25 +1055,20 @@ export function ChatWindow() {
           </div>
         )}
 
-        {/* Attached file chip */}
-        {uploadedFile && (
-          <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-accent-purple/10 border border-accent-purple/30 rounded-lg w-fit">
-            <svg className="w-4 h-4 text-accent-purple flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-accent-purple">{uploadedFile.filename}</span>
-              <span className="text-[10px] text-text-muted">{uploadedFile.chunks} chunks indexed{uploadedFile.tables ? ` · ${uploadedFile.tables} tables` : ''}</span>
-            </div>
-            <button
-              onClick={() => setUploadedFile(null)}
-              className="ml-1 text-text-muted hover:text-accent-red transition-colors"
-              title="Remove attachment"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        {/* Attached file chips */}
+        {uploadedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {uploadedFiles.map((f, i) => (
+              <div key={i} className="inline-flex items-center gap-1.5 px-2 py-1 bg-accent-purple/10 border border-accent-purple/30 rounded-lg">
+                <span className="text-[10px]">📎</span>
+                <span className="text-[11px] font-medium text-accent-purple">{f.filename}</span>
+                <span className="text-[9px] text-text-muted">{f.chunks}ch</span>
+                <button
+                  onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
+                  className="text-text-muted hover:text-accent-red transition-colors text-[10px]"
+                >×</button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -1104,6 +1093,7 @@ export function ChatWindow() {
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
             onChange={handleFileUpload}
             className="hidden"
@@ -1122,7 +1112,7 @@ export function ChatWindow() {
           </button>
           <button
             onClick={handleSend}
-            disabled={!input.trim() && !uploadedFile}
+            disabled={!input.trim() && uploadedFiles.length === 0}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Send
