@@ -137,6 +137,27 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
         {/* Task reference */}
         {msg.taskRef && <InlineTaskCard taskId={msg.taskRef} />}
 
+        {/* Knowledge sources indicator */}
+        {!isUser && msg.metadata?.retrieval_sources?.length > 0 && (
+          <details className="mt-1">
+            <summary className="text-[10px] text-text-muted cursor-pointer hover:text-text-secondary inline-flex items-center gap-1">
+              <span>📚</span>
+              <span>{msg.metadata.retrieval_sources.length} knowledge sources</span>
+              <span className="text-text-muted/50">({msg.metadata.retrieval_latency_ms}ms)</span>
+            </summary>
+            <div className="mt-1 space-y-0.5">
+              {msg.metadata.retrieval_sources.map((s, i) => (
+                <div key={i} className="text-[9px] text-text-muted pl-2 border-l border-border/50">
+                  <span className="font-mono text-accent-purple">{s.index}</span>
+                  {s.namespace && <span className="text-text-muted">/{s.namespace}</span>}
+                  <span className="ml-1 text-text-muted">({s.score})</span>
+                  <span className="ml-1 block text-text-muted/70 truncate">{s.preview}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         <div className="text-[10px] text-text-muted mt-0.5 font-mono">
           {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
         </div>
@@ -535,19 +556,41 @@ export function ChatWindow() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Session state
+  // Session state — persist active session across reloads
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState(null)
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try { return localStorage.getItem('mc_active_session') } catch { return null }
+  })
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Load sessions on mount (scoped to user)
+  // Persist activeSessionId to localStorage
   useEffect(() => {
-    chatApi.sessions().then(({ sessions: s }) => {
+    try {
+      if (activeSessionId) localStorage.setItem('mc_active_session', activeSessionId)
+      else localStorage.removeItem('mc_active_session')
+    } catch { /* ignore */ }
+  }, [activeSessionId])
+
+  // Load sessions on mount — auto-create if none exist
+  useEffect(() => {
+    chatApi.sessions().then(async ({ sessions: s }) => {
+      if (s.length === 0) {
+        // No sessions — auto-create one
+        try {
+          const { session } = await chatApi.createSession('General')
+          s = [session]
+        } catch { /* ignore */ }
+      }
       setSessions(s)
-      if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
+      // Restore persisted session or pick the first one
+      if (s.length > 0) {
+        const persisted = activeSessionId
+        const valid = s.some(x => x.id === persisted)
+        if (!valid) setActiveSessionId(s[0].id)
+      }
     }).catch(() => {})
   }, [])
 
@@ -751,10 +794,8 @@ export function ChatWindow() {
         return
       }
       const result = await res.json()
-      // Stage the upload — don't send yet. User hits Enter to send with context.
+      // Stage the upload — show as chip, don't inject into input text
       setUploadedFile(result)
-      const hint = `[${result.filename}: ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables` : ''}] `
-      setInput(prev => hint + prev)
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {
@@ -763,9 +804,14 @@ export function ChatWindow() {
   }
 
   const handleSend = async () => {
-    if (!input.trim()) return
+    if (!input.trim() && !uploadedFile) return
 
-    const content = input.trim()
+    // Prepend file context tag if a file is attached
+    let content = input.trim()
+    if (uploadedFile) {
+      const tag = `[${uploadedFile.filename}: ${uploadedFile.chunks} chunks indexed${uploadedFile.tables ? `, ${uploadedFile.tables} tables` : ''}]`
+      content = content ? `${tag} ${content}` : tag
+    }
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
     // Optimistic: add user message immediately
@@ -782,15 +828,27 @@ export function ChatWindow() {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
+    setUploadedFile(null)
     setTargets(defaultTarget)
 
     try {
+      // Ensure we have a session — auto-create if needed
+      let sendSessionId = activeSessionId
+      if (!sendSessionId) {
+        try {
+          const { session } = await chatApi.createSession('General')
+          setSessions(prev => [session, ...prev])
+          setActiveSessionId(session.id)
+          sendSessionId = session.id
+        } catch { /* fall through with null — server will handle */ }
+      }
+
       // POST returns the saved user message; LLM responses arrive via SSE
       const { message: saved } = await chatApi.send({
         targets: tempMsg.targets,
         content,
         mode,
-        session_id: activeSessionId,
+        session_id: sendSessionId,
       })
 
       // Replace temp message with the persisted one
@@ -956,6 +1014,28 @@ export function ChatWindow() {
           </div>
         )}
 
+        {/* Attached file chip */}
+        {uploadedFile && (
+          <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-accent-purple/10 border border-accent-purple/30 rounded-lg w-fit">
+            <svg className="w-4 h-4 text-accent-purple flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-accent-purple">{uploadedFile.filename}</span>
+              <span className="text-[10px] text-text-muted">{uploadedFile.chunks} chunks indexed{uploadedFile.tables ? ` · ${uploadedFile.tables} tables` : ''}</span>
+            </div>
+            <button
+              onClick={() => setUploadedFile(null)}
+              className="ml-1 text-text-muted hover:text-accent-red transition-colors"
+              title="Remove attachment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div className="relative flex gap-2">
           {mentionFilter !== null && (
             <MentionDropdown
@@ -995,7 +1075,7 @@ export function ChatWindow() {
           </button>
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !uploadedFile}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Send

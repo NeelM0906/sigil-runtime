@@ -8,6 +8,8 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "compact_context",
         "switch_model",
         "enable_tools",
+    },
+    "group:cron": {
         "schedule_task",
         "list_schedules",
         "remove_schedule",

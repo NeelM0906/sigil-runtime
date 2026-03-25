@@ -1,0 +1,271 @@
+{
+  "_description": "Automation rules for Recovery's task system. Defines escalation policies, auto-routing, scheduled actions, and event-driven triggers. These rules are designed to be executed by the Bomba SR runtime scheduler or as event hooks on task_update.",
+  "_version": "1.0",
+
+  "escalation_rules": {
+    "_description": "Automatic escalation when tasks stall or breach SLA thresholds.",
+    "rules": [
+      {
+        "id": "stage_sla_breach",
+        "description": "Escalate when a task exceeds the max_days defined for its current stage in workflow_stages.json.",
+        "trigger": "daily_check",
+        "condition": "days_in_current_stage > stage.max_days",
+        "actions": [
+          {
+            "action": "boost_priority",
+            "params": { "add_points": 15 },
+            "reason": "SLA breach automatically increases urgency"
+          },
+          {
+            "action": "notify",
+            "params": {
+              "target": "recovery",
+              "message_template": "⚠️ SLA BREACH: Task '{task.title}' has been in '{task.stage}' for {days_in_stage} days (max: {stage.max_days}). Priority boosted to {new_priority}."
+            }
+          },
+          {
+            "action": "tag_add",
+            "params": { "tag": "sla_breach" }
+          }
+        ]
+      },
+      {
+        "id": "critical_retention_fast_escalate",
+        "description": "Retention tasks with critical churn risk that aren't in 'intervention' within 24 hours get escalated to Recovery directly.",
+        "trigger": "hourly_check",
+        "condition": "task_type == 'retention' AND metadata.churn_risk == 'critical' AND stage IN ['alert', 'diagnosis'] AND hours_in_current_stage > 24",
+        "actions": [
+          {
+            "action": "set_priority",
+            "params": { "score": 95 }
+          },
+          {
+            "action": "notify",
+            "params": {
+              "target": "recovery",
+              "message_template": "🚨 CRITICAL: Account '{metadata.account_name}' at critical churn risk — stalled at '{task.stage}' for {hours_in_stage}h. Needs immediate intervention."
+            }
+          }
+        ]
+      },
+      {
+        "id": "high_value_agreement_stall",
+        "description": "Agreements worth $100K+ that stall for more than 7 days in any active stage.",
+        "trigger": "daily_check",
+        "condition": "task_type == 'agreement' AND metadata.estimated_value >= 100000 AND days_in_current_stage > 7 AND stage NOT IN ['won', 'lost']",
+        "actions": [
+          {
+            "action": "boost_priority",
+            "params": { "add_points": 10 }
+          },
+          {
+            "action": "notify",
+            "params": {
+              "target": "recovery",
+              "message_template": "💰 High-value deal '{task.title}' (${metadata.estimated_value}) stalled at '{task.stage}' for {days_in_stage} days. Review needed."
+            }
+          }
+        ]
+      },
+      {
+        "id": "double_sla_breach_escalate_to_prime",
+        "description": "If a task exceeds 2x its stage SLA, escalate beyond Recovery to SAI Prime for cross-sister attention.",
+        "trigger": "daily_check",
+        "condition": "days_in_current_stage > (stage.max_days * 2)",
+        "actions": [
+          {
+            "action": "set_priority",
+            "params": { "score": 90 }
+          },
+          {
+            "action": "notify",
+            "params": {
+              "target": "prime",
+              "message_template": "🔴 DOUBLE SLA BREACH: Recovery task '{task.title}' has been in '{task.stage}' for {days_in_stage} days (max: {stage.max_days}). Escalating to Prime for intervention."
+            }
+          },
+          {
+            "action": "tag_add",
+            "params": { "tag": "prime_escalated" }
+          }
+        ]
+      }
+    ]
+  },
+
+  "auto_routing_rules": {
+    "_description": "Automatically assign or reassign owner_agent_id based on task events.",
+    "rules": [
+      {
+        "id": "route_on_creation",
+        "description": "When a new task is created, assign to the being specified by being_routing.json for the task's initial stage.",
+        "trigger": "task_created",
+        "condition": "always",
+        "action": "assign_being_from_routing_config",
+        "params": {
+          "lookup": "being_routing.json → task_type → initial_stage → assigned_role"
+        }
+      },
+      {
+        "id": "route_on_stage_change",
+        "description": "When a task changes stage, check being_routing.json for the new stage's assigned_role and reassign if different.",
+        "trigger": "stage_changed",
+        "condition": "new_stage.assigned_role != current_owner",
+        "action": "reassign_being",
+        "params": {
+          "lookup": "being_routing.json → task_type → new_stage → assigned_role",
+          "notify_previous_owner": true,
+          "notify_new_owner": true
+        }
+      },
+      {
+        "id": "route_crisis_pr_to_recovery",
+        "description": "Crisis PR tasks bypass normal routing and go directly to Recovery (the sister) for coordination.",
+        "trigger": "task_created",
+        "condition": "task_type == 'pr' AND metadata.urgency == 'crisis'",
+        "action": "assign_being",
+        "params": {
+          "being": "recovery",
+          "override_routing": true
+        }
+      }
+    ]
+  },
+
+  "scheduled_actions": {
+    "_description": "Time-based automation that creates tasks, sends reminders, or triggers reviews.",
+    "rules": [
+      {
+        "id": "renewal_reminder_90",
+        "description": "Auto-create retention task 90 days before any account/partnership renewal date.",
+        "trigger": "daily_check",
+        "condition": "any_task.metadata.renewal_date - today == 90 days",
+        "action": "create_task",
+        "params": {
+          "task_type": "retention",
+          "title_template": "90-day renewal check: {source_task.metadata.account_name || source_task.metadata.partner_name}",
+          "metadata": {
+            "retention_trigger": "contract_expiring",
+            "churn_risk": "low"
+          },
+          "auto_link": "source_task.task_id"
+        }
+      },
+      {
+        "id": "renewal_reminder_30",
+        "description": "Auto-create urgent retention task 30 days before renewal if no active retention task exists.",
+        "trigger": "daily_check",
+        "condition": "any_task.metadata.renewal_date - today == 30 days AND no_active_retention_task_for_account",
+        "action": "create_task",
+        "params": {
+          "task_type": "retention",
+          "title_template": "⚠️ 30-day renewal alert: {account_name}",
+          "priority": "high",
+          "metadata": {
+            "retention_trigger": "contract_expiring",
+            "churn_risk": "medium"
+          }
+        }
+      },
+      {
+        "id": "weekly_pipeline_digest",
+        "description": "Every Monday at 8am, compile and post a pipeline summary to Recovery's dashboard.",
+        "trigger": "cron",
+        "cron_expression": "0 8 * * 1",
+        "action": "generate_dashboard_digest",
+        "params": {
+          "template": "templates/dashboard_metrics.md",
+          "targets": ["recovery", "prime"]
+        }
+      },
+      {
+        "id": "daily_priority_rescore",
+        "description": "Recalculate priority scores for all active tasks daily. Deadline proximity changes scores.",
+        "trigger": "cron",
+        "cron_expression": "0 6 * * *",
+        "action": "rescore_all_active_tasks",
+        "params": {
+          "scoring_config": "config/priority_scoring.json"
+        }
+      },
+      {
+        "id": "stale_contact_outreach",
+        "description": "If an active account hasn't been contacted in 30+ days, create a retention check-in task.",
+        "trigger": "daily_check",
+        "condition": "retention_task.stage == 'retained' AND (today - metadata.last_interaction_date) > 30 days",
+        "action": "create_task",
+        "params": {
+          "task_type": "retention",
+          "title_template": "Scheduled check-in: {account_name} (30+ days since last contact)",
+          "metadata": {
+            "retention_trigger": "scheduled_review",
+            "churn_risk": "low"
+          }
+        }
+      },
+      {
+        "id": "lost_deal_reengagement",
+        "description": "90 days after an agreement is marked 'lost', create a new identification task to re-engage.",
+        "trigger": "daily_check",
+        "condition": "agreement_task.stage == 'lost' AND (today - stage_changed_date) == 90 days",
+        "action": "create_task",
+        "params": {
+          "task_type": "agreement",
+          "title_template": "Re-engagement: {original_task.metadata.contact_name} (lost 90 days ago)",
+          "stage": "identification",
+          "metadata": {
+            "source_channel": "outbound_email"
+          },
+          "auto_link": "original_task.task_id"
+        }
+      }
+    ]
+  },
+
+  "event_hooks": {
+    "_description": "Actions triggered by specific task field changes, not time-based.",
+    "hooks": [
+      {
+        "id": "on_agreement_won",
+        "trigger_event": "stage_changed_to_won",
+        "task_type": "agreement",
+        "actions": [
+          "create_retention_task_for_account",
+          "update_revenue_dashboard",
+          "notify_prime_of_closed_deal"
+        ]
+      },
+      {
+        "id": "on_health_score_critical",
+        "trigger_event": "metadata.health_score_updated",
+        "condition": "new_value < 40",
+        "task_type": "retention",
+        "actions": [
+          "set_churn_risk_to_high",
+          "boost_priority_by_20",
+          "notify_keeper_immediate"
+        ]
+      },
+      {
+        "id": "on_partnership_activated",
+        "trigger_event": "stage_changed_to_active",
+        "task_type": "partnership",
+        "actions": [
+          "create_retention_task_for_partner",
+          "schedule_quarterly_review",
+          "notify_multiplier_for_amplification"
+        ]
+      },
+      {
+        "id": "on_pr_coverage_received",
+        "trigger_event": "metadata.coverage_results_updated",
+        "task_type": "pr",
+        "actions": [
+          "update_pr_effectiveness_metrics",
+          "notify_multiplier_to_amplify",
+          "log_media_contact_outcome"
+        ]
+      }
+    ]
+  }
+}

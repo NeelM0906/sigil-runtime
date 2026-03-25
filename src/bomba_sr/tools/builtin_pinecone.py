@@ -28,7 +28,7 @@ STRATA_INDEXES = {
     "oracleinfluencemastery",
     "ultimatestratabrain",
 }
-MAX_DESCRIBE_INDEXES = 5
+MAX_DESCRIBE_INDEXES = 20
 
 _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INDEX_CACHE_LOCK = threading.Lock()
@@ -244,26 +244,27 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
 
 
 def _embedding_settings() -> tuple[str, str, str]:
-    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     embed_model = (
         os.getenv("BOMBA_PINECONE_EMBED_MODEL")
         or os.getenv("OPENAI_EMBEDDING_MODEL")
-        or ("openai/text-embedding-3-small" if openrouter_key else DEFAULT_EMBED_MODEL)
+        or DEFAULT_EMBED_MODEL
     ).strip()
-    if openrouter_key:
-        return (
-            openrouter_key,
-            os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-            embed_model,
-        )
+    # Prefer OpenAI directly for embeddings (more reliable than proxying through OpenRouter)
     if openai_key:
         return (
             openai_key,
             os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
             embed_model,
         )
-    raise ValueError("OPENROUTER_API_KEY or OPENAI_API_KEY is required for Pinecone embeddings")
+    if openrouter_key:
+        return (
+            openrouter_key,
+            os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+            "openai/text-embedding-3-small",
+        )
+    raise ValueError("OPENAI_API_KEY or OPENROUTER_API_KEY is required for Pinecone embeddings")
 
 
 def _parse_matches(
@@ -311,10 +312,13 @@ def _pinecone_query_factory(default_index: str, default_namespace: str | None):
         effective_ns = tenant_cfg.get("namespace", default_namespace)
         index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
+        # Only apply tenant namespace when querying the tenant's own index
+        # (querying a different index like ublib2 should use that index's default ns)
+        tenant_ns = effective_ns if index_name == effective_index else default_namespace
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (effective_ns or None)
+            else (tenant_ns or None)
         )
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
         score_threshold = float(arguments.get("score_threshold") or 0.4)
@@ -393,12 +397,15 @@ def _pinecone_list_indexes_factory(default_index: str, default_namespace: str | 
             if host and idx < MAX_DESCRIBE_INDEXES:
                 try:
                     query: dict[str, Any] = {}
-                    if default_namespace:
+                    # Only pass namespace for the tenant's own default index
+                    if default_namespace and name == default_index:
                         query["namespace"] = default_namespace
+                    # Use the correct API key per index (may differ for STRATA)
+                    idx_key = _choose_pinecone_api_key(name) if name else api_key
                     stats = _http_json(
                         "POST",
                         f"https://{host}/describe_index_stats",
-                        headers={"Api-Key": api_key},
+                        headers={"Api-Key": idx_key},
                         payload=query,
                     )
                     if isinstance(stats.get("totalVectorCount"), int):
@@ -438,10 +445,11 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
         effective_ns = tenant_cfg.get("namespace", default_namespace)
         index_name = _require_safe_index_name(str(arguments.get("index_name") or effective_index))
         namespace = arguments.get("namespace")
+        tenant_ns = effective_ns if index_name == effective_index else default_namespace
         namespace_value = (
             str(namespace).strip()
             if namespace is not None and str(namespace).strip()
-            else (effective_ns or None)
+            else (tenant_ns or None)
         )
         extra_metadata = arguments.get("metadata") or {}
         if not isinstance(extra_metadata, dict):
@@ -463,7 +471,9 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
                 "text": text,
                 "tenant_id": tenant_id or None,
                 "being_id": being_id,  # may be None
-                **extra_metadata,  # caller-supplied metadata can override if intentional
+                "user_id": context.user_id,
+                "session_id": context.session_id,
+                **extra_metadata,
             }
             pinecone_vectors.append({
                 "id": vec_id,
@@ -487,7 +497,7 @@ def _pinecone_upsert_factory(default_index: str, default_namespace: str | None):
     return run
 
 
-def _pinecone_multi_query_factory(default_namespace: str | None):
+def _pinecone_multi_query_factory(default_index: str, default_namespace: str | None):
     def run(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
         query = str(arguments.get("query") or "").strip()
         if not query:
@@ -498,7 +508,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         top_k = max(1, min(20, int(arguments.get("top_k") or 5)))
         # Tenant-specific default namespace
         tenant_cfg = _load_tenant_pinecone_map().get(context.tenant_id, {})
-        effective_ns = tenant_cfg.get("namespace", default_namespace)
+        tenant_index = tenant_cfg.get("index", default_index)
+        tenant_ns = tenant_cfg.get("namespace", default_namespace)
         score_threshold = float(arguments.get("score_threshold") or 0.4)
 
         vector = _embed_query(query)
@@ -508,6 +519,8 @@ def _pinecone_multi_query_factory(default_namespace: str | None):
         def _query_one(spec: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
             idx_name = _require_safe_index_name(str(spec.get("index_name") or ""))
             ns = spec.get("namespace")
+            # Only apply tenant namespace for the tenant's own index
+            effective_ns = tenant_ns if idx_name == tenant_index else default_namespace
             ns_value = (
                 str(ns).strip()
                 if ns is not None and str(ns).strip()
@@ -596,16 +609,31 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
     return [
         ToolDefinition(
             name="pinecone_query",
-            description="Query a Pinecone vector index using an embedded search query.",
+            description=(
+                "Search your knowledge bases for information from past conversations, "
+                "uploaded documents, case data, contracts, and institutional knowledge. "
+                "USE THIS when you need to recall specific facts, case details, contract "
+                "terms, fee schedules, carrier information, or methodology that isn't in "
+                "your immediate conversation history. "
+                "Default searches your operational memory (saimemory). "
+                "Pass index_name='ublib2' to search the master knowledge library for "
+                "coaching frameworks, business methodology, and the Formula."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Natural-language search query."},
-                    "index_name": {"type": "string", "description": "Pinecone index name (defaults to configured default)."},
-                    "namespace": {"type": ["string", "null"], "description": "Optional namespace filter."},
-                    "top_k": {"type": "integer", "description": "Maximum matches to return (1-20)."},
-                    "score_threshold": {"type": "number", "description": "Minimum similarity score to keep a match."},
-                    "filter": {"type": "object", "description": "Optional Pinecone metadata filter (merged with automatic tenant scoping)."},
+                    "query": {"type": "string", "description": "Natural-language search query — describe what you're looking for."},
+                    "index_name": {
+                        "type": "string",
+                        "description": "Which knowledge base: 'saimemory' (default, operational memory) or 'ublib2' (master methodology library). Omit for default.",
+                    },
+                    "namespace": {
+                        "type": ["string", "null"],
+                        "description": "Namespace within the index. For saimemory: 'recovery' (case data), 'daily' (daily learnings), 'continuity-transfer' (identity). For ublib2: usually omit. Omit for your default.",
+                    },
+                    "top_k": {"type": "integer", "description": "Maximum matches to return (1-20, default 5)."},
+                    "score_threshold": {"type": "number", "description": "Minimum similarity score (default 0.4)."},
+                    "filter": {"type": "object", "description": "Optional Pinecone metadata filter."},
                 },
                 "required": ["query"],
                 "additionalProperties": False,
@@ -616,10 +644,12 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ),
         ToolDefinition(
             name="pinecone_list_indexes",
-            description="List accessible Pinecone indexes and vector counts.",
+            description=(
+                "List available Pinecone indexes and their stats. Use to verify "
+                "which knowledge bases are accessible and how many vectors they contain."
+            ),
             parameters={
                 "type": "object",
-                "description": "No arguments.",
                 "properties": {},
                 "additionalProperties": False,
             },
@@ -629,19 +659,24 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ),
         ToolDefinition(
             name="pinecone_upsert",
-            description="Embed and upsert text chunks into a Pinecone vector index.",
+            description=(
+                "Store important information as vectors in your knowledge base for "
+                "long-term recall. Use this when you learn something that should persist "
+                "across sessions — case outcomes, contract patterns, process improvements, "
+                "key decisions."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "texts": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Text chunks to embed and upsert.",
+                        "description": "Text chunks to embed and store.",
                     },
-                    "index_name": {"type": "string", "description": "Target Pinecone index (defaults to configured default)."},
-                    "namespace": {"type": ["string", "null"], "description": "Target namespace (defaults to configured default)."},
+                    "index_name": {"type": "string", "description": "Target index (default: saimemory)."},
+                    "namespace": {"type": ["string", "null"], "description": "Target namespace (default: your configured namespace)."},
                     "metadata": {"type": "object", "description": "Additional metadata to attach to each vector."},
-                    "id_prefix": {"type": "string", "description": "Prefix for generated vector IDs (default: 'bomba')."},
+                    "id_prefix": {"type": "string", "description": "Prefix for vector IDs (default: 'bomba')."},
                 },
                 "required": ["texts"],
                 "additionalProperties": False,
@@ -652,7 +687,12 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ),
         ToolDefinition(
             name="pinecone_multi_query",
-            description="Query multiple Pinecone indexes in parallel and merge results by score.",
+            description=(
+                "Search BOTH your operational memory AND the master knowledge library "
+                "in a single call. Use when you need comprehensive results — for example, "
+                "analyzing a case (saimemory) while grounding your approach in methodology (ublib2). "
+                "Returns merged results ranked by relevance."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -662,13 +702,12 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
                         "items": {
                             "type": "object",
                             "properties": {
-                                "index_name": {"type": "string", "description": "Pinecone index name."},
-                                "namespace": {"type": ["string", "null"], "description": "Optional namespace."},
-                                "filter": {"type": "object", "description": "Optional per-index metadata filter (merged with tenant scoping)."},
+                                "index_name": {"type": "string", "description": "Index name: 'saimemory' or 'ublib2'."},
+                                "namespace": {"type": ["string", "null"], "description": "Namespace within the index."},
                             },
                             "required": ["index_name"],
                         },
-                        "description": "List of indexes (with optional namespaces and filters) to query.",
+                        "description": "Indexes to search. Example: [{\"index_name\": \"saimemory\"}, {\"index_name\": \"ublib2\"}]",
                     },
                     "top_k": {"type": "integer", "description": "Maximum matches per index (1-20)."},
                     "score_threshold": {"type": "number", "description": "Minimum similarity score."},
@@ -678,6 +717,6 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
             },
             risk_level="low",
             action_type="read",
-            execute=_pinecone_multi_query_factory(default_namespace=default_namespace),
+            execute=_pinecone_multi_query_factory(default_index=default_index, default_namespace=default_namespace),
         ),
     ]

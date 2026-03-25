@@ -13,6 +13,7 @@ import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
+import { CronPanel } from './components/CronPanel'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -42,6 +43,7 @@ function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
+                <CronPanel />
                 <SubAgentTracker />
               </div>
               <div className="lg:col-span-8">

@@ -1,0 +1,149 @@
+{
+  "_description": "Priority scoring configuration for Recovery tasks. Computes a 0-100 numeric score from weighted factors. The score maps to the existing priority field: 0-25=low, 26-50=medium, 51-75=high, 76-100=critical.",
+  "_version": "1.0",
+  "_rationale": "Recovery's work is relationship-driven, so revenue impact and relationship value carry the heaviest weights. Time sensitivity ensures deadlines don't slip. Strategic alignment prevents chasing low-value-but-urgent distractions.",
+
+  "scoring_weights": {
+    "_description": "Each factor contributes a weighted percentage to the final score. Weights must sum to 1.0.",
+    "revenue_impact": {
+      "weight": 0.30,
+      "description": "Financial value at stake — either revenue to gain (agreements) or revenue to protect (retention).",
+      "scoring_bands": {
+        "_note": "Raw value → normalized 0-100 score before weight is applied",
+        "0_to_5000": 10,
+        "5001_to_25000": 30,
+        "25001_to_100000": 60,
+        "100001_to_500000": 80,
+        "500001_plus": 100
+      }
+    },
+    "relationship_value": {
+      "weight": 0.25,
+      "description": "Strategic importance of the relationship beyond immediate revenue. A key partner with ecosystem access scores higher than a one-off deal of equal dollar value.",
+      "scoring_method": "manual_assessment",
+      "scale": {
+        "min": 0,
+        "max": 100,
+        "guidance": {
+          "0_20": "Transactional, low strategic value",
+          "21_40": "Useful but replaceable relationship",
+          "41_60": "Meaningful relationship with growth potential",
+          "61_80": "Strategic relationship affecting multiple opportunities",
+          "81_100": "Critical ecosystem relationship — loss would cascade"
+        }
+      }
+    },
+    "time_sensitivity": {
+      "weight": 0.25,
+      "description": "How urgent is action? Computed from deadline proximity and trigger type.",
+      "auto_compute_rules": [
+        {
+          "condition": "deadline_within_days <= 3",
+          "score": 100,
+          "reason": "Immediate action required"
+        },
+        {
+          "condition": "deadline_within_days <= 7",
+          "score": 80,
+          "reason": "This week"
+        },
+        {
+          "condition": "deadline_within_days <= 14",
+          "score": 60,
+          "reason": "Next two weeks"
+        },
+        {
+          "condition": "deadline_within_days <= 30",
+          "score": 40,
+          "reason": "This month"
+        },
+        {
+          "condition": "deadline_within_days <= 90",
+          "score": 20,
+          "reason": "This quarter"
+        },
+        {
+          "condition": "deadline_within_days > 90 OR no_deadline",
+          "score": 10,
+          "reason": "Long-term, no immediate pressure"
+        }
+      ],
+      "trigger_overrides": {
+        "_description": "Certain retention triggers automatically boost time sensitivity regardless of deadline.",
+        "crisis_response": 100,
+        "competitor_threat": 85,
+        "support_escalation": 80,
+        "payment_issue": 75
+      }
+    },
+    "strategic_alignment": {
+      "weight": 0.20,
+      "description": "How well does this task align with Recovery's current strategic priorities? Prevents urgency from overriding importance.",
+      "scoring_method": "manual_assessment_or_tag_match",
+      "tag_boost_rules": [
+        {
+          "tag": "q1_priority",
+          "boost": 30,
+          "description": "Matches current quarterly priority"
+        },
+        {
+          "tag": "ecosystem_critical",
+          "boost": 25,
+          "description": "Critical to ACT-I ecosystem health"
+        },
+        {
+          "tag": "sean_flagged",
+          "boost": 40,
+          "description": "Explicitly flagged by Sean as important"
+        },
+        {
+          "tag": "revenue_target",
+          "boost": 20,
+          "description": "Contributes to active revenue target"
+        }
+      ],
+      "base_score_if_no_tags": 30
+    }
+  },
+
+  "priority_mapping": {
+    "_description": "Maps computed numeric score to the existing priority enum field used by Mission Control.",
+    "low": { "min": 0, "max": 25 },
+    "medium": { "min": 26, "max": 50 },
+    "high": { "min": 51, "max": 75 },
+    "critical": { "min": 76, "max": 100 }
+  },
+
+  "type_specific_adjustments": {
+    "_description": "Base score modifiers applied per task type BEFORE weighted scoring. Ensures retention tasks get appropriate urgency.",
+    "agreement": {
+      "base_modifier": 0,
+      "notes": "Agreements score naturally from revenue_impact"
+    },
+    "partnership": {
+      "base_modifier": 5,
+      "notes": "Slight boost because partnerships have compounding long-term value that's hard to quantify in immediate revenue"
+    },
+    "retention": {
+      "base_modifier": 10,
+      "notes": "Retention tasks get a built-in boost. Losing an existing relationship costs more than missing a new one (5-7x acquisition cost principle)."
+    },
+    "pr": {
+      "base_modifier": 0,
+      "notes": "PR scores from time_sensitivity (press deadlines) and strategic_alignment. No blanket modifier."
+    }
+  },
+
+  "recalculation_triggers": {
+    "_description": "Events that should trigger automatic priority re-scoring.",
+    "events": [
+      "task_stage_change",
+      "deadline_approaching_threshold",
+      "health_score_change",
+      "manual_field_update",
+      "daily_scheduled_rescore"
+    ],
+    "daily_rescore_time": "06:00 UTC",
+    "rescore_reason": "Deadline proximity changes daily. A task that was medium yesterday becomes high today as its deadline approaches."
+  }
+}

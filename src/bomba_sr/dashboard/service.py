@@ -695,7 +695,7 @@ class DashboardService:
                     "name": ab["name"],
                     "role": (ab.get("domain") or "")[:200],
                     "avatar": "\U0001f3af",  # 🎯
-                    "status": "online",
+                    "status": "offline",
                     "description": ab.get("domain", ""),
                     "type": TYPE_ACTI,
                     "tools": [],
@@ -909,7 +909,9 @@ class DashboardService:
             "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        result = [dict(r) for r in rows]
+        log.info("[sessions] list_sessions user=%s → %d sessions", user_id, len(result))
+        return result
 
     def get_session(self, session_id: str) -> dict | None:
         """Look up a single chat session by id."""
@@ -919,6 +921,7 @@ class DashboardService:
         return dict(row) if row else None
 
     def create_session(self, name: str, user_id: str | None = None, tenant_id: str | None = None) -> dict:
+        log.info("[sessions] create_session name='%s' user=%s", name, user_id)
         sid = f"sess-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
@@ -2454,13 +2457,26 @@ class DashboardService:
         except Exception:
             pass  # subagent_runs table may not exist yet
 
-        if not outputs and not agents:
+        # ── Auto-retrieval sources ──
+        retrieval_sources = None
+        retrieval_latency = 0
+        auto_retrieval = result.get("auto_retrieval")
+        if auto_retrieval and auto_retrieval.get("sources"):
+            retrieval_sources = auto_retrieval["sources"]
+            retrieval_latency = auto_retrieval.get("latency_ms", 0)
+
+        if not outputs and not agents and not retrieval_sources:
             return None
 
-        return {
-            "outputs": outputs if outputs else None,
-            "agents": agents if agents else None,
-        }
+        metadata: dict[str, Any] = {}
+        if outputs:
+            metadata["outputs"] = outputs
+        if agents:
+            metadata["agents"] = agents
+        if retrieval_sources:
+            metadata["retrieval_sources"] = retrieval_sources
+            metadata["retrieval_latency_ms"] = retrieval_latency
+        return metadata
 
     # ------------------------------------------------------------------
     # Sub-agents

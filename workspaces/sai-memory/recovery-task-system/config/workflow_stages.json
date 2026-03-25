@@ -1,0 +1,346 @@
+{
+  "_description": "Workflow stage definitions for each Recovery task type. Each type has its own stage progression reflecting the actual work pattern. Stages map to the 'stage' field in task metadata — NOT the generic 'status' field, which stays synced (e.g., stage='negotiation' → status='in-progress').",
+  "_version": "1.0",
+
+  "status_mapping": {
+    "_description": "Maps stage categories to the existing Mission Control status values for Kanban board compatibility.",
+    "initial_stages": "backlog",
+    "active_stages": "in-progress",
+    "review_stages": "review",
+    "terminal_stages": "done"
+  },
+
+  "workflows": {
+    "agreement": {
+      "_description": "Sales/agreement pipeline. Mirrors a B2B sales cycle from lead identification to close.",
+      "stages": [
+        {
+          "id": "identification",
+          "label": "Identification",
+          "status_map": "backlog",
+          "description": "Potential agreement opportunity identified. Needs initial research and qualification.",
+          "required_fields": ["contact_name", "agreement_type"],
+          "exit_criteria": ["contact_name populated", "agreement_type selected", "estimated_value provided"],
+          "max_days": 7,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "qualification",
+          "label": "Qualification",
+          "status_map": "backlog",
+          "description": "Validating the opportunity is real — budget, authority, need, timeline (BANT).",
+          "required_fields": ["estimated_value", "decision_maker"],
+          "exit_criteria": ["decision_maker identified", "estimated_value validated", "initial interest confirmed"],
+          "max_days": 14,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "outreach",
+          "label": "Outreach",
+          "status_map": "in-progress",
+          "description": "Active engagement — calls, emails, meetings to build the relationship and pitch.",
+          "required_fields": ["contact_email"],
+          "exit_criteria": ["meeting scheduled or proposal requested"],
+          "max_days": 21,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "proposal",
+          "label": "Proposal",
+          "status_map": "in-progress",
+          "description": "Formal proposal or SOW delivered. Awaiting review.",
+          "required_fields": ["contract_url"],
+          "exit_criteria": ["proposal delivered", "feedback received"],
+          "max_days": 14,
+          "assigned_role": "agreement-maker"
+        },
+        {
+          "id": "negotiation",
+          "label": "Negotiation",
+          "status_map": "in-progress",
+          "description": "Active negotiation on terms, pricing, scope. Agreement-maker leads.",
+          "required_fields": [],
+          "exit_criteria": ["terms agreed OR deal lost"],
+          "max_days": 30,
+          "assigned_role": "agreement-maker"
+        },
+        {
+          "id": "closing",
+          "label": "Closing",
+          "status_map": "review",
+          "description": "Final contract review, signatures, payment setup.",
+          "required_fields": ["contract_url"],
+          "exit_criteria": ["contract signed", "actual_value recorded"],
+          "max_days": 14,
+          "assigned_role": "agreement-maker"
+        },
+        {
+          "id": "won",
+          "label": "Won",
+          "status_map": "done",
+          "description": "Agreement signed and active. Trigger onboarding and retention handoff.",
+          "terminal": true,
+          "auto_actions": ["create_retention_task_for_account", "notify_keeper_for_onboarding", "update_revenue_metrics"]
+        },
+        {
+          "id": "lost",
+          "label": "Lost",
+          "status_map": "done",
+          "description": "Opportunity did not close. Log reason and schedule future re-engagement.",
+          "terminal": true,
+          "auto_actions": ["log_loss_reason", "schedule_reengagement_90_days"]
+        }
+      ],
+      "allowed_transitions": {
+        "identification": ["qualification", "lost"],
+        "qualification": ["outreach", "lost"],
+        "outreach": ["proposal", "qualification", "lost"],
+        "proposal": ["negotiation", "outreach", "lost"],
+        "negotiation": ["closing", "proposal", "lost"],
+        "closing": ["won", "negotiation", "lost"],
+        "won": [],
+        "lost": ["identification"]
+      }
+    },
+
+    "partnership": {
+      "_description": "Partnership development lifecycle. Longer cycle, more collaborative, less transactional than agreements.",
+      "stages": [
+        {
+          "id": "discovery",
+          "label": "Discovery",
+          "status_map": "backlog",
+          "description": "Identifying potential partners and assessing strategic fit.",
+          "required_fields": ["partner_name", "partnership_type"],
+          "exit_criteria": ["partnership_type determined", "initial fit assessment complete"],
+          "max_days": 14,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "relationship_building",
+          "label": "Relationship Building",
+          "status_map": "in-progress",
+          "description": "Building trust and rapport. Multiple touchpoints before formalizing.",
+          "required_fields": ["partner_contact"],
+          "exit_criteria": ["mutual interest confirmed", "key stakeholders engaged"],
+          "max_days": 30,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "value_alignment",
+          "label": "Value Alignment",
+          "status_map": "in-progress",
+          "description": "Defining mutual value proposition. What does each side contribute and receive?",
+          "required_fields": ["mutual_value_prop"],
+          "exit_criteria": ["mutual_value_prop articulated and agreed"],
+          "max_days": 21,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "formalization",
+          "label": "Formalization",
+          "status_map": "in-progress",
+          "description": "Creating formal partnership terms, MOUs, or agreements.",
+          "required_fields": ["revenue_model"],
+          "exit_criteria": ["terms documented", "both parties reviewed"],
+          "max_days": 30,
+          "assigned_role": "agreement-maker"
+        },
+        {
+          "id": "activation",
+          "label": "Activation",
+          "status_map": "review",
+          "description": "Launching the partnership. Integrations, co-marketing, referral setup.",
+          "required_fields": [],
+          "exit_criteria": ["partnership operational", "first joint activity completed"],
+          "max_days": 30,
+          "assigned_role": "multiplier"
+        },
+        {
+          "id": "active",
+          "label": "Active",
+          "status_map": "done",
+          "description": "Partnership is live and generating value. Transitions to keeper for ongoing management.",
+          "terminal": false,
+          "auto_actions": ["create_retention_task_for_partner", "schedule_quarterly_review"],
+          "assigned_role": "keeper"
+        },
+        {
+          "id": "dormant",
+          "label": "Dormant",
+          "status_map": "done",
+          "description": "Partnership inactive but not terminated. May reactivate.",
+          "terminal": true,
+          "auto_actions": ["schedule_reactivation_check_90_days"]
+        },
+        {
+          "id": "terminated",
+          "label": "Terminated",
+          "status_map": "done",
+          "description": "Partnership formally ended.",
+          "terminal": true,
+          "auto_actions": ["log_termination_reason", "archive_partnership_data"]
+        }
+      ],
+      "allowed_transitions": {
+        "discovery": ["relationship_building", "terminated"],
+        "relationship_building": ["value_alignment", "discovery", "terminated"],
+        "value_alignment": ["formalization", "relationship_building", "terminated"],
+        "formalization": ["activation", "value_alignment", "terminated"],
+        "activation": ["active", "formalization", "terminated"],
+        "active": ["dormant", "terminated"],
+        "dormant": ["relationship_building", "terminated"],
+        "terminated": ["discovery"]
+      }
+    },
+
+    "retention": {
+      "_description": "Account retention workflow. Triggered by risk signals or scheduled reviews. Fast-moving — retention is time-critical.",
+      "stages": [
+        {
+          "id": "alert",
+          "label": "Alert",
+          "status_map": "backlog",
+          "description": "Risk signal detected. Needs immediate triage.",
+          "required_fields": ["account_name", "retention_trigger"],
+          "exit_criteria": ["churn_risk assessed", "health_score updated"],
+          "max_days": 2,
+          "assigned_role": "keeper"
+        },
+        {
+          "id": "diagnosis",
+          "label": "Diagnosis",
+          "status_map": "in-progress",
+          "description": "Understanding the root cause of the retention risk.",
+          "required_fields": ["health_score", "churn_risk"],
+          "exit_criteria": ["root cause identified", "intervention strategy selected"],
+          "max_days": 3,
+          "assigned_role": "keeper"
+        },
+        {
+          "id": "intervention",
+          "label": "Intervention",
+          "status_map": "in-progress",
+          "description": "Executing the retention play — outreach, offer, escalation, or remediation.",
+          "required_fields": [],
+          "exit_criteria": ["client contacted", "save_offer presented if applicable"],
+          "max_days": 7,
+          "assigned_role": "keeper"
+        },
+        {
+          "id": "resolution",
+          "label": "Resolution",
+          "status_map": "review",
+          "description": "Determining outcome — did the intervention work?",
+          "required_fields": ["outcome"],
+          "exit_criteria": ["outcome recorded"],
+          "max_days": 14,
+          "assigned_role": "keeper"
+        },
+        {
+          "id": "retained",
+          "label": "Retained",
+          "status_map": "done",
+          "description": "Account saved. Schedule follow-up check.",
+          "terminal": true,
+          "auto_actions": ["schedule_health_check_30_days", "update_retention_metrics"]
+        },
+        {
+          "id": "churned",
+          "label": "Churned",
+          "status_map": "done",
+          "description": "Account lost. Log learnings and schedule win-back attempt.",
+          "terminal": true,
+          "auto_actions": ["log_churn_reason", "schedule_winback_90_days", "update_churn_metrics"]
+        }
+      ],
+      "allowed_transitions": {
+        "alert": ["diagnosis", "intervention"],
+        "diagnosis": ["intervention", "retained"],
+        "intervention": ["resolution", "diagnosis"],
+        "resolution": ["retained", "churned", "intervention"],
+        "retained": [],
+        "churned": ["alert"]
+      }
+    },
+
+    "pr": {
+      "_description": "Public relations workflow. Varies by PR type — crisis is fast-tracked, proactive campaigns follow full pipeline.",
+      "stages": [
+        {
+          "id": "ideation",
+          "label": "Ideation",
+          "status_map": "backlog",
+          "description": "PR opportunity or need identified. Brainstorming angle and approach.",
+          "required_fields": ["pr_type", "target_audience"],
+          "exit_criteria": ["key_messages drafted", "target outlets identified"],
+          "max_days": 7,
+          "assigned_role": "multiplier"
+        },
+        {
+          "id": "content_creation",
+          "label": "Content Creation",
+          "status_map": "in-progress",
+          "description": "Writing press releases, pitches, talking points, or content pieces.",
+          "required_fields": ["key_messages"],
+          "exit_criteria": ["content draft complete", "internal review passed"],
+          "max_days": 14,
+          "assigned_role": "multiplier"
+        },
+        {
+          "id": "approval",
+          "label": "Approval",
+          "status_map": "review",
+          "description": "Content review and sign-off before external distribution.",
+          "required_fields": [],
+          "exit_criteria": ["approved by Recovery lead or Sean"],
+          "max_days": 3,
+          "assigned_role": "multiplier"
+        },
+        {
+          "id": "outreach",
+          "label": "Media Outreach",
+          "status_map": "in-progress",
+          "description": "Pitching to journalists, influencers, and media contacts.",
+          "required_fields": ["media_contacts"],
+          "exit_criteria": ["pitches sent", "follow-ups scheduled"],
+          "max_days": 14,
+          "assigned_role": "connector"
+        },
+        {
+          "id": "coverage_tracking",
+          "label": "Coverage Tracking",
+          "status_map": "in-progress",
+          "description": "Monitoring for published coverage and social amplification.",
+          "required_fields": [],
+          "exit_criteria": ["coverage_results populated OR 30-day tracking period elapsed"],
+          "max_days": 30,
+          "assigned_role": "multiplier"
+        },
+        {
+          "id": "complete",
+          "label": "Complete",
+          "status_map": "done",
+          "description": "PR campaign concluded. Results logged for effectiveness analysis.",
+          "terminal": true,
+          "auto_actions": ["compute_coverage_metrics", "log_media_relationship_outcomes"]
+        }
+      ],
+      "allowed_transitions": {
+        "ideation": ["content_creation"],
+        "content_creation": ["approval", "ideation"],
+        "approval": ["outreach", "content_creation"],
+        "outreach": ["coverage_tracking", "content_creation"],
+        "coverage_tracking": ["complete", "outreach"],
+        "complete": []
+      },
+      "fast_track_rules": {
+        "_description": "Crisis PR skips ideation and approval stages for speed.",
+        "condition": "urgency == 'crisis'",
+        "entry_stage": "content_creation",
+        "skip_stages": ["ideation", "approval"],
+        "override_approval_required": false
+      }
+    }
+  }
+}

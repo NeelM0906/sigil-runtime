@@ -237,6 +237,10 @@ class BedrockProvider:
           anthropic.claude-opus-4-6-v1   → us.anthropic.claude-opus-4-6-v1
           us.anthropic.claude-opus-4-6-v1 → unchanged
         """
+        # Strip openrouter/ prefix if present
+        if model.startswith("openrouter/"):
+            model = model[len("openrouter/"):]
+
         # Check alias table first
         if model in _BEDROCK_MODEL_ALIASES:
             return _BEDROCK_MODEL_ALIASES[model]
@@ -244,6 +248,11 @@ class BedrockProvider:
         # Already has region prefix
         if model.startswith("us.") or model.startswith("eu."):
             return model
+
+        # Non-Anthropic models can't run on Bedrock — log and use a fallback
+        if "/" in model and not model.startswith("anthropic"):
+            log.warning("[bedrock] Non-Anthropic model requested: %s — falling back to claude-sonnet-4-6", model)
+            return "us.anthropic.claude-sonnet-4-6"
 
         # OpenRouter-style: anthropic/claude-opus-4.6
         if "/" in model:

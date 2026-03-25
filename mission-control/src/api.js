@@ -170,6 +170,32 @@ export const skillsApi = {
   },
 }
 
+// ── Cron API ────────────────────────────────────────────────
+
+export const cronApi = {
+  list() {
+    return request('/api/mc/cron/tasks')
+  },
+  create(data) {
+    return request('/api/mc/cron/tasks', { method: 'POST', body: JSON.stringify(data) })
+  },
+  update(id, data) {
+    return request(`/api/mc/cron/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+  },
+  remove(id) {
+    return request(`/api/mc/cron/tasks/${id}`, { method: 'DELETE' })
+  },
+  runs(id) {
+    return request(`/api/mc/cron/tasks/${id}/runs`)
+  },
+  forceRun(id) {
+    return request(`/api/mc/cron/tasks/${id}/run`, { method: 'POST' })
+  },
+  status() {
+    return request('/api/mc/cron/status')
+  },
+}
+
 // ── Auth API ────────────────────────────────────────────────
 
 export const authApi = {

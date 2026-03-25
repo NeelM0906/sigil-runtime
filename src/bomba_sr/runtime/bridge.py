@@ -552,6 +552,21 @@ class RuntimeBridge:
 
         recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8, session_id=request.session_id)
 
+        # ── Auto-retrieve from Pinecone (parallel, ~200ms) ──
+        pinecone_retrieval = None
+        if os.getenv("BOMBA_AUTO_RETRIEVAL", "true").lower() != "false" and search_query:
+            try:
+                from bomba_sr.memory.auto_retrieval import auto_retrieve
+                pinecone_retrieval = auto_retrieve(
+                    query=search_query,
+                    tenant_id=request.tenant_id,
+                    being_id=_being_id,
+                    top_k=5,
+                    score_threshold=0.3,
+                )
+            except Exception as exc:
+                logger.debug("Auto-retrieval failed (non-fatal): %s", exc)
+
         # Unified peer identity: if we can resolve a being_id from the session,
         # also recall memories tagged with that being_id (cross-context access).
         # This replaces the old cross-namespace hack that used user_id prefixes.
@@ -709,6 +724,8 @@ class RuntimeBridge:
         )
         if selected_skill_context:
             system_prefix_parts.append(f"Use selected skill instructions:\n{selected_skill_context}")
+        if pinecone_retrieval and pinecone_retrieval.has_results:
+            system_prefix_parts.append(pinecone_retrieval.format_context_block())
         system_prompt = "\n\n".join(system_prefix_parts)
 
         system_contract = (
@@ -1208,6 +1225,10 @@ class RuntimeBridge:
                 "turn_count": adaptation_turn_count,
                 "correction": adaptation_correction,
                 "self_evaluation": adaptation_evaluation,
+            },
+            "auto_retrieval": {
+                "sources": pinecone_retrieval.format_sources_summary() if pinecone_retrieval and pinecone_retrieval.has_results else [],
+                "latency_ms": pinecone_retrieval.latency_ms if pinecone_retrieval else 0,
             },
             "rescue": rescue_info,
             "subagents": {
