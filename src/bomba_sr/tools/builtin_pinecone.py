@@ -397,12 +397,15 @@ def _pinecone_list_indexes_factory(default_index: str, default_namespace: str | 
             if host and idx < MAX_DESCRIBE_INDEXES:
                 try:
                     query: dict[str, Any] = {}
-                    if default_namespace:
+                    # Only pass namespace for the tenant's own default index
+                    if default_namespace and name == default_index:
                         query["namespace"] = default_namespace
+                    # Use the correct API key per index (may differ for STRATA)
+                    idx_key = _choose_pinecone_api_key(name) if name else api_key
                     stats = _http_json(
                         "POST",
                         f"https://{host}/describe_index_stats",
-                        headers={"Api-Key": api_key},
+                        headers={"Api-Key": idx_key},
                         payload=query,
                     )
                     if isinstance(stats.get("totalVectorCount"), int):
