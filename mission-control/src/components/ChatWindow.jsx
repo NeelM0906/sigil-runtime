@@ -502,10 +502,18 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
               />
             ) : (
               <>
-                <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                <span className="flex-1 truncate">{s.name}</span>
+                {s._channel ? (
+                  <span className="w-3 h-3 shrink-0 text-[10px] font-bold text-accent-purple opacity-70">#</span>
+                ) : s._shared ? (
+                  <svg className="w-3 h-3 shrink-0 text-accent-amber opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                )}
+                <span className="flex-1 truncate">{s._channel ? s.channel_name || s.name : s.name}</span>
                 <div className="hidden group-hover:flex items-center gap-0.5">
                   <button
                     onClick={e => { e.stopPropagation(); setEditingId(s.id); setEditName(s.name) }}
