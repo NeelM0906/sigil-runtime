@@ -1104,6 +1104,12 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
         .then(({ tree }) => setFileTree(tree || []))
         .catch(() => {})
         .finally(() => setFileTreeLoading(false))
+      // Load session-scoped diff
+      setDiffLoading(true)
+      codeApi.diff(sessionWs, id)
+        .then(result => setDiffFiles(result.files || []))
+        .catch(() => setDiffFiles([]))
+        .finally(() => setDiffLoading(false))
     }
   }, [sessions])
 

@@ -44,7 +44,7 @@ class PiSession:
     is_streaming: bool = False
     last_activity: float = field(default_factory=time.time)
     messages: list = field(default_factory=list)  # list[PiMessage]
-    git_snapshot: str = ""        # git commit hash at session start (for scoped diffs)
+    git_baseline_diff: str = ""   # raw `git diff HEAD` output at session start
     git_untracked_at_start: set = field(default_factory=set)  # untracked files at session start
     _current_text: str = ""       # accumulates streaming text for current turn
     _current_tools: list = field(default_factory=list)  # accumulates tool calls for current turn
@@ -235,37 +235,23 @@ class PiBridge:
         self.ensure_running()
 
         sid = f"code-{uuid.uuid4().hex[:12]}"
-        # Snapshot git working tree for session-scoped diffs.
-        # git stash create makes a temporary commit of the current state
-        # (staged + unstaged) without modifying the working tree or stash list.
-        # If clean, it returns empty — fall back to HEAD.
-        git_snap = ""
+        # Snapshot current git state for session-scoped diffs.
+        # Save the raw `git diff HEAD` output — later we subtract this baseline
+        # from fresh diffs to show only changes made during this session.
+        baseline_diff = ""
+        untracked_at_start: set[str] = set()
         if (Path(ws) / ".git").is_dir():
             try:
                 r = subprocess.run(
-                    ["git", "stash", "create"],
-                    cwd=ws, capture_output=True, text=True, timeout=5,
+                    ["git", "diff", "HEAD", "--unified=3", "--no-color"],
+                    cwd=ws, capture_output=True, text=True, timeout=10,
                 )
-                git_snap = r.stdout.strip()
-                if not git_snap:
-                    # Working tree is clean — use HEAD as baseline
-                    r2 = subprocess.run(
-                        ["git", "rev-parse", "HEAD"],
-                        cwd=ws, capture_output=True, text=True, timeout=5,
-                    )
-                    git_snap = r2.stdout.strip()
-            except Exception:
-                pass
-
-        # Also snapshot untracked files so session diff only shows new ones
-        untracked_at_start: set[str] = set()
-        if git_snap:
-            try:
-                r3 = subprocess.run(
+                baseline_diff = r.stdout
+                r2 = subprocess.run(
                     ["git", "ls-files", "--others", "--exclude-standard"],
                     cwd=ws, capture_output=True, text=True, timeout=5,
                 )
-                untracked_at_start = {f.strip() for f in r3.stdout.splitlines() if f.strip()}
+                untracked_at_start = {f.strip() for f in r2.stdout.splitlines() if f.strip()}
             except Exception:
                 pass
 
@@ -273,7 +259,7 @@ class PiBridge:
             id=sid,
             title=title,
             workspace_root=ws,
-            git_snapshot=git_snap,
+            git_baseline_diff=baseline_diff,
             git_untracked_at_start=untracked_at_start,
         )
         self._sessions[sid] = session
@@ -848,47 +834,54 @@ class PiBridge:
     def git_diff(self, workspace: str | None = None, session_id: str | None = None) -> dict:
         """Run git diff in the workspace and return structured results.
 
-        If *session_id* is given, diffs against the session's git snapshot
-        (showing only changes made during that session). Otherwise diffs
-        against HEAD (all uncommitted changes).
+        If *session_id* is given, subtracts the session's baseline diff
+        (captured at session start) so only changes made during that session
+        are shown. Otherwise shows all uncommitted changes.
         """
         ws = workspace or self._active_workspace
         ws_path = Path(ws)
         if not (ws_path / ".git").is_dir():
             return {"files": [], "error": "Not a git repository"}
 
-        # Determine diff base: session snapshot or HEAD
-        diff_base = "HEAD"
-        if session_id:
-            session = self._sessions.get(session_id)
-            if session and session.git_snapshot:
-                diff_base = session.git_snapshot
-
         try:
-            # Diff working tree against the baseline
+            # Get current full diff against HEAD
             result = subprocess.run(
-                ["git", "diff", diff_base, "--unified=3", "--no-color"],
+                ["git", "diff", "HEAD", "--unified=3", "--no-color"],
                 cwd=ws, capture_output=True, text=True, timeout=10,
             )
             raw_diff = result.stdout
 
-            # Also get untracked files
+            # Get current untracked files
             untracked_result = subprocess.run(
                 ["git", "ls-files", "--others", "--exclude-standard"],
                 cwd=ws, capture_output=True, text=True, timeout=5,
             )
             untracked = [f.strip() for f in untracked_result.stdout.splitlines() if f.strip()]
 
-            # Parse unified diff into structured format
-            files = self._parse_unified_diff(raw_diff)
-
-            # Add untracked files (filter out pre-existing ones for session-scoped diffs)
+            # Session scoping: compare per-file diff sections against baseline
             exclude_untracked: set[str] = set()
             if session_id:
                 session = self._sessions.get(session_id)
                 if session:
                     exclude_untracked = session.git_untracked_at_start
+                    if session.git_baseline_diff:
+                        # Split both diffs into per-file raw sections and compare.
+                        # A file shows up only if its diff section changed
+                        # (new file, or existing file with new/different hunks).
+                        baseline_sections = self._split_diff_by_file(session.git_baseline_diff)
+                        current_sections = self._split_diff_by_file(raw_diff)
 
+                        # Build a new raw diff with only changed sections
+                        new_sections = []
+                        for fpath, section in current_sections.items():
+                            baseline_section = baseline_sections.get(fpath, "")
+                            if section != baseline_section:
+                                new_sections.append(section)
+                        raw_diff = "\n".join(new_sections)
+
+            files = self._parse_unified_diff(raw_diff)
+
+            # Add new untracked files (exclude pre-existing ones)
             for f in untracked:
                 if f in exclude_untracked:
                     continue
@@ -906,11 +899,34 @@ class PiBridge:
                     except OSError:
                         pass
 
-            return {"files": files, "raw": raw_diff[:50000]}
+            return {"files": files, "raw": raw_diff[:50000] if not session_id else ""}
         except subprocess.TimeoutExpired:
             return {"files": [], "error": "git diff timed out"}
         except Exception as exc:
             return {"files": [], "error": str(exc)}
+
+    @staticmethod
+    def _split_diff_by_file(raw: str) -> dict[str, str]:
+        """Split raw unified diff into {filepath: raw_section} map."""
+        sections: dict[str, str] = {}
+        current_path = ""
+        current_lines: list[str] = []
+
+        for line in raw.splitlines(keepends=True):
+            if line.startswith("diff --git"):
+                if current_path and current_lines:
+                    sections[current_path] = "".join(current_lines)
+                current_lines = [line]
+                current_path = ""
+            elif line.startswith("+++ b/") and not current_path:
+                current_path = line[6:].strip()
+                current_lines.append(line)
+            else:
+                current_lines.append(line)
+
+        if current_path and current_lines:
+            sections[current_path] = "".join(current_lines)
+        return sections
 
     @staticmethod
     def _parse_unified_diff(raw: str) -> list[dict]:
