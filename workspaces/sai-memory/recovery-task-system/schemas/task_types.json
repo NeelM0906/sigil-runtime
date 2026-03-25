@@ -1,0 +1,266 @@
+{
+  "_description": "JSON schemas for Recovery-specific task types. Each type extends the base task schema (task_id, title, description, status, priority, project_id, owner_agent_id) with domain-specific fields.",
+  "_version": "1.0",
+  "_note": "These schemas validate the 'metadata' JSON field that gets stored alongside the base task record in RuntimeDB.",
+
+  "base_task": {
+    "_description": "Fields inherited from the existing Bomba SR task system. These are NOT redefined here — they already exist in the tasks table.",
+    "inherited_fields": ["task_id", "title", "description", "status", "priority", "project_id", "owner_agent_id", "created_at", "updated_at"],
+    "recovery_extensions": {
+      "task_type": {
+        "type": "string",
+        "enum": ["agreement", "partnership", "retention", "pr"],
+        "description": "Recovery domain classification. Determines which schema, workflow, and routing rules apply."
+      },
+      "priority_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "description": "Computed numeric priority (0-100) from priority_scoring.json weights. Maps to existing priority field: 0-25=low, 26-50=medium, 51-75=high, 76-100=critical."
+      },
+      "stage": {
+        "type": "string",
+        "description": "Current workflow stage from workflow_stages.json. More granular than generic status field."
+      },
+      "assigned_being": {
+        "type": "string",
+        "description": "The Recovery being currently responsible. Set by being_routing.json rules, written to owner_agent_id."
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Type-specific fields defined below."
+      }
+    }
+  },
+
+  "task_types": {
+    "agreement": {
+      "_description": "Tasks related to closing deals, contracts, and formal agreements. Primary domain of the-agreement-maker.",
+      "type": "object",
+      "required": ["contact_name", "agreement_type", "estimated_value"],
+      "properties": {
+        "contact_name": {
+          "type": "string",
+          "description": "Primary contact or company name for this agreement."
+        },
+        "contact_email": {
+          "type": "string",
+          "format": "email",
+          "description": "Primary contact email for communication tracking."
+        },
+        "agreement_type": {
+          "type": "string",
+          "enum": ["service_contract", "licensing", "reseller", "referral", "consulting", "retainer", "custom"],
+          "description": "Classification of agreement. Affects default workflow stages and SLA timelines."
+        },
+        "estimated_value": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Projected revenue value in USD. Key input to priority scoring (revenue_impact weight)."
+        },
+        "actual_value": {
+          "type": "number",
+          "description": "Final signed value. Populated at close. Used for forecast accuracy tracking."
+        },
+        "decision_maker": {
+          "type": "string",
+          "description": "Name of the person with signing authority. Critical for routing — agreements without identified decision-makers get flagged."
+        },
+        "deadline": {
+          "type": "string",
+          "format": "date",
+          "description": "Target close date. Feeds time_sensitivity scoring and escalation triggers."
+        },
+        "objections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tracked objections raised during negotiation. Informs agreement-maker strategy."
+        },
+        "contract_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Link to contract document (Google Drive, DocuSign, etc)."
+        },
+        "source_channel": {
+          "type": "string",
+          "enum": ["inbound", "outbound_email", "outbound_call", "referral", "event", "partner_intro"],
+          "description": "How this opportunity originated. Feeds channel effectiveness analytics."
+        }
+      }
+    },
+
+    "partnership": {
+      "_description": "Tasks for building and managing strategic partnerships. Shared between connector (outreach/relationship) and agreement-maker (formalization).",
+      "type": "object",
+      "required": ["partner_name", "partnership_type"],
+      "properties": {
+        "partner_name": {
+          "type": "string",
+          "description": "Organization or individual name."
+        },
+        "partner_contact": {
+          "type": "string",
+          "description": "Primary point of contact at the partner organization."
+        },
+        "partnership_type": {
+          "type": "string",
+          "enum": ["strategic_alliance", "co_marketing", "technology_integration", "referral_network", "joint_venture", "affiliate", "community"],
+          "description": "Partnership classification. Determines workflow complexity and approval requirements."
+        },
+        "mutual_value_prop": {
+          "type": "string",
+          "description": "What each side gets. Must be articulated before advancing past 'qualification' stage."
+        },
+        "strategic_alignment_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Manual assessment of how well this partnership aligns with Recovery's mission (0-10). Feeds priority scoring."
+        },
+        "existing_relationship": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether there's a pre-existing relationship. Affects routing — warm intros go to connector, cold outreach to different flow."
+        },
+        "integration_requirements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Technical or operational requirements for the partnership to function."
+        },
+        "revenue_model": {
+          "type": "string",
+          "enum": ["revenue_share", "flat_fee", "commission", "equity", "in_kind", "none"],
+          "description": "How money flows in this partnership."
+        },
+        "renewal_date": {
+          "type": "string",
+          "format": "date",
+          "description": "When partnership terms are up for renewal. Feeds retention/keeper scheduling."
+        }
+      }
+    },
+
+    "retention": {
+      "_description": "Tasks focused on keeping existing relationships healthy and preventing churn. Primary domain of the keeper being.",
+      "type": "object",
+      "required": ["account_name", "retention_trigger"],
+      "properties": {
+        "account_name": {
+          "type": "string",
+          "description": "Client or partner account name."
+        },
+        "account_value": {
+          "type": "number",
+          "description": "Current annual revenue from this account. Directly feeds priority scoring."
+        },
+        "retention_trigger": {
+          "type": "string",
+          "enum": ["usage_decline", "support_escalation", "contract_expiring", "competitor_threat", "satisfaction_drop", "payment_issue", "scheduled_review", "at_risk_signal"],
+          "description": "What triggered this retention task. Determines urgency and response playbook."
+        },
+        "health_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Account health score (0-100). Below 40 = critical, 40-60 = at-risk, 60-80 = healthy, 80+ = champion."
+        },
+        "last_interaction_date": {
+          "type": "string",
+          "format": "date",
+          "description": "When we last meaningfully engaged this account. Gaps > 30 days trigger automated outreach."
+        },
+        "churn_risk": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Assessed churn probability. Critical = immediate keeper intervention."
+        },
+        "lifetime_value": {
+          "type": "number",
+          "description": "Total historical revenue from this account. Context for how much effort to invest in retention."
+        },
+        "renewal_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Contract renewal date. Tasks auto-created 90/60/30 days before renewal."
+        },
+        "save_offer": {
+          "type": "string",
+          "description": "What we can offer to retain (discount, upgrade, custom terms). Populated by keeper during intervention."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["retained", "churned", "downgraded", "upgraded", "pending"],
+          "description": "Final outcome of the retention effort. Feeds retention rate metrics."
+        }
+      }
+    },
+
+    "pr": {
+      "_description": "Public relations tasks — media outreach, brand building, crisis management, thought leadership. Shared between connector (relationships) and multiplier (amplification).",
+      "type": "object",
+      "required": ["pr_type", "target_audience"],
+      "properties": {
+        "pr_type": {
+          "type": "string",
+          "enum": ["media_outreach", "press_release", "thought_leadership", "crisis_response", "event_promotion", "case_study", "award_submission", "speaking_opportunity"],
+          "description": "PR activity classification. Determines workflow and approval chain."
+        },
+        "target_audience": {
+          "type": "string",
+          "description": "Who this PR effort is trying to reach. Guides channel selection and messaging."
+        },
+        "media_contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "outlet": { "type": "string" },
+              "email": { "type": "string" },
+              "status": { "type": "string", "enum": ["not_contacted", "pitched", "interested", "committed", "declined"] }
+            }
+          },
+          "description": "Journalists, editors, or influencers being engaged for this PR effort."
+        },
+        "key_messages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Core messages to communicate. Max 3 for clarity."
+        },
+        "embargo_date": {
+          "type": "string",
+          "format": "date",
+          "description": "If applicable, when the information can be made public."
+        },
+        "publish_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Target publication or launch date."
+        },
+        "coverage_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "outlet": { "type": "string" },
+              "url": { "type": "string" },
+              "reach_estimate": { "type": "number" },
+              "sentiment": { "type": "string", "enum": ["positive", "neutral", "negative"] }
+            }
+          },
+          "description": "Actual coverage achieved. Feeds PR effectiveness metrics."
+        },
+        "urgency": {
+          "type": "string",
+          "enum": ["proactive", "reactive", "crisis"],
+          "description": "Proactive = planned campaign. Reactive = responding to event. Crisis = immediate response required."
+        },
+        "approval_required": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this PR output needs approval before release. Crisis responses may bypass."
+        }
+      }
+    }
+  }
+}

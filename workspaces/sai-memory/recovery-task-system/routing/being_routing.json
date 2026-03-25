@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recovery Being Routing Configuration",
+  "description": "Maps task types, workflow stages, and conditions to the 4 Recovery specialist beings. Determines who owns a task at each lifecycle point.",
+  "version": "1.0.0",
+
+  "beings": {
+    "the-agreement-maker": {
+      "agent_id": "the-agreement-maker",
+      "label": "The Agreement Maker",
+      "domain": "Deal closure, contract negotiation, formal terms",
+      "capabilities": ["negotiation", "contract_drafting", "deal_structuring", "pricing", "legal_coordination"],
+      "max_concurrent_tasks": 10,
+      "primary_task_types": ["agreement"],
+      "secondary_task_types": ["partnership"]
+    },
+    "the-connector": {
+      "agent_id": "the-connector",
+      "label": "The Connector",
+      "domain": "Relationship building, introductions, network expansion",
+      "capabilities": ["outreach", "relationship_mapping", "introduction_brokering", "network_analysis", "community_engagement"],
+      "max_concurrent_tasks": 15,
+      "primary_task_types": ["partnership"],
+      "secondary_task_types": ["agreement", "pr"]
+    },
+    "the-keeper": {
+      "agent_id": "the-keeper",
+      "label": "The Keeper",
+      "domain": "Client retention, satisfaction monitoring, churn prevention",
+      "capabilities": ["health_monitoring", "intervention_planning", "satisfaction_tracking", "win_back", "onboarding"],
+      "max_concurrent_tasks": 20,
+      "primary_task_types": ["retention"],
+      "secondary_task_types": ["partnership"]
+    },
+    "the-multiplier": {
+      "agent_id": "the-multiplier",
+      "label": "The Multiplier",
+      "domain": "Public relations, amplification, reputation management",
+      "capabilities": ["content_creation", "media_relations", "social_amplification", "event_management", "case_study_development"],
+      "max_concurrent_tasks": 12,
+      "primary_task_types": ["pr"],
+      "secondary_task_types": ["partnership", "retention"]
+    }
+  },
+
+  "routing_rules": {
+    "description": "Rules are evaluated in order. First matching rule determines the assigned being.",
+    "rules": [
+      {
+        "rule_id": "R001",
+        "name": "Agreement negotiation stages",
+        "condition": {
+          "task_type": "agreement",
+          "stage_in": ["proposal_sent", "negotiating", "legal_review", "closed_won", "closed_lost"]
+        },
+        "assign_to": "the-agreement-maker",
+        "reason": "Agreement Maker owns all deal-closing stages"
+      },
+      {
+        "rule_id": "R002",
+        "name": "Agreement early stages",
+        "condition": {
+          "task_type": "agreement",
+          "stage_in": ["identified", "qualifying"]
+        },
+        "assign_to": "the-connector",
+        "reason": "Connector handles relationship initiation and qualification before handoff"
+      },
+      {
+        "rule_id": "R003",
+        "name": "Partnership relationship stages",
+        "condition": {
+          "task_type": "partnership",
+          "stage_in": ["scouting", "outreach", "exploring", "dormant"]
+        },
+        "assign_to": "the-connector",
+        "reason": "Connector owns the relationship-building phases"
+      },
+      {
+        "rule_id": "R004",
+        "name": "Partnership formalization",
+        "condition": {
+          "task_type": "partnership",
+          "stage_in": ["formalizing"]
+        },
+        "assign_to": "the-agreement-maker",
+        "reason": "Agreement Maker handles formal terms and structure"
+      },
+      {
+        "rule_id": "R005",
+        "name": "Active partnership maintenance",
+        "condition": {
+          "task_type": "partnership",
+          "stage_in": ["active"]
+        },
+        "assign_to": "the-keeper",
+        "reason": "Keeper monitors ongoing partnership health"
+      },
+      {
+        "rule_id": "R006",
+        "name": "All retention tasks",
+        "condition": {
+          "task_type": "retention"
+        },
+        "assign_to": "the-keeper",
+        "reason": "Keeper owns the entire retention lifecycle"
+      },
+      {
+        "rule_id": "R007",
+        "name": "All PR tasks",
+        "condition": {
+          "task_type": "pr"
+        },
+        "assign_to": "the-multiplier",
+        "reason": "Multiplier owns the entire PR lifecycle"
+      },
+      {
+        "rule_id": "R008",
+        "name": "Critical retention escalation",
+        "condition": {
+          "task_type": "retention",
+          "risk_level": "critical",
+          "priority_tier": "critical"
+        },
+        "assign_to": "the-keeper",
+        "escalate_to": "recovery",
+        "reason": "Critical churn risks escalate to Recovery coordinator for oversight"
+      },
+      {
+        "rule_id": "R009",
+        "name": "Cross-type testimonial opportunity",
+        "condition": {
+          "task_type": "retention",
+          "stage": "resolved",
+          "satisfaction_score_gte": 8
+        },
+        "spawn_task": {
+          "task_type": "pr",
+          "pr_type": "testimonial",
+          "assign_to": "the-multiplier"
+        },
+        "reason": "High-satisfaction resolved retention creates testimonial opportunity"
+      },
+      {
+        "rule_id": "R010",
+        "name": "Closed deal case study",
+        "condition": {
+          "task_type": "agreement",
+          "stage": "closed_won",
+          "estimated_value_gte": 50000
+        },
+        "spawn_task": {
+          "task_type": "pr",
+          "pr_type": "case_study",
+          "assign_to": "the-multiplier"
+        },
+        "reason": "High-value closed agreements should generate case studies"
+      }
+    ]
+  },
+
+  "handoff_protocol": {
+    "description": "When a task transitions between beings, ensure clean handoff",
+    "steps": [
+      "Current owner updates task description with status summary",
+      "Current owner sets stage to the transition target",
+      "Routing engine re-evaluates and assigns new owner_agent_id",
+      "New owner receives notification with full task context",
+      "New owner acknowledges within SLA period"
+    ],
+    "context_fields_required_on_handoff": [
+      "Current stage summary",
+      "Key contacts involved",
+      "Open items / blockers",
+      "Next recommended action"
+    ]
+  },
+
+  "fallback_routing": {
+    "unmatched_task_type": "the-connector",
+    "overloaded_being": "redistribute to being with lowest active task count in same domain",
+    "all_beings_overloaded": "escalate to recovery coordinator"
+  }
+}
