@@ -397,6 +397,48 @@ class DashboardService:
         self.db.execute("UPDATE mc_chat_sessions SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
+        # Teams / collaboration schema
+        self.db.script("""
+            CREATE TABLE IF NOT EXISTS mc_teams (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              admin_user_id TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS mc_team_members (
+              id TEXT PRIMARY KEY,
+              team_id TEXT NOT NULL,
+              user_id TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'member',
+              joined_at TEXT NOT NULL,
+              UNIQUE(team_id, user_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_team_members_team ON mc_team_members(team_id);
+            CREATE INDEX IF NOT EXISTS idx_mc_team_members_user ON mc_team_members(user_id);
+            CREATE TABLE IF NOT EXISTS mc_session_shares (
+              id TEXT PRIMARY KEY,
+              session_id TEXT NOT NULL,
+              team_id TEXT NOT NULL,
+              shared_by TEXT NOT NULL,
+              share_mode TEXT NOT NULL DEFAULT 'live',
+              created_at TEXT NOT NULL,
+              UNIQUE(session_id, team_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_session_shares_team ON mc_session_shares(team_id);
+            CREATE TABLE IF NOT EXISTS mc_team_channels (
+              id TEXT PRIMARY KEY,
+              team_id TEXT NOT NULL,
+              session_id TEXT NOT NULL,
+              name TEXT NOT NULL,
+              created_by TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              UNIQUE(team_id, session_id)
+            );
+        """)
+        self.db.commit()
+
         # Migration: add user_id to mc_messages
         _add_column("mc_messages", "user_id")
         self.db.execute("UPDATE mc_messages SET user_id = 'user-admin' WHERE user_id IS NULL")
@@ -905,11 +947,50 @@ class DashboardService:
     def list_sessions(self, user_id: str) -> list[dict]:
         if not user_id:
             raise ValueError("user_id is required")
-        rows = self.db.execute(
+        # User's own sessions
+        own = self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
-        result = [dict(r) for r in rows]
+        result = [dict(r) for r in own]
+        seen = {r["id"] for r in result}
+        # Team-shared sessions (live)
+        try:
+            shared = self.db.execute(
+                """SELECT s.* FROM mc_chat_sessions s
+                JOIN mc_session_shares sh ON s.id = sh.session_id
+                JOIN mc_team_members m ON sh.team_id = m.team_id
+                WHERE m.user_id = ? AND s.user_id != ?
+                ORDER BY s.updated_at DESC""",
+                (user_id, user_id),
+            ).fetchall()
+            for r in shared:
+                d = dict(r)
+                if d["id"] not in seen:
+                    d["_shared"] = True
+                    result.append(d)
+                    seen.add(d["id"])
+        except Exception:
+            pass
+        # Team channel sessions
+        try:
+            channels = self.db.execute(
+                """SELECT s.*, tc.name as channel_name FROM mc_chat_sessions s
+                JOIN mc_team_channels tc ON s.id = tc.session_id
+                JOIN mc_team_members m ON tc.team_id = m.team_id
+                WHERE m.user_id = ?
+                ORDER BY s.updated_at DESC""",
+                (user_id,),
+            ).fetchall()
+            for r in channels:
+                d = dict(r)
+                if d["id"] not in seen:
+                    d["_channel"] = True
+                    result.append(d)
+                    seen.add(d["id"])
+        except Exception:
+            pass
+        result.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
         log.info("[sessions] list_sessions user=%s → %d sessions", user_id, len(result))
         return result
 
@@ -955,6 +1036,98 @@ class DashboardService:
             self._emit_event("chat_session", {"action": "deleted", "session_id": session_id}, tenant_id=tenant_id)
             return True
         return False
+
+    # ------------------------------------------------------------------
+    # Teams
+    # ------------------------------------------------------------------
+
+    def create_team(self, name: str, admin_user_id: str, description: str = "") -> dict:
+        team_id = f"team-{uuid.uuid4().hex[:8]}"
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT INTO mc_teams (id, name, description, admin_user_id, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (team_id, name, description, admin_user_id, now, now),
+        )
+        self.db.execute_commit(
+            "INSERT INTO mc_team_members (id, team_id, user_id, role, joined_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, admin_user_id, "admin", now),
+        )
+        return self.get_team(team_id)
+
+    def get_team(self, team_id: str) -> dict | None:
+        row = self.db.execute("SELECT * FROM mc_teams WHERE id = ?", (team_id,)).fetchone()
+        if not row:
+            return None
+        team = dict(row)
+        team["members"] = self._get_team_members(team_id)
+        return team
+
+    def _get_team_members(self, team_id: str) -> list[dict]:
+        rows = self.db.execute(
+            """SELECT m.user_id, m.role, m.joined_at, u.name, u.email
+            FROM mc_team_members m JOIN mc_users u ON m.user_id = u.id
+            WHERE m.team_id = ? ORDER BY m.joined_at""",
+            (team_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def list_user_teams(self, user_id: str) -> list[dict]:
+        rows = self.db.execute(
+            """SELECT t.* FROM mc_teams t
+            JOIN mc_team_members m ON t.id = m.team_id
+            WHERE m.user_id = ? ORDER BY t.name""",
+            (user_id,),
+        ).fetchall()
+        teams = []
+        for r in rows:
+            team = dict(r)
+            team["members"] = self._get_team_members(team["id"])
+            teams.append(team)
+        return teams
+
+    def add_team_member(self, team_id: str, user_id: str, role: str = "member") -> dict:
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT OR IGNORE INTO mc_team_members (id, team_id, user_id, role, joined_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, user_id, role, now),
+        )
+        self.db.execute_commit(
+            "UPDATE mc_teams SET updated_at = ? WHERE id = ?", (now, team_id),
+        )
+        return {"added": True, "team_id": team_id, "user_id": user_id}
+
+    def remove_team_member(self, team_id: str, user_id: str) -> dict:
+        self.db.execute_commit(
+            "DELETE FROM mc_team_members WHERE team_id = ? AND user_id = ?",
+            (team_id, user_id),
+        )
+        return {"removed": True}
+
+    def share_session_with_team(
+        self, session_id: str, team_id: str, shared_by: str,
+    ) -> dict:
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT OR IGNORE INTO mc_session_shares (id, session_id, team_id, shared_by, share_mode, created_at) VALUES (?,?,?,?,?,?)",
+            (str(uuid.uuid4()), session_id, team_id, shared_by, "live", now),
+        )
+        return {"shared": True, "session_id": session_id, "team_id": team_id}
+
+    def create_team_channel(self, team_id: str, name: str, created_by: str) -> dict:
+        session = self.create_session(name=f"#{name}", user_id=created_by)
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT INTO mc_team_channels (id, team_id, session_id, name, created_by, created_at) VALUES (?,?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, session["id"], name, created_by, now),
+        )
+        return {"channel_id": session["id"], "name": name, "team_id": team_id}
+
+    def list_team_channels(self, team_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM mc_team_channels WHERE team_id = ? ORDER BY name",
+            (team_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------
     # Deliverables
