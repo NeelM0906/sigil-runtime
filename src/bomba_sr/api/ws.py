@@ -14,11 +14,11 @@ log = logging.getLogger(__name__)
 
 
 class ConnectionManager:
-    """Manages WebSocket connections with tenant scoping."""
+    """Manages WebSocket connections with tenant + session scoping."""
 
     def __init__(self):
         self._connections: dict[str, dict] = {}
-        # client_id -> {"ws": WebSocket, "tenant_id": str, "user_id": str, "queue": asyncio.Queue}
+        # client_id -> {"ws", "tenant_id", "user_id", "queue", "session_ids"}
         self._lock = asyncio.Lock()
 
     async def connect(self, client_id: str, websocket: WebSocket, tenant_id: str, user_id: str):
@@ -29,6 +29,7 @@ class ConnectionManager:
                 "tenant_id": tenant_id,
                 "user_id": user_id,
                 "queue": q,
+                "session_ids": set(),
             }
         log.info("[WS] Client connected: %s (tenant=%s, user=%s)", client_id, tenant_id, user_id)
 
@@ -37,18 +38,41 @@ class ConnectionManager:
             self._connections.pop(client_id, None)
         log.info("[WS] Client disconnected: %s", client_id)
 
-    def emit_event_sync(self, event_type: str, payload: dict, tenant_id: str | None = None):
-        """Called from synchronous code (dashboard service, orchestration engine).
+    def subscribe_session(self, client_id: str, session_id: str):
+        entry = self._connections.get(client_id)
+        if entry:
+            entry["session_ids"].add(session_id)
+
+    def unsubscribe_session(self, client_id: str, session_id: str):
+        entry = self._connections.get(client_id)
+        if entry:
+            entry["session_ids"].discard(session_id)
+
+    def emit_event_sync(
+        self, event_type: str, payload: dict,
+        tenant_id: str | None = None, session_id: str | None = None,
+    ):
+        """Fan-out event. Delivers to clients matching tenant_id OR subscribed to session_id.
         Thread-safe: asyncio.Queue.put_nowait is safe from any thread."""
         evt = {"event": event_type, "data": payload, "ts": datetime.now(timezone.utc).isoformat()}
         dead = []
+        delivered: set[str] = set()
         for cid, entry in list(self._connections.items()):
-            if tenant_id is not None and entry.get("tenant_id") and entry["tenant_id"] != tenant_id:
-                continue
-            try:
-                entry["queue"].put_nowait(evt)
-            except asyncio.QueueFull:
-                dead.append(cid)
+            should_deliver = False
+            # Tenant match (existing)
+            if tenant_id is None:
+                should_deliver = True
+            elif not entry.get("tenant_id") or entry["tenant_id"] == tenant_id:
+                should_deliver = True
+            # Session match (shared sessions)
+            if session_id and session_id in entry.get("session_ids", set()):
+                should_deliver = True
+            if should_deliver and cid not in delivered:
+                try:
+                    entry["queue"].put_nowait(evt)
+                    delivered.add(cid)
+                except asyncio.QueueFull:
+                    dead.append(cid)
         for cid in dead:
             self._connections.pop(cid, None)
 
@@ -87,7 +111,6 @@ def _authenticate_ws(token: str, dashboard_svc) -> dict | None:
 
 async def websocket_endpoint(websocket: WebSocket, token: str = ""):
     """Main WebSocket handler. Auth via ?token= query param."""
-    # Must accept() before we can send a close frame with a custom code
     await websocket.accept()
 
     dashboard_svc = websocket.app.state.dashboard_svc
@@ -128,6 +151,15 @@ async def websocket_endpoint(websocket: WebSocket, token: str = ""):
                 msg_type = data.get("type", "")
                 if msg_type == "ping":
                     await websocket.send_json({"event": "pong", "ts": datetime.now(timezone.utc).isoformat()})
+                elif msg_type == "subscribe_session":
+                    sid = data.get("session_id")
+                    if sid:
+                        manager.subscribe_session(client_id, sid)
+                        await websocket.send_json({"event": "subscribed", "session_id": sid})
+                elif msg_type == "unsubscribe_session":
+                    sid = data.get("session_id")
+                    if sid:
+                        manager.unsubscribe_session(client_id, sid)
         except (WebSocketDisconnect, RuntimeError, OSError, json.JSONDecodeError):
             pass
 

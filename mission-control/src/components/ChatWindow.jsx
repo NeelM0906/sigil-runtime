@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback, memo, Children } from 'react'
+import { useState, useRef, useEffect, useCallback, useContext, memo, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { useAuth } from '../context/AuthContext'
 import { chatApi, tasksApi, deliverablesApi, teamsApi } from '../api'
-import { useSharedSSE } from '../context/SSEContext'
+import { useSharedSSE, SSEContext } from '../context/SSEContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -670,6 +670,14 @@ export function ChatWindow() {
       else localStorage.removeItem('mc_active_session')
     } catch { /* ignore */ }
   }, [activeSessionId])
+
+  // Subscribe to WS events for the active session (enables shared session delivery)
+  const sseCtx = useContext(SSEContext)
+  useEffect(() => {
+    if (activeSessionId && sseCtx?.subscribeSession) {
+      sseCtx.subscribeSession(activeSessionId)
+    }
+  }, [activeSessionId, sseCtx])
 
   // Load sessions on mount — auto-create if none exist
   useEffect(() => {

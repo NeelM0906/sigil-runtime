@@ -1366,10 +1366,7 @@ class DashboardService:
                 "SELECT * FROM mc_messages WHERE id = ?", (msg_id,)
             ).fetchone()
         )
-        self._emit_event("chat_message", msg, tenant_id=tenant_id)
-        # Also emit to collaborators on shared/channel sessions
-        if session_id:
-            self._emit_to_session_collaborators(session_id, "chat_message", msg, exclude_tenant=tenant_id)
+        self._emit_event("chat_message", msg, tenant_id=tenant_id, session_id=session_id)
         return msg
 
     def create_system_message(
@@ -2755,7 +2752,7 @@ class DashboardService:
         except queue.Empty:
             return None
 
-    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None) -> None:
+    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None, session_id: str | None = None) -> None:
         now = self._now()
         # Persist
         self.db.execute_commit(
@@ -2763,11 +2760,11 @@ class DashboardService:
             (event_type, json.dumps(payload, default=str), now),
         )
 
-        # WebSocket fan-out (primary)
+        # WebSocket fan-out (primary) — delivers to tenant match OR session subscribers
         if self._ws_manager is not None:
-            self._ws_manager.emit_event_sync(event_type, payload, tenant_id)
+            self._ws_manager.emit_event_sync(event_type, payload, tenant_id=tenant_id, session_id=session_id)
 
-        # Legacy SSE fan-out (fallback)
+        # Legacy SSE fan-out (fallback — tenant-scoped only)
         evt = {"event": event_type, "data": payload, "ts": now}
         with self._sse_lock:
             dead: list[str] = []

@@ -78,8 +78,14 @@ export function SSEProvider({ children }) {
     }
   }, [])
 
+  const subscribeSession = useCallback((sessionId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'subscribe_session', session_id: sessionId }))
+    }
+  }, [])
+
   return (
-    <SSEContext.Provider value={{ subscribe, connected, send }}>
+    <SSEContext.Provider value={{ subscribe, connected, send, subscribeSession }}>
       {children}
     </SSEContext.Provider>
   )
