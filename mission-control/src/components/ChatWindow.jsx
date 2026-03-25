@@ -823,6 +823,8 @@ export function ChatWindow() {
       })
     },
     being_typing(data) {
+      // Only show typing for the active session (or unscoped global events)
+      if (data.session_id && data.session_id !== activeSessionRef.current) return
       setTypingBeings(prev => {
         const next = new Map(prev)
         if (data.active) {

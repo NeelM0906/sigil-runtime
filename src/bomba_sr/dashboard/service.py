@@ -2244,7 +2244,7 @@ class DashboardService:
         task_id = d.get("task_id")
         if task_id:
             self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
-        self._emit_event("deliverable_created", self._artifact_output_row(d))
+            self._emit_event("deliverable_created", self._artifact_output_row(d))
 
     def get_being_skill_list(self, being_id: str) -> list[dict]:
         """Return skills available to a being with metadata."""
@@ -2664,6 +2664,11 @@ class DashboardService:
         seen_urls: set[str] = set()
         for url in url_pattern.findall(reply_text):
             url_clean = url.rstrip(".,;:!?")
+            # Skip internal workspace/file paths that aren't real deliverables
+            if url_clean.startswith("/") or url_clean.startswith("./") or url_clean.startswith("workspaces/"):
+                continue
+            if url_clean.endswith(".md") and not url_clean.startswith("http"):
+                continue
             if url_clean not in seen_urls:
                 seen_urls.add(url_clean)
                 outputs.append({
