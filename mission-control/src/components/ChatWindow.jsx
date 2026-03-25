@@ -137,6 +137,27 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
         {/* Task reference */}
         {msg.taskRef && <InlineTaskCard taskId={msg.taskRef} />}
 
+        {/* Knowledge sources indicator */}
+        {!isUser && msg.metadata?.retrieval_sources?.length > 0 && (
+          <details className="mt-1">
+            <summary className="text-[10px] text-text-muted cursor-pointer hover:text-text-secondary inline-flex items-center gap-1">
+              <span>📚</span>
+              <span>{msg.metadata.retrieval_sources.length} knowledge sources</span>
+              <span className="text-text-muted/50">({msg.metadata.retrieval_latency_ms}ms)</span>
+            </summary>
+            <div className="mt-1 space-y-0.5">
+              {msg.metadata.retrieval_sources.map((s, i) => (
+                <div key={i} className="text-[9px] text-text-muted pl-2 border-l border-border/50">
+                  <span className="font-mono text-accent-purple">{s.index}</span>
+                  {s.namespace && <span className="text-text-muted">/{s.namespace}</span>}
+                  <span className="ml-1 text-text-muted">({s.score})</span>
+                  <span className="ml-1 block text-text-muted/70 truncate">{s.preview}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
         <div className="text-[10px] text-text-muted mt-0.5 font-mono">
           {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
         </div>

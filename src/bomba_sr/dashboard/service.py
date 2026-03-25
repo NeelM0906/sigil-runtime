@@ -2454,13 +2454,26 @@ class DashboardService:
         except Exception:
             pass  # subagent_runs table may not exist yet
 
-        if not outputs and not agents:
+        # ── Auto-retrieval sources ──
+        retrieval_sources = None
+        retrieval_latency = 0
+        auto_retrieval = result.get("auto_retrieval")
+        if auto_retrieval and auto_retrieval.get("sources"):
+            retrieval_sources = auto_retrieval["sources"]
+            retrieval_latency = auto_retrieval.get("latency_ms", 0)
+
+        if not outputs and not agents and not retrieval_sources:
             return None
 
-        return {
-            "outputs": outputs if outputs else None,
-            "agents": agents if agents else None,
-        }
+        metadata: dict[str, Any] = {}
+        if outputs:
+            metadata["outputs"] = outputs
+        if agents:
+            metadata["agents"] = agents
+        if retrieval_sources:
+            metadata["retrieval_sources"] = retrieval_sources
+            metadata["retrieval_latency_ms"] = retrieval_latency
+        return metadata
 
     # ------------------------------------------------------------------
     # Sub-agents
