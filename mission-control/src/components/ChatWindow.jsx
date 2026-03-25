@@ -556,19 +556,41 @@ export function ChatWindow() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Session state
+  // Session state — persist active session across reloads
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState(null)
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try { return localStorage.getItem('mc_active_session') } catch { return null }
+  })
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Load sessions on mount (scoped to user)
+  // Persist activeSessionId to localStorage
   useEffect(() => {
-    chatApi.sessions().then(({ sessions: s }) => {
+    try {
+      if (activeSessionId) localStorage.setItem('mc_active_session', activeSessionId)
+      else localStorage.removeItem('mc_active_session')
+    } catch { /* ignore */ }
+  }, [activeSessionId])
+
+  // Load sessions on mount — auto-create if none exist
+  useEffect(() => {
+    chatApi.sessions().then(async ({ sessions: s }) => {
+      if (s.length === 0) {
+        // No sessions — auto-create one
+        try {
+          const { session } = await chatApi.createSession('General')
+          s = [session]
+        } catch { /* ignore */ }
+      }
       setSessions(s)
-      if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
+      // Restore persisted session or pick the first one
+      if (s.length > 0) {
+        const persisted = activeSessionId
+        const valid = s.some(x => x.id === persisted)
+        if (!valid) setActiveSessionId(s[0].id)
+      }
     }).catch(() => {})
   }, [])
 
@@ -810,12 +832,23 @@ export function ChatWindow() {
     setTargets(defaultTarget)
 
     try {
+      // Ensure we have a session — auto-create if needed
+      let sendSessionId = activeSessionId
+      if (!sendSessionId) {
+        try {
+          const { session } = await chatApi.createSession('General')
+          setSessions(prev => [session, ...prev])
+          setActiveSessionId(session.id)
+          sendSessionId = session.id
+        } catch { /* fall through with null — server will handle */ }
+      }
+
       // POST returns the saved user message; LLM responses arrive via SSE
       const { message: saved } = await chatApi.send({
         targets: tempMsg.targets,
         content,
         mode,
-        session_id: activeSessionId,
+        session_id: sendSessionId,
       })
 
       // Replace temp message with the persisted one

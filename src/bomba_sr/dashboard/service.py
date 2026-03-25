@@ -909,7 +909,9 @@ class DashboardService:
             "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        result = [dict(r) for r in rows]
+        log.info("[sessions] list_sessions user=%s → %d sessions", user_id, len(result))
+        return result
 
     def get_session(self, session_id: str) -> dict | None:
         """Look up a single chat session by id."""
@@ -919,6 +921,7 @@ class DashboardService:
         return dict(row) if row else None
 
     def create_session(self, name: str, user_id: str | None = None, tenant_id: str | None = None) -> dict:
+        log.info("[sessions] create_session name='%s' user=%s", name, user_id)
         sid = f"sess-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
