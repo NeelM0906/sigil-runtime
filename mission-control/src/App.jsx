@@ -10,7 +10,7 @@ import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
 import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
-import { AgentTeams } from './components/AgentTeams'
+import { TeamPage } from './components/TeamPage'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
@@ -20,7 +20,7 @@ const TABS = [
   { id: 'tasks', label: 'Task Board' },
   { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
-  { id: 'teams', label: 'Agent Teams' },
+  { id: 'team', label: 'Team' },
   { id: 'skills', label: 'Skills' },
 ]
 
@@ -67,8 +67,8 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          <div style={show('teams')}>
-            <AgentTeams />
+          <div style={show('team')}>
+            <TeamPage />
           </div>
           <div style={show('skills')}>
             <SkillsPage />

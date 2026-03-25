@@ -432,11 +432,82 @@ function ChatFilters({ filters, setFilters, beings, onClear }) {
 
 // ── Session Sidebar ──────────────────────────────────────────
 
+function SessionItem({ session: s, active, onSelect, onRename, onDelete, isShared, isChannel }) {
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+
+  const handleRename = () => {
+    if (!editName.trim() || !onRename) return
+    onRename(s.id, editName.trim())
+    setEditing(false)
+  }
+
+  return (
+    <div
+      onClick={() => onSelect(s.id)}
+      className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition-colors ${
+        active
+          ? 'bg-accent-blue/10 text-accent-blue border-l-2 border-accent-blue'
+          : 'text-text-secondary hover:bg-bg-hover border-l-2 border-transparent'
+      }`}
+    >
+      {editing ? (
+        <input
+          autoFocus
+          value={editName}
+          onChange={e => setEditName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setEditing(false) }}
+          onBlur={handleRename}
+          className="flex-1 bg-bg-card border border-border rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none"
+          onClick={e => e.stopPropagation()}
+        />
+      ) : (
+        <>
+          {isChannel ? (
+            <span className="w-3 h-3 shrink-0 text-[10px] font-bold text-accent-purple opacity-70">#</span>
+          ) : isShared ? (
+            <span className="w-3 h-3 shrink-0 text-[10px] text-accent-amber opacity-70">👥</span>
+          ) : (
+            <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          )}
+          <span className="flex-1 truncate">{isChannel ? (s.channel_name || s.name) : s.name}</span>
+          {!isShared && !isChannel && (
+            <div className="hidden group-hover:flex items-center gap-0.5">
+              {onRename && (
+                <button
+                  onClick={e => { e.stopPropagation(); setEditing(true); setEditName(s.name) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-primary"
+                  title="Rename"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && s.id !== 'general' && (
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete(s.id) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-red"
+                  title="Delete"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editName, setEditName] = useState('')
 
   const handleCreate = () => {
     if (!newName.trim()) return
@@ -445,25 +516,19 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
     setCreating(false)
   }
 
-  const handleRename = (id) => {
-    if (!editName.trim()) return
-    onRename(id, editName.trim())
-    setEditingId(null)
-  }
+  const own = sessions.filter(s => !s._shared && !s._channel)
+  const shared = sessions.filter(s => s._shared)
+  const channels = sessions.filter(s => s._channel)
 
   return (
-    <div className="w-48 border-r border-border flex flex-col shrink-0">
+    <div className="w-52 border-r border-border bg-bg-secondary flex flex-col shrink-0">
       <div className="flex items-center justify-between px-2 py-2 border-b border-border/50">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Sessions</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-primary">Conversations</span>
         <button
           onClick={() => setCreating(!creating)}
           className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-colors"
           title="New session"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        >+</button>
       </div>
 
       {creating && (
@@ -480,66 +545,40 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
       )}
 
       <div className="flex-1 overflow-y-auto">
-        {sessions.map(s => (
-          <div
-            key={s.id}
-            onClick={() => onSelect(s.id)}
-            className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition-colors ${
-              s.id === activeSessionId
-                ? 'bg-accent-blue/10 text-accent-blue border-l-2 border-accent-blue'
-                : 'text-text-secondary hover:bg-bg-hover border-l-2 border-transparent'
-            }`}
-          >
-            {editingId === s.id ? (
-              <input
-                autoFocus
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleRename(s.id); if (e.key === 'Escape') setEditingId(null) }}
-                onBlur={() => handleRename(s.id)}
-                className="flex-1 bg-bg-card border border-border rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none"
-                onClick={e => e.stopPropagation()}
-              />
-            ) : (
-              <>
-                {s._channel ? (
-                  <span className="w-3 h-3 shrink-0 text-[10px] font-bold text-accent-purple opacity-70">#</span>
-                ) : s._shared ? (
-                  <svg className="w-3 h-3 shrink-0 text-accent-amber opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
-                )}
-                <span className="flex-1 truncate">{s._channel ? s.channel_name || s.name : s.name}</span>
-                <div className="hidden group-hover:flex items-center gap-0.5">
-                  <button
-                    onClick={e => { e.stopPropagation(); setEditingId(s.id); setEditName(s.name) }}
-                    className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-primary"
-                    title="Rename"
-                  >
-                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  {s.id !== 'general' && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onDelete(s.id) }}
-                      className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-red"
-                      title="Delete"
-                    >
-                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+        {/* My Sessions */}
+        <div className="px-2 pt-2 pb-1">
+          <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">My Sessions</span>
+        </div>
+        {own.map(s => (
+          <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+            onSelect={onSelect} onRename={onRename} onDelete={onDelete} />
         ))}
+
+        {/* Shared With Me */}
+        {shared.length > 0 && (
+          <>
+            <div className="px-2 pt-3 pb-1">
+              <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Shared With Me</span>
+            </div>
+            {shared.map(s => (
+              <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+                onSelect={onSelect} isShared />
+            ))}
+          </>
+        )}
+
+        {/* Team Channels */}
+        {channels.length > 0 && (
+          <>
+            <div className="px-2 pt-3 pb-1">
+              <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Team Channels</span>
+            </div>
+            {channels.map(s => (
+              <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+                onSelect={onSelect} isChannel />
+            ))}
+          </>
+        )}
       </div>
     </div>
   )
