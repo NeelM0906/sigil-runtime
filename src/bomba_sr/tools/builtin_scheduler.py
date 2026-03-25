@@ -21,14 +21,33 @@ def builtin_scheduler_tools(
         expression = str(arguments.get("cron_expression") or "").strip()
         goal = str(arguments.get("task_goal") or "").strip()
         enabled = bool(arguments.get("enabled", True))
-        created = add_schedule(
-            context.tenant_id,
-            context.user_id,
-            expression,
-            goal,
-            str(context.workspace_root),
-            enabled,
-        )
+        schedule_type = str(arguments.get("schedule_type") or "cron").strip().lower()
+        run_at = arguments.get("run_at")
+        interval_seconds = arguments.get("interval_seconds")
+        delete_after_run = bool(arguments.get("delete_after_run", False))
+        try:
+            created = add_schedule(
+                context.tenant_id,
+                context.user_id,
+                expression,
+                goal,
+                str(context.workspace_root),
+                enabled,
+                schedule_type=schedule_type,
+                run_at=run_at,
+                interval_seconds=interval_seconds,
+                delete_after_run=delete_after_run,
+            )
+        except TypeError:
+            # Fallback for bridge versions that don't yet accept the new kwargs
+            created = add_schedule(
+                context.tenant_id,
+                context.user_id,
+                expression,
+                goal,
+                str(context.workspace_root),
+                enabled,
+            )
         return {"created": created}
 
     def _list_schedules(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
@@ -63,15 +82,52 @@ def builtin_scheduler_tools(
     return [
         ToolDefinition(
             name="schedule_task",
-            description="Schedule a recurring proactive task using a cron expression.",
+            description=(
+                "Schedule a task to run automatically. Supports three schedule types:\n"
+                "  - cron: recurring via cron expression (e.g. '*/30 * * * *' = every 30min, "
+                "'0 9 * * *' = daily at 9am, '@hourly', '@daily')\n"
+                "  - at: one-shot at a specific ISO datetime (e.g. '2026-03-26T14:00:00Z'), "
+                "auto-deleted after execution\n"
+                "  - every: recurring at a fixed interval in seconds (e.g. 3600 = every hour)\n"
+                "Examples:\n"
+                "  {schedule_type: 'cron', cron_expression: '0 */6 * * *', task_goal: 'Check pipeline status'}\n"
+                "  {schedule_type: 'at', run_at: '2026-03-26T09:00:00Z', task_goal: 'Send morning report'}\n"
+                "  {schedule_type: 'every', interval_seconds: 1800, task_goal: 'Poll inbox'}"
+            ),
             parameters={
                 "type": "object",
                 "properties": {
-                    "cron_expression": {"type": "string"},
-                    "task_goal": {"type": "string"},
-                    "enabled": {"type": "boolean"},
+                    "schedule_type": {
+                        "type": "string",
+                        "enum": ["cron", "at", "every"],
+                        "description": "Type of schedule: 'cron' (recurring cron), 'at' (one-shot datetime), 'every' (fixed interval).",
+                    },
+                    "cron_expression": {
+                        "type": "string",
+                        "description": "Cron expression (required for schedule_type='cron'). E.g. '*/30 * * * *', '@hourly', '@daily'.",
+                    },
+                    "task_goal": {
+                        "type": "string",
+                        "description": "Natural-language description of what the task should do when it fires.",
+                    },
+                    "run_at": {
+                        "type": "string",
+                        "description": "ISO-8601 datetime for one-shot execution (required for schedule_type='at'). E.g. '2026-03-26T14:00:00Z'.",
+                    },
+                    "interval_seconds": {
+                        "type": "integer",
+                        "description": "Interval in seconds between runs (required for schedule_type='every'). Minimum 1.",
+                    },
+                    "delete_after_run": {
+                        "type": "boolean",
+                        "description": "If true, delete the task after it runs once. Defaults to true for 'at' type, false otherwise.",
+                    },
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "Whether the schedule starts enabled. Defaults to true.",
+                    },
                 },
-                "required": ["cron_expression", "task_goal"],
+                "required": ["task_goal"],
                 "additionalProperties": False,
             },
             risk_level="medium",
@@ -80,7 +136,7 @@ def builtin_scheduler_tools(
         ),
         ToolDefinition(
             name="list_schedules",
-            description="List existing recurring scheduled tasks.",
+            description="List existing scheduled tasks with their next run times, types, and status.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -95,7 +151,7 @@ def builtin_scheduler_tools(
         ),
         ToolDefinition(
             name="remove_schedule",
-            description="Remove a recurring scheduled task by id.",
+            description="Remove a scheduled task by id.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -110,7 +166,7 @@ def builtin_scheduler_tools(
         ),
         ToolDefinition(
             name="set_schedule_enabled",
-            description="Enable or disable a recurring scheduled task by id.",
+            description="Enable or disable a scheduled task by id.",
             parameters={
                 "type": "object",
                 "properties": {

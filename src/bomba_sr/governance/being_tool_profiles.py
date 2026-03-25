@@ -140,6 +140,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:media",         # fal video generation + request tracking
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:colosseum",     # colosseum tools — Forge's core domain
+        "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
     )),
 
     # Scholar — research + retrieval
@@ -151,6 +152,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:fs",            # read, write, edit, glob, grep (for reports)
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:knowledge",     # update_knowledge
+        "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
     )),
 
     # Recovery — CRM + outreach + voice + memory + skills
@@ -164,6 +166,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
         "group:skills",        # skill_create, skill_update, skill_list
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
+        "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
     )),
 
     # Memory — memory specialist + Pinecone

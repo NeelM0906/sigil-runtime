@@ -108,7 +108,7 @@ class RuntimeConfig:
     adaptation_auto_correct: bool = os.getenv("BOMBA_ADAPTATION_AUTO_CORRECT", "true").lower() != "false"
     heartbeat_enabled: bool = os.getenv("BOMBA_HEARTBEAT_ENABLED", "false").lower() != "false"
     heartbeat_interval_seconds: int = int(os.getenv("BOMBA_HEARTBEAT_INTERVAL", "1800"))
-    cron_enabled: bool = os.getenv("BOMBA_CRON_ENABLED", "false").lower() != "false"
+    cron_enabled: bool = os.getenv("BOMBA_CRON_ENABLED", "true").lower() != "false"
     dream_cycle_enabled: bool = os.getenv("BOMBA_DREAM_CYCLE_ENABLED", "false").lower() != "false"
     dream_cycle_interval_seconds: int = int(os.getenv("BOMBA_DREAM_CYCLE_INTERVAL", "3600"))
     replay_history_budget_fraction: float = float(os.getenv("BOMBA_REPLAY_HISTORY_BUDGET_FRACTION", "0.7"))

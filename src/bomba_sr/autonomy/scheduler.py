@@ -63,22 +63,57 @@ class CronScheduler:
             "scheduled_count": len(self.list_tasks(include_disabled=True)),
         }
 
-    def add_task(self, cron_expression: str, task_goal: str, enabled: bool = True) -> dict[str, Any]:
-        expression = cron_expression.strip()
-        if not expression:
-            raise ValueError("cron_expression must not be empty")
+    def add_task(
+        self,
+        cron_expression: str,
+        task_goal: str,
+        enabled: bool = True,
+        *,
+        schedule_type: str = "cron",
+        run_at: str | None = None,
+        interval_seconds: int | None = None,
+        delete_after_run: bool = False,
+    ) -> dict[str, Any]:
         goal = task_goal.strip()
         if not goal:
             raise ValueError("task_goal must not be empty")
 
+        schedule_type = schedule_type.strip().lower()
+        if schedule_type not in ("cron", "at", "every"):
+            raise ValueError(f"schedule_type must be 'cron', 'at', or 'every', got: {schedule_type!r}")
+
         now = datetime.now(timezone.utc)
-        next_run = self._next_from_expression(expression, now)
+
+        # Determine cron_expression and next_run based on schedule_type
+        if schedule_type == "at":
+            if not run_at:
+                raise ValueError("run_at is required for schedule_type='at'")
+            next_run = datetime.fromisoformat(run_at.replace("Z", "+00:00"))
+            if next_run.tzinfo is None:
+                next_run = next_run.replace(tzinfo=timezone.utc)
+            expression = run_at
+            # One-shot tasks default to delete_after_run=True unless explicitly set
+            delete_after_run = True
+        elif schedule_type == "every":
+            if not interval_seconds or interval_seconds < 1:
+                raise ValueError("interval_seconds must be >= 1 for schedule_type='every'")
+            next_run = now + timedelta(seconds=interval_seconds)
+            expression = f"every:{interval_seconds}s"
+        else:
+            # cron
+            expression = cron_expression.strip()
+            if not expression:
+                raise ValueError("cron_expression must not be empty for schedule_type='cron'")
+            next_run = self._next_from_expression(expression, now)
+
         task_id = str(uuid.uuid4())
         self.db.execute(
             """
             INSERT INTO scheduled_tasks (
-              id, tenant_id, user_id, cron_expression, task_goal, enabled, last_run_at, next_run_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
+              id, tenant_id, user_id, cron_expression, task_goal, enabled,
+              last_run_at, next_run_at, created_at,
+              schedule_type, delete_after_run, interval_seconds
+            ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
             """,
             (
                 task_id,
@@ -89,6 +124,9 @@ class CronScheduler:
                 int(bool(enabled)),
                 next_run.isoformat(),
                 now.isoformat(),
+                schedule_type,
+                int(bool(delete_after_run)),
+                interval_seconds,
             ),
         )
         self.db.commit()
@@ -96,10 +134,13 @@ class CronScheduler:
             "id": task_id,
             "tenant_id": self.tenant_id,
             "user_id": self.user_id,
+            "schedule_type": schedule_type,
             "cron_expression": expression,
             "task_goal": goal,
             "enabled": bool(enabled),
             "next_run_at": next_run.isoformat(),
+            "delete_after_run": delete_after_run,
+            "interval_seconds": interval_seconds,
         }
 
     def list_tasks(self, include_disabled: bool = True) -> list[dict[str, Any]]:
@@ -127,6 +168,7 @@ class CronScheduler:
         for row in rows:
             item = dict_from_row(row)
             item["enabled"] = bool(item.get("enabled"))
+            item["delete_after_run"] = bool(item.get("delete_after_run"))
             out.append(item)
         return out
 
@@ -146,6 +188,47 @@ class CronScheduler:
         self.db.commit()
         return {"updated": bool(updated), "task_id": task_id, "enabled": bool(enabled)}
 
+    def get_runs(self, task_id: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+        """Return recent run history, optionally filtered by task_id."""
+        if task_id:
+            rows = self.db.execute(
+                """
+                SELECT * FROM scheduled_task_runs
+                WHERE tenant_id = ? AND task_id = ?
+                ORDER BY ran_at DESC LIMIT ?
+                """,
+                (self.tenant_id, task_id, limit),
+            ).fetchall()
+        else:
+            rows = self.db.execute(
+                """
+                SELECT * FROM scheduled_task_runs
+                WHERE tenant_id = ?
+                ORDER BY ran_at DESC LIMIT ?
+                """,
+                (self.tenant_id, limit),
+            ).fetchall()
+        return [dict_from_row(r) for r in rows]
+
+    def _record_run(
+        self,
+        task_id: str,
+        ran_at: datetime,
+        status: str,
+        result_payload: dict[str, Any],
+    ) -> None:
+        """Insert a row into the run history table."""
+        run_id = str(uuid.uuid4())
+        error_message = result_payload.get("error") if status == "error" else None
+        self.db.execute(
+            """
+            INSERT INTO scheduled_task_runs (
+              id, tenant_id, task_id, ran_at, status, error_message
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (run_id, self.tenant_id, task_id, ran_at.isoformat(), status, error_message),
+        )
+
     def run_due_once(self) -> list[dict[str, Any]]:
         now = datetime.now(timezone.utc)
         rows = self.db.execute(
@@ -158,33 +241,70 @@ class CronScheduler:
             (self.tenant_id, self.user_id, now.isoformat()),
         ).fetchall()
         results: list[dict[str, Any]] = []
+        tasks_to_delete: list[str] = []
         for row in rows:
             item = dict_from_row(row)
             task_id = str(item["id"])
             expression = str(item["cron_expression"])
             goal = str(item["task_goal"])
+            sched_type = str(item.get("schedule_type") or "cron")
+            delete_flag = bool(item.get("delete_after_run"))
+            interval_secs = item.get("interval_seconds")
+
             result_payload: dict[str, Any] = {}
+            status = "ok"
             try:
                 result_payload = self.runner(goal, task_id) or {}
             except Exception as exc:
                 result_payload = {"error": str(exc)}
-            next_run = self._next_from_expression(expression, now)
-            self.db.execute(
-                """
-                UPDATE scheduled_tasks
-                SET last_run_at = ?, next_run_at = ?
-                WHERE id = ?
-                """,
-                (now.isoformat(), next_run.isoformat(), task_id),
-            )
+                status = "error"
+
+            # Record the run
+            self._record_run(task_id, now, status, result_payload)
+
+            # Compute next_run based on schedule_type
+            if sched_type == "at":
+                # One-shot: disable and optionally delete
+                tasks_to_delete.append(task_id)
+                next_run_iso = None
+            elif sched_type == "every" and interval_secs:
+                next_run = now + timedelta(seconds=int(interval_secs))
+                next_run_iso = next_run.isoformat()
+            else:
+                # cron
+                next_run = self._next_from_expression(expression, now)
+                next_run_iso = next_run.isoformat()
+
+            if next_run_iso and not delete_flag:
+                self.db.execute(
+                    """
+                    UPDATE scheduled_tasks
+                    SET last_run_at = ?, next_run_at = ?
+                    WHERE id = ?
+                    """,
+                    (now.isoformat(), next_run_iso, task_id),
+                )
+            elif delete_flag or sched_type == "at":
+                tasks_to_delete.append(task_id)
+
             results.append(
                 {
                     "task_id": task_id,
                     "ran_at": now.isoformat(),
-                    "next_run_at": next_run.isoformat(),
+                    "next_run_at": next_run_iso,
+                    "status": status,
                     "result": result_payload,
+                    "deleted": task_id in tasks_to_delete,
                 }
             )
+
+        # Delete one-shot tasks that have fired
+        for tid in set(tasks_to_delete):
+            self.db.execute(
+                "DELETE FROM scheduled_tasks WHERE id = ?",
+                (tid,),
+            )
+
         if rows:
             self.db.commit()
         return results
@@ -210,9 +330,34 @@ class CronScheduler:
 
             CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_due
               ON scheduled_tasks(tenant_id, user_id, enabled, next_run_at);
+
+            CREATE TABLE IF NOT EXISTS scheduled_task_runs (
+              id TEXT PRIMARY KEY,
+              tenant_id TEXT NOT NULL,
+              task_id TEXT NOT NULL,
+              ran_at TEXT NOT NULL,
+              status TEXT NOT NULL DEFAULT 'ok',
+              error_message TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_scheduled_task_runs_task
+              ON scheduled_task_runs(tenant_id, task_id, ran_at);
             """
         )
         self.db.commit()
+        # Add columns that may not exist in older schemas
+        for col, col_type, default in [
+            ("schedule_type", "TEXT", "'cron'"),
+            ("delete_after_run", "INTEGER", "0"),
+            ("interval_seconds", "INTEGER", "NULL"),
+        ]:
+            try:
+                self.db.execute(
+                    f"ALTER TABLE scheduled_tasks ADD COLUMN {col} {col_type} DEFAULT {default}"
+                )
+                self.db.commit()
+            except Exception:
+                pass  # column already exists
 
     @staticmethod
     def _next_from_expression(cron_expression: str, base_time: datetime) -> datetime:
