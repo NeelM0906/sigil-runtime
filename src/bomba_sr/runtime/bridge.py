@@ -611,7 +611,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=500,  # Load full session — replay budget caps what actually fits
+                limit=50,  # Recent turns — session summary covers older context
             )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,
@@ -754,7 +754,14 @@ class RuntimeBridge:
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
                 ],
                 "semantic_candidates": semantic_candidates,
-                "recent_history": [],  # Full transcript in replay_messages — no need to duplicate here
+                "recent_history": [
+                    {"text": f"session_id={request.session_id}"},
+                    (
+                        {"text": f"session_summary={session_summary['summary_text']}"}
+                        if session_summary is not None
+                        else {"text": "session_summary=None"}
+                    ),
+                ],
                 "procedural_candidates": procedural_candidates,
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
