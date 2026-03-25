@@ -9,6 +9,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
         "switch_model",
         "enable_tools",
     },
+    "group:exec": {"exec", "process"},
     "group:cron": {
         "schedule_task",
         "list_schedules",

@@ -167,6 +167,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:skills",        # skill_create, skill_update, skill_list
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
+        "group:exec",          # exec, process — run scripts and shell commands
     )),
 
     # Memory — memory specialist + Pinecone

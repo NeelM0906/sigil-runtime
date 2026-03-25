@@ -28,10 +28,20 @@ def _truncate_text(text: str, max_chars: int) -> str:
     return text[:half] + f"\n\n... [{omitted} chars truncated] ...\n\n" + text[-half:]
 
 
+_BLOCKED_PATTERNS = [
+    "rm -rf /", "rm -rf ~", "mkfs", "dd if=", "> /dev/sd",
+    "chmod -R 777 /", "shutdown", "reboot", "halt", "init 0", "init 6",
+]
+
+
 def _exec_tool(arguments: dict[str, Any], context: ToolContext, default_max_output_chars: int = 50000) -> dict[str, Any]:
     command = str(arguments.get("command") or "").strip()
     if not command:
         raise ValueError("command is required")
+    cmd_lower = command.lower().strip()
+    for pattern in _BLOCKED_PATTERNS:
+        if pattern in cmd_lower:
+            raise ValueError(f"Command blocked for safety: contains '{pattern}'")
     timeout = int(arguments.get("timeout") or 120)
     cwd_raw = str(arguments.get("cwd") or ".")
     cwd = context.guard_path(cwd_raw)
@@ -99,14 +109,21 @@ def builtin_exec_tools(default_max_output_chars: int = 50000) -> list[ToolDefini
     return [
         ToolDefinition(
             name="exec",
-            description="Execute a shell command in the workspace.",
+            description=(
+                "Execute a shell command on the host machine. Use this to run Python "
+                "scripts, install packages, process data, run git commands, or any "
+                "terminal operation. The command runs in the being's workspace directory. "
+                "Examples: 'python3 script.py', 'pip install pandas', 'ls -la uploads/', "
+                "'cat file.txt | grep keyword'. Output (stdout + stderr) is captured. "
+                "Timeout default: 120s."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string"},
-                    "timeout": {"type": "integer"},
-                    "cwd": {"type": "string"},
-                    "max_output_chars": {"type": "integer"},
+                    "command": {"type": "string", "description": "Shell command to execute"},
+                    "timeout": {"type": "integer", "description": "Timeout in seconds (default 120)"},
+                    "cwd": {"type": "string", "description": "Working directory (default: workspace root)"},
+                    "max_output_chars": {"type": "integer", "description": "Max output chars (default 50000)"},
                 },
                 "required": ["command"],
                 "additionalProperties": False,
@@ -122,7 +139,11 @@ def builtin_exec_tools(default_max_output_chars: int = 50000) -> list[ToolDefini
         ),
         ToolDefinition(
             name="process",
-            description="List or kill background processes managed by the runtime.",
+            description=(
+                "List or kill background processes started by this runtime. "
+                "Use action='list' to see running processes, action='kill' with "
+                "pid=<number> to terminate one."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
