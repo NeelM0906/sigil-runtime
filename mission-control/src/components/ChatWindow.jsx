@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, memo, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { useAuth } from '../context/AuthContext'
-import { chatApi, tasksApi, deliverablesApi } from '../api'
+import { chatApi, tasksApi, deliverablesApi, teamsApi } from '../api'
 import { useSharedSSE } from '../context/SSEContext'
 import { timeAgo } from '../store'
 
@@ -432,7 +432,7 @@ function ChatFilters({ filters, setFilters, beings, onClear }) {
 
 // ── Session Sidebar ──────────────────────────────────────────
 
-function SessionItem({ session: s, active, onSelect, onRename, onDelete, isShared, isChannel }) {
+function SessionItem({ session: s, active, onSelect, onRename, onDelete, onShare, isShared, isChannel }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
 
@@ -475,6 +475,17 @@ function SessionItem({ session: s, active, onSelect, onRename, onDelete, isShare
           <span className="flex-1 truncate">{isChannel ? (s.channel_name || s.name) : s.name}</span>
           {!isShared && !isChannel && (
             <div className="hidden group-hover:flex items-center gap-0.5">
+              {onShare && (
+                <button
+                  onClick={e => { e.stopPropagation(); onShare(s.id) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-blue"
+                  title="Share with team"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+              )}
               {onRename && (
                 <button
                   onClick={e => { e.stopPropagation(); setEditing(true); setEditName(s.name) }}
@@ -505,9 +516,11 @@ function SessionItem({ session: s, active, onSelect, onRename, onDelete, isShare
   )
 }
 
-function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete }) {
+function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete, onShare }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [shareSessionId, setShareSessionId] = useState(null)
+  const [teams, setTeams] = useState(null)  // null = not loaded, [] = no teams
 
   const handleCreate = () => {
     if (!newName.trim()) return
@@ -516,12 +529,49 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
     setCreating(false)
   }
 
+  const handleShareClick = async (sessionId) => {
+    setShareSessionId(sessionId)
+    if (teams === null) {
+      try {
+        const { teams: t } = await teamsApi.list()
+        setTeams(t || [])
+      } catch { setTeams([]) }
+    }
+  }
+
+  const handleShareToTeam = async (teamId) => {
+    if (!shareSessionId) return
+    try {
+      await onShare(teamId, shareSessionId)
+      setShareSessionId(null)
+    } catch (err) { alert('Share failed: ' + err.message) }
+  }
+
   const own = sessions.filter(s => !s._shared && !s._channel)
   const shared = sessions.filter(s => s._shared)
   const channels = sessions.filter(s => s._channel)
 
   return (
     <div className="w-52 border-r border-border bg-bg-secondary flex flex-col shrink-0">
+      {/* Share modal */}
+      {shareSessionId && (
+        <div className="absolute z-50 left-1 top-12 w-48 bg-bg-secondary border border-border rounded-lg shadow-lg p-2">
+          <div className="text-[10px] font-semibold text-text-muted uppercase mb-1.5">Share with team</div>
+          {(teams || []).length === 0 ? (
+            <p className="text-[10px] text-text-muted py-1">No teams available</p>
+          ) : (teams || []).map(t => (
+            <button
+              key={t.id}
+              onClick={() => handleShareToTeam(t.id)}
+              className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-hover rounded transition-colors"
+            >
+              {t.name} <span className="text-text-muted text-[10px]">({t.members?.length || 0})</span>
+            </button>
+          ))}
+          <button onClick={() => setShareSessionId(null)} className="w-full text-center text-[10px] text-text-muted hover:text-text-primary pt-1">Cancel</button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between px-2 py-2 border-b border-border/50">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-text-primary">Conversations</span>
         <button
@@ -551,7 +601,7 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
         </div>
         {own.map(s => (
           <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
-            onSelect={onSelect} onRename={onRename} onDelete={onDelete} />
+            onSelect={onSelect} onRename={onRename} onDelete={onDelete} onShare={handleShareClick} />
         ))}
 
         {/* Shared With Me */}
@@ -922,6 +972,7 @@ export function ChatWindow() {
           onCreate={handleCreateSession}
           onRename={handleRenameSession}
           onDelete={handleDeleteSession}
+          onShare={(teamId, sessionId) => teamsApi.shareSession(teamId, sessionId).then(() => chatApi.sessions().then(({ sessions: s }) => setSessions(s)))}
         />
       )}
 

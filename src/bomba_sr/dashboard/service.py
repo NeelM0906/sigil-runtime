@@ -1130,6 +1130,64 @@ class DashboardService:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def can_access_session(self, user_id: str, session_id: str) -> dict | None:
+        """Check if user can access a session (owner, shared, or channel)."""
+        own = self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        ).fetchone()
+        if own:
+            return {"access": "owner", "session": dict(own)}
+        shared = self.db.execute(
+            """SELECT sh.team_id, sh.share_mode, s.*
+            FROM mc_session_shares sh
+            JOIN mc_chat_sessions s ON s.id = sh.session_id
+            JOIN mc_team_members m ON sh.team_id = m.team_id
+            WHERE sh.session_id = ? AND m.user_id = ? AND sh.share_mode = 'live'""",
+            (session_id, user_id),
+        ).fetchone()
+        if shared:
+            return {"access": "shared", "session": dict(shared), "team_id": shared["team_id"]}
+        channel = self.db.execute(
+            """SELECT tc.team_id, s.*
+            FROM mc_team_channels tc
+            JOIN mc_chat_sessions s ON s.id = tc.session_id
+            JOIN mc_team_members m ON tc.team_id = m.team_id
+            WHERE tc.session_id = ? AND m.user_id = ?""",
+            (session_id, user_id),
+        ).fetchone()
+        if channel:
+            return {"access": "channel", "session": dict(channel), "team_id": channel["team_id"]}
+        return None
+
+    def _emit_to_session_collaborators(
+        self, session_id: str, event_type: str, payload: dict,
+        exclude_tenant: str | None = None,
+    ) -> None:
+        """Emit an event to all team members with access to this session."""
+        tenant_ids = set()
+        for query in [
+            """SELECT DISTINCT u.tenant_id
+            FROM mc_team_members m
+            JOIN mc_users u ON m.user_id = u.id
+            JOIN mc_session_shares sh ON sh.team_id = m.team_id
+            WHERE sh.session_id = ? AND sh.share_mode = 'live'""",
+            """SELECT DISTINCT u.tenant_id
+            FROM mc_team_members m
+            JOIN mc_users u ON m.user_id = u.id
+            JOIN mc_team_channels tc ON tc.team_id = m.team_id
+            WHERE tc.session_id = ?""",
+        ]:
+            try:
+                for r in self.db.execute(query, (session_id,)).fetchall():
+                    tid = r["tenant_id"]
+                    if tid and tid != exclude_tenant:
+                        tenant_ids.add(tid)
+            except Exception:
+                pass
+        for tid in tenant_ids:
+            self._emit_event(event_type, payload, tenant_id=tid)
+
     # ------------------------------------------------------------------
     # Deliverables
     # ------------------------------------------------------------------
@@ -1309,6 +1367,9 @@ class DashboardService:
             ).fetchone()
         )
         self._emit_event("chat_message", msg, tenant_id=tenant_id)
+        # Also emit to collaborators on shared/channel sessions
+        if session_id:
+            self._emit_to_session_collaborators(session_id, "chat_message", msg, exclude_tenant=tenant_id)
         return msg
 
     def create_system_message(
