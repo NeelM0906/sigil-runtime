@@ -247,6 +247,7 @@ class DashboardService:
         self._sse_lock = threading.Lock()
         self._ws_manager = None  # Set from app lifespan
         self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
+        self._session_locks: dict[str, threading.Lock] = {}  # session_id -> serialize being calls
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -1342,6 +1343,18 @@ class DashboardService:
     ) -> dict:
         if not session_id:
             session_id = f"sess-{uuid.uuid4().hex[:8]}"
+        # Auto-populate sender_name for collaborative sessions
+        if sender and sender != "system":
+            if metadata is None:
+                metadata = {}
+            if "sender_name" not in metadata:
+                row = self.db.execute("SELECT name FROM mc_users WHERE id = ?", (sender,)).fetchone()
+                if row and row["name"]:
+                    metadata["sender_name"] = row["name"]
+                else:
+                    being = self.get_being(sender)
+                    if being:
+                        metadata["sender_name"] = being.get("name", sender)
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
@@ -1383,13 +1396,24 @@ class DashboardService:
         )
         return cur.rowcount > 0
 
+    def _get_session_lock(self, session_id: str) -> threading.Lock:
+        if session_id not in self._session_locks:
+            self._session_locks[session_id] = threading.Lock()
+        return self._session_locks[session_id]
+
     def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "") -> None:
-        """Route a message to a being via LLM in a background thread."""
-        t = threading.Thread(
-            target=self._route_to_being_sync,
-            args=(being_id, content, sender, chat_session_id),
-            daemon=True,
-        )
+        """Route a message to a being via LLM in a background thread.
+        Serializes calls per session to prevent interleaving in shared sessions."""
+        lock = self._get_session_lock(chat_session_id) if chat_session_id else None
+
+        def _run():
+            if lock:
+                with lock:
+                    self._route_to_being_sync(being_id, content, sender, chat_session_id)
+            else:
+                self._route_to_being_sync(being_id, content, sender, chat_session_id)
+
+        t = threading.Thread(target=_run, daemon=True, name=f"route-{being_id}")
         t.start()
 
     @staticmethod
@@ -1613,7 +1637,8 @@ class DashboardService:
             "being_id": being_id,
             "being_name": being.get("name", being_id),
             "active": True,
-        })
+            "session_id": chat_session_id,
+        }, session_id=chat_session_id)
 
         # Transition task to in_progress
         if task_id:
@@ -1641,7 +1666,7 @@ class DashboardService:
                     "session_id": chat_session_id,
                     "text": progress_text,
                     "iteration": data.get("iteration", 0),
-                }, tenant_id=tenant_id)
+                }, tenant_id=tenant_id, session_id=chat_session_id)
 
         error_occurred = False
         result = None
@@ -1689,7 +1714,8 @@ class DashboardService:
                 "being_id": being_id,
                 "being_name": being.get("name", being_id),
                 "active": False,
-            })
+                "session_id": chat_session_id,
+            }, session_id=chat_session_id)
 
         # Register artifacts as deliverables so they appear in the Outputs panel
         if isinstance(result, dict):
@@ -1758,7 +1784,8 @@ class DashboardService:
             "being_id": being_id,
             "being_name": being.get("name", being_id),
             "active": True,
-        })
+            "session_id": chat_session_id,
+        }, session_id=chat_session_id)
         self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
 
         all_steps = self.get_task_steps(task_id)
@@ -1797,7 +1824,7 @@ class DashboardService:
                     "session_id": chat_session_id,
                     "text": progress_text,
                     "iteration": data.get("iteration", 0),
-                }, tenant_id=tenant_id)
+                }, tenant_id=tenant_id, session_id=chat_session_id)
 
         error_occurred = False
         cancelled = False
@@ -1867,7 +1894,8 @@ class DashboardService:
                 "being_id": being_id,
                 "being_name": being.get("name", being_id),
                 "active": False,
-            })
+                "session_id": chat_session_id,
+            }, session_id=chat_session_id)
 
         # Complete task
         if cancelled:

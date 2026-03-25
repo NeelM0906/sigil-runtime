@@ -41,7 +41,7 @@ function InlineTaskCard({ taskId }) {
 
 // ── Message Bubble ───────────────────────────────────────────
 
-const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick }) {
+const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick, isCollaborative }) {
   const isUser = msg.sender === 'user'
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
@@ -97,7 +97,11 @@ const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingCl
       <div className={`max-w-[75%] ${isUser ? 'text-right' : ''}`}>
         {/* Header: sender + targets + mode + type */}
         <div className={`flex items-center gap-1.5 mb-0.5 flex-wrap ${isUser ? 'justify-end' : ''}`}>
-          <span className="text-xs font-medium">{isUser ? 'You' : being?.name || msg.sender}</span>
+          <span className="text-xs font-medium">
+            {isUser
+              ? (isCollaborative && msg.metadata?.sender_name ? msg.metadata.sender_name : 'You')
+              : being?.name || msg.metadata?.sender_name || msg.sender}
+          </span>
 
           {msg.targets && msg.targets.length > 0 && (
             <span className="text-[10px] text-text-muted">
@@ -649,6 +653,7 @@ export function ChatWindow() {
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
+  const [collabTyping, setCollabTyping] = useState(new Map())
   const [typingBeings, setTypingBeings] = useState(new Map())
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -831,6 +836,23 @@ export function ChatWindow() {
         return next
       })
     },
+    collab_typing(data) {
+      if (data.session_id !== activeSessionRef.current) return
+      if (data.user_id === user?.user_id) return
+      setCollabTyping(prev => {
+        const next = new Map(prev)
+        if (data.active) {
+          next.set(data.user_id, data.user_name)
+          // Auto-clear after 10s (in case active:false never arrives)
+          setTimeout(() => {
+            setCollabTyping(p => { const n = new Map(p); n.delete(data.user_id); return n })
+          }, 10000)
+        } else {
+          next.delete(data.user_id)
+        }
+        return next
+      })
+    },
     chat_session(data) {
       if (data.action === 'deleted') {
         setSessions(prev => prev.filter(s => s.id !== data.session_id))
@@ -969,6 +991,9 @@ export function ChatWindow() {
     setTargets(targets.filter(t => t !== id))
   }
 
+  const activeSession = sessions.find(s => s.id === activeSessionId)
+  const isCollaborative = !!(activeSession?._shared || activeSession?._channel)
+
   return (
     <div className="bg-bg-secondary border border-border rounded-lg flex h-[calc(100vh-80px)]">
       {/* Session Sidebar */}
@@ -1049,6 +1074,7 @@ export function ChatWindow() {
             msg={msg}
             getBeingById={getBeingById}
             onBeingClick={openBeingDetail}
+            isCollaborative={isCollaborative}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -1068,6 +1094,15 @@ export function ChatWindow() {
               <span className="text-text-muted">is responding...</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Collaborative typing indicators */}
+      {collabTyping.size > 0 && (
+        <div className="px-3 py-1 border-t border-border/20">
+          <span className="text-[10px] text-text-muted italic">
+            {[...collabTyping.values()].join(', ')} {collabTyping.size === 1 ? 'is' : 'are'} typing...
+          </span>
         </div>
       )}
 

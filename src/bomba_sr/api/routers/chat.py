@@ -157,14 +157,6 @@ def send_message(
     elif len(targets) > 1:
         msg_type = "group"
 
-    # Include sender name for collaborative sessions
-    sender_name = None
-    sender_row = dashboard_svc.db.execute(
-        "SELECT name FROM mc_users WHERE id = ?", (sender,)
-    ).fetchone()
-    if sender_row:
-        sender_name = sender_row["name"]
-
     msg = dashboard_svc.create_message(
         sender=sender,
         content=body.content,
@@ -174,8 +166,16 @@ def send_message(
         task_ref=body.taskRef,
         session_id=session_id,
         tenant_id=auth["tenant_id"],
-        metadata={"sender_name": sender_name} if sender_name else None,
     )
+
+    # Emit collaborative typing indicator so other session viewers see activity
+    sender_name = msg.get("metadata", {}).get("sender_name") if isinstance(msg.get("metadata"), dict) else None
+    dashboard_svc._emit_event("collab_typing", {
+        "session_id": session_id,
+        "user_id": sender,
+        "user_name": sender_name or sender,
+        "active": True,
+    }, session_id=session_id)
 
     # Route to each targeted being in background
     for tid in targets:
