@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Children } from 'react'
+import { useState, useRef, useEffect, useCallback, memo, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { useAuth } from '../context/AuthContext'
@@ -41,7 +41,7 @@ function InlineTaskCard({ taskId }) {
 
 // ── Message Bubble ───────────────────────────────────────────
 
-function MessageBubble({ msg, getBeingById, onBeingClick }) {
+const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick }) {
   const isUser = msg.sender === 'user'
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
@@ -164,7 +164,7 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
       </div>
     </div>
   )
-}
+})
 
 // ── Deliverable Card ─────────────────────────────────────────
 
@@ -979,7 +979,12 @@ export function ChatWindow() {
         {!loading && messages.length === 0 && (
           <div className="text-center text-xs text-text-muted py-8">No messages yet. Start a conversation.</div>
         )}
-        {messages.map(msg => (
+        {messages.length > 100 && (
+          <div className="text-center text-[10px] text-text-muted py-2">
+            Showing last 100 of {messages.length} messages
+          </div>
+        )}
+        {(messages.length > 100 ? messages.slice(-100) : messages).map(msg => (
           <MessageBubble
             key={msg.id}
             msg={msg}

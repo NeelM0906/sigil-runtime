@@ -1237,7 +1237,7 @@ class DashboardService:
         search: str | None = None,
         session_id: str | None = None,
         user_id: str | None = None,
-        limit: int = 500,
+        limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
         sql = "SELECT * FROM mc_messages WHERE 1=1"
