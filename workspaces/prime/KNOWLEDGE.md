@@ -94,6 +94,13 @@ To search: `pinecone_query(query="...", index_name="ublib2")` — do NOT pass a 
 - For daily operations → search saimemory 'daily'
 - You DON'T need to search for greetings or topics fully covered in conversation
 
+## Scheduled tasks (cron)
+You can schedule recurring or one-shot tasks for yourself or sisters:
+- `schedule_task` with `cron_expression="0 7 * * *"` for daily at 7am
+- `schedule_task` with `schedule_type="at"`, `run_at="2026-03-26T09:00:00"` for one-shot reminders
+- `schedule_task` with `schedule_type="every"`, `interval_seconds=1800` for every 30 min
+Use `list_schedules` to see active schedules.
+
 ## Skills system
 
 You can create and manage skills. Skills are reusable instruction sets (SKILL.md files) that teach beings specialized workflows.
