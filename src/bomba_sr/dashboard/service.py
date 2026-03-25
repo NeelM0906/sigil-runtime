@@ -695,7 +695,7 @@ class DashboardService:
                     "name": ab["name"],
                     "role": (ab.get("domain") or "")[:200],
                     "avatar": "\U0001f3af",  # 🎯
-                    "status": "online",
+                    "status": "offline",
                     "description": ab.get("domain", ""),
                     "type": TYPE_ACTI,
                     "tools": [],
