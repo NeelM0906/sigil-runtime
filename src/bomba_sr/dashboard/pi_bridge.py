@@ -44,6 +44,8 @@ class PiSession:
     is_streaming: bool = False
     last_activity: float = field(default_factory=time.time)
     messages: list = field(default_factory=list)  # list[PiMessage]
+    git_snapshot: str = ""        # git commit hash at session start (for scoped diffs)
+    git_untracked_at_start: set = field(default_factory=set)  # untracked files at session start
     _current_text: str = ""       # accumulates streaming text for current turn
     _current_tools: list = field(default_factory=list)  # accumulates tool calls for current turn
 
@@ -233,10 +235,46 @@ class PiBridge:
         self.ensure_running()
 
         sid = f"code-{uuid.uuid4().hex[:12]}"
+        # Snapshot git working tree for session-scoped diffs.
+        # git stash create makes a temporary commit of the current state
+        # (staged + unstaged) without modifying the working tree or stash list.
+        # If clean, it returns empty — fall back to HEAD.
+        git_snap = ""
+        if (Path(ws) / ".git").is_dir():
+            try:
+                r = subprocess.run(
+                    ["git", "stash", "create"],
+                    cwd=ws, capture_output=True, text=True, timeout=5,
+                )
+                git_snap = r.stdout.strip()
+                if not git_snap:
+                    # Working tree is clean — use HEAD as baseline
+                    r2 = subprocess.run(
+                        ["git", "rev-parse", "HEAD"],
+                        cwd=ws, capture_output=True, text=True, timeout=5,
+                    )
+                    git_snap = r2.stdout.strip()
+            except Exception:
+                pass
+
+        # Also snapshot untracked files so session diff only shows new ones
+        untracked_at_start: set[str] = set()
+        if git_snap:
+            try:
+                r3 = subprocess.run(
+                    ["git", "ls-files", "--others", "--exclude-standard"],
+                    cwd=ws, capture_output=True, text=True, timeout=5,
+                )
+                untracked_at_start = {f.strip() for f in r3.stdout.splitlines() if f.strip()}
+            except Exception:
+                pass
+
         session = PiSession(
             id=sid,
             title=title,
             workspace_root=ws,
+            git_snapshot=git_snap,
+            git_untracked_at_start=untracked_at_start,
         )
         self._sessions[sid] = session
 
@@ -807,20 +845,29 @@ class PiBridge:
             "truncated": truncated,
         }
 
-    def git_diff(self, workspace: str | None = None) -> dict:
+    def git_diff(self, workspace: str | None = None, session_id: str | None = None) -> dict:
         """Run git diff in the workspace and return structured results.
 
-        Returns {files: [{path, status, hunks: [{header, lines: [{type, content, old_num, new_num}]}]}]}
+        If *session_id* is given, diffs against the session's git snapshot
+        (showing only changes made during that session). Otherwise diffs
+        against HEAD (all uncommitted changes).
         """
         ws = workspace or self._active_workspace
         ws_path = Path(ws)
         if not (ws_path / ".git").is_dir():
             return {"files": [], "error": "Not a git repository"}
 
+        # Determine diff base: session snapshot or HEAD
+        diff_base = "HEAD"
+        if session_id:
+            session = self._sessions.get(session_id)
+            if session and session.git_snapshot:
+                diff_base = session.git_snapshot
+
         try:
-            # Get both staged and unstaged diff with context
+            # Diff working tree against the baseline
             result = subprocess.run(
-                ["git", "diff", "HEAD", "--unified=3", "--no-color"],
+                ["git", "diff", diff_base, "--unified=3", "--no-color"],
                 cwd=ws, capture_output=True, text=True, timeout=10,
             )
             raw_diff = result.stdout
@@ -835,8 +882,16 @@ class PiBridge:
             # Parse unified diff into structured format
             files = self._parse_unified_diff(raw_diff)
 
-            # Add untracked files
+            # Add untracked files (filter out pre-existing ones for session-scoped diffs)
+            exclude_untracked: set[str] = set()
+            if session_id:
+                session = self._sessions.get(session_id)
+                if session:
+                    exclude_untracked = session.git_untracked_at_start
+
             for f in untracked:
+                if f in exclude_untracked:
+                    continue
                 fp = ws_path / f
                 if fp.is_file():
                     try:

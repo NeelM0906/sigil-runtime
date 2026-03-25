@@ -63,6 +63,10 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
         runtime_adaptation.py    # Metrics aggregation, policy versioning/rollback, self-correction
         self_evaluation.py       # SelfEvaluator -- LLM-based performance self-assessment
       codeintel/                 # router.py (Serena vs native), serena.py, native.py
+      dashboard/
+        service.py               # DashboardService -- MC beings, messages, SSE, tasks
+        openclaw_sync.py         # OpenClaw session mirroring to MC
+        pi_bridge.py             # Pi coding agent RPC bridge (Code tab backend)
       storage/db.py              # SQLite RuntimeDB wrapper (WAL mode, thread-safe RLock)
       models/capabilities.py     # OpenRouter capability fetch + cache
       identity/profile.py        # User profile + signal approvals
@@ -83,6 +87,21 @@ PROJEKT/                         # <-- THIS is the project root. Always work fro
   docs/                          # Authoritative runtime documentation
   skills/                        # Workspace skill definitions (SKILL.md files)
     web_search/SKILL.md          # Bundled web search skill
+  mission-control/                     # React 19 + Vite + Tailwind dashboard
+    src/
+      App.jsx                    # Tab router (Overview, Tasks, Comms, Teams, Code)
+      api.js                     # REST client (tasks, beings, chat, code, acti, auth)
+      components/
+        CodeWorkspace.jsx        # Code tab -- Pi agent chat, diff viewer, file tree
+        CodeStatusCard.jsx       # Overview sidebar -- code agent health card
+        ChatWindow.jsx           # Comms tab -- multi-session being chat
+        AgentTeams.jsx           # Teams tab -- ACT-I cluster explorer
+        TaskBoard.jsx            # Task management with drag-and-drop
+        Header.jsx               # Nav tabs + status indicators
+      hooks/
+        useSSE.js                # MC-wide SSE subscription
+        useCodeSSE.js            # Per-session Code tab SSE subscription
+    vite.config.js               # Dev proxy to backend :8787
   workspaces/
     prime/
       configs/                   # Agent JSON configs (Mylo, Callie, Athena)
@@ -119,6 +138,13 @@ PYTHONPATH=src python scripts/run_runtime_server.py --host 127.0.0.1 --port 8787
 # 5. Health check
 curl -s http://127.0.0.1:8787/health | python -m json.tool
 # Expected: {"ok": true}
+
+# 6. Mission Control dashboard (separate terminal)
+cd mission-control && npx vite
+# Open http://localhost:5173
+
+# 7. SAI Code CLI (any terminal, any folder)
+sai-code  # alias for pi with SAI Prime identity
 ```
 
 ## Environment Variables
@@ -183,6 +209,12 @@ curl -s http://127.0.0.1:8787/health | python -m json.tool
 | `BOMBA_SKILL_WATCHER` | No | `true` | Auto-reload skills on file change |
 | `BOMBA_SKILL_CATALOG_SOURCES` | No | `clawhub,anthropic_skills` | Skill catalog sources |
 | `CLAWHUB_API_BASE` | No | none | ClawHub registry API base URL |
+| **Code Agent (Pi)** | | | |
+| `BOMBA_PI_ENABLED` | No | `true` | Enable Code tab Pi agent |
+| `BOMBA_PI_MODEL` | No | `openrouter/anthropic/claude-sonnet-4` | Model for code agent |
+| `BOMBA_PI_TOOLS` | No | `read,bash,edit,write,grep,find,ls` | Pi tools to enable |
+| `BOMBA_PI_THINKING` | No | `off` | Pi thinking level (off/minimal/low/medium/high) |
+| `BOMBA_PI_IDENTITY` | No | `true` | Inject SAI Prime identity into Pi system prompt |
 
 Full reference: `docs/03-config-reference.md` and `src/bomba_sr/runtime/config.py`
 
@@ -200,7 +232,7 @@ PYTHONPATH=src .venv/bin/python -m pytest tests/test_wave1_capabilities.py::Test
 # With print output
 PYTHONPATH=src .venv/bin/python -m pytest -s tests/test_wave1_capabilities.py
 ```
-Test naming convention: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`, `test_builtin_*`, `test_import_*`, `test_soul_*`, `test_sisters*`.
+Test naming convention: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`, `test_builtin_*`, `test_import_*`, `test_soul_*`, `test_sisters*`, `test_pi_bridge*`.
 
 ## HTTP API Curl Templates (heredoc-safe for agents)
 ```bash
@@ -328,6 +360,45 @@ curl -s http://127.0.0.1:8787/codeintel \
 - **Path traversal protection** on skill install — IDs sanitized with `re.sub(r'[^a-z0-9_-]', '', id)`.
 - **Tool governance:** two-layer — PolicyPipeline (visibility/allow-deny) then ToolGovernanceService (per-call risk/confidence).
 - **Confidence-gated learning:** `>=0.4` auto-applies, `<0.4` goes to approval queue.
+
+### Code Tab (Pi Coding Agent Integration)
+- **Harness:** Pi coding agent v0.62.0 (`@mariozechner/pi-coding-agent`), spawned as subprocess in RPC mode.
+- **Bridge:** `dashboard/pi_bridge.py` — manages Pi process lifecycle, stdin/stdout JSONL communication, event dispatch, session tracking with local message persistence.
+- **Protocol:** Pi RPC over pipes. Commands: `prompt`, `abort`, `new_session`, `get_state`, `get_messages`. Events: `text_delta`, `toolcall_start/end`, `tool_execution_start/end`, `agent_start/end`, `extension_ui_request`.
+- **Multi-workspace:** Each session can target any folder. Pi restarts with new `cwd` when workspace changes. `git stash create` snapshots working tree at session start for scoped diffs.
+- **Identity injection:** SAI Prime identity (SOUL.md + IDENTITY.md + MISSION.md) appended to Pi's system prompt via `--append-system-prompt`. Controlled by `BOMBA_PI_IDENTITY` env var.
+- **SSE streaming:** Per-session SSE at `/api/mc/code/sessions/{id}/events`. 18 event types mapped from Pi events to `code_*` MC events.
+- **Git diff viewer:** `git_diff()` runs `git diff <snapshot>` scoped to session. Parses unified diff into structured `{files, hunks, lines}`. Untracked files filtered against session-start snapshot.
+- **Approval flow:** Pi `extension_ui_request` events (from `pi-permissions` extension) dispatched as `code_approval_required` SSE events. Frontend shows modal with Accept/Deny/Cancel. Responses sent back via `extension_ui_response` on stdin.
+- **File browsing:** `file_tree()` scans workspace with skip-list (`.git`, `.venv`, `node_modules`, etc.). `read_file()` with path traversal guard and 100KB truncation.
+- **Frontend:** `CodeWorkspace.jsx` — session sidebar, chat panel (streaming markdown + DiffBlock tool views), file tree with touched-file highlighting, right panel with Diff/Changes/Activity/Usage tabs.
+- **Cross-tab:** Comms "Code" button, Task Board "Code" action, Overview `CodeStatusCard`, Header status indicator. `initialPrompt` prop auto-creates session and sends prompt.
+- **CLI alias:** `sai-code` in `~/.zshrc` launches Pi TUI with SAI Prime identity in any terminal.
+
+| Env Var | Default | Description |
+|---|---|---|
+| `BOMBA_PI_ENABLED` | `true` | Enable/disable code agent |
+| `BOMBA_PI_MODEL` | `openrouter/anthropic/claude-sonnet-4` | Model for code agent |
+| `BOMBA_PI_TOOLS` | `read,bash,edit,write,grep,find,ls` | Enabled Pi tools |
+| `BOMBA_PI_THINKING` | `off` | Thinking level |
+| `BOMBA_PI_IDENTITY` | `true` | Inject SAI Prime identity into system prompt |
+
+**API Endpoints:**
+```
+GET    /api/mc/code/health                    — Pi bridge status
+GET    /api/mc/code/sessions                  — List sessions
+POST   /api/mc/code/sessions                  — Create session {title, workspace_root}
+DELETE /api/mc/code/sessions/{id}             — Delete session
+POST   /api/mc/code/sessions/{id}/prompt      — Send prompt {message}
+POST   /api/mc/code/sessions/{id}/abort       — Cancel current operation
+GET    /api/mc/code/sessions/{id}/messages    — Session conversation history
+GET    /api/mc/code/sessions/{id}/events      — SSE event stream
+POST   /api/mc/code/sessions/{id}/respond-ui  — Approval response {request_id, response}
+GET    /api/mc/code/state                     — Pi agent state
+GET    /api/mc/code/files?depth=3&workspace=  — Workspace file tree
+GET    /api/mc/code/files/read?path=&workspace= — Read file content
+GET    /api/mc/code/diff?workspace=&session_id= — Session-scoped git diff
+```
 
 ## Safety Rules
 1. **No `rm` or `mv` without `cp` backup first.** Always: `cp -r target target.bak && rm -rf target`

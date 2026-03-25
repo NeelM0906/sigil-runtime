@@ -854,6 +854,7 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
   const [showNewSession, setShowNewSession] = useState(false)
   const [diffFiles, setDiffFiles] = useState([])
   const [diffLoading, setDiffLoading] = useState(false)
+  const [panelSize, setPanelSize] = useState('default') // 'collapsed' | 'default' | 'expanded'
 
   // I2 fix: ref for allTools so closures always read current value
   const allToolsRef = useRef([])
@@ -1139,17 +1140,17 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
   }, [activeSessionId])
 
   const refreshDiff = useCallback(async () => {
-    if (!activeWorkspace) return
+    if (!activeWorkspace || !activeSessionId) return
     setDiffLoading(true)
     try {
-      const result = await codeApi.diff(activeWorkspace)
+      const result = await codeApi.diff(activeWorkspace, activeSessionId)
       setDiffFiles(result.files || [])
     } catch {
       setDiffFiles([])
     } finally {
       setDiffLoading(false)
     }
-  }, [activeWorkspace])
+  }, [activeWorkspace, activeSessionId])
 
   const handleFileClick = useCallback(async (filePath) => {
     try {
@@ -1294,12 +1295,30 @@ export function CodeWorkspace({ initialPrompt = null, onConsumePrompt = null }) 
                 sseError={sseError}
               />
             </div>
-            {/* Activity panel */}
-            <div className="w-64 flex-shrink-0 border-l border-border bg-bg-secondary">
-              <CodeActivityPanel
-                tools={allTools} usage={usage} streaming={streaming}
-                diffFiles={diffFiles} diffLoading={diffLoading} onRefreshDiff={refreshDiff}
-              />
+            {/* Panel toggle strip (always visible) */}
+            <div className="flex-shrink-0 flex items-stretch">
+              <button
+                onClick={() => setPanelSize(prev =>
+                  prev === 'collapsed' ? 'default' : prev === 'default' ? 'expanded' : 'collapsed'
+                )}
+                className="w-5 bg-bg-secondary border-l border-border hover:bg-bg-hover flex items-center justify-center transition-colors group"
+                title={panelSize === 'collapsed' ? 'Show panel' : panelSize === 'default' ? 'Expand panel' : 'Collapse panel'}
+              >
+                <span className="text-[10px] text-text-muted group-hover:text-accent-blue transition-colors">
+                  {panelSize === 'collapsed' ? '\u25C0' : '\u25B6'}
+                </span>
+              </button>
+              {/* Activity panel — resizable */}
+              {panelSize !== 'collapsed' && (
+                <div className={`border-l border-border bg-bg-secondary transition-all duration-200 ${
+                  panelSize === 'expanded' ? 'w-[45vw]' : 'w-72'
+                }`}>
+                  <CodeActivityPanel
+                    tools={allTools} usage={usage} streaming={streaming}
+                    diffFiles={diffFiles} diffLoading={diffLoading} onRefreshDiff={refreshDiff}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

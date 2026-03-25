@@ -1717,7 +1717,8 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(503, {"error": "code agent not configured"})
                         return
                     ws = query.get("workspace", [None])[0]
-                    result = pi_bridge.git_diff(workspace=ws)
+                    sid = query.get("session_id", [None])[0]
+                    result = pi_bridge.git_diff(workspace=ws, session_id=sid)
                     self._write_cors(200, result)
                     return
 
