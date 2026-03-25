@@ -751,10 +751,8 @@ export function ChatWindow() {
         return
       }
       const result = await res.json()
-      // Stage the upload — don't send yet. User hits Enter to send with context.
+      // Stage the upload — show as chip, don't inject into input text
       setUploadedFile(result)
-      const hint = `[${result.filename}: ${result.chunks} chunks indexed${result.tables ? `, ${result.tables} tables` : ''}] `
-      setInput(prev => hint + prev)
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {
@@ -763,9 +761,14 @@ export function ChatWindow() {
   }
 
   const handleSend = async () => {
-    if (!input.trim()) return
+    if (!input.trim() && !uploadedFile) return
 
-    const content = input.trim()
+    // Prepend file context tag if a file is attached
+    let content = input.trim()
+    if (uploadedFile) {
+      const tag = `[${uploadedFile.filename}: ${uploadedFile.chunks} chunks indexed${uploadedFile.tables ? `, ${uploadedFile.tables} tables` : ''}]`
+      content = content ? `${tag} ${content}` : tag
+    }
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
     // Optimistic: add user message immediately
@@ -782,6 +785,7 @@ export function ChatWindow() {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
+    setUploadedFile(null)
     setTargets(defaultTarget)
 
     try {
@@ -956,6 +960,28 @@ export function ChatWindow() {
           </div>
         )}
 
+        {/* Attached file chip */}
+        {uploadedFile && (
+          <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-accent-purple/10 border border-accent-purple/30 rounded-lg w-fit">
+            <svg className="w-4 h-4 text-accent-purple flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-accent-purple">{uploadedFile.filename}</span>
+              <span className="text-[10px] text-text-muted">{uploadedFile.chunks} chunks indexed{uploadedFile.tables ? ` · ${uploadedFile.tables} tables` : ''}</span>
+            </div>
+            <button
+              onClick={() => setUploadedFile(null)}
+              className="ml-1 text-text-muted hover:text-accent-red transition-colors"
+              title="Remove attachment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div className="relative flex gap-2">
           {mentionFilter !== null && (
             <MentionDropdown
@@ -995,7 +1021,7 @@ export function ChatWindow() {
           </button>
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !uploadedFile}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Send
