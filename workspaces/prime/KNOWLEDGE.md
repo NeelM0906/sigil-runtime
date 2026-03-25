@@ -85,6 +85,7 @@ Your default index. Contains your identity, learnings, and work output.
 Sean's institutional knowledge. SACRED — Aiko review before any writes.
 The Formula, coaching methodology, business strategy, self-mastery frameworks.
 USE THIS for: strategic decisions, methodology grounding, coaching frameworks, the Formula
+To search: `pinecone_query(query="...", index_name="ublib2")` — do NOT pass a namespace (82K vectors are in the default namespace)
 
 ### When to search knowledge bases
 - For cross-being coordination or strategic planning → search both with pinecone_multi_query

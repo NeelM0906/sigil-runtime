@@ -155,7 +155,7 @@ def auto_retrieve(
         "saimemory_daily": _POOL.submit(_search_index, sai_index, "daily", api_key_sai),
     }
     if api_key_ublib2:
-        futures["ublib2"] = _POOL.submit(_search_index, "ublib2", "longterm", api_key_ublib2)
+        futures["ublib2"] = _POOL.submit(_search_index, "ublib2", None, api_key_ublib2)
 
     for name, future in futures.items():
         try:

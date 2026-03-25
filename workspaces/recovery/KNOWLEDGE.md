@@ -32,6 +32,7 @@ Your default index. Contains everything you've learned from work.
 ### ublib2 — Master knowledge library (82K+ vectors)
 Sean's institutional knowledge. The Formula, coaching methodology, business strategy, compliance frameworks, values.
 USE THIS for: "how should we approach this negotiation?", "what's the Formula say about objection handling?", "Sean's framework for carrier disputes"
+To search: `pinecone_query(query="...", index_name="ublib2")` — do NOT pass a namespace (82K vectors are in the default namespace)
 
 ### When to search knowledge bases
 - If a user asks about a SPECIFIC case, contract, carrier, or rate → search saimemory first (pinecone_query with default settings)
