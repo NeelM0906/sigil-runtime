@@ -28,7 +28,7 @@ STRATA_INDEXES = {
     "oracleinfluencemastery",
     "ultimatestratabrain",
 }
-MAX_DESCRIBE_INDEXES = 5
+MAX_DESCRIBE_INDEXES = 20
 
 _INDEX_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INDEX_CACHE_LOCK = threading.Lock()
