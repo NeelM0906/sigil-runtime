@@ -1,365 +1,163 @@
-# CLAUDE.md -- SAI Runtime (Sigil Runtime Engine)
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## PRIME DIRECTIVE
-**READ source code BEFORE attempting any fix or guess.** Do not hypothesize about behavior -- open the file, read the function, then act. This single rule would have prevented the majority of past session failures.
+**READ source code BEFORE attempting any fix or guess.** Do not hypothesize about behavior — open the file, read the function, then act.
 
-## Tech Stack (LOCKED -- do not flip)
+## Tech Stack
 - **Language:** Python 3.11+ (venv at `.venv/`, Python 3.14 active)
-- **Framework:** stdlib `http.server.ThreadingHTTPServer` -- NOT Flask, NOT FastAPI, NOT Django
-- **Database:** SQLite (WAL mode) via `src/bomba_sr/storage/db.py` -- NOT PostgreSQL, NOT MongoDB
-- **LLM routing:** OpenRouter (primary), Anthropic direct, OpenAI direct, StaticEchoProvider fallback
-- **Code intelligence:** Serena-first, native fallback
-- **Frontend:** None. This is a backend runtime. No Vite, no Next.js, no React.
-- **Package management:** `pyproject.toml` + `setuptools` -- no `package.json` exists anywhere
-- **Testing:** `pytest` (100+ tests, all passing) -- NOT unittest discover
-- **Dependencies:** `PyYAML>=6.0`, `croniter>=1.3.0`, `html2text>=2024.2.26`
+- **API Framework:** FastAPI + Uvicorn (`src/bomba_sr/api/app.py`)
+- **Database:** PostgreSQL (primary, via `BOMBA_POSTGRES_DSN`) with SQLite fallback per-tenant
+- **LLM routing:** OpenRouter (primary), Bedrock (HIPAA), Anthropic direct, StaticEchoProvider fallback
+- **Frontend:** React + Vite (`mission-control/`), served from `mission-control/dist/` by FastAPI
+- **Testing:** `pytest` (700+ tests)
+- **Key dependencies:** `PyYAML`, `croniter`, `bcrypt`, `boto3`, `pypdf`, `openpyxl`, `xlrd`
 
-## Directory Layout
-```
-PROJEKT/                         # <-- THIS is the project root. Always work from here.
-  .env                           # Active env vars (DO NOT commit)
-  .env.example                   # Env template with all vars documented
-  pyproject.toml                 # Project metadata + pytest config
-  HEARTBEAT.md                   # Proactive autonomy checklist (user-editable)
-  src/
-    bomba_sr/                    # Main package -- ALL source code lives here
-      runtime/
-        bridge.py                # RuntimeBridge -- THE central orchestrator
-        config.py                # RuntimeConfig -- all env var parsing
-        loop.py                  # AgenticLoop -- iterative tool-call loop
-        health.py                # HealthSnapshot for loop system prompt
-        rescue.py                # Git-based workspace rescue snapshots
-        sisters.py               # SisterConfig + SisterRegistry loader/lifecycle
-        tenancy.py               # Multi-tenant context binding
-      llm/providers.py           # LLM provider selection + ChatMessage model
-      context/policy.py          # Context assembly + TurnProfile enum
-      tools/                     # base.py (ToolExecutor) + builtin_*.py per domain
-        builtin_web.py           # web_search (Brave/DuckDuckGo) + web_fetch tools
-        builtin_pinecone.py      # pinecone_query + pinecone_list_indexes tools
-        builtin_voice.py         # Bland.ai call management tools
-        builtin_colosseum.py     # CHDDIA² Colosseum v2 tournament tools (5 tools)
-        builtin_prove_ahead.py   # Prove-Ahead competitive intelligence tools (4 tools)
-        builtin_sisters.py       # Prime sister management tools
-        builtin_subagents.py     # sessions_spawn, sessions_poll, sessions_list tools
-        builtin_scheduler.py     # schedule_task, list_schedules tools
-      governance/                # tool_policy.py, policy_pipeline.py, tool_profiles.py
-      skills/                    # loader, registry, engine, ecosystem, parser, eligibility
-        skillmd_parser.py        # Agent Skills standard parser (SKILL.md YAML frontmatter)
-        eligibility.py           # OpenClaw metadata gating (requires.env, bins, os)
-        ecosystem.py             # Skill catalog install (ClawHub, Anthropic Skills)
-      commands/                  # parser, router, disclosure, skill_nl_router
-      memory/
-        hybrid.py                # Hybrid memory (DB + markdown + embeddings + conversation history)
-        consolidation.py         # MemoryConsolidator (semantic + procedural memories)
-        embeddings.py            # Optional OpenAI embeddings for semantic search
-      subagents/
-        protocol.py              # SubAgentTask/events, shared memory, event streaming
-        orchestrator.py          # Async spawn, crash recovery, cascade stop, depth enforcement
-        worker.py                # SubAgentWorkerFactory -- real LLM-backed sub-agent workers
-      autonomy/
-        heartbeat.py             # HeartbeatEngine -- background daemon for proactive checks
-        scheduler.py             # CronScheduler -- recurring task execution
-      adaptation/
-        runtime_adaptation.py    # Metrics aggregation, policy versioning/rollback, self-correction
-        self_evaluation.py       # SelfEvaluator -- LLM-based performance self-assessment
-      codeintel/                 # router.py (Serena vs native), serena.py, native.py
-      storage/db.py              # SQLite RuntimeDB wrapper (WAL mode, thread-safe RLock)
-      models/capabilities.py     # OpenRouter capability fetch + cache
-      identity/profile.py        # User profile + signal approvals
-      identity/soul.py           # SoulConfig loader from SOUL/IDENTITY mission files
-      projects/service.py        # Project/task service
-      artifacts/store.py         # Artifact persistence
-      info/retrieval.py          # Wikipedia/generic info retrieval
-      plugins/                   # Plugin registration + discovery
-  scripts/
-    run_chat_cli.py              # Interactive CLI entry point
-    run_runtime_server.py        # HTTP server entry point
-    run_user_e2e.py              # E2E scripted test
-    import_sai_identity.py       # SAI identity/mission file import
-    import_sai_memory.py         # SAI memory + formula import
-  contracts/                     # JSON Schema files for all domain models
-  tests/                         # pytest tests (all phases + ouroboros)
-  sql/migrations/                # SQL migration scripts (reference schemas, 001-008)
-  docs/                          # Authoritative runtime documentation
-  skills/                        # Workspace skill definitions (SKILL.md files)
-    web_search/SKILL.md          # Bundled web search skill
-  workspaces/
-    prime/
-      configs/                   # Agent JSON configs (Mylo, Callie, Athena)
-      tools/                     # SAI reference tool scripts (bland, pinecone, voice, zoom)
-      prove-ahead/               # Prove-Ahead competitive intelligence data + reports
-      memory/                    # Imported memory state files
-    forge/
-      colosseum/v2/              # Colosseum v2 source + data (beings, judges, scenarios)
-  acceptance/                    # Acceptance criteria documents
-  product/                       # Product specs and manifests
-  .runtime/                      # Runtime state dir (SQLite DB, tenant data)
-```
-
-## Startup Sequence
+## Build & Run Commands
 ```bash
-# 1. Activate venv (REQUIRED -- system python lacks deps)
+# Activate venv (REQUIRED)
 source .venv/bin/activate
 
-# 2. Verify env
-cp .env.example .env  # if .env missing; then fill OPENROUTER_API_KEY
+# Run tests (all)
+PYTHONPATH=src python -m pytest tests/ -q
 
-# 3. Run tests first to confirm clean state
-PYTHONPATH=src python -m pytest -q
-# Expected: 100+ passed
+# Run single test
+PYTHONPATH=src python -m pytest tests/test_file.py::TestClass::test_method -v
 
-# 4a. CLI mode
-PYTHONPATH=src python scripts/run_chat_cli.py \
-  --tenant-id tenant-local --user-id user-local \
-  --workspace "$(pwd)"
+# Start API server
+set -a && source .env && set +a
+PYTHONPATH=src python scripts/run_api_server.py --host 0.0.0.0 --port 8787
 
-# 4b. HTTP server mode
-PYTHONPATH=src python scripts/run_runtime_server.py --host 127.0.0.1 --port 8787
+# Build frontend
+cd mission-control && npm run build
 
-# 5. Health check
-curl -s http://127.0.0.1:8787/health | python -m json.tool
-# Expected: {"ok": true}
+# After frontend build, restart server to serve new bundle
 ```
 
-## Environment Variables
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `OPENROUTER_API_KEY` | Yes (for live LLM) | none | Primary LLM provider key |
-| `BOMBA_MODEL_ID` | No | `anthropic/claude-opus-4.6` | Default model ID |
-| `BOMBA_RUNTIME_HOME` | No | `.runtime` | Runtime state directory |
-| `BOMBA_AGENTIC_LOOP_ENABLED` | No | `true` | Enable agentic tool-call loop |
-| `BOMBA_MAX_LOOP_ITERATIONS` | No | `25` | Max iterations per turn |
-| `BOMBA_LOOP_DETECTION_WINDOW` | No | `5` | Repeating tool-call detection window |
-| `BOMBA_BUDGET_LIMIT_USD` | No | `2.0` | Per-turn spending limit |
-| `BOMBA_BUDGET_HARD_STOP_PCT` | No | `0.9` | Budget fraction that triggers hard stop |
-| `BOMBA_TOOL_PROFILE` | No | `full` | Tool visibility profile |
-| `BOMBA_TOOL_ALLOW` | No | `` | Comma-separated tool allow list |
-| `BOMBA_TOOL_DENY` | No | `` | Comma-separated tool deny list |
-| `BOMBA_LEARNING_AUTO_APPLY_CONFIDENCE` | No | `0.4` | Auto-apply threshold for learning signals |
-| **Conversation History** | | | |
-| `BOMBA_REPLAY_HISTORY_BUDGET_FRACTION` | No | `0.3` | Max fraction of input tokens for turn replay |
-| **Autonomy** | | | |
-| `BOMBA_HEARTBEAT_ENABLED` | No | `false` | Enable background heartbeat |
-| `BOMBA_HEARTBEAT_INTERVAL` | No | `1800` | Heartbeat interval in seconds |
-| `BOMBA_CRON_ENABLED` | No | `false` | Enable cron scheduler |
-| **Adaptation** | | | |
-| `BOMBA_ADAPTATION_METRICS_INTERVAL` | No | `5` | Turns between metrics-based self-correction |
-| `BOMBA_ADAPTATION_LLM_EVAL_INTERVAL` | No | `10` | Turns between LLM self-evaluation |
-| `BOMBA_ADAPTATION_AUTO_CORRECT` | No | `true` | Enable automatic policy correction |
-| **Web Search** | | | |
-| `BOMBA_WEB_SEARCH_ENABLED` | No | `true` | Enable web search/fetch tools |
-| `BRAVE_API_KEY` | No | none | Brave Search API key (falls back to DuckDuckGo) |
-| **Pinecone** | | | |
-| `BOMBA_PINECONE_ENABLED` | No | `false` | Enable Pinecone retrieval tools |
-| `BOMBA_PINECONE_DEFAULT_INDEX` | No | `ublib2` | Default Pinecone index |
-| `BOMBA_PINECONE_DEFAULT_NAMESPACE` | No | `longterm` | Default Pinecone namespace |
-| `PINECONE_API_KEY` | Conditional | none | Primary Pinecone API key |
-| `PINECONE_API_KEY_STRATA` | No | none | Optional key for STRATA indexes |
-| `BOMBA_PINECONE_INDEX_HOSTS` | No | none | Optional JSON host map fallback |
-| **Voice (Bland.ai)** | | | |
-| `BOMBA_VOICE_ENABLED` | No | `false` | Enable voice call management tools |
-| `BOMBA_VOICE_PROVIDER` | No | `bland` | Voice provider selector |
-| `BLAND_API_KEY` | Conditional | none | Bland API key |
-| **Colosseum** | | | |
-| `BOMBA_COLOSSEUM_ENABLED` | No | `false` | Enable Colosseum v2 tournament tools |
-| `BOMBA_COLOSSEUM_MODEL_ID` | No | `gpt-4o-mini` | Model for being/judge LLM calls |
-| **Prove-Ahead** | | | |
-| `BOMBA_PROVE_AHEAD_ENABLED` | No | `false` | Enable Prove-Ahead competitive intelligence tools |
-| **Zoom Skill Prereqs** | | | |
-| `ZOOM_ACCOUNT_ID` | No | none | Zoom S2S OAuth account id |
-| `ZOOM_CLIENT_ID` | No | none | Zoom S2S OAuth client id |
-| `ZOOM_CLIENT_SECRET` | No | none | Zoom S2S OAuth client secret |
-| **Sub-agents** | | | |
-| `BOMBA_SUBAGENT_MAX_SPAWN_DEPTH` | No | `3` | Max sub-agent nesting depth |
-| `BOMBA_SUBAGENT_CRASH_WINDOW` | No | `60` | Crash detection window (seconds) |
-| `BOMBA_SUBAGENT_CRASH_MAX` | No | `3` | Max crashes before cooldown |
-| `BOMBA_SUBAGENT_CRASH_COOLDOWN` | No | `120` | Cooldown after crash threshold |
-| **Serena** | | | |
-| `SERENA_BASE_URL` | No | `http://127.0.0.1:9121` | Serena code intel endpoint |
-| `SERENA_API_KEY` | No | none | Serena API key |
-| `SERENA_FALLBACK_TO_NATIVE` | No | `true` | Fall back to native codeintel |
-| **Skills** | | | |
-| `BOMBA_SKILL_ROOTS` | No | `` | Additional skill directories |
-| `BOMBA_SKILL_WATCHER` | No | `true` | Auto-reload skills on file change |
-| `BOMBA_SKILL_CATALOG_SOURCES` | No | `clawhub,anthropic_skills` | Skill catalog sources |
-| `CLAWHUB_API_BASE` | No | none | ClawHub registry API base URL |
+## Two Databases — Critical Distinction
+- **PostgreSQL** (`BOMBA_POSTGRES_DSN` in `.env`): Shared Mission Control DB — users, beings, messages, sessions, teams, auth tokens. The running server uses THIS for all dashboard operations.
+- **SQLite** (`.runtime/bomba_runtime.db`): Legacy/fallback. Tests use this. DO NOT create users or modify being configs in SQLite — the server won't see them.
+- **Per-tenant SQLite** (`.runtime/tenants/{tenant-id}/bomba_runtime.db`): Conversation turns, memories, skills, scheduled tasks. One DB per tenant.
 
-Full reference: `docs/03-config-reference.md` and `src/bomba_sr/runtime/config.py`
+When creating users, resetting passwords, or changing being configs: **use PostgreSQL** via `bomba_sr.storage.postgres.PostgresDB(os.environ['BOMBA_POSTGRES_DSN'])`.
 
-## Testing
-```bash
-# All tests (fast -- ~1.5s)
-PYTHONPATH=src .venv/bin/python -m pytest -q
+## Architecture
 
-# Single test file
-PYTHONPATH=src .venv/bin/python -m pytest tests/test_wave1_capabilities.py -v
+### Core Flow: User Message → Being Response
+1. Frontend POST `/api/mc/chat/messages` → `chat.py` router
+2. `DashboardService._route_to_being_sync()` (runs in background thread)
+3. Classifies message: `not_task` / `light_task` / `full_task`
+4. `full_task` → immediate ack + background execution with progress streaming
+5. `RuntimeBridge.handle_turn()` — the central orchestrator
+6. Loads SoulConfig (identity) from workspace SOUL.md/IDENTITY.md
+7. Auto-retrieves from Pinecone (saimemory + ublib2) in parallel
+8. Assembles context: system prompt + replay history + semantic recall
+9. `AgenticLoop.run()` — iterates: LLM generate → parse tool calls → execute → loop
+10. Returns result → dashboard creates chat message → SSE to frontend
 
-# Single test
-PYTHONPATH=src .venv/bin/python -m pytest tests/test_wave1_capabilities.py::TestName::test_method -v
+### Key Files
+- `src/bomba_sr/runtime/bridge.py` — RuntimeBridge, handle_turn, the god object
+- `src/bomba_sr/runtime/loop.py` — AgenticLoop with auto-compaction at 75% context
+- `src/bomba_sr/dashboard/service.py` — DashboardService, beings, messages, sessions, teams
+- `src/bomba_sr/api/app.py` — FastAPI app factory, lifespan, router registration
+- `src/bomba_sr/llm/providers.py` — Provider selection (OpenRouter > Bedrock > Anthropic > Echo)
+- `src/bomba_sr/llm/bedrock.py` — AWS Bedrock with retry backoff
+- `src/bomba_sr/memory/hybrid.py` — HybridMemoryStore (SQLite + markdown + embeddings)
+- `src/bomba_sr/memory/auto_retrieval.py` — Automatic Pinecone search on every turn
+- `src/bomba_sr/context/policy.py` — Context assembly with profile-weighted budget allocation
+- `src/bomba_sr/identity/soul.py` — SoulConfig loader from workspace identity files
+- `src/bomba_sr/governance/tool_profiles.py` — Tool groups and being access profiles
+- `src/bomba_sr/governance/being_tool_profiles.py` — Per-tenant tool allow/deny
 
-# With print output
-PYTHONPATH=src .venv/bin/python -m pytest -s tests/test_wave1_capabilities.py
-```
-Test naming convention: `test_wave{N}_*`, `test_phase{N}_*`, `test_product_sequence{N}_*`, `test_ouroboros_*`, `test_ws{N}_*`, `test_skill*`, `test_builtin_*`, `test_import_*`, `test_soul_*`, `test_sisters*`.
+### Beings & Tenants
+5 core beings, each with their own tenant and workspace:
+| Being | Tenant | Model | Workspace |
+|-------|--------|-------|-----------|
+| Prime (SAI) | tenant-prime | anthropic/claude-opus-4.6 | workspaces/prime/ |
+| Forge | tenant-forge | anthropic/claude-sonnet-4.6 | workspaces/forge/ |
+| Scholar | tenant-scholar | openai/gpt-5.4 | workspaces/scholar/ |
+| Recovery | tenant-recovery | anthropic/claude-sonnet-4.6 | workspaces/recovery/ |
+| SAI Memory | tenant-memory | google/gemini-3.1-pro | workspaces/sai-memory/ |
 
-## HTTP API Curl Templates (heredoc-safe for agents)
-```bash
-# Chat turn -- use heredoc to avoid JSON escaping disasters
-curl -s http://127.0.0.1:8787/chat \
-  -H 'content-type: application/json' \
-  -d "$(cat <<'ENDJSON'
-{
-  "tenant_id": "tenant-local",
-  "session_id": "sess-1",
-  "user_id": "user-local",
-  "workspace_root": "/absolute/path/to/project",
-  "message": "your message here"
-}
-ENDJSON
-)" | python -m json.tool
+ACT-I specialized beings exist but default to **offline**. Voice agents (athena-hoi, callie, mylo) are also offline.
 
-# Spawn sub-agent
-curl -s http://127.0.0.1:8787/subagents/spawn \
-  -H 'content-type: application/json' \
-  -d "$(cat <<'ENDJSON'
-{
-  "tenant_id": "tenant-local",
-  "parent_session_id": "sess-1",
-  "parent_turn_id": "turn-1",
-  "workspace_root": "/absolute/path",
-  "task_id": "task-uuid",
-  "idempotency_key": "unique-key-12chars",
-  "goal": "describe the goal",
-  "done_when": ["criterion 1"],
-  "input_context_refs": [],
-  "output_schema": {},
-  "priority": "normal",
-  "run_timeout_seconds": 120,
-  "cleanup": "keep"
-}
-ENDJSON
-)"
+### Pinecone (Vector Memory)
+- **saimemory** (7K+ vectors): Operational memory. Per-tenant namespace routing via `.runtime/tenant_pinecone_map.json`
+- **ublib2** (82K+ vectors): Sean's master knowledge library. Vectors in **default (empty) namespace** — never pass a namespace for ublib2
+- Auto-retrieval searches both on every turn (`auto_retrieval.py`)
+- `BOMBA_PINECONE_INDEX_HOSTS` env var maps index names to hosts
+- `pinecone_list_indexes` describes up to 20 indexes (MAX_DESCRIBE_INDEXES)
 
-# Poll sub-agent events
-curl -s "http://127.0.0.1:8787/subagents/events?tenant_id=tenant-local&run_id=RUN_ID"
+### Embedding Routing
+Embeddings use **OpenAI directly** (not OpenRouter) when `OPENAI_API_KEY` is set. Both `memory/embeddings.py` and `tools/builtin_pinecone.py` prefer OpenAI over OpenRouter for embedding calls.
 
-# Code intelligence
-curl -s http://127.0.0.1:8787/codeintel \
-  -H 'content-type: application/json' \
-  -d '{"tenant_id":"tenant-local","tool_name":"find_symbol","arguments":{"symbol":"RuntimeBridge"}}'
-```
+### Frontend (Mission Control)
+- React SPA in `mission-control/`, built with Vite
+- Served from `mission-control/dist/` by the FastAPI server
+- After editing JSX: `cd mission-control && npm run build`, then restart server
+- SSE for real-time updates (chat messages, typing indicators, progress, task updates)
+- Browser caching: users must hard-refresh (Cmd+Shift+R) after deploys
 
-**JSON/curl rule:** ALWAYS use `cat <<'ENDJSON'` heredoc for multi-line JSON. Single quotes on the delimiter prevent shell expansion.
+### Session Management
+- Sessions persisted in `mc_chat_sessions` (PostgreSQL)
+- `activeSessionId` stored in browser localStorage
+- Auto-creates "General" session if user has zero sessions
+- Sessions categorized: own / shared / team channels
+- Full conversation transcript replayed (limit=500 turns, 70% context budget)
 
-## Key Architectural Facts
+### Teams System
+- Teams, members, channels, session sharing in PostgreSQL
+- `mc_teams`, `mc_team_members`, `mc_session_shares`, `mc_team_channels` tables
+- Any member can share sessions; only admins add/remove members
+- Team channels appear in all members' Comms sidebar
 
-### Core Architecture
-- **RuntimeBridge** (`runtime/bridge.py`) is the single entry point for all operations. CLI and HTTP server both call `handle_turn()`.
-- **Tenant isolation:** Each tenant gets its own RuntimeDB, memory store, skill registry. Cached in `_tenant_runtimes` dict.
-- **Agentic loop** (`runtime/loop.py`) iterates: generate -> parse tool calls -> execute via governance -> append results -> check stop conditions.
-- **Provider selection order:** Anthropic key > OpenAI key > OpenRouter key > StaticEchoProvider.
+### Cron Scheduler
+- Enabled by default (`BOMBA_CRON_ENABLED=true`)
+- 3 schedule types: `cron`, `at` (one-shot), `every` (interval)
+- Run history tracked in `scheduled_task_runs` table
+- API: `/api/mc/cron/*`, frontend panel on Overview tab
 
-### Three-Tier Memory System
-1. **Working/Episodic** — `markdown_notes` table + filesystem notes under workspace `memory/` dir. Persists session observations and task notes.
-2. **Semantic** — `memories` + `memory_archive` tables via `MemoryConsolidator`. Handles contradiction detection (archives old belief, promotes new), versioned updates, and recency-weighted lexical retrieval.
-3. **Procedural** — `procedural_memories` table. Tracks tool-chain strategies with success/failure counters. Retrieval ranked by `lexical_score * success_ratio`. Learned automatically after successful tool chains.
+### Tool Governance
+- Tools organized in groups: `group:fs`, `group:web`, `group:memory`, `group:cron`, `group:seo`, `group:skills`, etc.
+- Being profiles map tenants to allowed tool groups (being_tool_profiles.py)
+- `parse_document` is in `group:fs` — all beings with fs access can use it
 
-### Conversation History (Sliding Window + Summary)
-- `conversation_turns` table stores every turn with `turn_number`, `token_estimate`.
-- Last 3-5 turns replayed as full `ChatMessage` pairs (budget-capped at 30% of available input tokens via `_cap_recent_turn_messages()`).
-- Older turns condensed into `session_summaries` via LLM-generated digests (triggered every 5 turns, window=3).
-- Summaries injected into `recent_history` input of context assembly.
+## User Accounts
+Accounts live in **PostgreSQL**. Key user groups:
+- `@callagyrecovery.com` — password `SPCL01!`, tenant `tenant-recovery-*`
+- `@sigil.ai` / `@acti.ai` — password `SPATI01!`, tenant `tenant-sai`
+- `neel@sai.ai` — admin, tenant `tenant-prime`
 
-### Sub-Agents
-- **Real workers** — `SubAgentWorkerFactory` creates workers that call `bridge.handle_turn()` recursively with their own session.
-- Async execution via `ThreadPoolExecutor`, non-blocking. Parent continues while children run.
-- **Depth enforcement** — `subagent_max_spawn_depth` (default 3) prevents runaway nesting.
-- **Cascade stop** — when parent budget exhausts or max iterations hit, active children are terminated.
-- **Crash recovery** — crash window/max/cooldown prevents rapid respawning.
-- **Shared memory writes** require: `writer_agent_id`, `ticket_id`, `timestamp`, `confidence`, `scope` (scratch|proposal|committed).
+## Common Pitfalls
+1. **Wrong database**: Creating users/beings in SQLite when server uses Postgres
+2. **Embedding 401**: OpenAI key sent to OpenRouter URL (or vice versa)
+3. **ublib2 shows 0 vectors**: Passing a namespace filter (ublib2 uses default namespace)
+4. **Beings echo stubs**: Wrong model_id in Postgres (e.g., `minimax/minimax-m2.5`)
+5. **Auto-logout**: Token expiry — tokens last 30 days with auto-renewal
+6. **Frontend not updating**: Serve stale bundle — rebuild + restart + hard refresh
+7. **Bedrock model ID**: Must strip `openrouter/` prefix, map to `us.anthropic.*` format
+8. **ACT-I beings online**: They reset to online on config load if not set to offline in code
 
-### Sister Architecture (Prime + Persistent Sisters)
-- Sister config lives in `workspaces/prime/sisters.json` and is loaded by `runtime/sisters.py`.
-- `SisterRegistry` exposes `list_sisters`, `get_sister`, `spawn_sister`, and `stop_sister`.
-- Prime runtime bridges sister control to:
-  - dashboard (`sisters` section)
-  - tools (`sisters_list`, `sisters_spawn`, `sisters_stop`, `sisters_message`, `sisters_status`)
-  - direct bridge methods (`spawn_sister`, `stop_sister`, `message_sister`).
-
-### Proactive Autonomy
-- **Heartbeat** — `HeartbeatEngine` runs a background daemon thread. Reads `HEARTBEAT.md` checklist from workspace root at configured interval (default 30min). Invokes `bridge.handle_turn()` with the checklist content. Reports only actionable items.
-- **Cron** — `CronScheduler` polls for due tasks every 15s. Stores tasks in `scheduled_tasks` table. Uses `croniter` for full cron expression parsing, with built-in fallback for `@hourly`, `@daily`, `*/N * * * *`. Each execution gets a unique session ID.
-
-### Self-Correcting Adaptation
-- **Metrics-based** (every N turns, default 5) — `RuntimeAdaptationEngine.check_and_correct()` detects regressions across retrieval precision, search escalation, sub-agent success, loop incidents. On 2+ signals: rollback to last known-good policy. On 1 signal: targeted adjustment.
-- **LLM self-evaluation** (every N turns, default 10) — `SelfEvaluator.evaluate()` reviews recent `loop_executions`, asks the LLM to score itself on tool_efficiency, memory_quality, goal_completion, and suggest policy_updates.
-- **Policy versioning** — all policy changes versioned in `policy_versions` table with diffs and rollback references.
-
-### Web Search
-- `web_search` tool — Brave Search API (if `BRAVE_API_KEY` set), falls back to DuckDuckGo instant answers.
-- `web_fetch` tool — fetches URL content, strips HTML to text.
-- Gated by `BOMBA_WEB_SEARCH_ENABLED` config.
-
-### SoulConfig Identity Injection
-- `identity/soul.py` parses workspace identity artifacts:
-  - `SOUL.md`, `IDENTITY.md`, `MISSION.md`, `VISION.md`, `FORMULA.md`, `PRIORITIES.md`.
-- Runtime behavior:
-  - SOUL + IDENTITY + MISSION + VISION are prepended into system contract context.
-  - FORMULA is injected into semantic candidates.
-  - PRIORITIES are injected into working memory.
-
-### Pinecone Tools
-- `pinecone_query`: embeds query via OpenAI and retrieves matches from Pinecone index host.
-- `pinecone_list_indexes`: enumerates indexes and attempts vector stats retrieval.
-- Host routing: control-plane index discovery + cache, with optional `BOMBA_PINECONE_INDEX_HOSTS` fallback map.
-- Default index/namespace: `ublib2` / `longterm` (configurable). STRATA key routing supported for known STRATA indexes.
-- Registration is gated by `BOMBA_PINECONE_ENABLED`.
-
-### Voice Tools
-- `voice_list_calls`, `voice_get_transcript`, `voice_make_call`, `voice_list_pathways`.
-- Outbound calls are high-risk (`voice_make_call`) and flow through governance approval logic.
-- Registration is gated by `BOMBA_VOICE_ENABLED`.
-
-### Skills System
-- **Agent Skills standard** (agentskills.io) compliant `SKILL.md` files with YAML frontmatter.
-- **OpenClaw `metadata.openclaw`** extensions supported: `requires.env`, `requires.bins`, `requires.anyBins`, `requires.os`.
-- **Skill loading precedence:** workspace skills > user skills (`~/.sigil/skills/`) > bundled > plugin dirs.
-- **Catalog sources:** ClawHub, Anthropic Skills (configurable via `BOMBA_SKILL_CATALOG_SOURCES`).
-- **Path traversal protection** on skill install — IDs sanitized with `re.sub(r'[^a-z0-9_-]', '', id)`.
-- **Tool governance:** two-layer — PolicyPipeline (visibility/allow-deny) then ToolGovernanceService (per-call risk/confidence).
-- **Confidence-gated learning:** `>=0.4` auto-applies, `<0.4` goes to approval queue.
+## Environment Variables (Key Ones)
+| Variable | Purpose |
+|----------|---------|
+| `BOMBA_POSTGRES_DSN` | PostgreSQL connection (primary DB) |
+| `OPENROUTER_API_KEY` | LLM calls (primary provider) |
+| `OPENAI_API_KEY` | Embeddings for Pinecone queries |
+| `PINECONE_API_KEY` | Vector memory access |
+| `BOMBA_LLM_PROVIDER_PRIORITY` | `openrouter` (default) or `bedrock` |
+| `BOMBA_AUTO_RETRIEVAL` | `true`/`false` — auto Pinecone on every turn |
+| `BOMBA_REPLAY_HISTORY_BUDGET_FRACTION` | `0.7` — 70% of context for conversation replay |
+| `BOMBA_MAX_LOOP_ITERATIONS` | `50` — max tool call iterations per turn |
+| `BOMBA_CRON_ENABLED` | `true` — enable cron scheduler |
 
 ## Safety Rules
-1. **No `rm` or `mv` without `cp` backup first.** Always: `cp -r target target.bak && rm -rf target`
-2. **No `git reset --hard` or `git clean -fd`** without explicit user confirmation.
-3. **Never overwrite `.env`** -- it contains live API keys. Use `.env.example` as reference.
-4. **Always use absolute paths** in commands. The working directory is `/Users/zidane/Downloads/PROJEKT`.
-5. **Do not create files outside the project root** without explicit instruction.
-
-## Debugging Protocol
-1. **Read the source file first.** Open `src/bomba_sr/<module>.py` and read the relevant function.
-2. **Check the contract schema** in `contracts/` if the issue involves request/response shape.
-3. **Run the specific failing test** with `-v -s` to see full output.
-4. **Check `.runtime/bomba_runtime.db`** for state issues -- it is SQLite, use `sqlite3` CLI.
-5. **Read `docs/06-components-reference.md`** to understand which component owns what.
-6. **Check adaptation state** — query `policy_versions` and `runtime_metrics_rollup` tables for self-correction decisions.
-
-## Common Mistakes to Avoid
-- **Wrong python:** Use `.venv/bin/python` or activate venv. System python lacks PyYAML.
-- **Missing PYTHONPATH:** Always set `PYTHONPATH=src` when running scripts or tests.
-- **Relative imports in tests:** Tests use `from bomba_sr.X import Y` -- requires `PYTHONPATH=src` in pyproject.toml.
-- **Assuming a web framework:** There is no Flask/FastAPI. The HTTP server is raw `http.server`.
-- **Editing SQL migrations for runtime changes:** The SQLite tables are created in-code by each service. The `sql/migrations/` are reference schemas only.
-- **Wrong directory:** All commands assume cwd is `/Users/zidane/Downloads/PROJEKT`. Do not cd into subdirectories.
-- **Forgetting thread safety:** `RuntimeDB` wraps all operations in `threading.RLock()`. Do not bypass.
-- **Sub-agent depth:** Default max depth is 3. If sub-agents fail silently, check depth limit.
+1. **Never overwrite `.env`** — contains live API keys
+2. **Never `git reset --hard`** without confirmation
+3. **PostgreSQL is the source of truth** for users/beings/sessions
+4. **ublib2 is SACRED** — Aiko review before any writes
+5. **Always use absolute paths** — working directory is the project root
 
 ## Query Enrichment Hook
-A `UserPromptSubmit` hook at `.claude/hooks/enrich-prompt.sh` auto-injects
-per-query dynamic context into every prompt. It classifies the query intent
-and selects minimal, high-value context (branch, diff, relevant paths).
-
-Categories: `debug` | `test` | `api` | `file` | `git` | `refactor` | `general`
-
-Config: `.claude/settings.json` (project-level hook registration).
-The hook runs in <200ms and injects ~100-200 tokens of `additionalContext`.
+A `UserPromptSubmit` hook at `.claude/hooks/enrich-prompt.sh` auto-injects per-query dynamic context (branch, diff, relevant paths). Config: `.claude/settings.json`.
