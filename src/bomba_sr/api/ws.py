@@ -22,7 +22,6 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
 
     async def connect(self, client_id: str, websocket: WebSocket, tenant_id: str, user_id: str):
-        await websocket.accept()
         q: asyncio.Queue = asyncio.Queue(maxsize=500)
         async with self._lock:
             self._connections[client_id] = {
@@ -88,6 +87,9 @@ def _authenticate_ws(token: str, dashboard_svc) -> dict | None:
 
 async def websocket_endpoint(websocket: WebSocket, token: str = ""):
     """Main WebSocket handler. Auth via ?token= query param."""
+    # Must accept() before we can send a close frame with a custom code
+    await websocket.accept()
+
     dashboard_svc = websocket.app.state.dashboard_svc
     if not dashboard_svc:
         await websocket.close(code=1011, reason="Service unavailable")
