@@ -11,11 +11,48 @@ from typing import Any
 from bomba_sr.tools.base import ToolContext, ToolDefinition
 
 
+_BINARY_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"}
+
+
 def _read_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
     path = context.guard_path(str(arguments["path"]))
     offset = int(arguments.get("offset") or 0)
     limit = int(arguments.get("limit") or 0)
-    text = path.read_text(encoding="utf-8")
+
+    # Binary files: extract text with lightweight parser
+    if path.suffix.lower() in _BINARY_EXTENSIONS:
+        try:
+            from bomba_sr.ingestion.parser import extract_text
+            extracted = extract_text(str(path))
+            text = extracted.get("text") or ""
+            lines = text.splitlines()
+            if offset < 0:
+                offset = 0
+            if limit > 0:
+                sliced = lines[offset : offset + limit]
+            else:
+                sliced = lines[offset:]
+            return {
+                "path": str(path),
+                "content": "\n".join(sliced),
+                "lines": len(lines),
+                "returned_lines": len(sliced),
+                "format": extracted.get("format", ""),
+            }
+        except Exception as exc:
+            return {
+                "path": str(path),
+                "error": f"Binary file ({path.suffix}) — extraction failed: {exc}",
+                "hint": "Use the parse_document tool for document processing.",
+            }
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return {
+            "path": str(path),
+            "error": f"Binary file — cannot read as text. Use parse_document tool for {path.suffix} files.",
+        }
     lines = text.splitlines()
     if offset < 0:
         offset = 0
@@ -111,6 +148,25 @@ def _literal_grep_matches(pattern: str, root: Path, file_glob: str) -> list[dict
             if pattern in line:
                 matches.append({"path": str(path), "line": idx, "snippet": line.strip()})
     return matches
+
+
+def _parse_document_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    """Parse a document (PDF, DOCX, PPTX, XLSX, HTML, images) into structured text."""
+    path = context.guard_path(str(arguments["path"]))
+    if not path.is_file():
+        return {"error": f"File not found: {path}"}
+    try:
+        from bomba_sr.ingestion.parser import extract_text
+        extracted = extract_text(str(path))
+        return {
+            "path": str(path),
+            "content": extracted["text"][:30000],
+            "format": extracted["format"],
+            "filename": extracted["filename"],
+            "byte_size": extracted["byte_size"],
+        }
+    except Exception as exc:
+        return {"error": f"Document parsing failed: {exc}", "path": str(path)}
 
 
 def _grep_tool(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
@@ -256,5 +312,25 @@ def builtin_fs_tools() -> list[ToolDefinition]:
             action_type="read",
             execute=_grep_tool,
             aliases=("grep_content",),
+        ),
+        ToolDefinition(
+            name="parse_document",
+            description=(
+                "Parse and extract text from document files: PDF, DOCX, XLSX, XLS, CSV, PPTX, "
+                "HTML, and images. Returns structured markdown with tables preserved. Use this "
+                "after web_fetch downloads a binary file, or to process files in the "
+                "workspace/uploads/ directory. For Excel files, returns all sheets as markdown tables."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the document file"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_parse_document_tool,
         ),
     ]

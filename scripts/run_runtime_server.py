@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# DEPRECATED: Use scripts/run_api_server.py (FastAPI + uvicorn) instead.
+# This legacy server is kept for backward compatibility during migration.
+# It will be removed in a future release.
 from __future__ import annotations
 
 import argparse
@@ -9,8 +12,11 @@ import os
 import sys
 import hashlib
 import secrets
+import time
+
+import bcrypt
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -51,35 +57,66 @@ def _load_dotenv_early(path: Path, *, override: bool = True) -> None:
 
 _load_dotenv_early(Path(__file__).resolve().parent.parent / ".env")
 
-# ── Mission Control users ─────────────────────────────────────────────
-# password_hash = sha256(password).hexdigest()
-# To add users: python3 -c "import hashlib; print(hashlib.sha256(b'yourpassword').hexdigest())"
+# ── Mission Control seed users ────────────────────────────────────────
+# Seed users are INSERT OR IGNORE'd on first run only.
+# Passwords below are bcrypt-hashed defaults — change after first login.
+# To generate a new hash: python3 -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt(rounds=12)).decode())"
 _MC_USERS: dict[str, dict] = {
     "admin@sigil.ai": {
         "id": "user-admin",
         "name": "Admin",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"sigil2026").hexdigest(),
+        "password_hash": "$2b$12$W0osG4K9DWwVDyS9zNduOeNTdavleY6OLppfqs2XxeMUONK5s9AjO",
     },
     "neel@acti.ai": {
         "id": "user-neel",
         "name": "Neel",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"neel2026").hexdigest(),
+        "password_hash": "$2b$12$IhHRKAiHUiNtyqhxv.uA2eNppAd.dN.BIcb4Ez67M5VgK34o0UkoG",
     },
     "nadav@acti.ai": {
         "id": "user-nadav",
         "name": "Nadav",
         "role": "operator",
-        "password_hash": hashlib.sha256(b"nadav2026").hexdigest(),
+        "password_hash": "$2b$12$7bd/c1QU9OBSjHfRsGlYVO2K0CfThSyWzHP/gd9g62GoGwgVl3Wl.",
     },
     "sean@acti.ai": {
         "id": "user-sean",
         "name": "Sean",
         "role": "admin",
-        "password_hash": hashlib.sha256(b"sean2026").hexdigest(),
+        "password_hash": "$2b$12$//rJilsKeJkLud41fIPdiO7vETBHSMZDY/guF3XJN4AJKlkez4T8S",
     },
 }
+
+# ── Rate limiting (in-memory) ────────────────────────────────────────
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}
+_USER_REQUEST_COUNTS: dict[str, list[float]] = {}
+
+_LOGIN_RATE_WINDOW = 60.0
+_LOGIN_RATE_MAX = 5
+_USER_RATE_WINDOW = 60.0
+_USER_RATE_MAX = 120
+
+
+def _check_login_rate(email: str) -> bool:
+    """Return True if login rate limit exceeded for this email."""
+    now = time.time()
+    attempts = [t for t in _LOGIN_ATTEMPTS.get(email, []) if now - t < _LOGIN_RATE_WINDOW]
+    _LOGIN_ATTEMPTS[email] = attempts
+    return len(attempts) >= _LOGIN_RATE_MAX
+
+
+def _record_login_failure(email: str) -> None:
+    _LOGIN_ATTEMPTS.setdefault(email, []).append(time.time())
+
+
+def _check_user_write_rate(user_id: str) -> bool:
+    """Return True if write rate limit exceeded for this user."""
+    now = time.time()
+    reqs = [t for t in _USER_REQUEST_COUNTS.get(user_id, []) if now - t < _USER_RATE_WINDOW]
+    reqs.append(now)
+    _USER_REQUEST_COUNTS[user_id] = reqs
+    return len(reqs) > _USER_RATE_MAX
 
 
 def _load_openclaw_runtime_defaults(project_root: Path) -> None:
@@ -255,9 +292,36 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
             self.end_headers()
             self.wfile.write(encoded)
+
+        def _get_user_from_token(self) -> dict | None:
+            """Extract and validate Bearer token, return {user_id, tenant_id, role} or None."""
+            auth = self.headers.get("Authorization", "")
+            if not auth.startswith("Bearer "):
+                return None
+            token = auth[7:]
+            row = dashboard_svc.db.execute(
+                "SELECT s.user_id, s.expires_at, u.tenant_id, u.role "
+                "FROM mc_sessions_auth s "
+                "JOIN mc_users u ON u.id = s.user_id "
+                "WHERE s.token = ?",
+                (token,),
+            ).fetchone()
+            if not row:
+                return None
+            if row["expires_at"] < datetime.now(timezone.utc).isoformat():
+                return None
+            return {"user_id": row["user_id"], "tenant_id": row["tenant_id"], "role": row["role"]}
+
+        def _require_auth(self) -> dict | None:
+            """Auth gate: validate token and return auth dict, or send 401 and return None."""
+            _auth = self._get_user_from_token()
+            if not _auth:
+                self._write_cors(401, {"error": "Unauthorized"})
+                return None
+            return _auth
 
         def _serve_static(self, rel_path: str) -> None:
             if ".." in rel_path or "\\" in rel_path:
@@ -301,7 +365,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 self.send_header("Access-Control-Allow-Origin", allowed_origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
             self.send_header("Content-Length", "0")
             self.end_headers()
 
@@ -1364,6 +1428,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 self._write_cors(503, {"error": "dashboard service not initialized"})
                 return
 
+            # Auth gate — SSE endpoint is exempt (handles its own connection lifecycle)
+            if path != "/api/mc/events":
+                _auth = self._require_auth()
+                if not _auth:
+                    return
+            else:
+                _auth = None
+
             try:
                 # --- Beings ---
                 if path == "/api/mc/beings":
@@ -1443,6 +1515,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     top_level_only = query.get("top_level_only", ["true"])[0].lower() != "false"
                     tasks = dashboard_svc.list_tasks(
                         project_svc,
+                        tenant_id=_auth["tenant_id"],
                         assignee=query.get("assignee", [None])[0],
                         priority=query.get("priority", [None])[0],
                         status=query.get("status", [None])[0],
@@ -1459,38 +1532,46 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/artifacts"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    artifacts = dashboard_svc.list_task_artifacts(tid)
+                    artifacts = dashboard_svc.list_task_artifacts(tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"artifacts": artifacts})
                     return
                 if path == "/api/mc/tasks/cleanup":
-                    deleted = dashboard_svc.clean_casual_tasks(project_svc)
+                    deleted = dashboard_svc.clean_casual_tasks(project_svc, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"deleted": deleted})
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/orchestration"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    task = dashboard_svc.get_task_with_orchestration(project_svc, tid)
+                    task = dashboard_svc.get_task_with_orchestration(project_svc, tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"task": task})
                     return
                 if path.startswith("/api/mc/tasks/") and path.endswith("/children"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    child_ids = dashboard_svc.get_task_children(tid)
+                    child_ids = dashboard_svc.get_task_children(tid, tenant_id=_auth["tenant_id"])
                     children = []
                     for cid in child_ids:
                         try:
-                            children.append(dashboard_svc.get_task(project_svc, cid))
+                            children.append(dashboard_svc.get_task(project_svc, cid, tenant_id=_auth["tenant_id"]))
                         except Exception:
                             children.append({"id": cid, "status": "unknown"})
                     self._write_cors(200, {"children": children, "parent_task_id": tid})
                     return
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    task = dashboard_svc.get_task(project_svc, tid)
+                    task = dashboard_svc.get_task(project_svc, tid, tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"task": task})
                     return
 
                 # --- Orchestration ---
                 if path.startswith("/api/mc/orchestration/") and path.endswith("/status"):
                     oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    # Verify orchestration task belongs to this tenant
+                    _orch_task = dashboard_svc.db.execute(
+                        "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                        (oid, _auth["tenant_id"]),
+                    ).fetchone()
+                    if not _orch_task:
+                        self._write_cors(404, {"error": "orchestration not found"})
+                        return
                     status = dashboard_svc.get_orchestration_status(oid)
                     if status is None:
                         self._write_cors(404, {"error": "orchestration not found"})
@@ -1499,6 +1580,13 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     return
                 if path.startswith("/api/mc/orchestration/") and path.endswith("/log"):
                     oid = path.split("/api/mc/orchestration/", 1)[1].split("/")[0]
+                    _orch_task = dashboard_svc.db.execute(
+                        "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                        (oid, _auth["tenant_id"]),
+                    ).fetchone()
+                    if not _orch_task:
+                        self._write_cors(404, {"error": "orchestration not found"})
+                        return
                     log_entries = dashboard_svc.get_orchestration_log(oid)
                     self._write_cors(200, {"log": log_entries})
                     return
@@ -1551,13 +1639,50 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     self._write_cors(200, {"sister_id": sid, "profile": profile})
                     return
 
+                # --- Audit Log (admin-only) ---
+                if path == "/api/mc/audit":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Admin role required"})
+                        return
+                    _a_tenant = query.get("tenant_id", [None])[0]
+                    _a_being = query.get("being_id", [None])[0]
+                    _a_tool = query.get("tool_name", [None])[0]
+                    _a_limit = int(query.get("limit", ["100"])[0])
+                    _sql = "SELECT * FROM tool_audit_log WHERE 1=1"
+                    _params: list = []
+                    if _a_tenant:
+                        _sql += " AND tenant_id = ?"
+                        _params.append(_a_tenant)
+                    if _a_being:
+                        _sql += " AND being_id = ?"
+                        _params.append(_a_being)
+                    if _a_tool:
+                        _sql += " AND tool_name = ?"
+                        _params.append(_a_tool)
+                    _sql += " ORDER BY created_at DESC LIMIT ?"
+                    _params.append(_a_limit)
+                    try:
+                        _rows = dashboard_svc.db.execute(_sql, _params).fetchall()
+                        self._write_cors(200, {"entries": [dict(r) for r in _rows]})
+                    except Exception:
+                        self._write_cors(200, {"entries": []})
+                    return
+
+                # --- Auth: Me ---
+                if path == "/api/mc/auth/me":
+                    _user_row = dashboard_svc.db.execute(
+                        "SELECT id, email, name, role, tenant_id, created_at FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    if not _user_row:
+                        self._write_cors(404, {"error": "user not found"})
+                        return
+                    self._write_cors(200, {"user": dict(_user_row)})
+                    return
+
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
-                    _uid = query.get("user_id", [None])[0]
-                    if not _uid:
-                        self._write_cors(400, {"error": "user_id query parameter is required"})
-                        return
-                    sessions = dashboard_svc.list_sessions(user_id=_uid)
+                    sessions = dashboard_svc.list_sessions(user_id=_auth["user_id"])
                     self._write_cors(200, {"sessions": sessions})
                     return
 
@@ -1568,6 +1693,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         target=query.get("target", [None])[0],
                         search=query.get("search", [None])[0],
                         session_id=query.get("session_id", [None])[0],
+                        user_id=_auth["user_id"],
                         limit=int(query.get("limit", ["500"])[0]),
                         offset=int(query.get("offset", ["0"])[0]),
                     )
@@ -1578,15 +1704,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 if path == "/api/mc/deliverables":
                     task_id = query.get("task_id", [None])[0]
                     if task_id:
-                        deliverables = dashboard_svc.list_deliverables(task_id)
+                        deliverables = dashboard_svc.list_deliverables(task_id, tenant_id=_auth["tenant_id"])
                     else:
-                        deliverables = dashboard_svc.list_all_deliverables()
+                        deliverables = dashboard_svc.list_all_deliverables(tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"deliverables": deliverables})
                     return
 
                 # --- Sub-agents ---
                 if path == "/api/mc/subagents":
-                    runs = dashboard_svc.list_subagent_runs()
+                    runs = dashboard_svc.list_subagent_runs(tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"runs": runs})
                     return
 
@@ -1746,6 +1872,17 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
             except Exception:
                 return
 
+            # Auth gate — login/register are exempt
+            if path not in ("/api/mc/auth/login", "/api/mc/auth/register"):
+                _auth = self._require_auth()
+                if not _auth:
+                    return
+                if _check_user_write_rate(_auth["user_id"]):
+                    self._write_cors(429, {"error": "Rate limit exceeded"})
+                    return
+            else:
+                _auth = None
+
             try:
                 # --- Tasks ---
                 if path == "/api/mc/tasks":
@@ -1758,6 +1895,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         assignees=body.get("assignees"),
                         owner_agent_id=body.get("owner_agent_id"),
                         parent_task_id=body.get("parent_task_id"),
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(201, {"task": task})
                     return
@@ -1770,13 +1908,17 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     result = dashboard_svc.orchestration_engine.start(
                         goal=body["goal"],
                         requester_session_id=body.get("session_id", "mc-chat-prime"),
-                        sender=body.get("sender", "user"),
+                        sender=_auth["user_id"],
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(201, {"orchestration": result})
                     return
 
                 # --- Dream Cycle ---
                 if path == "/api/mc/dream-cycle":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Admin role required"})
+                        return
                     being_id = body.get("being_id")
                     result = bridge.dream_cycle_run_once(
                         being_id=being_id,
@@ -1792,20 +1934,51 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     if not _email or not _password:
                         self._write_cors(400, {"error": "Email and password required"})
                         return
-                    _hash = hashlib.sha256(_password.encode()).hexdigest()
+                    if _check_login_rate(_email):
+                        self._write_cors(429, {"error": "Too many login attempts. Try again later."})
+                        return
                     _row = dashboard_svc.db.execute(
                         "SELECT * FROM mc_users WHERE email = ?", (_email,)
                     ).fetchone()
-                    if not _row or dict(_row).get("password_hash") != _hash:
+                    if not _row:
+                        _record_login_failure(_email)
                         self._write_cors(401, {"error": "Invalid credentials"})
                         return
                     _user = dict(_row)
+                    _stored_hash = _user.get("password_hash", "")
+                    if _stored_hash.startswith("$2b$"):
+                        if not bcrypt.checkpw(_password.encode(), _stored_hash.encode()):
+                            _record_login_failure(_email)
+                            self._write_cors(401, {"error": "Invalid credentials"})
+                            return
+                    else:
+                        # Legacy SHA-256 — verify then upgrade to bcrypt
+                        if hashlib.sha256(_password.encode()).hexdigest() != _stored_hash:
+                            _record_login_failure(_email)
+                            self._write_cors(401, {"error": "Invalid credentials"})
+                            return
+                        _new_hash = bcrypt.hashpw(_password.encode(), bcrypt.gensalt(rounds=12)).decode()
+                        dashboard_svc.db.execute_commit(
+                            "UPDATE mc_users SET password_hash = ? WHERE id = ?",
+                            (_new_hash, _user["id"]),
+                        )
+                    # Single-session: invalidate any existing tokens
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?", (_user["id"],),
+                    )
                     _token = secrets.token_urlsafe(32)
+                    _now_ts = datetime.now(timezone.utc).isoformat()
+                    _expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+                    dashboard_svc.db.execute_commit(
+                        "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+                        (_token, _user["id"], _now_ts, _expires),
+                    )
                     self._write_cors(200, {
                         "user_id": _user["id"],
                         "email": _user["email"],
                         "name": _user["name"],
                         "role": _user.get("role", "operator"),
+                        "tenant_id": _user.get("tenant_id", "tenant-local"),
                         "token": _token,
                     })
                     return
@@ -1828,18 +2001,33 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         self._write_cors(409, {"error": "Account already exists"})
                         return
                     _uid = f"user-{uuid.uuid4().hex[:8]}"
-                    _hash = hashlib.sha256(_password.encode()).hexdigest()
+                    _tenant_id = f"tenant-{uuid.uuid4().hex[:8]}"
+                    _hash = bcrypt.hashpw(_password.encode(), bcrypt.gensalt(rounds=12)).decode()
                     _now = datetime.now(timezone.utc).isoformat()
                     dashboard_svc.db.execute_commit(
-                        "INSERT INTO mc_users (id, email, name, password_hash, role, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-                        (_uid, _email, _name, _hash, "operator", _now, _now),
+                        "INSERT INTO mc_users (id, email, name, password_hash, role, tenant_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                        (_uid, _email, _name, _hash, "operator", _tenant_id, _now, _now),
+                    )
+                    # Initialize tenant directory structure
+                    from bomba_sr.runtime.tenancy import TenantRegistry
+                    _registry = TenantRegistry(Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")))
+                    _registry.ensure_tenant(tenant_id=_tenant_id)
+                    # Defensive: clear any stale tokens for this user
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?", (_uid,),
                     )
                     _token = secrets.token_urlsafe(32)
+                    _expires = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+                    dashboard_svc.db.execute_commit(
+                        "INSERT INTO mc_sessions_auth (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+                        (_token, _uid, _now, _expires),
+                    )
                     self._write_cors(201, {
                         "user_id": _uid,
                         "email": _email,
                         "name": _name,
                         "role": "operator",
+                        "tenant_id": _tenant_id,
                         "token": _token,
                     })
                     return
@@ -1847,15 +2035,14 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 # --- Chat Sessions ---
                 if path == "/api/mc/chat/sessions":
                     name = body.get("name", "New Chat")
-                    _uid = body.get("user_id")
-                    session = dashboard_svc.create_session(name, user_id=_uid)
+                    session = dashboard_svc.create_session(name, user_id=_auth["user_id"], tenant_id=_auth["tenant_id"])
                     self._write_cors(201, {"session": session})
                     return
 
                 # --- Chat ---
                 if path == "/api/mc/chat/messages":
                     content = body.get("content", "")
-                    sender = body.get("sender", "user")
+                    sender = _auth["user_id"]
                     targets = body.get("targets", [])
                     mode = body.get("mode", "auto")
                     task_ref = body.get("taskRef")
@@ -1874,6 +2061,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         targets=targets, msg_type=msg_type,
                         mode=mode, task_ref=task_ref,
                         session_id=session_id,
+                        tenant_id=_auth["tenant_id"],
                     )
 
                     # Route to each targeted being in background
@@ -1884,6 +2072,9 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     return
 
                 if path == "/api/mc/chat/system":
+                    if _auth.get("role") != "admin":
+                        self._write_cors(403, {"error": "Forbidden: admin role required"})
+                        return
                     msg = dashboard_svc.create_system_message(
                         content=body.get("content", ""),
                         task_ref=body.get("taskRef"),
@@ -1944,6 +2135,55 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                     self._write_cors(200, {"ok": True})
                     return
 
+                # --- Auth: Logout ---
+                if path == "/api/mc/auth/logout":
+                    _raw_token = self.headers.get("Authorization", "")[7:]
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE token = ?",
+                        (_raw_token,),
+                    )
+                    self._write_cors(200, {"ok": True})
+                    return
+
+                # --- Auth: Change Password ---
+                if path == "/api/mc/auth/change-password":
+                    _old_pw = body.get("old_password") or ""
+                    _new_pw = body.get("new_password") or ""
+                    if not _old_pw or not _new_pw:
+                        self._write_cors(400, {"error": "old_password and new_password required"})
+                        return
+                    if len(_new_pw) < 6:
+                        self._write_cors(400, {"error": "New password must be at least 6 characters"})
+                        return
+                    _row = dashboard_svc.db.execute(
+                        "SELECT password_hash FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    if not _row:
+                        self._write_cors(404, {"error": "user not found"})
+                        return
+                    _stored = dict(_row).get("password_hash", "")
+                    if _stored.startswith("$2b$"):
+                        if not bcrypt.checkpw(_old_pw.encode(), _stored.encode()):
+                            self._write_cors(401, {"error": "Invalid current password"})
+                            return
+                    else:
+                        if hashlib.sha256(_old_pw.encode()).hexdigest() != _stored:
+                            self._write_cors(401, {"error": "Invalid current password"})
+                            return
+                    _new_hash = bcrypt.hashpw(_new_pw.encode(), bcrypt.gensalt(rounds=12)).decode()
+                    dashboard_svc.db.execute_commit(
+                        "UPDATE mc_users SET password_hash = ?, updated_at = ? WHERE id = ?",
+                        (_new_hash, datetime.now(timezone.utc).isoformat(), _auth["user_id"]),
+                    )
+                    # Invalidate all sessions for this user
+                    dashboard_svc.db.execute_commit(
+                        "DELETE FROM mc_sessions_auth WHERE user_id = ?",
+                        (_auth["user_id"],),
+                    )
+                    self._write_cors(200, {"ok": True})
+                    return
+
                 self._write_cors(404, {"error": "not_found"})
             except KeyError as exc:
                 self._write_cors(400, {"error": f"missing field: {exc}"})
@@ -1965,7 +2205,37 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
             except Exception:
                 return
 
+            _auth = self._require_auth()
+            if not _auth:
+                return
+            if _check_user_write_rate(_auth["user_id"]):
+                self._write_cors(429, {"error": "Rate limit exceeded"})
+                return
+
             try:
+                # PATCH /api/mc/auth/me
+                if path == "/api/mc/auth/me":
+                    _updates = {}
+                    if "name" in body:
+                        _updates["name"] = body["name"]
+                    if "email" in body:
+                        _updates["email"] = (body["email"] or "").strip().lower()
+                    if not _updates:
+                        self._write_cors(400, {"error": "Nothing to update"})
+                        return
+                    _set_clauses = ", ".join(f"{k} = ?" for k in _updates)
+                    _vals = list(_updates.values()) + [datetime.now(timezone.utc).isoformat(), _auth["user_id"]]
+                    dashboard_svc.db.execute_commit(
+                        f"UPDATE mc_users SET {_set_clauses}, updated_at = ? WHERE id = ?",
+                        _vals,
+                    )
+                    _user_row = dashboard_svc.db.execute(
+                        "SELECT id, email, name, role, tenant_id, created_at FROM mc_users WHERE id = ?",
+                        (_auth["user_id"],),
+                    ).fetchone()
+                    self._write_cors(200, {"user": dict(_user_row)})
+                    return
+
                 # PATCH /api/mc/beings/:id
                 if path.startswith("/api/mc/beings/"):
                     bid = path.split("/api/mc/beings/", 1)[1].split("/")[0]
@@ -1979,10 +2249,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 # PATCH /api/mc/chat/sessions/:id
                 if path.startswith("/api/mc/chat/sessions/"):
                     sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
-                    session = dashboard_svc.rename_session(sid, body.get("name", ""))
-                    if not session:
-                        self._write_cors(404, {"error": "session not found"})
+                    existing = dashboard_svc.get_session(sid)
+                    if not existing or existing.get("user_id") != _auth["user_id"]:
+                        self._write_cors(403, {"error": "Forbidden"})
                         return
+                    session = dashboard_svc.rename_session(sid, body.get("name", ""), tenant_id=_auth["tenant_id"])
                     self._write_cors(200, {"session": session})
                     return
 
@@ -1997,6 +2268,7 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                         assignees=body.get("assignees"),
                         title=body.get("title"),
                         description=body.get("description"),
+                        tenant_id=_auth["tenant_id"],
                     )
                     self._write_cors(200, {"task": task})
                     return
@@ -2016,11 +2288,18 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 self._write_cors(403, {"error": "origin_not_allowed"})
                 return
 
+            _auth = self._require_auth()
+            if not _auth:
+                return
+            if _check_user_write_rate(_auth["user_id"]):
+                self._write_cors(429, {"error": "Rate limit exceeded"})
+                return
+
             try:
                 # DELETE /api/mc/tasks/:id
                 if path.startswith("/api/mc/tasks/"):
                     tid = path.split("/api/mc/tasks/", 1)[1].split("/")[0]
-                    ok = dashboard_svc.delete_task(project_svc, tid)
+                    ok = dashboard_svc.delete_task(project_svc, tid, tenant_id=_auth["tenant_id"])
                     if not ok:
                         self._write_cors(404, {"error": "task not found"})
                         return
@@ -2030,7 +2309,11 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 # DELETE /api/mc/chat/sessions/:id
                 if path.startswith("/api/mc/chat/sessions/"):
                     sid = path.split("/api/mc/chat/sessions/", 1)[1].split("/")[0]
-                    ok = dashboard_svc.delete_session(sid)
+                    existing = dashboard_svc.get_session(sid)
+                    if not existing or existing.get("user_id") != _auth["user_id"]:
+                        self._write_cors(403, {"error": "Forbidden"})
+                        return
+                    ok = dashboard_svc.delete_session(sid, tenant_id=_auth["tenant_id"])
                     if not ok:
                         self._write_cors(404, {"error": "session not found or is default"})
                         return
@@ -2040,6 +2323,15 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 # DELETE /api/mc/chat/messages/:id
                 if path.startswith("/api/mc/chat/messages/"):
                     mid = path.split("/api/mc/chat/messages/", 1)[1].split("/")[0]
+                    msg_row = dashboard_svc.db.execute(
+                        "SELECT m.session_id FROM mc_messages m "
+                        "JOIN mc_chat_sessions s ON s.id = m.session_id "
+                        "WHERE m.id = ? AND s.user_id = ?",
+                        (mid, _auth["user_id"]),
+                    ).fetchone()
+                    if not msg_row:
+                        self._write_cors(403, {"error": "Forbidden"})
+                        return
                     ok = dashboard_svc.delete_message(mid)
                     if not ok:
                         self._write_cors(404, {"error": "message not found"})
@@ -2139,7 +2431,12 @@ def make_handler(bridge: RuntimeBridge, dashboard_svc=None, project_svc=None, pi
                 self._write_cors(503, {"error": "dashboard service not initialized"})
                 return
 
-            client_id = dashboard_svc.subscribe_sse()
+            _auth = self._get_user_from_token()
+            if not _auth:
+                self._write_cors(401, {"error": "Unauthorized"})
+                return
+
+            client_id = dashboard_svc.subscribe_sse(tenant_id=_auth["tenant_id"])
             self.send_response(200)
             allowed_origin = self._cors_origin()
             if allowed_origin:
@@ -2197,11 +2494,11 @@ def main() -> int:
     try:
         from bomba_sr.dashboard.service import DashboardService
         from bomba_sr.projects.service import ProjectService
-        from bomba_sr.storage.db import RuntimeDB
+        from bomba_sr.storage.factory import create_shared_db
 
         runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
         runtime_home.mkdir(parents=True, exist_ok=True)
-        mc_db = RuntimeDB(runtime_home / "bomba_runtime.db")
+        mc_db = create_shared_db()
         project_svc = ProjectService(mc_db)
         dashboard_svc = DashboardService(db=mc_db, bridge=bridge)
         dashboard_svc.ensure_mc_project(project_svc)
@@ -2211,6 +2508,13 @@ def main() -> int:
         artifact_store = ArtifactStore(mc_db, artifacts_root)
         dashboard_svc.set_artifact_store(artifact_store)
         artifact_store.set_on_created(dashboard_svc.notify_artifact_created)
+        # Purge expired auth tokens on startup
+        _purged = mc_db.execute_commit(
+            "DELETE FROM mc_sessions_auth WHERE expires_at < ?",
+            (datetime.now(timezone.utc).isoformat(),),
+        ).rowcount
+        if _purged:
+            print(f"mission control: purged {_purged} expired auth token(s)")
         loaded = dashboard_svc.load_beings_from_configs()
         dashboard_svc.init_orchestration(project_svc)
         print(f"mission control: loaded {loaded} beings from configs")

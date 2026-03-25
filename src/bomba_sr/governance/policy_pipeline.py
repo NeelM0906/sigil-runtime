@@ -5,20 +5,18 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import PROFILE_TOOLS, ToolProfile, profile_from_value, resolve_alias
+from bomba_sr.governance.tool_profiles import resolve_alias
 
 
 @dataclass(frozen=True)
 class ResolvedPolicy:
     allowed_tools: frozenset[str] | None
     denied_tools: frozenset[str]
-    profile: ToolProfile
     source_layers: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class ToolPolicyContext:
-    profile: ToolProfile
     tenant_id: str
     provider_name: str | None = None
     agent_id: str | None = None
@@ -45,15 +43,7 @@ class PolicyPipeline:
         if available_tools is not None:
             available = {resolve_alias(x) for x in available_tools}
 
-        profile = profile_from_value(context.profile)
-        base_allowed = PROFILE_TOOLS[profile]
-        if base_allowed is None:
-            allowed: set[str] | None = None
-        else:
-            allowed = set(resolve_alias(x) for x in base_allowed)
-            if available is not None:
-                allowed &= available
-        layers.append(f"profile:{profile.value}")
+        allowed: set[str] | None = None
 
         tenant_allow, tenant_deny = self._tenant_overrides(context.tenant_id)
         if tenant_allow:
@@ -85,7 +75,6 @@ class PolicyPipeline:
         return ResolvedPolicy(
             allowed_tools=(frozenset(allowed) if allowed is not None else None),
             denied_tools=frozenset(denied),
-            profile=profile,
             source_layers=tuple(layers),
         )
 

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from './context/AuthContext'
 import { BeingsProvider } from './context/BeingsContext'
+import { SSEProvider } from './context/SSEContext'
 import { LoginPage } from './components/LoginPage'
 import { Header } from './components/Header'
 import { BeingsRegistry } from './components/BeingsRegistry'
@@ -12,6 +13,9 @@ import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { CodeWorkspace } from './components/CodeWorkspace'
 import { CodeStatusCard } from './components/CodeStatusCard'
+import { ProjectsHub } from './components/ProjectsHub'
+import { SkillsPage } from './components/SkillsPage'
+import { CronPanel } from './components/CronPanel'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -19,6 +23,7 @@ const TABS = [
   { id: 'chat', label: 'Comms' },
   { id: 'teams', label: 'Agent Teams' },
   { id: 'code', label: 'Code' },
+  { id: 'skills', label: 'Skills' },
 ]
 
 function Dashboard() {
@@ -32,15 +37,21 @@ function Dashboard() {
     setActiveTab('code')
   }, [])
 
+  // Use CSS display toggling instead of conditional rendering
+  // so components stay mounted (SSE connections persist, state preserved)
+  const show = (tab) => activeTab === tab ? {} : { display: 'none' }
+
   return (
+    <SSEProvider>
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
         <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} user={user} onLogout={logout} />
         <main className="p-3 max-w-[1920px] mx-auto">
-          {activeTab === 'overview' && (
+          <div style={show('overview')}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
+                <CronPanel />
                 <SubAgentTracker />
                 <CodeStatusCard onOpenCode={() => setActiveTab('code')} />
               </div>
@@ -48,11 +59,14 @@ function Dashboard() {
                 <TaskBoard onOpenInCode={openInCode} />
               </div>
             </div>
-          )}
-          {activeTab === 'tasks' && (
+          </div>
+          <div style={show('tasks')}>
             <TaskBoard fullWidth onOpenInCode={openInCode} />
-          )}
-          {activeTab === 'chat' && (
+          </div>
+          <div style={show('projects')}>
+            <ProjectsHub />
+          </div>
+          <div style={show('chat')}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
                 <ChatWindow userId={user?.id} onOpenInCode={openInCode} />
@@ -61,16 +75,19 @@ function Dashboard() {
                 <OrchestrationTracker />
               </div>
             </div>
-          )}
-          {activeTab === 'teams' && (
+          </div>
+          <div style={show('teams')}>
             <AgentTeams />
-          )}
-          {activeTab === 'code' && (
+          </div>
+          <div style={show('code')}>
             <CodeWorkspace
               initialPrompt={codeInitialPrompt}
               onConsumePrompt={() => setCodeInitialPrompt(null)}
             />
-          )}
+          </div>
+          <div style={show('skills')}>
+            <SkillsPage />
+          </div>
         </main>
 
         <BeingDetail onOpenTask={(task) => {
@@ -79,6 +96,7 @@ function Dashboard() {
         }} />
       </div>
     </BeingsProvider>
+    </SSEProvider>
   )
 }
 

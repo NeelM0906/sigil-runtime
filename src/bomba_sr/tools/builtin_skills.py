@@ -142,7 +142,41 @@ def builtin_skill_tools(
             "description": description,
         }
 
+    def skill_list(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+        status_filter = str(arguments.get("status") or "").strip() or None
+        if status_filter == "all":
+            status_filter = None
+        skills = registry.list_skills(context.tenant_id, status=status_filter)
+        return {
+            "skills": [
+                {
+                    "skill_id": s.skill_id,
+                    "name": s.name,
+                    "description": s.description,
+                    "version": s.version,
+                    "status": s.status,
+                    "source": s.source,
+                }
+                for s in skills
+            ],
+            "count": len(skills),
+        }
+
     tools: list[ToolDefinition] = [
+        ToolDefinition(
+            name="skill_list",
+            description="List all installed skills for this tenant. Optionally filter by status (active, draft, validated, or all).",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["active", "draft", "validated", "all"]},
+                },
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=skill_list,
+        ),
         ToolDefinition(
             name="skill_create",
             description="Create a SKILL.md skill in workspace/skills and register it for the tenant.",
@@ -188,66 +222,4 @@ def builtin_skill_tools(
         ),
     ]
 
-    if skills_ecosystem is not None:
-        def skill_install_request(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-            source = str(arguments.get("source") or "").strip()
-            skill_id = _slugify_skill_id(str(arguments.get("skill_id") or arguments.get("name") or "").strip())
-            if not source or not skill_id:
-                raise ValueError("source and skill_id are required")
-            req = skills_ecosystem.create_install_request(
-                tenant_id=context.tenant_id,
-                user_id=context.user_id,
-                source=source,
-                skill_id=skill_id,
-                workspace_root=str(context.workspace_root),
-                session_id=context.session_id,
-                turn_id=context.turn_id,
-                reason=str(arguments.get("reason") or "").strip() or None,
-            )
-            return req.__dict__
-
-        def skill_install_apply(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-            request_id = str(arguments.get("request_id") or "").strip()
-            if not request_id:
-                raise ValueError("request_id is required")
-            return skills_ecosystem.execute_install(
-                tenant_id=context.tenant_id,
-                request_id=request_id,
-                workspace_root=str(context.workspace_root),
-            )
-
-        tools.extend(
-            [
-                ToolDefinition(
-                    name="skill_install_request",
-                    description="Create an approval-gated request to install a skill from a shared catalog source.",
-                    parameters={
-                        "type": "object",
-                        "properties": {
-                            "source": {"type": "string", "enum": ["clawhub", "anthropic_skills"]},
-                            "skill_id": {"type": "string"},
-                            "reason": {"type": "string"},
-                        },
-                        "required": ["source", "skill_id"],
-                        "additionalProperties": False,
-                    },
-                    risk_level="high",
-                    action_type="write",
-                    execute=skill_install_request,
-                ),
-                ToolDefinition(
-                    name="skill_install_apply",
-                    description="Apply an approved skill install request into workspace/skills.",
-                    parameters={
-                        "type": "object",
-                        "properties": {"request_id": {"type": "string"}},
-                        "required": ["request_id"],
-                        "additionalProperties": False,
-                    },
-                    risk_level="high",
-                    action_type="write",
-                    execute=skill_install_apply,
-                ),
-            ]
-        )
     return tools

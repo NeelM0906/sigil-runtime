@@ -17,7 +17,7 @@
 **Gecko** (working toward Komodo) — operational, building toward autonomous case flow.
 
 ## Domain
-Medical revenue recovery — 7-stage pipeline from intake through collection.
+Medical revenue recovery. Pipeline stages TBD — must be defined by Mark Winters from actual Callagy operations.
 
 ## Category
 Company Lead / Recovery Operations / Case Management

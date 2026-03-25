@@ -19,10 +19,13 @@ async function request(path, opts = {}) {
     ...opts,
   })
 
-  // On 401 force re-login
+  // On 401 force re-login (debounced to avoid reload loops)
   if (res.status === 401) {
-    localStorage.removeItem('mc_auth')
-    window.location.reload()
+    if (!window._mc_reloading) {
+      window._mc_reloading = true
+      localStorage.removeItem('mc_auth')
+      window.location.reload()
+    }
     throw new Error('Session expired')
   }
 
@@ -55,6 +58,9 @@ export const tasksApi = {
   },
   delete(id) {
     return request(`/api/mc/tasks/${id}`, { method: 'DELETE' })
+  },
+  cancel(id) {
+    return request(`/api/mc/tasks/${id}/cancel`, { method: 'POST' })
   },
   history(taskId) {
     return request(`/api/mc/tasks/history${taskId ? `?taskId=${taskId}` : ''}`)
@@ -118,12 +124,11 @@ export const chatApi = {
     })
   },
   // Sessions
-  sessions(userId) {
-    const qs = userId ? `?user_id=${userId}` : ''
-    return request(`/api/mc/chat/sessions${qs}`)
+  sessions() {
+    return request('/api/mc/chat/sessions')
   },
-  createSession(name, userId) {
-    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name, user_id: userId }) })
+  createSession(name) {
+    return request('/api/mc/chat/sessions', { method: 'POST', body: JSON.stringify({ name }) })
   },
   renameSession(id, name) {
     return request(`/api/mc/chat/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) })
@@ -150,7 +155,46 @@ export const subagentsApi = {
   },
 }
 
-// ── ACT-I Architecture API ──────────────────────────────────
+// ── Skills API ──────────────────────────────────────────────
+
+export const skillsApi = {
+  list(status) {
+    const qs = status ? `?status=${status}` : ''
+    return request(`/api/mc/skills${qs}`)
+  },
+  get(id) {
+    return request(`/api/mc/skills/${id}`)
+  },
+  executions(limit = 50) {
+    return request(`/api/mc/skills/executions?limit=${limit}`)
+  },
+}
+
+// ── Cron API ────────────────────────────────────────────────
+
+export const cronApi = {
+  list() {
+    return request('/api/mc/cron/tasks')
+  },
+  create(data) {
+    return request('/api/mc/cron/tasks', { method: 'POST', body: JSON.stringify(data) })
+  },
+  update(id, data) {
+    return request(`/api/mc/cron/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+  },
+  remove(id) {
+    return request(`/api/mc/cron/tasks/${id}`, { method: 'DELETE' })
+  },
+  runs(id) {
+    return request(`/api/mc/cron/tasks/${id}/runs`)
+  },
+  forceRun(id) {
+    return request(`/api/mc/cron/tasks/${id}/run`, { method: 'POST' })
+  },
+  status() {
+    return request('/api/mc/cron/status')
+  },
+}
 
 // ── Auth API ────────────────────────────────────────────────
 

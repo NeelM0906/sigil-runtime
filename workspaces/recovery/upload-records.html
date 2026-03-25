@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAI Recovery — Record Upload</title>
+  <style>
+    :root {
+      --primary: #1a6b4a;
+      --primary-light: #e8f5ee;
+      --primary-dark: #0d4a30;
+      --accent: #2e8b67;
+      --bg: #f7faf8;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --text-muted: #6b7280;
+      --border: #d1d5db;
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .header .logo { font-size: 2rem; }
+    .header h1 { font-size: 1.4rem; font-weight: 600; }
+    .header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+
+    /* Main Container */
+    .container {
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 0.25rem;
+      color: var(--primary-dark);
+    }
+    .card .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* Form Fields */
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.35rem;
+      color: var(--text);
+    }
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      transition: border 0.2s;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(46,139,103,0.12);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: var(--bg);
+      margin-bottom: 1rem;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--primary-light);
+    }
+    .drop-zone .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .drop-zone p { color: var(--text-muted); font-size: 0.9rem; }
+    .drop-zone .browse {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .drop-zone .formats {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* File List */
+    .file-list { list-style: none; margin-bottom: 1rem; }
+    .file-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: var(--primary-light);
+      border-radius: 8px;
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+    }
+    .file-list li .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .file-list li .file-size { color: var(--text-muted); font-size: 0.75rem; }
+    .file-list li .remove-btn {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0 0.25rem;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+    }
+
+    /* Status Messages */
+    .status {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .status.success {
+      display: block;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .status.error {
+      display: block;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🌱</div>
+    <div>
+      <h1>SAI Recovery — Record Upload</h1>
+      <p>Upload medical records, contracts, and claim documents</p>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- File Details Card -->
+    <div class="card">
+      <h2>📋 File Details</h2>
+      <p class="subtitle">Help us categorize your upload for faster processing.</p>
+
+      <label for="caseId">Case / File ID</label>
+      <input type="text" id="caseId" placeholder="e.g. 18831, 25661">
+
+      <label for="docType">Document Type</label>
+      <select id="docType">
+        <option value="">— Select type —</option>
+        <option value="contract">Provider-Carrier Contract</option>
+        <option value="claim">Claim / EOB</option>
+        <option value="medical-record">Medical Record</option>
+        <option value="treatment-spreadsheet">Treatment Spreadsheet</option>
+        <option value="appeal-letter">Appeal Letter</option>
+        <option value="correspondence">Carrier Correspondence</option>
+        <option value="fee-schedule">Fee Schedule</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="carrier">Carrier / Payer</label>
+      <select id="carrier">
+        <option value="">— Select carrier —</option>
+        <option value="qualcare">Qualcare</option>
+        <option value="chn">CHN</option>
+        <option value="horizon">Horizon BCBS</option>
+        <option value="aetna">Aetna</option>
+        <option value="cigna">Cigna</option>
+        <option value="united">UnitedHealthcare</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="notes">Notes (optional)</label>
+      <textarea id="notes" placeholder="Any context that helps — provider name, date of service, etc."></textarea>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="card">
+      <h2>📁 Upload Files</h2>
+      <p class="subtitle">Drag & drop or browse. Multiple files supported.</p>
+
+      <div class="drop-zone" id="dropZone">
+        <div class="icon">📤</div>
+        <p>Drag files here or <span class="browse" id="browseBtn">browse your computer</span></p>
+        <p class="formats">Accepted: PDF, XLSX, XLS, CSV, DOC, DOCX, JPG, PNG, TXT</p>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.jpg,.jpeg,.png,.txt" hidden>
+
+      <ul class="file-list" id="fileList"></ul>
+
+      <button class="btn btn-primary" id="uploadBtn" disabled>
+        🚀 Upload Records
+      </button>
+
+      <div class="status" id="statusMsg"></div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    🌱 SAI Recovery · Every file is a person. Every dollar matters.
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    let selectedFiles = [];
+
+    const ACCEPTED = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'text/plain'
+    ];
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function renderFiles() {
+      fileList.innerHTML = '';
+      selectedFiles.forEach((file, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="file-info">📄 ${file.name} <span class="file-size">(${formatSize(file.size)})</span></span>
+          <button class="remove-btn" data-index="${i}" title="Remove">✕</button>
+        `;
+        fileList.appendChild(li);
+      });
+      uploadBtn.disabled = selectedFiles.length === 0;
+    }
+
+    function addFiles(files) {
+      for (const file of files) {
+        if (ACCEPTED.includes(file.type) || file.name.match(/\.(pdf|xlsx|xls|csv|doc|docx|jpg|jpeg|png|txt)$/i)) {
+          const alreadyAdded = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+          if (!alreadyAdded) selectedFiles.push(file);
+        }
+      }
+      renderFiles();
+    }
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      addFiles(e.dataTransfer.files);
+    });
+
+    // Browse
+    browseBtn.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('click', (e) => { if (e.target !== browseBtn) fileInput.click(); });
+    fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+
+    // Remove file
+    fileList.addEventListener('click', e => {
+      if (e.target.classList.contains('remove-btn')) {
+        selectedFiles.splice(parseInt(e.target.dataset.index), 1);
+        renderFiles();
+      }
+    });
+
+    // Upload handler
+    uploadBtn.addEventListener('click', () => {
+      if (selectedFiles.length === 0) return;
+
+      const caseId = document.getElementById('caseId').value.trim();
+      const docType = document.getElementById('docType').value;
+      const carrier = document.getElementById('carrier').value;
+      const notes = document.getElementById('notes').value.trim();
+
+      // Build summary
+      const fileNames = selectedFiles.map(f => f.name).join(', ');
+      const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+
+      // For now: log to console and show success
+      // In production this would POST to an API endpoint
+      console.log('Upload payload:', {
+        caseId, docType, carrier, notes,
+        files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+      });
+
+      statusMsg.className = 'status success';
+      statusMsg.innerHTML = `
+        ✅ <strong>${selectedFiles.length} file(s)</strong> queued for upload (${formatSize(totalSize)}).<br>
+        ${caseId ? `Case: <strong>${caseId}</strong> · ` : ''}
+        ${docType ? `Type: <strong>${docType}</strong> · ` : ''}
+        ${carrier ? `Carrier: <strong>${carrier}</strong>` : ''}
+        <br><em>Backend integration coming soon — files logged to console.</em>
+      `;
+
+      // Reset
+      selectedFiles = [];
+      renderFiles();
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Production reverse proxy with automatic HTTPS
+# Run with: caddy run --config Caddyfile
+# Requires: apt install caddy (or brew install caddy)
+
+bomba.acti.ai {
+    reverse_proxy localhost:8787
+}

@@ -415,7 +415,6 @@ class ToolGovernanceService:
         self.register_classification("glob", "read", "low")
         self.register_classification("grep", "read", "low")
         self.register_classification("memory_search", "read", "low")
-        self.register_classification("memory_get", "read", "low")
         self.register_classification("list_approvals", "read", "low")
         self.register_classification("sessions_poll", "read", "low")
         self.register_classification("sessions_list", "read", "low")

@@ -9,7 +9,6 @@ from pathlib import Path
 
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.storage.db import RuntimeDB
 
 
@@ -25,7 +24,7 @@ class PolicyPipelineTests(unittest.TestCase):
                 global_deny=("exec",),
             )
             resolved = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-p"),
+                ToolPolicyContext(tenant_id="tenant-p"),
                 available_tools=("read", "write", "exec", "grep"),
             )
             self.assertEqual(resolved.allowed_tools, frozenset({"read", "write"}))
@@ -62,7 +61,7 @@ class PolicyPipelineTests(unittest.TestCase):
 
             pipeline = PolicyPipeline(governance=governance)
             resolved = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-q"),
+                ToolPolicyContext(tenant_id="tenant-q"),
                 available_tools=("read", "write", "grep", "exec"),
             )
             self.assertEqual(resolved.allowed_tools, frozenset({"read", "grep"}))

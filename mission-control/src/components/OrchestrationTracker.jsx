@@ -1,6 +1,21 @@
-import { useState, useEffect } from 'react'
-import { useSSE } from '../hooks/useSSE'
+import { useState, useEffect, useCallback } from 'react'
+import { useSharedSSE } from '../context/SSEContext'
 import { deliverablesApi } from '../api'
+
+function authUrl(url) {
+  if (!url) return url
+  try {
+    const stored = localStorage.getItem('mc_auth')
+    if (stored) {
+      const { token } = JSON.parse(stored)
+      if (token) {
+        const sep = url.includes('?') ? '&' : '?'
+        return `${url}${sep}token=${encodeURIComponent(token)}`
+      }
+    }
+  } catch { /* ignore */ }
+  return url
+}
 
 const STATUS_CONFIG = {
   spawning: { label: 'Working', dot: 'bg-accent-blue', text: 'text-accent-blue', pulse: true },
@@ -124,7 +139,7 @@ function DeliverableCard({ item }) {
       <div className="flex items-center gap-1.5 mt-2">
         {isWebViewable && item.url && (
           <a
-            href={item.url}
+            href={authUrl(item.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="px-2 py-0.5 text-[10px] font-medium rounded bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30 transition-colors"
@@ -134,7 +149,7 @@ function DeliverableCard({ item }) {
         )}
         {item.url && (
           <a
-            href={item.url}
+            href={authUrl(item.url)}
             download={item.filename}
             className="px-2 py-0.5 text-[10px] font-medium rounded bg-bg-hover text-text-secondary hover:text-text-primary transition-colors"
           >
@@ -171,15 +186,20 @@ export function OrchestrationTracker() {
   const [deliverables, setDeliverables] = useState([])
   const [activeSection, setActiveSection] = useState('agents')
 
-  // Load existing deliverables from API on mount
-  useEffect(() => {
+  // Load deliverables on mount + periodic refresh
+  const loadDeliverables = useCallback(() => {
     deliverablesApi.list().then(data => {
       const items = Array.isArray(data) ? data : data?.deliverables || []
       setDeliverables(items)
     }).catch(() => {})
   }, [])
+  useEffect(() => { loadDeliverables() }, [loadDeliverables])
+  useEffect(() => {
+    const interval = setInterval(loadDeliverables, 20000)
+    return () => clearInterval(interval)
+  }, [loadDeliverables])
 
-  useSSE({
+  useSharedSSE({
     orchestration_spawn(data) {
       setSpawns(prev => {
         const key = `${data.task_id}:${data.being_id}`

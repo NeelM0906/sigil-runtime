@@ -11,7 +11,16 @@ export function useSSE(handlers, url = '/api/mc/events') {
   handlersRef.current = handlers
 
   useEffect(() => {
-    const source = new EventSource(url)
+    // EventSource cannot send Authorization headers — pass token via query param
+    let sseUrl = url
+    try {
+      const stored = localStorage.getItem('mc_auth')
+      if (stored) {
+        const { token } = JSON.parse(stored)
+        if (token) sseUrl = `${url}?token=${encodeURIComponent(token)}`
+      }
+    } catch { /* ignore */ }
+    const source = new EventSource(sseUrl)
 
     const eventTypes = ['chat_message', 'being_status', 'task_update', 'task_steps_update', 'artifact_created', 'subagent_event', 'being_typing', 'chat_session', 'deliverable_created', 'orchestration_spawn']
 

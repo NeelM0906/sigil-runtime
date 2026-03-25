@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { TASK_STATUSES, timeAgo } from '../store'
 import { useBeings } from '../context/BeingsContext'
 import { tasksApi, actiApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 
 const STATUS_CONFIG = {
   backlog: { label: 'Backlog', color: 'text-text-muted', dot: 'bg-text-muted' },
   in_progress: { label: 'In Progress', color: 'text-accent-blue', dot: 'bg-accent-blue' },
   in_review: { label: 'In Review', color: 'text-accent-amber', dot: 'bg-accent-amber' },
   done: { label: 'Done', color: 'text-accent-green', dot: 'bg-accent-green' },
+  cancelled: { label: 'Cancelled', color: 'text-text-muted', dot: 'bg-text-muted' },
 }
 
 const PRIORITY_CONFIG = {
@@ -332,7 +333,7 @@ function TaskModal({ task, onSave, onClose, beings }) {
 
 // ── Task Detail Slide-out ────────────────────────────────────
 
-function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, onBeingClick, onPreview, onOpenInCode }) {
+function TaskDetail({ task, history, onClose, onEdit, onDelete, onCancel, getBeingById, onBeingClick, onPreview, onOpenInCode }) {
   const config = STATUS_CONFIG[task.status]
   const prio = PRIORITY_CONFIG[task.priority]
 
@@ -366,6 +367,14 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, getBeingById, on
                 title="Open in Code workspace"
               >
                 Code
+              </button>
+            )}
+            {task.status === 'in_progress' && (
+              <button
+                onClick={() => { if (confirm('Cancel this running task?')) onCancel(task.id) }}
+                className="px-2 py-1 text-[10px] text-accent-amber hover:text-accent-red font-medium transition-colors"
+              >
+                Cancel
               </button>
             )}
             <button
@@ -861,11 +870,17 @@ export function TaskBoard({ fullWidth = false, onOpenInCode = null }) {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
+  // Periodic polling every 15s for task board freshness
+  useEffect(() => {
+    const interval = setInterval(fetchTasks, 15000)
+    return () => clearInterval(interval)
+  }, [fetchTasks])
+
   // Real-time task updates via SSE
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
 
-  useSSE({
+  useSharedSSE({
     task_update(evt) {
       const { action, task, task_id } = evt
       if (action === 'created' && task) {
@@ -997,6 +1012,16 @@ export function TaskBoard({ fullWidth = false, onOpenInCode = null }) {
     }
   }
 
+  const handleCancel = async (taskId) => {
+    try {
+      await tasksApi.cancel(taskId)
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'cancelled' } : t))
+      setDetailTask(null)
+    } catch (err) {
+      alert('Failed to cancel task: ' + err.message)
+    }
+  }
+
   // Detail view
   const openDetail = async (task) => {
     setDetailTask(task)
@@ -1084,6 +1109,7 @@ export function TaskBoard({ fullWidth = false, onOpenInCode = null }) {
           onClose={() => setDetailTask(null)}
           onEdit={(task) => { setDetailTask(null); setShowModal(task) }}
           onDelete={handleDelete}
+          onCancel={handleCancel}
           getBeingById={getBeingById}
           onBeingClick={openBeingDetail}
           onPreview={setPreviewArtifact}

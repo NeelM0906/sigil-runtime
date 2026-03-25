@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
+import { useAuth } from '../context/AuthContext'
 import { chatApi, tasksApi, deliverablesApi } from '../api'
-import { useSSE } from '../hooks/useSSE'
+import { useSharedSSE } from '../context/SSEContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -44,6 +45,16 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
   const isUser = msg.sender === 'user'
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
+
+  // Progress messages (real-time tool execution feedback)
+  if (msg._isProgress || msg.type === 'progress') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary animate-pulse">
+        <span className="w-1.5 h-1.5 bg-accent-blue rounded-full animate-ping" />
+        <span>{msg.content}</span>
+      </div>
+    )
+  }
 
   // System messages
   if (isSystem) {
@@ -125,6 +136,27 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
 
         {/* Task reference */}
         {msg.taskRef && <InlineTaskCard taskId={msg.taskRef} />}
+
+        {/* Knowledge sources indicator */}
+        {!isUser && msg.metadata?.retrieval_sources?.length > 0 && (
+          <details className="mt-1">
+            <summary className="text-[10px] text-text-muted cursor-pointer hover:text-text-secondary inline-flex items-center gap-1">
+              <span>📚</span>
+              <span>{msg.metadata.retrieval_sources.length} knowledge sources</span>
+              <span className="text-text-muted/50">({msg.metadata.retrieval_latency_ms}ms)</span>
+            </summary>
+            <div className="mt-1 space-y-0.5">
+              {msg.metadata.retrieval_sources.map((s, i) => (
+                <div key={i} className="text-[9px] text-text-muted pl-2 border-l border-border/50">
+                  <span className="font-mono text-accent-purple">{s.index}</span>
+                  {s.namespace && <span className="text-text-muted">/{s.namespace}</span>}
+                  <span className="ml-1 text-text-muted">({s.score})</span>
+                  <span className="ml-1 block text-text-muted/70 truncate">{s.preview}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         <div className="text-[10px] text-text-muted mt-0.5 font-mono">
           {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
@@ -246,7 +278,7 @@ function MarkdownSegment({ content, getBeingById }) {
         code: ({ children, className }) => {
           const isBlock = className?.includes('language-')
           if (isBlock) {
-            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto">{children}</code>
+            return <code className="block bg-black/20 rounded p-2 my-1.5 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-w-full">{children}</code>
           }
           return <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono">{children}</code>
         },
@@ -509,11 +541,14 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 export function ChatWindow({ userId, onOpenInCode = null }) {
   const { beings, getBeingById, openBeingDetail } = useBeings()
+  const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  const [targets, setTargets] = useState([])
+  // Operator users default to recovery; admins broadcast to prime
+  const defaultTarget = user?.role === 'admin' ? [] : ['recovery']
+  const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
@@ -521,21 +556,43 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Session state
+  // Session state — persist active session across reloads
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState(null)
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    try { return localStorage.getItem('mc_active_session') } catch { return null }
+  })
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Load sessions on mount (scoped to user)
+  // Persist activeSessionId to localStorage
   useEffect(() => {
-    chatApi.sessions(userId).then(({ sessions: s }) => {
+    try {
+      if (activeSessionId) localStorage.setItem('mc_active_session', activeSessionId)
+      else localStorage.removeItem('mc_active_session')
+    } catch { /* ignore */ }
+  }, [activeSessionId])
+
+  // Load sessions on mount — auto-create if none exist
+  useEffect(() => {
+    chatApi.sessions().then(async ({ sessions: s }) => {
+      if (s.length === 0) {
+        // No sessions — auto-create one
+        try {
+          const { session } = await chatApi.createSession('General')
+          s = [session]
+        } catch { /* ignore */ }
+      }
       setSessions(s)
-      if (s.length > 0 && !activeSessionId) setActiveSessionId(s[0].id)
+      // Restore persisted session or pick the first one
+      if (s.length > 0) {
+        const persisted = activeSessionId
+        const valid = s.some(x => x.id === persisted)
+        if (!valid) setActiveSessionId(s[0].id)
+      }
     }).catch(() => {})
-  }, [userId])
+  }, [])
 
   // Load messages from API
   const isInitialLoad = useRef(true)
@@ -588,7 +645,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   // Session CRUD handlers
   const handleCreateSession = async (name) => {
     try {
-      const { session } = await chatApi.createSession(name, userId)
+      const { session } = await chatApi.createSession(name)
       setSessions(prev => [session, ...prev])
       setActiveSessionId(session.id)
     } catch (err) {
@@ -616,7 +673,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   }
 
   // SSE: incoming LLM responses and system messages arrive here
-  useSSE({
+  useSharedSSE({
     chat_message(data) {
       if (data.sender === 'user') return
       setTypingBeings(prev => {
@@ -629,8 +686,31 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
       if (msgSession !== activeSessionRef.current) return
       setAwaitingReplySince(null)
       setMessages(prev => {
-        if (prev.some(m => m.id === data.id)) return prev
-        return [...prev, data]
+        // Remove progress placeholder when final response arrives
+        const without = prev.filter(m => m.id !== `progress-${data.sender}`)
+        if (without.some(m => m.id === data.id)) return without
+        return [...without, data]
+      })
+    },
+    being_progress(data) {
+      if (data.session_id && data.session_id !== activeSessionRef.current) return
+      setMessages(prev => {
+        const progressId = `progress-${data.being_id}`
+        const progressMsg = {
+          id: progressId,
+          sender: data.being_id,
+          content: data.text,
+          timestamp: new Date().toISOString(),
+          type: 'progress',
+          _isProgress: true,
+        }
+        const existing = prev.findIndex(m => m.id === progressId)
+        if (existing >= 0) {
+          const next = [...prev]
+          next[existing] = progressMsg
+          return next
+        }
+        return [...prev, progressMsg]
       })
     },
     being_typing(data) {
@@ -684,10 +764,55 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     inputRef.current?.focus()
   }
 
-  const handleSend = async () => {
-    if (!input.trim()) return
+  const fileInputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState(null) // staged upload result
 
-    const content = input.trim()
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = '' // reset for re-upload of same file
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
+      const stored = localStorage.getItem('mc_auth')
+      const token = stored ? JSON.parse(stored).token : ''
+      const res = await fetch('/api/mc/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.status === 401) {
+        // Don't trigger reload loop — just show error
+        setUploadedFile(null)
+        return
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('Upload failed:', err)
+        return
+      }
+      const result = await res.json()
+      // Stage the upload — show as chip, don't inject into input text
+      setUploadedFile(result)
+    } catch (err) {
+      console.error('Upload failed:', err)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() && !uploadedFile) return
+
+    // Prepend file context tag if a file is attached
+    let content = input.trim()
+    if (uploadedFile) {
+      const tag = `[${uploadedFile.filename}: ${uploadedFile.chunks} chunks indexed${uploadedFile.tables ? `, ${uploadedFile.tables} tables` : ''}]`
+      content = content ? `${tag} ${content}` : tag
+    }
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
     // Optimistic: add user message immediately
@@ -704,17 +829,27 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
-    setTargets([])
+    setUploadedFile(null)
+    setTargets(defaultTarget)
 
     try {
+      // Ensure we have a session — auto-create if needed
+      let sendSessionId = activeSessionId
+      if (!sendSessionId) {
+        try {
+          const { session } = await chatApi.createSession('General')
+          setSessions(prev => [session, ...prev])
+          setActiveSessionId(session.id)
+          sendSessionId = session.id
+        } catch { /* fall through with null — server will handle */ }
+      }
+
       // POST returns the saved user message; LLM responses arrive via SSE
       const { message: saved } = await chatApi.send({
-        sender: 'user',
         targets: tempMsg.targets,
         content,
         mode,
-        session_id: activeSessionId,
-        user_id: userId,
+        session_id: sendSessionId,
       })
 
       // Replace temp message with the persisted one
@@ -880,6 +1015,28 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           </div>
         )}
 
+        {/* Attached file chip */}
+        {uploadedFile && (
+          <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-accent-purple/10 border border-accent-purple/30 rounded-lg w-fit">
+            <svg className="w-4 h-4 text-accent-purple flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-accent-purple">{uploadedFile.filename}</span>
+              <span className="text-[10px] text-text-muted">{uploadedFile.chunks} chunks indexed{uploadedFile.tables ? ` · ${uploadedFile.tables} tables` : ''}</span>
+            </div>
+            <button
+              onClick={() => setUploadedFile(null)}
+              className="ml-1 text-text-muted hover:text-accent-red transition-colors"
+              title="Remove attachment"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div className="relative flex gap-2">
           {mentionFilter !== null && (
             <MentionDropdown
@@ -888,13 +1045,22 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
               beings={beings}
             />
           )}
-          <input
+          <textarea
             ref={inputRef}
             value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message... (@ to mention a being)"
-            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
+            onChange={(e) => { handleInputChange(e); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px' }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleKeyDown(e) } else { handleKeyDown(e) } }}
+            placeholder="Message... (@ to mention a being, Shift+Enter for newline)"
+            rows={1}
+            className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors resize-none overflow-hidden"
+            style={{ minHeight: '38px', maxHeight: '200px' }}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            onChange={handleFileUpload}
+            className="hidden"
           />
           {onOpenInCode && input.trim() && (
             <button
@@ -906,8 +1072,20 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
             </button>
           )}
           <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="Upload document"
+            className="px-2 py-2 text-text-muted hover:text-accent-blue disabled:opacity-30 transition-colors"
+          >
+            {uploading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
+            )}
+          </button>
+          <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !uploadedFile}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Send

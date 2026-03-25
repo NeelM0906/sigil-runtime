@@ -77,6 +77,7 @@ from bomba_sr.tools.builtin_data_access import builtin_data_access_tools
 from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 from bomba_sr.tools.builtin_browser import builtin_browser_tools
+from bomba_sr.tools.builtin_seo import builtin_seo_tools
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ class TurnRequest:
     task_id: str | None = None
     max_loop_iterations: int | None = None
     on_iteration: Any = None
+    on_progress: Any = None
     disable_tools: bool = False
     include_representation: bool = False
 
@@ -192,7 +194,6 @@ class RuntimeBridge:
             if parsed is not None:
                 command_policy = runtime.policy_pipeline.resolve(
                     ToolPolicyContext(
-                        profile=self.config.tool_profile,
                         tenant_id=request.tenant_id,
                         provider_name=self.provider.provider_name,
                     ),
@@ -549,7 +550,22 @@ class RuntimeBridge:
                 for hit in search_pack.results[:8]
             ]
 
-        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8)
+        recall = runtime.memory.recall(user_id=request.user_id, query=search_query, limit=8, session_id=request.session_id)
+
+        # ── Auto-retrieve from Pinecone (parallel, ~200ms) ──
+        pinecone_retrieval = None
+        if os.getenv("BOMBA_AUTO_RETRIEVAL", "true").lower() != "false" and search_query:
+            try:
+                from bomba_sr.memory.auto_retrieval import auto_retrieve
+                pinecone_retrieval = auto_retrieve(
+                    query=search_query,
+                    tenant_id=request.tenant_id,
+                    being_id=_being_id,
+                    top_k=5,
+                    score_threshold=0.3,
+                )
+            except Exception as exc:
+                logger.debug("Auto-retrieval failed (non-fatal): %s", exc)
 
         # Unified peer identity: if we can resolve a being_id from the session,
         # also recall memories tagged with that being_id (cross-context access).
@@ -587,7 +603,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=3,  # Fewer turns for subtask context — keep it focused
+                limit=50,
             )
             recent_turn_messages = _strip_tool_blocks(raw_turns)
         else:
@@ -595,7 +611,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=5,
+                limit=500,  # Load full session — replay budget caps what actually fits
             )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,
@@ -708,6 +724,8 @@ class RuntimeBridge:
         )
         if selected_skill_context:
             system_prefix_parts.append(f"Use selected skill instructions:\n{selected_skill_context}")
+        if pinecone_retrieval and pinecone_retrieval.has_results:
+            system_prefix_parts.append(pinecone_retrieval.format_context_block())
         system_prompt = "\n\n".join(system_prefix_parts)
 
         system_contract = (
@@ -736,14 +754,7 @@ class RuntimeBridge:
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
                 ],
                 "semantic_candidates": semantic_candidates,
-                "recent_history": [
-                    {"text": f"session_id={request.session_id}"},
-                    (
-                        {"text": f"session_summary={session_summary['summary_text']}"}
-                        if session_summary is not None
-                        else {"text": "session_summary=None"}
-                    ),
-                ],
+                "recent_history": [],  # Full transcript in replay_messages — no need to duplicate here
                 "procedural_candidates": procedural_candidates,
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
@@ -828,7 +839,6 @@ class RuntimeBridge:
             )
             resolved_policy = runtime.policy_pipeline.resolve(
                 ToolPolicyContext(
-                    profile=self.config.tool_profile,
                     tenant_id=request.tenant_id,
                     provider_name=self.provider.provider_name,
                 ),
@@ -884,6 +894,8 @@ class RuntimeBridge:
                     budget_limit_usd=effective_budget_limit,
                     budget_hard_stop_pct=effective_budget_stop_pct,
                     parallel_read_tools=effective_parallel_reads,
+                    progress_callback=request.on_progress,
+                    model_context_length=capabilities.context_length,
                 ),
             )
             loop_result = loop.run(
@@ -1053,6 +1065,7 @@ class RuntimeBridge:
                 evidence_refs=[note["note_id"]],
                 reason=reason,
                 being_id=_being_id_for_write,
+                session_id=request.session_id,
             )
 
         identity_update = runtime.identity.ingest_turn(
@@ -1213,6 +1226,10 @@ class RuntimeBridge:
                 "correction": adaptation_correction,
                 "self_evaluation": adaptation_evaluation,
             },
+            "auto_retrieval": {
+                "sources": pinecone_retrieval.format_sources_summary() if pinecone_retrieval and pinecone_retrieval.has_results else [],
+                "latency_ms": pinecone_retrieval.latency_ms if pinecone_retrieval else 0,
+            },
             "rescue": rescue_info,
             "subagents": {
                 "cascade_stopped_runs": cascade_stopped_runs,
@@ -1232,7 +1249,6 @@ class RuntimeBridge:
         runtime = self._tenant_runtime(tenant_id, workspace_root)
         policy = runtime.policy_pipeline.resolve(
             ToolPolicyContext(
-                profile=self.config.tool_profile,
                 tenant_id=tenant_id,
                 provider_name=self.provider.provider_name,
             ),
@@ -2324,7 +2340,6 @@ class RuntimeBridge:
             try:
                 policy = runtime.policy_pipeline.resolve(
                     ToolPolicyContext(
-                        profile=self.config.tool_profile,
                         tenant_id=tenant_id,
                         provider_name=self.provider.provider_name,
                     ),
@@ -2641,6 +2656,7 @@ class RuntimeBridge:
             if self.config.web_search_enabled:
                 tool_executor.register_many(builtin_web_tools(brave_api_key=self.config.brave_api_key))
                 tool_executor.register_many(builtin_browser_tools())
+            tool_executor.register_many(builtin_seo_tools())
             if self.config.pinecone_enabled:
                 tool_executor.register_many(
                     builtin_pinecone_tools(

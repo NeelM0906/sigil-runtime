@@ -1,60 +1,137 @@
 # Knowledge Base
 *Self-maintained by recovery. Updated as I learn.*
 
+## Your tools and capabilities
+
+You have these tools available — USE THEM proactively:
+
+### Web research
+- **web_search**: Search the internet for information, case law, fee schedules, carrier contacts, regulatory updates
+- **web_fetch**: Download any URL. For web pages, returns text content. For files (PDF, Excel, CSV), downloads to your workspace and returns the file path. ALWAYS follow up with parse_document to read the file.
+
+### Document processing
+- **parse_document**: Read and extract text from PDF, DOCX, XLSX, XLS, CSV, and other file formats. Use this after web_fetch downloads a binary file, or to read files uploaded by users. Example workflow: web_fetch downloads fee_schedule.xlsx → parse_document reads it → you analyze the content
+- **read**: Read text files directly (TXT, MD, CSV, code files)
+- **write**: Create or overwrite files in your workspace
+- **edit**: Make targeted edits to existing files
+
+### Memory and knowledge
+- **memory_search**: Search your semantic memory for past conversations, documents, and learned information
+- **memory_store**: Save important information for future reference
+- **update_knowledge**: Update your KNOWLEDGE.md file
+
+## Knowledge bases (Pinecone)
+
+You have two knowledge bases:
+
+### saimemory — Your operational memory
+Your default index. Contains everything you've learned from work.
+- **Namespace 'recovery'** (default): Case data, contract terms, carrier patterns, fee schedules, client details. USE THIS for: "what's the DRG rate?", "Hartford contract terms", "case 18831 status", "Qualcare reimbursement rates"
+- **Namespace 'daily'**: Daily work learnings from all beings. USE THIS for: "what did we work on yesterday?", "recent updates"
+
+### ublib2 — Master knowledge library (82K+ vectors)
+Sean's institutional knowledge. The Formula, coaching methodology, business strategy, compliance frameworks, values.
+USE THIS for: "how should we approach this negotiation?", "what's the Formula say about objection handling?", "Sean's framework for carrier disputes"
+To search: `pinecone_query(query="...", index_name="ublib2")` — do NOT pass a namespace (82K vectors are in the default namespace)
+
+### When to search knowledge bases
+- If a user asks about a SPECIFIC case, contract, carrier, or rate → search saimemory first (pinecone_query with default settings)
+- If the answer isn't in your conversation history or saimemory → search ublib2 for methodology guidance
+- If you need both operational data AND strategic guidance → use pinecone_multi_query to search both at once
+- You DON'T need to search for greetings, simple questions, or topics fully covered in the current conversation
+
+### When someone asks you to process a document or file:
+1. If they uploaded it: the file is in your workspace/uploads/ directory. Use parse_document to read it.
+2. If they give you a URL: use web_fetch to download it, then parse_document to read the downloaded file.
+3. If they paste content directly: you can read it from the message. No tools needed — just analyze what they pasted.
+
+NEVER say "I can't process documents" or "I can't read Excel files." You CAN — use web_fetch + parse_document.
+
+## Scheduled tasks (cron)
+You can schedule recurring or one-shot tasks:
+- `schedule_task` with `cron_expression="0 7 * * *"` for daily at 7am
+- `schedule_task` with `schedule_type="at"`, `run_at="2026-03-26T09:00:00"` for one-shot
+- `schedule_task` with `schedule_type="every"`, `interval_seconds=3600` for hourly
+Results are automatically delivered to the user's chat. Use `list_schedules` to see existing schedules.
+
+## Skills
+You can create and use skills. If a workflow needs to be repeated (e.g., processing a specific type of case, generating a report format, following a compliance checklist), ask to create it as a skill for future use. Use skill_list to see available skills. Use skill_create to build new ones.
+
 ## Key Facts
 
 ## Domain Expertise
 
-### Campaign Resilience & Premium Program Launch Strategy
+## Business Structure (Confirmed by Mark Winters)
+- **SAI Recovery (me)** → Federal NSA/IDR ONLY — Callagy Recovery
+- **SAI PIP** (planned) → NJ/NY No-Fault — Callagy Law
+- **SAI Workers' Comp** (planned) → State WC boards — Callagy Law
+- **SAI Law Commercial** (planned) → Commercial insurance litigation — Callagy Law
+- Until sisters are online, I capture everything and flag which lane it belongs to.
 
-**Key insight from 90-Day Resilience Framework (2026-03-05):**
+## Core Work Product: Contract Analysis
+The #1 capability Mark needs automated is **contract rate analysis**:
+1. Read the provider-carrier contract to identify applicable reimbursement rules
+2. Match claim type (ER, inpatient, outpatient surgery, etc.) to the correct contract provision
+3. Apply rate (percentage of billed, DRG lookup, grouper rate, fee schedule)
+4. Apply escalation clauses (e.g., 3% annual increases)
+5. Apply MPR (Multiple Procedure Reduction) if applicable
+6. Calculate implant costs separately if applicable (e.g., 60% of billed)
+7. Sum to Total PPO owed
+8. Subtract carrier payment
+9. Outstanding balance = recovery target
 
-1. **Most launch failures are compound** — 3-4 mediocre areas together are fatal, not one catastrophic error. Pre-launch scoring (1-10 on 10 failure modes) catches this.
+## Known Carrier Contract Patterns
+### Qualcare
+- **ER outpatient**: 85% of billed charges
+- **Inpatient**: DRG code lookup against fee schedule (e.g., DRG 514 = $24,351 under 5/1/23 contract)
+- **Surgical (CAS legacy)**: Grouper rates + MPR + 3% escalations (Mar 2023, Sep 2023) + implants at 60%
+- **Simple percentage**: Some providers at flat % (CarePoint = 15% of billed)
+- **Appeal routing**: Must appeal to carrier first; carrier refers to Qualcare if needed
 
-2. **Ad creative fatigue timelines (approximate):** Meta ads ~7-14 days for narrow audiences, YouTube ~2-4 weeks. Plan 6-8 complete creative refreshes over 90 days. Hooks fatigue fastest (7-10 day refresh).
+### CHN
+- **Outpatient (non-same-day surgery)**: 85% of billed charges
+- **ER**: 85% with $465 max (but carrier has exceeded this)
 
-3. **The "3 campaigns in a trench coat" model:** A 90-day campaign is really 3 phases — Ignition (days 1-30), Sustain (31-60), Close (61-90). Each needs different energy, creatives, and tactics.
+## Key Personnel
+- **Courtney Carloni** — Pre-litigation analyst who performs manual contract analysis (ground truth for automation)
+- **Mark Winters** — Human lead, guides recovery operations
+- **Lucrezia, Betsy, Jennifer** — Qualcare contacts for claim review
 
-4. **Budget pacing critical:** 5-8% in validation (days 1-7), 15-20% in calibration (8-21), 35-40% in scaling (22-50), 20-25% optimization (51-75), 10-15% close (76-90). Never burn 60% in first 30 days.
+## Test Cases Provided (8 cases across 3 carriers)
+Cases 18831, 18877, 6069, 25661, 22760, 29043, 28344, 32105 — with contracts, treatment spreadsheets, and Courtney's manual analysis as ground truth benchmarks.
 
-5. **Kill vs. Optimize rule:** Never judge ad set until 2x target CPA spent. 72-hour no-change rule after launch. 20% max daily budget increases.
+## Reliability Issue
+Bot went down multiple times during Mark's document uploads. Trust was damaged. Stable uptime is non-negotiable. Mark needs clear online/offline indicators.
 
-6. **Show-up rates (approximate):** Live webinar 25-40%, on-demand 40-60%, multi-day challenge Day 1→Day 5 drops ~50%. SMS reminders at 15-min and 2-hr marks significantly improve attendance.
+## Callagy Recovery Platform — Operational Foundation
+## Source
+Discord channel conversations March 17-20, 2026 between Mark Winters, SAI Recovery, Danny Lopez, and Aiko. Combined with Sean Callagy's founding directive (voice memo, ~March 2026).
 
-7. **Founder energy = campaign energy** in premium programs. Plan 2 "light weeks" (weeks 4, 8). Batch content creation. Delegate all non-high-leverage activities.
+## Sean's Mandate
+- ZERO CONTAMINATION — no invisible human constraints
+- Curve of possibility: 1 hour = 1 week, 1 day = half a year
+- 10,000 files/month by June 2026
+- 20X multiple (pushing toward $3B valuation) by July 2026
+- SAI must OWN decisions — tell humans what to do next, not ask
+- Create as many beings as possible — 100 in the Colosseum
+- Work 24/7. Show what we can do. Shock with speed.
 
-**File:** `CAMPAIGN_FAILURE_MODES_AND_90_DAY_RESILIENCE_FRAMEWORK.md` (~35KB)
+## Platform Architecture (6 Pillars)
+1. **SAI** — Concept engine, workflow designer, being architect
+2. **ACTi Consulting** (Fernando/Adam) — Methodology guardian
+3. **Concept & Training Team** (Mark + Fatima + case staff) — SME, validation
+4. **Developer Team** — Builds to spec, maintains backend post-handoff
+5. **PAD** — Dual: backend source of truth + staff UI for file oversight
+6. **Dashboard** — AI visibility layer (Aiko v1 → Dev Team maintains)
 
-### Objection Handling — 4-Step Communication Model for Premium Programs
+## Build Process (7 Phases)
+Problem Definition → Specification → Review & Correction → Build → Shadow Mode (5 days min, 90%+) → Go-Live (ACTi + Mark approval) → Maintenance
 
-**Key patterns from Visionary Program script build (2026-03-06):**
+## 28-Day Timeline
+- Days 6-7: Exception queue live, validate 100 cases, lock build
+- Days 8-14: SHADOW MODE (90%+ target)
+- Days 15-21: LIVE MODE (AI sends automatically)
+- Days 22-28: FULL REPLACEMENT (Rosemarie → exception queue only)
+- Days 28-31: SEAN SESSION (30x multiple story)
 
-1. **"I need to think about it"** = fear of commitment / fear of change. Rapport first, then name the pattern (thinking = stalling), then reframe toward a specific decision point. Never pressure — clarify.
-
-2. **"It's too expensive"** = they see cost, not ROI. Validate the number, then reframe: what is NOT changing costing them? Make the math concrete. Shift from "expense" to "investment with measurable return."
-
-3. **"I've tried coaching before"** = trust wound. Honor the past experience explicitly. Distinguish between "coaching doesn't work" vs "that coaching didn't work." Use the founder's real track record ($700M) as proof separation. Turn skepticism into an asset.
-
-4. **The 4-Step Model applied to objections:** (a) Emotional Rapport — validate without flinching, (b) Truth to Pain — name what's really happening, (c) Heroic Unique Identity — separate this from everything else, (d) Agreement Formation — invite, don't push.
-
-5. **Transition lines should open doors, not close them.** End with a question that moves toward clarity (yes or no), not toward guilt. Offer a concrete next micro-step (talk to an alumnus, review payment structure, identify the one remaining concern).
-
-6. **Level 5 Listening in objection handling:** The first objection stated is almost never the real one. Go one layer deeper. Silence after the transition line is critical — don't fill the space.
-
-7. **Integrity-based influence principles:** Agreement ≠ Closing. If it's not right for them, say so. Every question must be a real question. GHIC alignment in every word.
-
-## Learned Patterns
-### Operational Assessment Methodology
-
-**Key Learning from Business Operations Assessment (2026-03-07):**
-
-1. **Infrastructure vs. Performance Gap** - Having comprehensive metrics frameworks doesn't equal having performance data. Both BD agents have detailed dashboards showing "—" for all actual metrics. Must activate data collection before optimization.
-
-2. **7 Levers Coverage Model** - Effective coverage assessment requires three layers:
-   - Framework readiness (documentation exists)
-   - Operational capability (agents/systems deployed) 
-   - Performance measurement (actual results tracked)
-   
-   Current state: Strong framework, partial deployment, zero measurement.
-
-3. *
+## HIPAA — Three Blockers

@@ -61,10 +61,17 @@ class ProjectService:
             self.db.execute("SELECT parent_task_id FROM project_tasks LIMIT 0")
         except Exception:
             try:
+                self.db.conn.rollback()
+            except Exception:
+                pass
+            try:
                 self.db.execute("ALTER TABLE project_tasks ADD COLUMN parent_task_id TEXT DEFAULT NULL")
                 self.db.commit()
             except Exception:
-                pass
+                try:
+                    self.db.conn.rollback()
+                except Exception:
+                    pass
         # Create the parent_task_id index AFTER the migration ensures the column exists.
         try:
             self.db.execute(
@@ -72,7 +79,10 @@ class ProjectService:
             )
             self.db.commit()
         except Exception:
-            pass
+            try:
+                self.db.conn.rollback()
+            except Exception:
+                pass
 
     def create_project(
         self,

@@ -8,7 +8,6 @@ from bomba_sr.commands.parser import CommandParser
 from bomba_sr.commands.router import CommandContext, CommandRouter
 from bomba_sr.governance.policy_pipeline import PolicyPipeline, ToolPolicyContext
 from bomba_sr.governance.tool_policy import ToolGovernanceService
-from bomba_sr.governance.tool_profiles import ToolProfile
 from bomba_sr.skills.eligibility import EligibilityEngine
 from bomba_sr.skills.loader import SkillLoader
 from bomba_sr.skills.skillmd_parser import SkillMdParser
@@ -93,7 +92,7 @@ class CommandRouterTests(unittest.TestCase):
             parser = CommandParser()
 
             policy = pipeline.resolve(
-                ToolPolicyContext(profile=ToolProfile.FULL, tenant_id="tenant-router"),
+                ToolPolicyContext(tenant_id="tenant-router"),
                 available_tools=executor.known_tool_names(),
             )
             ctx = CommandContext(

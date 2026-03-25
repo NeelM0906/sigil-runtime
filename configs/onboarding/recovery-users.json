@@ -1,0 +1,63 @@
+{
+  "users": [
+    {
+      "email": "mark.winters@callagyrecovery.com",
+      "name": "Mark Winters",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-mark",
+      "being_id": "recovery",
+      "pinecone_index": "saimemory",
+      "pinecone_namespace": "recovery",
+      "supabase_sister": "recovery",
+      "supabase_table": "sai_memory"
+    },
+    {
+      "email": "dannylopez@callagyrecovery.com",
+      "name": "Danny Lopez",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-danny",
+      "being_id": "recovery",
+      "pinecone_index": "saimemory",
+      "pinecone_namespace": "recovery",
+      "supabase_sister": "recovery",
+      "supabase_table": "sai_memory"
+    },
+    {
+      "email": "eric.ranner@callagyrecovery.com",
+      "name": "Eric Ranner",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-eric"
+    },
+    {
+      "email": "ramon.inoa@callagyrecovery.com",
+      "name": "Ramon Inoa",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-ramon"
+    },
+    {
+      "email": "fatima.espinar@callagyrecovery.com",
+      "name": "Fatima Espinar",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-fatima"
+    },
+    {
+      "email": "kaitlin.varner@callagyrecovery.com",
+      "name": "Kaitlin Varner",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-kaitlin"
+    },
+    {
+      "email": "laura.yeaw@callagyrecovery.com",
+      "name": "Laura Yeaw",
+      "password": "SPCL01!",
+      "role": "operator",
+      "tenant_id": "tenant-recovery-laura"
+    }
+  ]
+}

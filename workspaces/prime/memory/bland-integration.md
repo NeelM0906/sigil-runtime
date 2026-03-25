@@ -21,7 +21,7 @@ Created a comprehensive integration framework connecting the Colosseum AI compet
 
 ## What Was Built
 
-### `./workspaces/prime/Projects/colosseum/bland_integration.py`
+### `/Users/samantha/Projects/colosseum/bland_integration.py`
 
 A full-featured integration module with:
 

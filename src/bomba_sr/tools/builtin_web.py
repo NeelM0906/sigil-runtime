@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import urllib.parse
 import urllib.request
@@ -110,8 +111,15 @@ def _web_search_factory(brave_api_key: str | None):
     return run
 
 
+_BINARY_CONTENT_TYPES = {
+    "application/pdf", "application/vnd.openxmlformats-officedocument",
+    "application/vnd.ms-excel", "application/msword", "application/zip",
+    "application/octet-stream", "image/png", "image/jpeg",
+}
+_BINARY_EXTENSIONS = {".pdf", ".xlsx", ".xls", ".docx", ".pptx", ".csv", ".zip", ".png", ".jpg", ".jpeg"}
+
+
 def _web_fetch(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
-    _ = context
     url = str(arguments.get("url") or "").strip()
     if not url:
         raise ValueError("url is required")
@@ -119,7 +127,37 @@ def _web_fetch(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("url must use http or https")
 
+    # Detect if URL points to a binary file
+    url_ext = os.path.splitext(parsed.path)[1].lower()
+    save_binary = arguments.get("save") or url_ext in _BINARY_EXTENSIONS
+
     payload_bytes, content_type = _http_get(url)
+
+    # Check if response is binary
+    is_binary = any(ct in content_type.lower() for ct in _BINARY_CONTENT_TYPES) or save_binary
+
+    if is_binary and context.workspace_root:
+        # Save binary file to workspace downloads/ directory
+        import hashlib
+        from pathlib import Path
+        downloads_dir = Path(context.workspace_root) / "downloads"
+        downloads_dir.mkdir(parents=True, exist_ok=True)
+        filename = os.path.basename(parsed.path) or f"download-{hashlib.md5(url.encode()).hexdigest()[:8]}"
+        if not os.path.splitext(filename)[1]:
+            # Guess extension from content type
+            ext_map = {"application/pdf": ".pdf", "application/vnd.ms-excel": ".xls",
+                       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx"}
+            filename += ext_map.get(content_type.split(";")[0].strip(), ".bin")
+        dest = downloads_dir / filename
+        dest.write_bytes(payload_bytes)
+        return {
+            "url": url,
+            "content_type": content_type,
+            "saved_to": str(dest),
+            "bytes": len(payload_bytes),
+            "hint": f"Binary file saved to {dest}. Use `read` or `parse_document` tool to read its contents.",
+        }
+
     text = payload_bytes.decode("utf-8", errors="replace")
     if "html" in content_type.lower() or text.lstrip().startswith("<"):
         text = _html_to_text(text)
@@ -153,12 +191,13 @@ def builtin_web_tools(brave_api_key: str | None = None) -> list[ToolDefinition]:
         ),
         ToolDefinition(
             name="web_fetch",
-            description="Fetch URL content and return text.",
+            description="Fetch URL content. For text/HTML returns content directly. For binary files (PDF, Excel, etc.) saves to workspace and returns the file path — then use `read` or `parse_document` to process.",
             parameters={
                 "type": "object",
                 "properties": {
                     "url": {"type": "string"},
                     "max_chars": {"type": "integer"},
+                    "save": {"type": "boolean", "description": "Force save as file even for text content"},
                 },
                 "required": ["url"],
                 "additionalProperties": False,

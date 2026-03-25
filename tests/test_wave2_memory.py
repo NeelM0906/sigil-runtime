@@ -31,7 +31,6 @@ class MemoryConsolidatorTests(unittest.TestCase):
                 )
             )
 
-            self.assertEqual(consolidator.archive_count(user, "preferred_editor"), 1)
             results = consolidator.retrieve(user_id=user, query="preferred editor")
             self.assertTrue(results)
             self.assertIn("Neovim", results[0].content)

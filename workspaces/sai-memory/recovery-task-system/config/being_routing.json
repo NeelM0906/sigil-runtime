@@ -1,0 +1,153 @@
+{
+  "_description": "Maps Recovery task types and workflow stages to specific ACT-I beings. Each being has a domain of expertise, and tasks are routed to the being best suited for the current stage of work. The 'owner_agent_id' field in the tasks table gets set to the being's runtime identifier.",
+  "_version": "1.0",
+
+  "beings": {
+    "_description": "Recovery's specialist beings and their domains. These map to real owner_agent_id values in the Bomba SR tasks table.",
+
+    "agreement-maker": {
+      "runtime_id": "the-agreement-maker",
+      "display_name": "The Agreement Maker",
+      "domain": "Closing deals, negotiating terms, formalizing partnerships, contract management",
+      "strengths": ["negotiation", "objection_handling", "contract_drafting", "closing_techniques"],
+      "primary_task_types": ["agreement"],
+      "secondary_task_types": ["partnership"],
+      "capacity_note": "Highest impact per task — focus on fewer, higher-value items"
+    },
+
+    "connector": {
+      "runtime_id": "the-connector",
+      "display_name": "The Connector",
+      "domain": "Building relationships, networking, introductions, outreach, rapport building",
+      "strengths": ["relationship_building", "networking", "warm_introductions", "media_relationships"],
+      "primary_task_types": ["partnership"],
+      "secondary_task_types": ["agreement", "pr"],
+      "capacity_note": "High-volume relationship touchpoints — can handle more tasks simultaneously"
+    },
+
+    "keeper": {
+      "runtime_id": "the-keeper",
+      "display_name": "The Keeper",
+      "domain": "Account retention, health monitoring, churn prevention, renewal management, client success",
+      "strengths": ["retention_plays", "health_monitoring", "save_offers", "renewal_optimization"],
+      "primary_task_types": ["retention"],
+      "secondary_task_types": ["partnership"],
+      "capacity_note": "Proactive monitoring role — handles many accounts with alert-driven intervention"
+    },
+
+    "multiplier": {
+      "runtime_id": "the-multiplier",
+      "display_name": "The Multiplier",
+      "domain": "Amplification, PR execution, thought leadership, content distribution, brand building",
+      "strengths": ["content_amplification", "pr_campaigns", "thought_leadership", "event_promotion"],
+      "primary_task_types": ["pr"],
+      "secondary_task_types": ["partnership"],
+      "capacity_note": "Campaign-oriented — tasks tend to be longer-running with multiple deliverables"
+    }
+  },
+
+  "routing_rules": {
+    "_description": "Primary routing table. For each task_type + stage combination, specifies which being should own the task. This is the source of truth for auto_routing in automation_triggers.json.",
+
+    "agreement": {
+      "identification": "connector",
+      "qualification": "connector",
+      "outreach": "connector",
+      "proposal": "agreement-maker",
+      "negotiation": "agreement-maker",
+      "closing": "agreement-maker",
+      "won": null,
+      "lost": null,
+      "_handoff_points": {
+        "connector_to_agreement-maker": {
+          "at_stage": "proposal",
+          "reason": "Relationship is established, now needs negotiation expertise",
+          "handoff_protocol": "Connector provides relationship context, communication style notes, and key stakeholder map to agreement-maker"
+        }
+      }
+    },
+
+    "partnership": {
+      "discovery": "connector",
+      "relationship_building": "connector",
+      "value_alignment": "connector",
+      "formalization": "agreement-maker",
+      "activation": "multiplier",
+      "active": "keeper",
+      "dormant": null,
+      "terminated": null,
+      "_handoff_points": {
+        "connector_to_agreement-maker": {
+          "at_stage": "formalization",
+          "reason": "Relationship built, needs legal/commercial structuring",
+          "handoff_protocol": "Connector documents mutual value prop, partner expectations, and relationship dynamics"
+        },
+        "agreement-maker_to_multiplier": {
+          "at_stage": "activation",
+          "reason": "Terms set, needs go-to-market execution and amplification",
+          "handoff_protocol": "Agreement-maker provides partnership terms, deliverables, and co-marketing permissions"
+        },
+        "multiplier_to_keeper": {
+          "at_stage": "active",
+          "reason": "Launch complete, needs ongoing health management",
+          "handoff_protocol": "Multiplier provides activation results, contact cadence, and success metrics baseline"
+        }
+      }
+    },
+
+    "retention": {
+      "alert": "keeper",
+      "diagnosis": "keeper",
+      "intervention": "keeper",
+      "resolution": "keeper",
+      "retained": null,
+      "churned": null,
+      "_notes": "Retention is keeper-dominated. The keeper owns the full lifecycle. Only exception: if intervention requires renegotiating terms, agreement-maker may be pulled in as a consultant (not a routing change)."
+    },
+
+    "pr": {
+      "ideation": "multiplier",
+      "content_creation": "multiplier",
+      "approval": "multiplier",
+      "outreach": "connector",
+      "coverage_tracking": "multiplier",
+      "complete": null,
+      "_handoff_points": {
+        "multiplier_to_connector": {
+          "at_stage": "outreach",
+          "reason": "Content is ready, now needs relationship-based media pitching",
+          "handoff_protocol": "Multiplier provides press kit, key messages, approved pitches, and target outlet list"
+        },
+        "connector_to_multiplier": {
+          "at_stage": "coverage_tracking",
+          "reason": "Pitches sent, now needs monitoring and amplification of results",
+          "handoff_protocol": "Connector provides pitch responses, committed coverage, and follow-up schedule"
+        }
+      }
+    }
+  },
+
+  "fallback_routing": {
+    "_description": "When the designated being is unavailable or overloaded, tasks fall back in this priority order.",
+    "agreement-maker": ["connector", "keeper"],
+    "connector": ["multiplier", "keeper"],
+    "keeper": ["connector", "agreement-maker"],
+    "multiplier": ["connector", "keeper"]
+  },
+
+  "load_balancing": {
+    "_description": "Simple capacity-based routing. If a being exceeds max_active_tasks, new tasks route to fallback.",
+    "max_active_tasks": {
+      "agreement-maker": 10,
+      "connector": 20,
+      "keeper": 30,
+      "multiplier": 15
+    },
+    "_rationale": {
+      "agreement-maker": "Complex negotiations need focus — fewer tasks, deeper engagement",
+      "connector": "Relationship touchpoints can be higher volume — more tasks, lighter per-task effort",
+      "keeper": "Monitoring many accounts with alert-driven intervention — highest capacity",
+      "multiplier": "Campaigns need sustained effort — moderate capacity"
+    }
+  }
+}

@@ -236,6 +236,25 @@ class StaticEchoProvider:
 def provider_from_env() -> LLMProvider:
     priority = os.getenv("BOMBA_LLM_PROVIDER_PRIORITY", "openrouter_first").strip().lower()
 
+    # Bedrock: HIPAA-compliant AWS endpoint
+    if priority == "bedrock" or (
+        priority not in {"openrouter", "openrouter_first", "anthropic_first"}
+        and os.getenv("AWS_ACCESS_KEY_ID")
+        and os.getenv("AWS_SECRET_ACCESS_KEY")
+        and os.getenv("BOMBA_LLM_PROVIDER_PRIORITY", "").strip().lower() == "bedrock"
+    ):
+        ak = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+        sk = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
+        if ak and sk:
+            from bomba_sr.llm.bedrock import BedrockProvider
+            return BedrockProvider(
+                access_key=ak,
+                secret_key=sk,
+                region=os.getenv("AWS_REGION", "us-east-1"),
+                max_output_tokens=int(os.getenv("BOMBA_BEDROCK_MAX_OUTPUT_TOKENS", "8192")),
+                max_retries=int(os.getenv("BOMBA_BEDROCK_MAX_RETRIES", "3")),
+            )
+
     # OpenRouter first by default. This matches OpenClaw-style model IDs
     # such as "anthropic/claude-opus-4.6" and still leaves an escape hatch:
     # set BOMBA_LLM_PROVIDER_PRIORITY=anthropic_first to force direct Anthropic.

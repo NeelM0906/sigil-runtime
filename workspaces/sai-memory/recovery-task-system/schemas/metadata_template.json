@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recovery Task Metadata Templates",
+  "description": "Ready-to-use metadata templates for creating Recovery tasks. Each template pre-fills the RECOVERY_META block with required fields and sensible defaults.",
+  "version": "1.0.0",
+
+  "templates": {
+    "new_agreement": {
+      "label": "New Agreement Task",
+      "description": "Create a new agreement/deal task",
+      "metadata": {
+        "task_type": "agreement",
+        "stage": "identified",
+        "priority_score": 0,
+        "counterparty": "",
+        "agreement_type": "service_contract",
+        "estimated_value": 0,
+        "deadline": "",
+        "decision_maker": "",
+        "legal_review_required": false
+      },
+      "title_format": "Agreement: {counterparty} — {agreement_type}",
+      "initial_status": "todo",
+      "initial_being": "the-connector"
+    },
+
+    "new_partnership": {
+      "label": "New Partnership Task",
+      "description": "Create a new partnership development task",
+      "metadata": {
+        "task_type": "partnership",
+        "stage": "scouting",
+        "priority_score": 0,
+        "partner_entity": "",
+        "partnership_type": "strategic_alliance",
+        "mutual_value_proposition": "",
+        "introduction_source": ""
+      },
+      "title_format": "Partnership: {partner_entity} — {partnership_type}",
+      "initial_status": "todo",
+      "initial_being": "the-connector"
+    },
+
+    "new_retention_churn_risk": {
+      "label": "Churn Risk Retention Task",
+      "description": "Create an urgent retention task for a client showing churn signals",
+      "metadata": {
+        "task_type": "retention",
+        "stage": "flagged",
+        "priority_score": 0,
+        "client": "",
+        "retention_trigger": "churn_risk",
+        "risk_level": "high",
+        "client_lifetime_value": 0,
+        "last_interaction_date": "",
+        "satisfaction_score": null
+      },
+      "title_format": "Retention [{risk_level}]: {client} — {retention_trigger}",
+      "initial_status": "todo",
+      "initial_being": "the-keeper"
+    },
+
+    "new_retention_contract_expiry": {
+      "label": "Contract Expiry Retention Task",
+      "description": "Proactive retention task for upcoming contract renewal",
+      "metadata": {
+        "task_type": "retention",
+        "stage": "flagged",
+        "priority_score": 0,
+        "client": "",
+        "retention_trigger": "contract_expiry",
+        "risk_level": "medium",
+        "client_lifetime_value": 0,
+        "last_interaction_date": ""
+      },
+      "title_format": "Renewal: {client} — Contract Expiring",
+      "initial_status": "todo",
+      "initial_being": "the-keeper"
+    },
+
+    "new_retention_proactive": {
+      "label": "Proactive Nurture Task",
+      "description": "Proactive relationship nurturing for healthy accounts",
+      "metadata": {
+        "task_type": "retention",
+        "stage": "flagged",
+        "priority_score": 0,
+        "client": "",
+        "retention_trigger": "proactive_nurture",
+        "risk_level": "low"
+      },
+      "title_format": "Nurture: {client} — Proactive Check-in",
+      "initial_status": "todo",
+      "initial_being": "the-keeper"
+    },
+
+    "new_pr_press_release": {
+      "label": "Press Release Task",
+      "description": "Create a press release PR task",
+      "metadata": {
+        "task_type": "pr",
+        "stage": "ideation",
+        "priority_score": 0,
+        "pr_type": "press_release",
+        "target_audience": "",
+        "key_message": "",
+        "media_outlets": [],
+        "embargo_date": null
+      },
+      "title_format": "PR: Press Release — {key_message}",
+      "initial_status": "todo",
+      "initial_being": "the-multiplier"
+    },
+
+    "new_pr_case_study": {
+      "label": "Case Study Task",
+      "description": "Create a case study from a successful agreement or partnership",
+      "metadata": {
+        "task_type": "pr",
+        "stage": "ideation",
+        "priority_score": 0,
+        "pr_type": "case_study",
+        "target_audience": "",
+        "key_message": "",
+        "linked_agreement_task": "",
+        "approval_required_from": ""
+      },
+      "title_format": "PR: Case Study — {key_message}",
+      "initial_status": "todo",
+      "initial_being": "the-multiplier"
+    },
+
+    "new_pr_testimonial": {
+      "label": "Testimonial Task",
+      "description": "Capture a client testimonial after successful retention resolution",
+      "metadata": {
+        "task_type": "pr",
+        "stage": "ideation",
+        "priority_score": 0,
+        "pr_type": "testimonial",
+        "target_audience": "prospects",
+        "key_message": "",
+        "linked_agreement_task": "",
+        "approval_required_from": ""
+      },
+      "title_format": "PR: Testimonial — {key_message}",
+      "initial_status": "todo",
+      "initial_being": "the-multiplier"
+    },
+
+    "new_pr_crisis_response": {
+      "label": "Crisis Response Task",
+      "description": "Urgent PR response to a reputational threat or negative event",
+      "metadata": {
+        "task_type": "pr",
+        "stage": "ideation",
+        "priority_score": 0,
+        "pr_type": "crisis_response",
+        "target_audience": "",
+        "key_message": "",
+        "media_outlets": []
+      },
+      "title_format": "PR [URGENT]: Crisis Response — {key_message}",
+      "initial_status": "todo",
+      "initial_being": "the-multiplier"
+    }
+  },
+
+  "usage": {
+    "description": "Select a template, fill in the empty fields, calculate priority score, then pass to task_create",
+    "example": {
+      "template": "new_agreement",
+      "filled_metadata": {
+        "task_type": "agreement",
+        "stage": "identified",
+        "priority_score": 72.5,
+        "counterparty": "Acme Corp",
+        "agreement_type": "service_contract",
+        "estimated_value": 75000,
+        "deadline": "2026-04-30",
+        "decision_maker": "Jane Smith, VP Partnerships",
+        "legal_review_required": true
+      },
+      "generated_title": "Agreement: Acme Corp — service_contract",
+      "generated_description": "<!--RECOVERY_META:{\"task_type\":\"agreement\",\"stage\":\"identified\",\"priority_score\":72.5,\"counterparty\":\"Acme Corp\",\"agreement_type\":\"service_contract\",\"estimated_value\":75000,\"deadline\":\"2026-04-30\",\"decision_maker\":\"Jane Smith, VP Partnerships\",\"legal_review_required\":true}-->\n\nPotential $75K annual service contract with Acme Corp. Decision maker: Jane Smith (VP Partnerships). Legal review will be required before execution."
+    }
+  }
+}

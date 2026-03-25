@@ -1,0 +1,48 @@
+sigil-runtime/
+├── src/bomba_sr/
+│   ├── projects/
+│   │   ├── __init__.py              # Exports ProjectService
+│   │   └── service.py               # Core CRUD (250 lines)
+│   ├── dashboard/
+│   │   ├── service.py               # DashboardService (2,761 lines) - wraps ProjectService
+│   │   └── openclaw_sync.py         # Syncs external OpenClaw sessions (610 lines)
+│   ├── storage/
+│   │   ├── db.py                    # RuntimeDB (SQLite wrapper)
+│   │   ├── factory.py
+│   │   └── postgres.py
+│   ├── api/routers/
+│   │   ├── tasks.py                 # Task CRUD endpoints
+│   │   ├── projects.py              # Project catalog endpoint
+│   │   ├── beings.py                # Being registry
+│   │   ├── chat.py                  # Chat messaging
+│   │   ├── events.py                # SSE streaming
+│   │   ├── orchestration.py         # Multi-agent coordination
+│   │   ├── deliverables.py          # File artifacts
+│   │   ├── subagents.py             # Sub-agent tracking
+│   │   ├── auth.py                  # Authentication
+│   │   ├── admin.py                 # Admin operations
+│   │   └── acti.py                  # ACT-I architecture
+│   └── tools/
+│       └── builtin_projects.py      # Tool definitions for agent use
+├── mission-control/                 # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── TaskBoard.jsx        # Kanban-style task board
+│   │   │   ├── ProjectsHub.jsx      # Project overview
+│   │   │   ├── BeingsRegistry.jsx   # Being management
+│   │   │   ├── ChatWindow.jsx       # Chat interface
+│   │   │   ├── OrchestrationTracker.jsx
+│   │   │   ├── SubAgentTracker.jsx
+│   │   │   ├── ActiArchitecture.jsx
+│   │   │   ├── AgentTeams.jsx
+│   │   │   └── BeingDetail.jsx
+│   │   ├── hooks/useSSE.js          # SSE real-time hook
+│   │   ├── api.js                   # API client
+│   │   ├── store.js                 # State management
+│   │   └── context/
+│   │       ├── AuthContext.jsx
+│   │       └── BeingsContext.jsx
+│   └── package.json                 # React 19, Vite 7, Tailwind 4
+└── sql/migrations/
+    ├── 009_team_manager.sql         # Team graph model (nodes, edges, pipelines)
+    └── ...                          # Other migration files

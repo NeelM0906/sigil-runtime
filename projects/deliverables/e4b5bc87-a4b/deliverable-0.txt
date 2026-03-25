@@ -1,0 +1,59 @@
+/Users/studio2/Projects/sigil-runtime/
+├── src/bomba_sr/
+│   ├── projects/
+│   │   ├── __init__.py
+│   │   └── service.py                    ← Core ProjectService (SQLite CRUD)
+│   ├── tools/
+│   │   └── builtin_projects.py           ← Sister-facing tool definitions
+│   ├── storage/
+│   │   └── db.py                         ← RuntimeDB (SQLite WAL wrapper)
+│   ├── dashboard/
+│   │   ├── service.py                    ← DashboardService (MC bridge, SSE, classification)
+│   │   └── openclaw_sync.py              ← OpenClaw workspace sync
+│   └── api/routers/
+│       ├── tasks.py                      ← /api/mc/tasks REST endpoints
+│       ├── auth.py                       ← /api/mc/auth
+│       ├── chat.py                       ← /api/mc/chat
+│       ├── deliverables.py               ← /api/mc/deliverables
+│       ├── subagents.py                  ← /api/mc/subagents
+│       ├── events.py                     ← SSE streaming
+│       ├── orchestration.py              ← Orchestration tracking
+│       ├── acti.py                       ← ACT-I architecture
+│       └── admin.py                      ← Admin operations
+│
+├── mission-control/                       ← React SPA (Vite + Tailwind)
+│   ├── package.json                       ← React 19.2, Vite 7.3, Tailwind 4.2
+│   ├── vite.config.js
+│   ├── index.html
+│   ├── src/
+│   │   ├── main.jsx
+│   │   ├── App.jsx
+│   │   ├── api.js                         ← Centralized API client (JWT, all endpoints)
+│   │   ├── store.js                       ← Constants (TASK_STATUSES) + timeAgo helper
+│   │   ├── index.css
+│   │   ├── hooks/useSSE.js                ← SSE subscription hook
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx
+│   │   │   └── BeingsContext.jsx
+│   │   └── components/
+│   │       ├── TaskBoard.jsx              ← Kanban board (drag-drop, CRUD, detail, artifacts)
+│   │       ├── ProjectsHub.jsx            ← Project inventory browser
+│   │       ├── BeingsRegistry.jsx
+│   │       ├── BeingDetail.jsx
+│   │       ├── ChatWindow.jsx
+│   │       ├── AgentTeams.jsx
+│   │       ├── SubAgentTracker.jsx
+│   │       ├── OrchestrationTracker.jsx
+│   │       ├── ActiArchitecture.jsx
+│   │       ├── LoginPage.jsx
+│   │       └── Header.jsx
+│   ├── data/                              ← Static seed data
+│   │   ├── beings.json
+│   │   ├── chat.json
+│   │   └── tasks.json
+│   └── dist/                              ← Production build
+│       ├── index.html
+│       └── assets/
+│
+├── tests/
+│   └── test_dashboard_service.py          ← Dashboard service tests

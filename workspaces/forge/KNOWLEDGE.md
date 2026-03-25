@@ -14,29 +14,34 @@
 - **Form handling:** Real-time validation, loading states, success/error messaging
 - **Deployment ready:** No configuration needed, direct HTML file deployment
 
-## Domain Expertise
+### Discussion Log Postgres Schema (July 2025)
+- **File:** `discussion_log_schema.sql` (9,317 bytes) in forge workspace
+- **Purpose:** Append-only store for conversation discussion topics captured every 4 hours
+- **Table:** `discussion_log` — id (UUID PK), captured_at (timestamptz), being_id (text), session_id (text nullable), topic (text), summary (text), raw_excerpt (text), metadata (jsonb), dedup_hash (generated SHA-256), created_at (timestamptz)
+- **Append-only enforcement:** Three BEFORE triggers block UPDATE, DELETE, and TRUNCATE with explicit exception messages ("no deletion, dilution, or distortion")
+- **Deduplication:** SHA-256 hash generated column on (being_id || topic || 4-hour-window-truncation) with UNIQUE constraint; INSERT ON CONFLICT DO NOTHING skips dupes silently
+- **Indexes:** B-tree on captured_at, B-tree on being_id, GIN on metadata (jsonb), composite on (being_id, captured_at DESC)
+- **Bonus:** Two utility views — v_recent_discussions (last 24h) and v_topic_frequency (topic counts across beings)
+- **Depends on:** pgcrypto extension for gen_random_uuid() and digest()
 
-### Campaign & Launch Marketing (500+ Program Enrollments)
-- **Best launch mechanism for 500+ enrollments:** 5-Day Challenge Funnel (hybrid with automated replay). Outperforms single webinars for community-driven programs.
-- **Email architecture:** 40-55 emails over 90 days. Welcome (5) → Nurture (20-30) → Launch (12-16) → Post-close (3-5). 40-60% of sales come in last 48 hours of cart-close.
-- **Landing page pattern:** Hook → Problem Agitation → Solution Framework → Social Proof Stack → Offer Stack → Guarantee → FAQ → Final CTA with urgency. Long-form outperforms short-form for premium offers.
-- **Paid media split:** Meta 60-70%, YouTube 15-20%, Google 10-15%, TikTok 5-10%. Budget phases: Testing (15%) → Optimization (20%) → Scaling (25%) → Launch Push (40%).
-- **Referral mechanics:** Ambassador programs drive 10-25% of enrollments. Bring-a-friend and viral waitlists are force multipliers.
-- **Key benchmarks:** Challenge registration 25-50% from targeted traffic, show-up 40-60% Day 1, challenge-to-sale 8-20% of Day 1 attendees. Cold traffic landing page conversion 2-5%.
-- **Minimum tech stack:** CRM+Email (ActiveCampaign/HubSpot), Landing Pages (ClickFunnels/Leadpages), Payments (Stripe+ThriveCart), Webinar (Zoom), Ads (Meta+Google), Analytics (GA4+Pixel).
-- **Critical rule:** Never launch without an email list. Build list weeks 1-6, launch weeks 7-9, scale weeks 10-12.
+### ACT-I Ecosystem Status Report (July 2025)
+- **File:** `acti_ecosystem_status_report_july_2025.md` (2,698 bytes) saved to forge workspace
+- **Sections:** 5 — Ecosystem Overview, Active Sisters & Being Count, Top Performing Clusters, Key Milestones, Current Priority
+- **Ecosystem stats:** 19 total beings (17 operational + 2 apex), 4 runtime sisters, 80 skill clusters, 9 skill families, 7 levers, 2,524 total skill points
+- **Top cluster:** Social (189p), followed by Oracle (169p), StageHand (144p), Hunter (86p), Canvas (82p)
+- **Current priority:** Recovery project tracking system buildout
 
-### Fal.ai Video Generation — Production Notes
-- **Default text-to-video model:** `fal-ai/wan/v2.2-a14b/text-to-video` — reliable, completes in ~2-3 min
-- **Cinematic prompting:** Lead with camera movement type ("cinematic tracking shot"), then subject, then environment, then lighting, then quality modifiers ("Shot on RED camera, anamorphic lens, 24fps cinematic motion")
-- **Aspect ratio:** 16:9 for cinematic widescreen; always specify explicitly
-- **Duration:** 5 seconds is a safe default; produces ~5.5MB MP4 files at higher quality settings
-- **Seed reproducibility:** Seeds are returned in results (e.g., seed 235600130) — store for re-generation or variation work
-- **Workflow:** Single `fal_video_generate` call with `wait_for_completion=true` and generous timeout (300s) is cleanest for sub-agent delivery
-- **Prompt structure for nature/adventure scenes:** Camera movement → subject action → environment details → lighting conditions → atmospheric elements → color palette → technical specs → emotional tone. This order consistently produces coherent results.
-- **Fallback models if needed:** kling-video, minimax, or other fal.ai text-to-video endpoints
+### ACT-I Being Architecture Cheat Sheet (July 2025)
+- **File:** `acti_being_architecture_cheat_sheet.md` (5,566 bytes) saved to forge workspace
+- **Structure:** 4 sister sections (Prime/Scholar/Forge/Recovery), Quick Reference footer, Lever Definitions table
+- **All 19 beings mapped:** 4 Prime + 2 Scholar + 9 Forge + 4 Recovery
+- **Each being includes:** Name, one-line role, top 3 clusters with points, lever coverage
+- **Key architectural insight:** Scholar has highest per-being point density (227.5p/being); L4 (Revenue Optimization) has zero runtime coverage — flagged as gap
+- **Sister totals:** Prime 293p, Scholar 455p, Forge 1,297p, Recovery 479p = 2,524 total
 
-### Legal Industry Outreach (B2B Enterprise Sales)
-- **Optimal sequence length:** 6 emails over 25 days for cold outreach to managing partners and C-suite legal decision makers
-- **Subject line split test:** Authority-based ("27 years of courtroom influence") vs. problem-focused ("Why BigLaw partners are increasing originations by $2.4M") - authority performs better with legal audience
-- **Credibility establishment:** Lead with founder's legal background and specific achievements (trial verdicts, years of practice) bef
+### ACT-I Ecosystem Capability Map (July 2025)
+- **File:** `acti_ecosystem_capability_map_july_2025.md` (5,646 bytes) saved to forge workspace
+- **Structure:** Stats block, 4 sister sections with being tables, Sister Comparison table, Lever Coverage Matrix, Data Completeness Note, footer
+- **Style:** Print-ready capability brief — direct, confident, zero fluff, emoji-coded sisters (⚡🔬🔨💰)
+- **Key additions beyond cheat sheet:** Sister comparison table with avg points/being and signature strengths, lever coverage matrix showing which sisters cover which levers, narrative intros for each sister
+- **Data integrity:** All totals traced to source; cluster data included only where verified (The Writer, The Agreement Maker); re

@@ -55,20 +55,27 @@ log = logging.getLogger(__name__)
 # ── Task classification ──────────────────────────────────────
 # Keep dashboard classification on the same model the bundled OpenClaw runtime uses
 # unless the caller explicitly overrides it.
-_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", os.getenv("BOMBA_MODEL_ID", "anthropic/claude-opus-4.6"))
+_CLASSIFY_MODEL = os.getenv("BOMBA_CLASSIFY_MODEL", "anthropic/claude-haiku-4.5")
 
 _CLASSIFY_SYSTEM_PROMPT = """\
 You are a message classifier for a multi-agent command center.
 Given a user message sent to an AI being, classify it into exactly one category:
 
-- "not_task" — casual/conversational, greetings, questions about the being itself, \
-information requests with no concrete action required. Examples: "Hi", "How are you?", \
-"What's in your memory?", "Tell me about yourself."
-- "light_task" — needs a single action or lookup, no multi-step plan needed. \
-Examples: "Search Pinecone for X", "Summarize this document", "What's the status of Y."
-- "full_task" — needs multi-step execution that benefits from a tracked plan with sub-steps. \
-Examples: "Research X and write a report", "Audit all memory files and flag inconsistencies", \
-"Set up the integration for Recovery."
+- "not_task" — greetings, casual questions, status checks, simple info requests \
+that need no action. Examples: "Hi", "How are you?", "What's in your memory?", \
+"What did we discuss last time?", "Tell me about yourself."
+- "light_task" — single-step action: a lookup, a quick summary, a short answer \
+from memory or search. Done in one tool call. Examples: "Search Pinecone for \
+Hartford cases", "What's the fee schedule URL?", "Summarize the last call with Mark."
+- "full_task" — requires multiple steps, produces deliverables or artifacts, involves \
+research + synthesis, file creation, deep analysis, or multi-tool workflows. If the \
+being would need 3+ tool calls or produce a document/report/file, it's a full_task. \
+Examples: "Research X and write a report", "Draft the settlement brief for case Y", \
+"Analyze all WC contracts and flag issues", "Build a comparison of carrier EOB formats", \
+"Create a training document for the new extraction rules", \
+"Pull all Hartford case data and create a status summary."
+
+KEY RULE: If the request would produce a document, report, file, or artifact — classify as full_task.
 
 Respond with ONLY a JSON object: {"classification": "not_task"|"light_task"|"full_task"}
 Nothing else."""
@@ -188,6 +195,29 @@ def _extract_json(text: str) -> dict | None:
             return payload
     return None
 
+_FRIENDLY_TOOL_NAMES = {
+    "web_search": "Searching the web",
+    "web_fetch": "Reading webpage",
+    "read": "Reading file",
+    "write": "Writing file",
+    "exec": "Running command",
+    "memory_search": "Searching memory",
+    "memory_store": "Storing to memory",
+    "pinecone_query": "Querying knowledge base",
+    "pinecone_upsert": "Updating knowledge base",
+    "glob": "Scanning files",
+    "grep": "Searching in files",
+    "edit": "Editing file",
+    "code_search": "Searching code",
+}
+
+_PROGRESS_SKIP_TOOLS = frozenset({"compact_context", "session_status"})
+
+
+def _friendly_tool_name(tool_name: str) -> str:
+    return _FRIENDLY_TOOL_NAMES.get(tool_name, tool_name.replace("_", " ").title())
+
+
 _BEING_COLS = (
     "id", "name", "role", "avatar", "status", "description", "type",
     "tools", "skills", "color", "model_id", "workspace", "tenant_id",
@@ -213,8 +243,9 @@ class DashboardService:
         self.project_service: Any | None = None
         self.orchestration_engine: Any | None = None
         self.openclaw_sync: OpenClawSync | None = None
-        self._sse_clients: dict[str, queue.Queue] = {}
+        self._sse_clients: dict[str, dict] = {}  # client_id -> {"queue": Queue, "tenant_id": str}
         self._sse_lock = threading.Lock()
+        self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -325,6 +356,7 @@ class DashboardService:
               password_hash TEXT NOT NULL,
               role TEXT NOT NULL DEFAULT 'operator',
               avatar TEXT,
+              tenant_id TEXT,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL
             );
@@ -339,58 +371,80 @@ class DashboardService:
         """)
         self.db.commit()
 
+        # Helper: add column if not exists (Postgres needs rollback on failure)
+        def _add_column(table: str, col: str, col_type: str = "TEXT", default: str | None = None) -> None:
+            ddl = f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"
+            if default is not None:
+                ddl += f" DEFAULT '{default}'"
+            try:
+                self.db.execute(ddl)
+                self.db.commit()
+            except Exception:
+                # Postgres aborts the transaction on duplicate column — must rollback
+                try:
+                    self.db.conn.rollback()
+                except Exception:
+                    pass
+
         # Migration: add session_id to mc_messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN session_id TEXT DEFAULT 'general'")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "session_id", default="general")
         self.db.execute("CREATE INDEX IF NOT EXISTS idx_mc_messages_session ON mc_messages(session_id, timestamp DESC)")
         self.db.execute("UPDATE mc_messages SET session_id = 'general' WHERE session_id IS NULL")
         # Migration: add metadata column for outputs/agents attached to messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN metadata TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "metadata")
         # Migration: add user_id to mc_chat_sessions
-        try:
-            self.db.execute("ALTER TABLE mc_chat_sessions ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_chat_sessions", "user_id")
         self.db.execute("UPDATE mc_chat_sessions SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
         # Migration: add user_id to mc_messages
-        try:
-            self.db.execute("ALTER TABLE mc_messages ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_messages", "user_id")
         self.db.execute("UPDATE mc_messages SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
         # Migration: add user_id to mc_deliverables
-        try:
-            self.db.execute("ALTER TABLE mc_deliverables ADD COLUMN user_id TEXT")
-            self.db.commit()
-        except Exception:
-            pass  # column already exists
+        _add_column("mc_deliverables", "user_id")
         self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
+
+        # Migration: add tenant_id to mc_users
+        _add_column("mc_users", "tenant_id")
+        self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-admin' WHERE id = 'user-admin' AND tenant_id IS NULL")
+        self.db.execute("UPDATE mc_users SET tenant_id = 'tenant-sai' WHERE id = 'user-sai' AND tenant_id IS NULL")
+        self.db.commit()
+
+        # Tool audit log for compliance trail
+        self.db.script("""
+            CREATE TABLE IF NOT EXISTS tool_audit_log (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                being_id TEXT,
+                user_id TEXT,
+                session_id TEXT,
+                tool_name TEXT NOT NULL,
+                arguments_summary TEXT,
+                result_status TEXT NOT NULL,
+                error_message TEXT,
+                duration_ms INTEGER,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_tool_audit_tenant
+                ON tool_audit_log(tenant_id, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_tool_audit_being
+                ON tool_audit_log(being_id, created_at DESC);
+        """)
 
         # Seed default users if table is empty
         count = self.db.execute("SELECT COUNT(*) as c FROM mc_users").fetchone()["c"]
         if count == 0:
             now = self._now()
-            for email, name, pwd, role, uid in [
-                ("admin@sigil.ai", "Admin", "sigil2026", "admin", "user-admin"),
-                ("sai@sigil.ai", "Sai", "sai2026", "operator", "user-sai"),
+            for email, name, pwd, role, uid, tid in [
+                ("admin@sigil.ai", "Admin", "sigil2026", "admin", "user-admin", "tenant-admin"),
+                ("sai@sigil.ai", "Sai", "sai2026", "operator", "user-sai", "tenant-sai"),
             ]:
                 self.db.execute_commit(
-                    "INSERT INTO mc_users (id,email,name,password_hash,role,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
-                    (uid, email, name, hashlib.sha256(pwd.encode()).hexdigest(), role, now, now),
+                    "INSERT INTO mc_users (id,email,name,password_hash,role,tenant_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                    (uid, email, name, hashlib.sha256(pwd.encode()).hexdigest(), role, tid, now, now),
                 )
                 # Create a General session for each seeded user
                 self.db.execute_commit(
@@ -641,7 +695,7 @@ class DashboardService:
                     "name": ab["name"],
                     "role": (ab.get("domain") or "")[:200],
                     "avatar": "\U0001f3af",  # 🎯
-                    "status": "online",
+                    "status": "offline",
                     "description": ab.get("domain", ""),
                     "type": TYPE_ACTI,
                     "tools": [],
@@ -855,7 +909,9 @@ class DashboardService:
             "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        result = [dict(r) for r in rows]
+        log.info("[sessions] list_sessions user=%s → %d sessions", user_id, len(result))
+        return result
 
     def get_session(self, session_id: str) -> dict | None:
         """Look up a single chat session by id."""
@@ -864,7 +920,8 @@ class DashboardService:
         ).fetchone()
         return dict(row) if row else None
 
-    def create_session(self, name: str, user_id: str | None = None) -> dict:
+    def create_session(self, name: str, user_id: str | None = None, tenant_id: str | None = None) -> dict:
+        log.info("[sessions] create_session name='%s' user=%s", name, user_id)
         sid = f"sess-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
@@ -874,10 +931,10 @@ class DashboardService:
         session = dict(self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE id = ?", (sid,)
         ).fetchone())
-        self._emit_event("chat_session", {"action": "created", "session": session})
+        self._emit_event("chat_session", {"action": "created", "session": session}, tenant_id=tenant_id)
         return session
 
-    def rename_session(self, session_id: str, name: str) -> dict:
+    def rename_session(self, session_id: str, name: str, tenant_id: str | None = None) -> dict:
         now = self._now()
         self.db.execute_commit(
             "UPDATE mc_chat_sessions SET name = ?, updated_at = ? WHERE id = ?",
@@ -886,16 +943,16 @@ class DashboardService:
         session = dict(self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE id = ?", (session_id,)
         ).fetchone())
-        self._emit_event("chat_session", {"action": "updated", "session": session})
+        self._emit_event("chat_session", {"action": "updated", "session": session}, tenant_id=tenant_id)
         return session
 
-    def delete_session(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str, tenant_id: str | None = None) -> bool:
         if session_id == "general":
             return False
         self.db.execute_commit("DELETE FROM mc_messages WHERE session_id = ?", (session_id,))
         cur = self.db.execute_commit("DELETE FROM mc_chat_sessions WHERE id = ?", (session_id,))
         if cur.rowcount > 0:
-            self._emit_event("chat_session", {"action": "deleted", "session_id": session_id})
+            self._emit_event("chat_session", {"action": "deleted", "session_id": session_id}, tenant_id=tenant_id)
             return True
         return False
 
@@ -954,19 +1011,31 @@ class DashboardService:
             "title": str(record.get("title") or filename),
         }
 
-    def list_deliverables(self, task_id: str) -> list[dict]:
+    def list_deliverables(self, task_id: str, tenant_id: str = MC_TENANT) -> list[dict]:
+        # Verify task belongs to tenant before returning deliverables
+        if tenant_id:
+            row = self.db.execute(
+                "SELECT 1 FROM project_tasks WHERE task_id = ? AND tenant_id = ?",
+                (task_id, tenant_id),
+            ).fetchone()
+            if not row:
+                return []
         rows = self.db.execute(
             "SELECT * FROM mc_deliverables WHERE task_id = ? ORDER BY created_at DESC",
             (task_id,),
         ).fetchall()
         items = [dict(r) for r in rows]
-        items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id))
+        items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id, tenant_id=tenant_id))
         return sorted(items, key=self._output_sort_key, reverse=True)
 
-    def list_all_deliverables(self, limit: int = 50) -> list[dict]:
+    def list_all_deliverables(self, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
+        # Scope deliverables to tasks owned by the tenant
         rows = self.db.execute(
-            "SELECT * FROM mc_deliverables ORDER BY created_at DESC LIMIT ?",
-            (limit,),
+            "SELECT d.* FROM mc_deliverables d "
+            "JOIN project_tasks t ON t.task_id = d.task_id "
+            "WHERE t.tenant_id = ? "
+            "ORDER BY d.created_at DESC LIMIT ?",
+            (tenant_id, limit),
         ).fetchall()
         items = [dict(r) for r in rows]
         store = getattr(self, "_artifact_store", None)
@@ -974,7 +1043,7 @@ class DashboardService:
             try:
                 items.extend(
                     self._artifact_output_row(r.to_dict())
-                    for r in store.list_recent_artifacts(MC_TENANT, limit=limit)
+                    for r in store.list_recent_artifacts(tenant_id, limit=limit)
                 )
             except Exception:
                 pass
@@ -994,6 +1063,7 @@ class DashboardService:
         target: str | None = None,
         search: str | None = None,
         session_id: str | None = None,
+        user_id: str | None = None,
         limit: int = 500,
         offset: int = 0,
     ) -> list[dict]:
@@ -1002,6 +1072,16 @@ class DashboardService:
         if session_id:
             sql += " AND session_id = ?"
             params.append(session_id)
+        if user_id and not session_id:
+            # Only apply user-scoped session filter when no explicit session_id.
+            # When session_id is given, the caller already knows which session.
+            # Also include messages where user is sender/target (covers sessions
+            # not yet in mc_chat_sessions, e.g. auto-generated session IDs).
+            sql += (
+                " AND (session_id IN (SELECT id FROM mc_chat_sessions WHERE user_id = ?)"
+                " OR sender = ? OR targets LIKE ?)"
+            )
+            params.extend([user_id, user_id, f"%{user_id}%"])
         if sender:
             sql += " AND sender = ?"
             params.append(sender)
@@ -1026,6 +1106,7 @@ class DashboardService:
         task_ref: str | None = None,
         session_id: str = "",
         metadata: dict | None = None,
+        tenant_id: str | None = None,
     ) -> dict:
         if not session_id:
             session_id = f"sess-{uuid.uuid4().hex[:8]}"
@@ -1053,7 +1134,7 @@ class DashboardService:
                 "SELECT * FROM mc_messages WHERE id = ?", (msg_id,)
             ).fetchone()
         )
-        self._emit_event("chat_message", msg)
+        self._emit_event("chat_message", msg, tenant_id=tenant_id)
         return msg
 
     def create_system_message(
@@ -1115,6 +1196,50 @@ class DashboardService:
             if group:
                 return group[0]
         return None
+
+    def _inject_upload_context(self, content: str, being_id: str) -> str:
+        """If the message references an uploaded file, inject its full text."""
+        match = re.search(r'\[([^]]+?):\s*\d+\s*chunks?\s*indexed[^]]*\]', content)
+        if not match:
+            return content
+
+        filename = match.group(1).strip()
+        being = self.get_being(being_id) or {}
+        ws = self._resolve_workspace_path(being.get("workspace"))
+        if not ws:
+            return content
+
+        upload_path = ws / "uploads" / filename
+        if not upload_path.exists():
+            uploads_dir = ws / "uploads"
+            if uploads_dir.exists():
+                for f in uploads_dir.iterdir():
+                    if f.name.lower() == filename.lower():
+                        upload_path = f
+                        break
+
+        if not upload_path.exists():
+            return content
+
+        try:
+            from bomba_sr.ingestion.parser import extract_text
+            extracted = extract_text(str(upload_path))
+            doc_text = extracted.get("text", "")
+            if not doc_text:
+                return content
+
+            if len(doc_text) > 100_000:
+                doc_text = doc_text[:100_000] + "\n\n[... document truncated at 100K chars ...]"
+
+            return (
+                f'<uploaded_document filename="{filename}" format="{extracted.get("format", "")}">\n'
+                f"{doc_text}\n"
+                f"</uploaded_document>\n\n"
+                f"{content}"
+            )
+        except Exception as exc:
+            log.debug("Failed to inject upload context for %s: %s", filename, exc)
+            return content
 
     def _effective_user_message(self, being_id: str, content: str, chat_session_id: str) -> str:
         if not self._is_short_confirmation(content):
@@ -1183,7 +1308,13 @@ class DashboardService:
             )
             return
 
-        tenant_id = being.get("tenant_id") or MC_TENANT
+        being_tenant_id = being.get("tenant_id") or MC_TENANT
+        # Resolve the human sender's tenant for task board scoping
+        sender_row = self.db.execute(
+            "SELECT tenant_id FROM mc_users WHERE id = ?", (sender,)
+        ).fetchone()
+        sender_tenant_id = (sender_row["tenant_id"] if sender_row else None) or MC_TENANT
+        tenant_id = being_tenant_id  # used for bridge.handle_turn (being's runtime context)
         session_id = self._runtime_chat_session_id(being_id, chat_session_id)
 
         # Resolve workspace: being's workspace relative to project root
@@ -1205,21 +1336,44 @@ class DashboardService:
             and self.orchestration_engine is not None
             and self.project_service is not None
         ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id)
+            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id, tenant_id=sender_tenant_id)
             return
 
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
-            task_id = self._auto_create_task(being_id, being, content, classification=classification)
+            task_id = self._auto_create_task(being_id, being, content, classification=classification, tenant_id=sender_tenant_id)
 
-        # For full_task, generate and attach sub-steps
+        # ── full_task: send immediate ack, then execute in this (already background) thread ──
         if classification == "full_task" and task_id:
             step_labels = self._generate_task_steps(content)
             if step_labels:
-                steps = self.create_task_steps(task_id, step_labels)
-                # Mark the first step as in_progress
-                if steps:
-                    self.update_task_step(steps[0]["id"], "in_progress")
+                self.create_task_steps(task_id, step_labels)
+
+            # Immediate acknowledgment so user can keep chatting
+            self.create_message(
+                sender=being_id,
+                content="Got it \u2014 working on this now. I'll update you as I make progress. You can track this on the Task Board.",
+                targets=[sender],
+                msg_type="direct",
+                task_ref=task_id,
+                session_id=chat_session_id,
+            )
+
+            self._execute_full_task_background(
+                being_id=being_id,
+                being=being,
+                content=content,
+                sender=sender,
+                tenant_id=tenant_id,
+                sender_tenant_id=sender_tenant_id,
+                session_id=session_id,
+                workspace=workspace,
+                chat_session_id=chat_session_id,
+                task_id=task_id,
+            )
+            return
+
+        # ── not_task / light_task: synchronous (fast enough) ──
 
         # Signal busy + typing before calling bridge
         self.update_being(being_id, {"status": "busy"})
@@ -1231,28 +1385,43 @@ class DashboardService:
 
         # Transition task to in_progress
         if task_id:
-            self._auto_update_task_status(task_id, "in_progress")
+            self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
 
-        # Build step-advancing callback for real-time progress
-        all_steps = self.get_task_steps(task_id) if task_id and classification == "full_task" else []
-        step_cursor = [0]
-        num_steps = len(all_steps)
-
-        def _on_loop_iteration(iteration, loop_state):
-            if num_steps == 0 or step_cursor[0] >= num_steps - 1:
-                return
-            self.advance_task_step(task_id)
-            step_cursor[0] += 1
+        def _on_progress(event_type, data):
+            """Send progress messages to chat during tool execution."""
+            if event_type == "tool_result":
+                tool_name = data.get("tool_name", "")
+                status = data.get("status", "")
+                summary = data.get("summary", "")[:150]
+                if tool_name in _PROGRESS_SKIP_TOOLS:
+                    return
+                if status == "success":
+                    progress_text = f"\u26a1 {_friendly_tool_name(tool_name)}"
+                    if summary:
+                        progress_text += f": {summary[:100]}"
+                elif status == "error":
+                    progress_text = f"\u26a0\ufe0f {_friendly_tool_name(tool_name)} failed"
+                else:
+                    return
+                self._emit_event("being_progress", {
+                    "being_id": being_id,
+                    "being_name": being.get("name", being_id),
+                    "session_id": chat_session_id,
+                    "text": progress_text,
+                    "iteration": data.get("iteration", 0),
+                }, tenant_id=tenant_id)
 
         error_occurred = False
+        result = None
         try:
             from bomba_sr.runtime.bridge import TurnRequest
             from bomba_sr.context.policy import TurnProfile
             effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
             _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
             # Use deep context (TASK_EXECUTION) only for actual tasks;
             # casual chat stays lean with just SOUL + IDENTITY.
-            _profile = TurnProfile.TASK_EXECUTION if classification in ("light_task", "full_task") else TurnProfile.CHAT
+            _profile = TurnProfile.TASK_EXECUTION if classification == "light_task" else TurnProfile.CHAT
             req = TurnRequest(
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -1262,7 +1431,7 @@ class DashboardService:
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
                 profile=_profile,
-                on_iteration=_on_loop_iteration if all_steps else None,
+                on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
             result = self.bridge.handle_turn(req)
@@ -1290,21 +1459,199 @@ class DashboardService:
                 "active": False,
             })
 
+        # Register artifacts as deliverables so they appear in the Outputs panel
+        if isinstance(result, dict):
+            for art in result.get("artifacts", []):
+                try:
+                    aid = art.get("artifact_id")
+                    if task_id:
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=art.get("title") or art.get("filename") or "output",
+                            file_type=art.get("type") or "file",
+                            file_path=art.get("path") or "",
+                            url=f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            line_count=0,
+                            byte_size=art.get("byte_size") or 0,
+                        )
+                    else:
+                        self._emit_event("deliverable_created", {
+                            "id": aid,
+                            "filename": art.get("title") or "output",
+                            "file_type": art.get("type") or "file",
+                            "url": f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            "byte_size": art.get("byte_size") or 0,
+                            "being_id": being_id,
+                        }, tenant_id=tenant_id)
+                except Exception as exc:
+                    log.debug("Failed to register artifact as deliverable: %s", exc)
+
         # Transition task to done (or back to backlog on error)
         if task_id:
             if error_occurred:
-                self._auto_update_task_status(task_id, "backlog")
+                self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
             else:
-                # For full_task, complete all remaining steps
-                if classification == "full_task":
-                    for step in self.get_task_steps(task_id):
-                        if step["status"] != "done":
-                            self.update_task_step(step["id"], "done")
-                self._auto_update_task_status(task_id, "done")
+                self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
 
         self.create_message(
             sender=being_id,
             content=reply or f"[{being_id} returned empty response]",
+            targets=[sender],
+            msg_type="direct",
+            task_ref=task_id,
+            session_id=chat_session_id,
+            metadata=msg_metadata,
+        )
+
+    def _execute_full_task_background(
+        self,
+        being_id: str,
+        being: dict,
+        content: str,
+        sender: str,
+        tenant_id: str,
+        sender_tenant_id: str,
+        session_id: str,
+        workspace: str,
+        chat_session_id: str,
+        task_id: str,
+    ) -> None:
+        """Execute a full_task with progress updates. Called from the already-background route thread."""
+        cancel_event = threading.Event()
+        self._cancel_events[task_id] = cancel_event
+
+        self.update_being(being_id, {"status": "busy"})
+        self._emit_event("being_typing", {
+            "being_id": being_id,
+            "being_name": being.get("name", being_id),
+            "active": True,
+        })
+        self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
+
+        all_steps = self.get_task_steps(task_id)
+        if all_steps:
+            self.update_task_step(all_steps[0]["id"], "in_progress")
+        step_cursor = [0]
+        num_steps = len(all_steps)
+
+        def _on_loop_iteration(iteration, loop_state):
+            if cancel_event.is_set():
+                loop_state.stopped_reason = "cancelled"
+                raise InterruptedError("Task cancelled by user")
+            if num_steps == 0 or step_cursor[0] >= num_steps - 1:
+                return
+            self.advance_task_step(task_id)
+            step_cursor[0] += 1
+
+        def _on_progress(event_type, data):
+            if event_type == "tool_result":
+                tool_name = data.get("tool_name", "")
+                status = data.get("status", "")
+                summary = data.get("summary", "")[:150]
+                if tool_name in _PROGRESS_SKIP_TOOLS:
+                    return
+                if status == "success":
+                    progress_text = f"\u26a1 {_friendly_tool_name(tool_name)}"
+                    if summary:
+                        progress_text += f": {summary[:100]}"
+                elif status == "error":
+                    progress_text = f"\u26a0\ufe0f {_friendly_tool_name(tool_name)} failed"
+                else:
+                    return
+                self._emit_event("being_progress", {
+                    "being_id": being_id,
+                    "being_name": being.get("name", being_id),
+                    "session_id": chat_session_id,
+                    "text": progress_text,
+                    "iteration": data.get("iteration", 0),
+                }, tenant_id=tenant_id)
+
+        error_occurred = False
+        cancelled = False
+        result = None
+        reply = ""
+        msg_metadata: dict | None = None
+        try:
+            # Check if already cancelled before starting
+            if cancel_event.is_set():
+                raise InterruptedError("Task cancelled by user")
+
+            from bomba_sr.runtime.bridge import TurnRequest
+            from bomba_sr.context.policy import TurnProfile
+
+            effective_content = self._effective_user_message(being_id, content, chat_session_id)
+            effective_content = self._inject_upload_context(effective_content, being_id)
+            _inc_rep = bool(_REPRESENTATION_KEYWORDS.search(effective_content))
+            req = TurnRequest(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                user_id=sender,
+                user_message=effective_content,
+                workspace_root=workspace,
+                task_id=task_id,
+                project_id=MC_PROJECT_ID,
+                profile=TurnProfile.TASK_EXECUTION,
+                max_loop_iterations=50,
+                on_iteration=_on_loop_iteration if all_steps else None,
+                on_progress=_on_progress,
+                include_representation=_inc_rep,
+            )
+            result = self.bridge.handle_turn(req)
+            if isinstance(result, dict):
+                assistant = result.get("assistant")
+                if isinstance(assistant, dict):
+                    reply = assistant.get("text", "")
+                if not reply:
+                    reply = result.get("reply", result.get("response", ""))
+                msg_metadata = self._extract_message_metadata(result, tenant_id, session_id)
+
+                # Register artifacts as deliverables
+                for art in result.get("artifacts", []):
+                    try:
+                        aid = art.get("artifact_id")
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=art.get("title") or art.get("filename") or "output",
+                            file_type=art.get("type") or "file",
+                            file_path=art.get("path") or "",
+                            url=f"/api/mc/artifacts/{aid}/download" if aid else "",
+                            line_count=0,
+                            byte_size=art.get("byte_size") or 0,
+                        )
+                    except Exception as exc:
+                        log.debug("Failed to register artifact as deliverable: %s", exc)
+        except InterruptedError:
+            reply = "[Task cancelled]"
+            cancelled = True
+        except Exception as exc:
+            reply = f"[Error: {exc}]"
+            error_occurred = True
+        finally:
+            self._cancel_events.pop(task_id, None)
+            self.update_being(being_id, {"status": "online"})
+            self._emit_event("being_typing", {
+                "being_id": being_id,
+                "being_name": being.get("name", being_id),
+                "active": False,
+            })
+
+        # Complete task
+        if cancelled:
+            self._auto_update_task_status(task_id, "cancelled", tenant_id=sender_tenant_id)
+        elif error_occurred:
+            self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+        else:
+            for step in self.get_task_steps(task_id):
+                if step["status"] != "done":
+                    self.update_task_step(step["id"], "done")
+            self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
+
+        # Send final result as chat message
+        self.create_message(
+            sender=being_id,
+            content=reply or f"[{being_id} completed the task]",
             targets=[sender],
             msg_type="direct",
             task_ref=task_id,
@@ -1339,6 +1686,7 @@ class DashboardService:
         sender: str,
         session_id: str,
         chat_session_id: str = "",
+        tenant_id: str = MC_TENANT,
     ) -> None:
         """Route a full_task to Prime's orchestration engine instead of direct LLM."""
         # Acknowledge in chat immediately
@@ -1367,6 +1715,7 @@ class DashboardService:
                 requester_session_id=session_id,
                 sender=sender,
                 chat_session_id=chat_session_id,
+                tenant_id=tenant_id,
             )
             log.info(
                 "Orchestration started: task=%s status=%s",
@@ -1406,6 +1755,7 @@ class DashboardService:
         content: str,
         *,
         classification: str,
+        tenant_id: str = MC_TENANT,
     ) -> str | None:
         """Auto-create a task on the board when a being receives a classified message.
 
@@ -1435,13 +1785,14 @@ class DashboardService:
                 priority="medium",
                 assignees=[being_id],
                 owner_agent_id=being_id,
+                tenant_id=tenant_id,
             )
             log.info('[CLASSIFY] Task created: id=%s classification=%s', task.get("id", "?")[:8], classification)
             return task.get("id")
         except Exception:
             return None
 
-    def _auto_update_task_status(self, task_id: str, new_status: str) -> None:
+    def _auto_update_task_status(self, task_id: str, new_status: str, tenant_id: str = MC_TENANT) -> None:
         """Update task status and emit events for real-time board updates."""
         if not self.project_service:
             return
@@ -1450,9 +1801,18 @@ class DashboardService:
                 project_service=self.project_service,
                 task_id=task_id,
                 status=new_status,
+                tenant_id=tenant_id,
             )
         except Exception:
             pass
+
+    def cancel_task(self, task_id: str, tenant_id: str = MC_TENANT) -> bool:
+        """Cancel a running task. Signals the background thread and updates status."""
+        evt = self._cancel_events.get(task_id)
+        if evt:
+            evt.set()
+        self._auto_update_task_status(task_id, "cancelled", tenant_id=tenant_id)
+        return True
 
     # ------------------------------------------------------------------
     # Task classification
@@ -1486,15 +1846,16 @@ class DashboardService:
             )
             payload = _extract_json(resp.text)
             if payload:
-                classification = payload.get("classification", "not_task")
+                classification = payload.get("classification", "light_task")
                 if classification in ("not_task", "light_task", "full_task"):
+                    log.info('[TASK-CLASSIFY] "%.80s" → %s', stripped, classification)
                     return classification
         except Exception as exc:
-            log.debug("Task classification failed, defaulting to not_task: %s", exc)
+            log.info("Task classification failed, defaulting to light_task: %s", exc)
 
-        # Safe default: do NOT create a task when the classifier is uncertain.
-        # Creating spurious tasks is worse than missing a real one.
-        return "not_task"
+        # Default to light_task — missing a real task is worse than creating
+        # a light one that auto-completes.
+        return "light_task"
 
     def _generate_task_steps(self, content: str) -> list[str]:
         """Use LLM to break a full_task message into sub-steps."""
@@ -1595,13 +1956,13 @@ class DashboardService:
         """Set the artifact store reference for dashboard artifact tracking."""
         self._artifact_store = store
 
-    def list_task_artifacts(self, task_id: str) -> list[dict]:
+    def list_task_artifacts(self, task_id: str, tenant_id: str = MC_TENANT) -> list[dict]:
         """List artifacts attached to a task."""
         store = getattr(self, "_artifact_store", None)
         if not store:
             return []
         try:
-            records = store.list_task_artifacts(MC_TENANT, task_id)
+            records = store.list_task_artifacts(tenant_id, task_id)
             return [r.to_dict() for r in records]
         except Exception:
             return []
@@ -1704,6 +2065,7 @@ class DashboardService:
     def list_tasks(
         self,
         project_service: Any,
+        tenant_id: str = MC_TENANT,
         assignee: str | None = None,
         priority: str | None = None,
         status: str | None = None,
@@ -1712,7 +2074,7 @@ class DashboardService:
         top_level_only: bool = False,
     ) -> list[dict]:
         tasks = project_service.list_tasks(
-            MC_TENANT, MC_PROJECT_ID, status=status,
+            tenant_id, MC_PROJECT_ID, status=status,
             top_level_only=top_level_only,
         )
         if priority:
@@ -1734,8 +2096,8 @@ class DashboardService:
             tasks = [t for t in tasks if t.get("created_at", "") <= to_date]
         return [self._normalize_task(t) for t in tasks]
 
-    def get_task(self, project_service: Any, task_id: str) -> dict:
-        task = project_service.get_task(MC_TENANT, task_id)
+    def get_task(self, project_service: Any, task_id: str, tenant_id: str = MC_TENANT) -> dict:
+        task = project_service.get_task(tenant_id, task_id)
         rows = self.db.execute(
             "SELECT being_id FROM mc_task_assignments WHERE task_id = ?",
             (task_id,),
@@ -1745,12 +2107,12 @@ class DashboardService:
         task["steps"] = self.get_task_steps(task_id)
         return self._normalize_task(task)
 
-    def clean_casual_tasks(self, project_service: Any) -> int:
+    def clean_casual_tasks(self, project_service: Any, tenant_id: str = MC_TENANT) -> int:
         """Delete auto-created tasks that were casual messages (not real tasks).
 
         Returns the number of tasks deleted.
         """
-        tasks = project_service.list_tasks(MC_TENANT, MC_PROJECT_ID)
+        tasks = project_service.list_tasks(tenant_id, MC_PROJECT_ID)
         deleted = 0
         for t in tasks:
             desc = t.get("description", "")
@@ -1761,7 +2123,7 @@ class DashboardService:
             # Check if the title looks like a casual message
             if _NOT_TASK_PATTERNS.match(title.rstrip("...")):
                 tid = t["task_id"]
-                self.delete_task(project_service, tid)
+                self.delete_task(project_service, tid, tenant_id=tenant_id)
                 deleted += 1
         return deleted
 
@@ -1806,9 +2168,20 @@ class DashboardService:
         assignees: list[str] | None = None,
         owner_agent_id: str | None = None,
         parent_task_id: str | None = None,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
+        # Ensure the MC project exists for this tenant
+        try:
+            project_service.get_project(tenant_id, MC_PROJECT_ID)
+        except ValueError:
+            project_service.create_project(
+                tenant_id=tenant_id,
+                name=MC_PROJECT_NAME,
+                workspace_root=str(Path.cwd()),
+                project_id=MC_PROJECT_ID,
+            )
         task = project_service.create_task(
-            tenant_id=MC_TENANT,
+            tenant_id=tenant_id,
             project_id=MC_PROJECT_ID,
             title=title,
             description=description,
@@ -1830,7 +2203,7 @@ class DashboardService:
             task["assignees"] = []
 
         self._log_task_history(tid, "created", {"title": title, "status": status, "priority": priority})
-        self._emit_event("task_update", {"action": "created", "task": self._normalize_task(task)})
+        self._emit_event("task_update", {"action": "created", "task": self._normalize_task(task)}, tenant_id=tenant_id)
         return self._normalize_task(task)
 
     def update_task(
@@ -1843,6 +2216,7 @@ class DashboardService:
         assignees: list[str] | None = None,
         title: str | None = None,
         description: str | None = None,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
         changes: dict[str, Any] = {}
         if status:
@@ -1852,7 +2226,7 @@ class DashboardService:
 
         # ProjectService.update_task only handles status/priority/owner
         task = project_service.update_task(
-            tenant_id=MC_TENANT,
+            tenant_id=tenant_id,
             task_id=task_id,
             status=status,
             priority=priority,
@@ -1874,12 +2248,12 @@ class DashboardService:
             sets.append("updated_at = ?")
             params.append(self._now())
             params.append(task_id)
-            params.append(MC_TENANT)
+            params.append(tenant_id)
             self.db.execute_commit(
                 f"UPDATE project_tasks SET {', '.join(sets)} WHERE task_id = ? AND tenant_id = ?",
                 params,
             )
-            task = project_service.get_task(MC_TENANT, task_id)
+            task = project_service.get_task(tenant_id, task_id)
 
         if assignees is not None:
             with self.db.transaction() as conn:
@@ -1899,22 +2273,22 @@ class DashboardService:
         if changes:
             self._log_task_history(task_id, "updated", changes)
         normalized = self._normalize_task(task)
-        self._emit_event("task_update", {"action": "updated", "task": normalized})
+        self._emit_event("task_update", {"action": "updated", "task": normalized}, tenant_id=tenant_id)
         return normalized
 
-    def delete_task(self, project_service: Any, task_id: str) -> bool:
+    def delete_task(self, project_service: Any, task_id: str, tenant_id: str = MC_TENANT) -> bool:
         try:
-            project_service.get_task(MC_TENANT, task_id)
+            project_service.get_task(tenant_id, task_id)
         except ValueError:
             return False
         with self.db.transaction() as conn:
             conn.execute(
                 "DELETE FROM project_tasks WHERE tenant_id = ? AND task_id = ?",
-                (MC_TENANT, task_id),
+                (tenant_id, task_id),
             )
             conn.execute("DELETE FROM mc_task_assignments WHERE task_id = ?", (task_id,))
         self._log_task_history(task_id, "deleted", {})
-        self._emit_event("task_update", {"action": "deleted", "task_id": task_id})
+        self._emit_event("task_update", {"action": "deleted", "task_id": task_id}, tenant_id=tenant_id)
         return True
 
     def task_history(self, task_id: str | None = None, limit: int = 50) -> list[dict]:
@@ -1950,23 +2324,23 @@ class DashboardService:
     # Orchestration — parent/child task views
     # ------------------------------------------------------------------
 
-    def get_task_children(self, task_id: str) -> list[str]:
+    def get_task_children(self, task_id: str, tenant_id: str = MC_TENANT) -> list[str]:
         """Return child task IDs that have this task as parent_task_id."""
         rows = self.db.execute(
             """SELECT task_id FROM project_tasks
                WHERE parent_task_id = ? AND tenant_id = ?
                ORDER BY created_at ASC""",
-            (task_id, MC_TENANT),
+            (task_id, tenant_id),
         ).fetchall()
         return [str(r["task_id"]) for r in rows]
 
-    def get_task_parent(self, task_id: str) -> str | None:
+    def get_task_parent(self, task_id: str, tenant_id: str = MC_TENANT) -> str | None:
         """Return the parent task ID if this task has one."""
         row = self.db.execute(
             """SELECT parent_task_id FROM project_tasks
                WHERE task_id = ? AND tenant_id = ?
                LIMIT 1""",
-            (task_id, MC_TENANT),
+            (task_id, tenant_id),
         ).fetchone()
         if row is None:
             return None
@@ -1977,16 +2351,17 @@ class DashboardService:
         self,
         project_service: Any,
         task_id: str,
+        tenant_id: str = MC_TENANT,
     ) -> dict:
         """Get a task enriched with orchestration data (children, parent, orch log)."""
-        task = self.get_task(project_service, task_id)
+        task = self.get_task(project_service, task_id, tenant_id=tenant_id)
         # Add parent/child info
-        task["parent_task_id"] = self.get_task_parent(task_id)
-        child_ids = self.get_task_children(task_id)
+        task["parent_task_id"] = self.get_task_parent(task_id, tenant_id=tenant_id)
+        child_ids = self.get_task_children(task_id, tenant_id=tenant_id)
         task["children"] = []
         for cid in child_ids:
             try:
-                child = self.get_task(project_service, cid)
+                child = self.get_task(project_service, cid, tenant_id=tenant_id)
                 task["children"].append(child)
             except Exception:
                 task["children"].append({"id": cid, "status": "unknown"})
@@ -2082,24 +2457,39 @@ class DashboardService:
         except Exception:
             pass  # subagent_runs table may not exist yet
 
-        if not outputs and not agents:
+        # ── Auto-retrieval sources ──
+        retrieval_sources = None
+        retrieval_latency = 0
+        auto_retrieval = result.get("auto_retrieval")
+        if auto_retrieval and auto_retrieval.get("sources"):
+            retrieval_sources = auto_retrieval["sources"]
+            retrieval_latency = auto_retrieval.get("latency_ms", 0)
+
+        if not outputs and not agents and not retrieval_sources:
             return None
 
-        return {
-            "outputs": outputs if outputs else None,
-            "agents": agents if agents else None,
-        }
+        metadata: dict[str, Any] = {}
+        if outputs:
+            metadata["outputs"] = outputs
+        if agents:
+            metadata["agents"] = agents
+        if retrieval_sources:
+            metadata["retrieval_sources"] = retrieval_sources
+            metadata["retrieval_latency_ms"] = retrieval_latency
+        return metadata
 
     # ------------------------------------------------------------------
     # Sub-agents
     # ------------------------------------------------------------------
 
-    def list_subagent_runs(self) -> list[dict]:
-        """Query subagent_runs table if it exists."""
+    def list_subagent_runs(self, tenant_id: str = MC_TENANT) -> list[dict]:
+        """Query subagent_runs table if it exists, scoped to tenant."""
         try:
             rows = self.db.execute(
                 """SELECT * FROM subagent_runs
-                   ORDER BY created_at DESC LIMIT 50"""
+                   WHERE tenant_id = ?
+                   ORDER BY created_at DESC LIMIT 50""",
+                (tenant_id,),
             ).fetchall()
             return [dict(r) for r in rows]
         except Exception:
@@ -2109,11 +2499,11 @@ class DashboardService:
     # SSE
     # ------------------------------------------------------------------
 
-    def subscribe_sse(self) -> str:
-        """Create an SSE subscription.  Returns client_id."""
+    def subscribe_sse(self, tenant_id: str = "") -> str:
+        """Create an SSE subscription scoped to a tenant.  Returns client_id."""
         client_id = str(uuid.uuid4())
         with self._sse_lock:
-            self._sse_clients[client_id] = queue.Queue()
+            self._sse_clients[client_id] = {"queue": queue.Queue(), "tenant_id": tenant_id}
         return client_id
 
     def unsubscribe_sse(self, client_id: str) -> None:
@@ -2122,15 +2512,15 @@ class DashboardService:
 
     def poll_sse(self, client_id: str, timeout: float = 20.0) -> dict | None:
         """Block up to *timeout* seconds for the next event."""
-        q = self._sse_clients.get(client_id)
-        if q is None:
+        entry = self._sse_clients.get(client_id)
+        if entry is None:
             return None
         try:
-            return q.get(timeout=timeout)
+            return entry["queue"].get(timeout=timeout)
         except queue.Empty:
             return None
 
-    def _emit_event(self, event_type: str, payload: dict) -> None:
+    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None) -> None:
         now = self._now()
         # Persist
         self.db.execute_commit(
@@ -2138,13 +2528,15 @@ class DashboardService:
             (event_type, json.dumps(payload, default=str), now),
         )
 
-        # Fan-out
+        # Fan-out (scoped by tenant_id when provided, broadcast when None)
         evt = {"event": event_type, "data": payload, "ts": now}
         with self._sse_lock:
             dead: list[str] = []
-            for cid, q in self._sse_clients.items():
+            for cid, entry in self._sse_clients.items():
+                if tenant_id is not None and entry.get("tenant_id") and entry["tenant_id"] != tenant_id:
+                    continue
                 try:
-                    q.put_nowait(evt)
+                    entry["queue"].put_nowait(evt)
                 except queue.Full:
                     dead.append(cid)
             for cid in dead:

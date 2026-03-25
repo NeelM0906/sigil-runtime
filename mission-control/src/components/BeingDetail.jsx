@@ -179,6 +179,14 @@ export function BeingDetail({ onOpenTask }) {
 
   const being = selectedBeingId ? getBeingById(selectedBeingId) : null
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!selectedBeingId) return
+    const handleKey = (e) => { if (e.key === 'Escape') closeBeingDetail() }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [selectedBeingId, closeBeingDetail])
+
   // Fetch assigned tasks
   useEffect(() => {
     if (!being) return

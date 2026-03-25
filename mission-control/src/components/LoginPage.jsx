@@ -125,15 +125,7 @@ export function LoginPage() {
             )}
           </button>
 
-          <div className="text-center pt-1">
-            <button
-              type="button"
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
-              className="text-xs text-text-muted hover:text-accent-blue transition-colors"
-            >
-              {mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
-            </button>
-          </div>
+          {/* Registration disabled — accounts are provisioned by admin */}
         </form>
 
         <p className="text-center text-text-muted text-[10px] mt-6 font-mono">

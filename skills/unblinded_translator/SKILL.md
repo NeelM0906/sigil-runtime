@@ -1,9 +1,9 @@
 ---
-name: unblinded-translator
+name: unblinded_translator
 description: Transform long transcripts into structured Unblinded Formula knowledge records.
-license: MIT
 user-invocable: true
-allowed-tools: read write memory_store pinecone_query
+disable-model-invocation: false
+risk-level: low
 ---
 # Unblinded Translator Workflow
 
@@ -15,34 +15,9 @@ Use this skill to convert transcript content into structured, reusable formula k
 - Optional Pinecone upsert flag.
 
 ## Steps
-1. Load transcript text from the provided source.
-2. Normalize whitespace and preserve speaker boundaries where available.
-3. Chunk transcript into 3000-character windows with 200-character overlap.
-4. For each chunk, call the LLM with the translator prompt from `TRANSLATOR_PROMPT.md`.
-5. Parse output into the schema:
-   - `topic`
-   - `context`
-   - `formula_elements`
-   - `main_lesson`
-   - `seans_processing`
-   - `seans_approach`
-6. Merge chunk outputs into a single structured document with deduped themes and formula elements.
-7. Save result JSON under workspace memory, for example:
-   - `memory/translator/<name>-structured.json`
-8. Save a markdown summary:
-   - `memory/translator/<name>-summary.md`
-9. If Pinecone tooling is available and explicitly requested, query index metadata and stage the structured output for upsert.
-
-## Output Contract
-Return:
-- `chunks_processed`
-- `output_json_path`
-- `output_summary_path`
-- `formula_elements_detected`
-- `pinecone_staged` (boolean)
-- `errors` (list)
-
-## Notes
-- Do not invent details not present in transcript content.
-- Preserve uncertainty explicitly when confidence is low.
-- Prefer concise, high-signal output over verbose narration.
+1. **Read** the transcript from file or accept inline text.
+2. **Parse** into logical segments (topics, teaching moments, Q&A).
+3. **Extract** Formula mechanics, principles, and actionable insights.
+4. **Structure** into a 7-column knowledge record format.
+5. **Write** the structured output to workspace.
+6. **Optionally upsert** to Pinecone for long-term retrieval.

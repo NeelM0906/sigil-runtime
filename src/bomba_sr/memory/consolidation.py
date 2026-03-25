@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from bomba_sr.memory.utils import ensure_column, lexical_score, utc_now_iso
 from bomba_sr.storage.db import RuntimeDB
 
 
@@ -18,10 +19,6 @@ META_MEMORY_PATTERNS = [
     re.compile(r"\bi don't (have|remember|recall)\b", re.IGNORECASE),
     re.compile(r"\bdid i tell you\b", re.IGNORECASE),
 ]
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass(frozen=True)
@@ -34,6 +31,7 @@ class MemoryCandidate:
     evidence_refs: tuple[str, ...] = ()
     recency_ts: str | None = None
     being_id: str | None = None
+    session_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,18 +101,11 @@ class MemoryConsolidator:
             """
         )
         self.db.commit()
-        # Add being_id column to existing tables (migration)
-        self._ensure_column("memories", "being_id", "TEXT")
-        self._ensure_column("procedural_memories", "being_id", "TEXT")
-        self._ensure_column("memory_archive", "being_id", "TEXT")
-
-    def _ensure_column(self, table: str, column: str, definition: str) -> None:
-        rows = self.db.execute(f"PRAGMA table_info({table})").fetchall()
-        existing = {str(row["name"]) for row in rows}
-        if column in existing:
-            return
-        self.db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-        self.db.commit()
+        # Add being_id and session_id columns to existing tables (migration)
+        ensure_column(self.db, "memories", "being_id", "TEXT")
+        ensure_column(self.db, "memories", "session_id", "TEXT")
+        ensure_column(self.db, "procedural_memories", "being_id", "TEXT")
+        ensure_column(self.db, "memory_archive", "being_id", "TEXT")
 
     def upsert(self, candidate: MemoryCandidate) -> str:
         now = utc_now_iso()
@@ -134,8 +125,8 @@ class MemoryConsolidator:
                 """
                 INSERT INTO memories (
                   id, user_id, memory_key, tier, content, entities, evidence_refs,
-                  recency_ts, active, version, created_at, updated_at, being_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)
+                  recency_ts, active, version, created_at, updated_at, being_id, session_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?)
                 """,
                 (
                     memory_id,
@@ -149,6 +140,7 @@ class MemoryConsolidator:
                     now,
                     now,
                     candidate.being_id,
+                    candidate.session_id,
                 ),
             )
             self.db.commit()
@@ -217,18 +209,23 @@ class MemoryConsolidator:
         self.db.commit()
         return new_id
 
-    def retrieve(
+    def _retrieve_scored(
         self,
-        user_id: str,
+        scope_col: str,
+        scope_val: str,
         query: str,
         limit: int = 10,
         recency_half_life_days: float = 14.0,
         recency_weight: float = 0.15,
+        session_id: str | None = None,
     ) -> list[RetrievedMemory]:
         rows = self.db.execute(
-            "SELECT * FROM memories WHERE user_id = ? AND active = 1 AND tier = 'semantic'",
-            (user_id,),
+            f"SELECT * FROM memories WHERE {scope_col} = ? AND active = 1 AND tier = 'semantic'",
+            (scope_val,),
         ).fetchall()
+
+        # Session boost: memories from the current session get a score bonus
+        _SESSION_BOOST = 0.3
 
         scored: list[RetrievedMemory] = []
         for row in rows:
@@ -236,13 +233,23 @@ class MemoryConsolidator:
             if self._is_meta_noise(content):
                 continue
 
-            lexical = self._lexical_score(query, content)
+            lex = lexical_score(query, content)
             recency_boost = self._recency_boost(
                 recency_ts=str(row["recency_ts"]),
                 half_life_days=recency_half_life_days,
                 weight=recency_weight,
             )
-            score = lexical + recency_boost
+            score = lex + recency_boost
+
+            # Boost memories from the current session
+            row_session = None
+            try:
+                row_session = row["session_id"]
+            except (IndexError, KeyError):
+                pass
+            if session_id and row_session == session_id:
+                score += _SESSION_BOOST
+
             scored.append(
                 RetrievedMemory(
                     memory_id=str(row["id"]),
@@ -250,7 +257,7 @@ class MemoryConsolidator:
                     content=content,
                     score=score,
                     recency_boost=recency_boost,
-                    lexical_score=lexical,
+                    lexical_score=lex,
                     recency_ts=str(row["recency_ts"]),
                 )
             )
@@ -258,12 +265,16 @@ class MemoryConsolidator:
         scored.sort(key=lambda x: x.score, reverse=True)
         return scored[:limit]
 
-    def archive_count(self, user_id: str, key: str) -> int:
-        row = self.db.execute(
-            "SELECT COUNT(*) AS c FROM memory_archive WHERE user_id = ? AND memory_key = ?",
-            (user_id, key),
-        ).fetchone()
-        return int(row["c"]) if row is not None else 0
+    def retrieve(
+        self,
+        user_id: str,
+        query: str,
+        limit: int = 10,
+        recency_half_life_days: float = 14.0,
+        recency_weight: float = 0.15,
+        session_id: str | None = None,
+    ) -> list[RetrievedMemory]:
+        return self._retrieve_scored("user_id", user_id, query, limit, recency_half_life_days, recency_weight, session_id=session_id)
 
     def learn_procedural(
         self,
@@ -335,26 +346,26 @@ class MemoryConsolidator:
         self.db.commit()
         return memory_id
 
-    def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+    def _recall_procedural_scored(self, scope_col: str, scope_val: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
         rows = self.db.execute(
-            """
+            f"""
             SELECT *
             FROM procedural_memories
-            WHERE user_id = ? AND active = 1
+            WHERE {scope_col} = ? AND active = 1
             ORDER BY updated_at DESC
             LIMIT 200
             """,
-            (user_id,),
+            (scope_val,),
         ).fetchall()
         scored: list[dict[str, Any]] = []
         for row in rows:
             content = str(row["content"])
-            lexical = self._lexical_score(query, content)
+            lex = lexical_score(query, content)
             success_count = int(row["success_count"])
             failure_count = int(row["failure_count"])
             total = success_count + failure_count
             success_ratio = (success_count + 1) / (total + 2)
-            score = lexical * success_ratio
+            score = lex * success_ratio
             scored.append(
                 {
                     "id": str(row["id"]),
@@ -363,13 +374,16 @@ class MemoryConsolidator:
                     "success_count": success_count,
                     "failure_count": failure_count,
                     "success_ratio": success_ratio,
-                    "lexical_score": lexical,
+                    "lexical_score": lex,
                     "score": score,
                     "updated_at": str(row["updated_at"]),
                 }
             )
         scored.sort(key=lambda item: item["score"], reverse=True)
         return scored[: max(1, int(limit))]
+
+    def recall_procedural(self, user_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        return self._recall_procedural_scored("user_id", user_id, query, limit)
 
     def retrieve_by_being(
         self,
@@ -380,112 +394,16 @@ class MemoryConsolidator:
         recency_weight: float = 0.15,
     ) -> list[RetrievedMemory]:
         """Retrieve semantic memories scoped by being_id (cross-context)."""
-        rows = self.db.execute(
-            "SELECT * FROM memories WHERE being_id = ? AND active = 1 AND tier = 'semantic'",
-            (being_id,),
-        ).fetchall()
-
-        scored: list[RetrievedMemory] = []
-        for row in rows:
-            content = str(row["content"])
-            if self._is_meta_noise(content):
-                continue
-            lexical = self._lexical_score(query, content)
-            recency_boost = self._recency_boost(
-                recency_ts=str(row["recency_ts"]),
-                half_life_days=recency_half_life_days,
-                weight=recency_weight,
-            )
-            score = lexical + recency_boost
-            scored.append(
-                RetrievedMemory(
-                    memory_id=str(row["id"]),
-                    key=str(row["memory_key"]),
-                    content=content,
-                    score=score,
-                    recency_boost=recency_boost,
-                    lexical_score=lexical,
-                    recency_ts=str(row["recency_ts"]),
-                )
-            )
-        scored.sort(key=lambda x: x.score, reverse=True)
-        return scored[:limit]
+        return self._retrieve_scored("being_id", being_id, query, limit, recency_half_life_days, recency_weight)
 
     def recall_procedural_by_being(self, being_id: str, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Recall procedural memories scoped by being_id."""
-        rows = self.db.execute(
-            """
-            SELECT *
-            FROM procedural_memories
-            WHERE being_id = ? AND active = 1
-            ORDER BY updated_at DESC
-            LIMIT 200
-            """,
-            (being_id,),
-        ).fetchall()
-        scored: list[dict[str, Any]] = []
-        for row in rows:
-            content = str(row["content"])
-            lexical = self._lexical_score(query, content)
-            success_count = int(row["success_count"])
-            failure_count = int(row["failure_count"])
-            total = success_count + failure_count
-            success_ratio = (success_count + 1) / (total + 2)
-            score = lexical * success_ratio
-            scored.append(
-                {
-                    "id": str(row["id"]),
-                    "strategy_key": str(row["strategy_key"]),
-                    "content": content,
-                    "success_count": success_count,
-                    "failure_count": failure_count,
-                    "success_ratio": success_ratio,
-                    "lexical_score": lexical,
-                    "score": score,
-                    "updated_at": str(row["updated_at"]),
-                }
-            )
-        scored.sort(key=lambda item: item["score"], reverse=True)
-        return scored[: max(1, int(limit))]
-
-    def backfill_being_id(self) -> int:
-        """Backfill being_id from user_id patterns like 'prime->forge'."""
-        import re as _re
-        pattern = _re.compile(r"^prime->(.+)$")
-        updated = 0
-
-        for table in ("memories", "procedural_memories"):
-            rows = self.db.execute(
-                f"SELECT id, user_id FROM {table} WHERE being_id IS NULL"
-            ).fetchall()
-            for row in rows:
-                uid = str(row["user_id"])
-                m = pattern.match(uid)
-                if m:
-                    bid = m.group(1)
-                    self.db.execute(
-                        f"UPDATE {table} SET being_id = ? WHERE id = ?",
-                        (bid, str(row["id"])),
-                    )
-                    updated += 1
-
-        if updated:
-            self.db.commit()
-        return updated
+        return self._recall_procedural_scored("being_id", being_id, query, limit)
 
     @staticmethod
     def _is_meta_noise(text: str) -> bool:
         t = text.strip()
         return any(pattern.search(t) for pattern in META_MEMORY_PATTERNS)
-
-    @staticmethod
-    def _lexical_score(query: str, content: str) -> float:
-        q_terms = {t for t in re.findall(r"[a-zA-Z0-9_]+", query.lower()) if len(t) >= 2}
-        c_terms = {t for t in re.findall(r"[a-zA-Z0-9_]+", content.lower()) if len(t) >= 2}
-        if not q_terms or not c_terms:
-            return 0.0
-        overlap = len(q_terms & c_terms)
-        return overlap / len(q_terms)
 
     @staticmethod
     def _recency_boost(recency_ts: str, half_life_days: float, weight: float) -> float:

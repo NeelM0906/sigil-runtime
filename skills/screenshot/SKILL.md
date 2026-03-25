@@ -1,43 +1,19 @@
 ---
 name: screenshot
-description: Capture screenshots of web pages using headless browser
-version: "1.0.0"
-intent-tags: [screenshot, browser, capture, web, image]
-tools-required: [exec]
-risk-level: medium
-default-enabled: false
+description: Capture screenshots of web pages using headless browser. Requires Chromium or Chrome.
 user-invocable: false
-metadata:
-  sigil:
-    requires:
-      anyBins: [chromium, google-chrome, chrome]
-    artifact_type: image
-    mime_type: image/png
-    extension: .png
-inputs:
-  url:
-    type: string
-    required: true
-    description: URL to screenshot
-  width:
-    type: integer
-    required: false
-    description: Viewport width (default 1280)
-  height:
-    type: integer
-    required: false
-    description: Viewport height (default 720)
-outputs:
-  file_path:
-    type: string
-    description: Path to screenshot PNG
-  file_size:
-    type: integer
-    description: File size in bytes
+disable-model-invocation: false
+risk-level: medium
 ---
+# Screenshot Capture
 
-# Screenshot
+Capture screenshots of web pages using a headless browser.
 
-Captures web page screenshots using headless Chromium.
-Requires a Chromium-based browser to be installed.
-Falls back to a simple HTML-to-image approach if no browser is available.
+## Preconditions
+- Chromium, Google Chrome, or Chrome must be installed.
+
+## Steps
+1. Accept a URL and optional viewport dimensions.
+2. Use `browser_screenshot` tool or `exec` with headless Chrome to capture the page.
+3. Save the PNG to the workspace.
+4. Return the file path.

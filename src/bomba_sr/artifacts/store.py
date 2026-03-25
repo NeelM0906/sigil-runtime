@@ -107,10 +107,6 @@ class ArtifactStore:
               ON artifacts(tenant_id, session_id, created_at DESC);
             """
         )
-        existing_cols = {
-            str(r["name"])
-            for r in self.db.execute("PRAGMA table_info(artifacts)").fetchall()
-        }
         for col, col_type in [
             ("project_id", "TEXT"),
             ("task_id", "TEXT"),
@@ -118,8 +114,14 @@ class ArtifactStore:
             ("created_by", "TEXT"),
             ("skill_id", "TEXT"),
         ]:
-            if col not in existing_cols:
+            try:
                 self.db.execute(f"ALTER TABLE artifacts ADD COLUMN {col} {col_type}")
+                self.db.commit()
+            except Exception:
+                try:
+                    self.db.conn.rollback()
+                except Exception:
+                    pass
         self.db.execute(
             "CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(tenant_id, project_id, created_at DESC)"
         )

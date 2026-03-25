@@ -1,10 +1,12 @@
 ---
-name: web-search
+name: web_search
 description: Search the web for current information. Use when user asks about recent events, documentation, or time-sensitive data.
-license: MIT
 user-invocable: true
-allowed-tools: web_search web_fetch
+disable-model-invocation: false
+risk-level: low
 ---
+# Web Search
+
 When the request needs up-to-date information:
 1. Call `web_search` with a precise query and limit 5.
 2. Select the most relevant 1-3 results.

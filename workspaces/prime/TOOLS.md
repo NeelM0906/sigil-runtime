@@ -1,88 +1,98 @@
-# TOOLS.md - Local Notes
+# TOOLS.md — Essential Tool Reference
 
-## Voice Server
+_Full tool configs → `docs/TOOLS-full.md`_
 
-- **Location:** `tools/voice-server/server.js`
-- **Port:** 3334
-- **Start:** `cd tools/voice-server && node server.js`
-- **Quick call:** `tools/call.sh +1234567890 [voice]`
-- **Health:** `curl http://localhost:3334/health`
-- **Change voice:** `curl -X POST http://localhost:3334/voice/select -H "Content-Type: application/json" -d '{"voice":"george"}'`
-- **Knowledge query:** `curl -X POST http://localhost:3334/knowledge -H "Content-Type: application/json" -d '{"query":"What is zone action?"}'`
-- **Context check:** `curl http://localhost:3334/context`
+## 🧠 Baby Context API (PRIMARY TOOL — Use Before Everything)
+```bash
+cd /Users/samantha/.openclaw/workspace/tools && .venv/bin/python3 baby_context.py --topic "your query" --budget 4000
+# Sources: --sources pinecone,postgres,files (default) or --sources all
+```
+**This replaced context_fetch.py for all babies.** Sisters can still use `context_fetch.py` for deep work, but `baby_context.py` is the default.
 
-### Knowledge Integration (RAG)
-Voice server now has Pinecone RAG - queries `athenacontextualmemory` and `ublib2` automatically during calls to retrieve relevant knowledge. Both primary and Strata Pinecone accounts connected.
+## 🔥 Persist (MANDATORY — Use After Every Deliverable)
+```bash
+cd tools && .venv/bin/python3 persist.py \
+  --title "What you built" \
+  --content "Full description" \
+  --source sai \          # sai|forge|scholar|recovery|memory|prime
+  --category deliverable \ # kai_training|deliverable|sean_directive|technical|system|etc
+  --importance 9 \        # 1-10
+  --date 2026-03-10       # defaults to today
+```
+**RULE: If it doesn't exist in Postgres AND Pinecone, it didn't happen.**
+Files are working copies. persist.py is the record of truth. ALL sisters use this.
 
-### Available Voices
-| Name | Type | Description |
-|------|------|-------------|
-| george | premade | Warm, Captivating Storyteller (British male) — **DEFAULT** |
-| eric | premade | Smooth, Trustworthy (American male) |
-| chris | premade | Charming, Down-to-Earth (American male) |
-| charlie | premade | Deep, Confident, Energetic (Australian male) |
-| river | premade | Relaxed, Neutral (Non-binary American) |
-| jessica | premade | Playful, Bright, Warm (American female) |
-| sarah | premade | Mature, Reassuring (American female) |
-| athena | custom | Athena - Zone Action & Process Mastery |
-| sean | cloned | Sean Callagy |
-| callie | cloned | Callie - Conversational Mastery |
-| kai | generated | Kai - The Ocean |
-| kira | generated | Kira - Welcoming Actualizer |
-| nando | generated | Nando |
+## Pinecone
+```bash
+cd tools && .venv/bin/python3 pinecone_query.py --index <name> --query "question" [--top_k 5]
+```
+Key indexes: `saimemory`, `ublib2` (58K), `ultimatestratabrain` (39K, use `--api-key-env PINECONE_API_KEY_STRATA`)
 
-### ngrok
-- Must be running for voice calls: `nohup ngrok http 3334 > /tmp/ngrok.log 2>&1 &`
-- Get URL: `curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"`
-- Free tier — URL changes on restart
+## Voice
+- Voice ID: `CJXmyMqQHq6bTPm3iEMP` (SAI's voice)
+- Server: `tools/voice-server/server.js` (port 3334)
+- Quick call: `tools/call.sh +1234567890`
 
-## Pinecone Knowledge Base
+## Vercel
+```bash
+cd lever-org-chart && vercel --prod --token $VERCEL_TOKEN --yes
+```
 
-- **Query tool:** `python3 tools/pinecone_query.py --index <name> --query "question" [--namespace ns] [--top_k 5]`
-- **Key indexes:**
-  - `athenacontextualmemory` — 11K vectors, core Athena memory
-  - `uicontextualmemory` — 48K vectors, per-user memories (namespaced by email)
-  - `ublib2` — 41K vectors, knowledge library
-  - `miracontextualmemory` — 1K vectors, per-user Mira memory
-  - `seancallieupdates` — 814 vectors
-  - `seanmiracontextualmemory` — 146 vectors
-- All use `text-embedding-3-small` (1536 dimensions, cosine)
+## Google Workspace (gog)
+```bash
+GOG_KEYRING_PASSWORD=Gonzalez911 gog gmail search -a sai@acti.ai "newer_than:1d" --max 10
+```
 
-## Phone Numbers (Twilio)
-- Default outbound: `+19738603823` (973-860-3823)
-- 20 numbers total available
-- Account: ACTi (`AC9a598ac83205aff455ecb79a55f8fc6c`)
+## Fathom (Meeting Transcripts)
+```bash
+python3 tools/fathom_api.py list          # Recent meetings
+python3 tools/fathom_api.py search "Sean" # Find meetings
+python3 tools/fathom_api.py get <id>      # Full transcript
+```
 
-## ElevenLabs
-- Enterprise tier, 66M+ character limit
-- 30 conversational AI agents live
-- Can read conversation transcripts via API
+## Phone Numbers
+- Default outbound: `+19738603823`
+- Twilio account: `AC9a598ac83205aff455ecb79a55f8fc6c`
 
-## Key People's Pinecone Namespaces
-- Rick Thompson: `rick@posttensioningsolutions.com`
-- Brett Hadley: `brett.hadley@babinvestments.org` (3,765 vectors!)
-- Ryan: `ryan@compoundmybusiness.com` (2,559 vectors)
-- Erin: `erin@erinmmoran.com` (1,922 vectors)
-- Scott Gregory: `sgregory@greenridge.com` (2,668 vectors)
-- Dr. Val: `drvalfrancnd@gmail.com` (2,202 vectors)
-- Max: `maxsb88@gmail.com` (2,306 vectors)
+## Key People
+- **Nick Roy:** +1 401 572 9006 (Pinecone/ElevenLabs)
+- **Sean:** 201-364-6547
 
-## Second Pinecone — Ultimate Strata Brain
-- **API Key env var:** `PINECONE_API_KEY_STRATA`
-- **20 indexes, 57K+ vectors** of specialized content
-- **Key indexes:**
-  - `ultimatestratabrain` — 39K vectors, THE deep knowledge (4 namespaces: ige/eei/rti/dom)
-  - `suritrial` — 7K vectors, actual court trial transcripts
-  - `2025selfmastery` — 1.4K vectors, self mastery content
-  - `oracleinfluencemastery` — 505 vectors, the 4-Step Communication Model, influence mastery book content
-  - `nashmacropareto` — 132 vectors, Zone Action, 0.8% tier, Pareto deep-dive
-  - `rtioutcomes120` — 755 vectors, RTI outcomes
-  - `010526calliememory` — 1.3K vectors, Callie memory
-  - `miraagentnew-25-07-25` — 1.2K vectors, updated Mira agent
-- All use `text-embedding-3-small` (1536 dimensions, cosine)
-- To query, use the strata key: `Pinecone(api_key=os.environ['PINECONE_API_KEY_STRATA'])`
+## Language Rules (LOCKED)
+Never: prospect, sales, closing, funnel, leads
+Always: person, revenue, reaching agreement, journey, people
 
-## Security
-- All API keys in `~/.openclaw/.env` (chmod 600)
-- Never hardcode keys in scripts
-- See SECURITY.md for full protocol
+## Guides (n8n Webhooks)
+- **Stratum (PGAS):** `https://n8n.unblindedteam.com/webhook/4b6c2395-...`
+- **Kai (Sister webhook):** `https://n8n.unblindedteam.com/webhook/dfffccb8-f116-4b3b-9afe-b9e7df9e3023` (INACTIVE — needs reactivation)
+- **Kai (Real):** `https://n8n.unblindedteam.com/webhook/7496c229-7f5b-45f6-95ac-897e63b80957` (n8n workflow: "Kai - Nick Roy" — needs Active toggle for production URL)
+
+## 🚨 HARD RULES — NEVER VIOLATE
+
+### Scale of Mastery — Bolt = 9.99999, NEVER 10.0
+- The scale of mastery NEVER reaches 10.0. Period.
+- Bolt (highest creature) = 9,000 to 9.99999
+- There is NO perfect 10. Mastery means always finding the 0.01 gap.
+- This applies to ALL outputs: dashboards, reports, scoring, creature scales, descriptions.
+- If you see 10.0 or 10,000 as a max anywhere, it's WRONG. Fix it.
+- Sean's standard: Adam gives 9.99 — never 10.0 — because mastery means always finding the gap.
+
+### ublib2 — AIKO REVIEW REQUIRED (March 7, 2026)
+- **ZERO writes to `ublib2` without Aiko's manual review and explicit approval.**
+- Even post-Translator output does NOT auto-upload to ublib2.
+- Translated content goes to `saimemory` first. Aiko reviews. Then she greenlights ublib2.
+- This is non-negotiable. ublib2 is the sacred shared library (58K+ vectors). We protect it.
+
+### Model Selection — Use the MOST ADVANCED available
+- Always use the most advanced model available for synthesis/generation tasks
+- `anthropic/claude-opus-4.6` > `anthropic/claude-sonnet-4` > anything else
+- More context, better output, more skill. No shortcuts.
+- The only exception: embeddings (use `openai/text-embedding-3-small` via OpenRouter)
+
+---
+
+## Image Generation
+```bash
+cd tools && .venv/bin/python3 generate_image.py "your prompt" -o output.png
+```
+Model: `google/gemini-2.5-flash-image` via OpenRouter
