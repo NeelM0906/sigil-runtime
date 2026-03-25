@@ -131,10 +131,14 @@ def create_app() -> FastAPI:
         # SPA fallback: any non-API, non-asset path serves index.html
         @app.get("/{full_path:path}")
         def spa_fallback(full_path: str):
+            from starlette.responses import Response
             file_path = MC_DIST / full_path
             if full_path and file_path.is_file() and ".." not in full_path:
                 return FileResponse(str(file_path))
-            return FileResponse(str(MC_DIST / "index.html"))
+            # No-cache on index.html so deploys take effect immediately
+            resp = FileResponse(str(MC_DIST / "index.html"))
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            return resp
 
     return app
 
