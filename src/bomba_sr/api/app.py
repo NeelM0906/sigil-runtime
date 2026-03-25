@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,12 @@ async def lifespan(app: FastAPI):
         logger.warning("mission control init failed (%s), MC endpoints disabled", exc)
         logger.warning("".join(traceback.format_exception(exc)))
 
+    # Wire WebSocket manager into dashboard service
+    from bomba_sr.api.ws import manager as ws_manager
+    if dashboard_svc is not None:
+        dashboard_svc._ws_manager = ws_manager
+    app.state.ws_manager = ws_manager
+
     app.state.dashboard_svc = dashboard_svc
     app.state.project_svc = project_svc
 
@@ -103,6 +109,13 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(teams.router)
     app.include_router(upload.router)
+
+    # WebSocket endpoint for real-time events (replaces SSE as primary transport)
+    from bomba_sr.api.ws import websocket_endpoint
+
+    @app.websocket("/ws")
+    async def ws_route(websocket: WebSocket, token: str = Query("")):
+        await websocket_endpoint(websocket, token=token)
 
     from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse

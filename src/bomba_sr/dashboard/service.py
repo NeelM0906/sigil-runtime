@@ -245,6 +245,7 @@ class DashboardService:
         self.openclaw_sync: OpenClawSync | None = None
         self._sse_clients: dict[str, dict] = {}  # client_id -> {"queue": Queue, "tenant_id": str}
         self._sse_lock = threading.Lock()
+        self._ws_manager = None  # Set from app lifespan
         self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
         self._ensure_schema()
         self._sanitize_stored_paths()
@@ -2701,7 +2702,11 @@ class DashboardService:
             (event_type, json.dumps(payload, default=str), now),
         )
 
-        # Fan-out (scoped by tenant_id when provided, broadcast when None)
+        # WebSocket fan-out (primary)
+        if self._ws_manager is not None:
+            self._ws_manager.emit_event_sync(event_type, payload, tenant_id)
+
+        # Legacy SSE fan-out (fallback)
         evt = {"event": event_type, "data": payload, "ts": now}
         with self._sse_lock:
             dead: list[str] = []
