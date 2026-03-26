@@ -135,6 +135,49 @@ Fetch a URL, download the file, parse it. Works for PDFs, Excel, HTML, any forma
 ### sessions_spawn + sisters = Parallel work
 Need research AND a report simultaneously? Spawn a sister for research, do the report yourself, merge results.
 
+### Video generation (TESTED & WORKING)
+Use fal.ai with Kling v2 Master. The `FAL_KEY` env var is already set.
+
+```python
+import requests, os, time, json
+
+FAL_KEY = os.environ["FAL_KEY"]
+
+# 1. Submit
+resp = requests.post(
+    "https://queue.fal.run/fal-ai/kling-video/v2/master/text-to-video",
+    headers={"Authorization": f"Key {FAL_KEY}", "Content-Type": "application/json"},
+    json={"prompt": "YOUR PROMPT HERE", "duration": "5", "aspect_ratio": "16:9"},
+)
+data = resp.json()
+request_id = data["request_id"]
+
+# 2. Poll (takes ~2 min)
+while True:
+    time.sleep(5)
+    status = requests.get(
+        f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}/status",
+        headers={"Authorization": f"Key {FAL_KEY}"},
+    ).json()
+    if status["status"] == "COMPLETED":
+        result = requests.get(
+            f"https://queue.fal.run/fal-ai/kling-video/requests/{request_id}",
+            headers={"Authorization": f"Key {FAL_KEY}"},
+        ).json()
+        video_url = result["video"]["url"]
+        break
+    elif status["status"] in ("FAILED", "CANCELLED"):
+        raise Exception(f"Video generation failed: {status}")
+
+# 3. Download
+vid = requests.get(video_url)
+with open("output.mp4", "wb") as f:
+    f.write(vid.content)
+```
+
+Other video APIs also available: `RUNWAY_API_KEY`, `LUMA_API_KEY`, `REPLICATE_API_TOKEN`.
+For image-to-video, use the `/v2/master/image-to-video` endpoint instead.
+
 ### Common pip packages to know:
 - requests (HTTP calls to APIs)
 - beautifulsoup4 (web scraping)
