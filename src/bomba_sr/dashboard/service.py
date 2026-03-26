@@ -320,6 +320,47 @@ class DashboardService:
                 log.info("[AUTO-DELIVERABLE] Registered %s from %s tool call", fname, tool_name)
             except Exception as exc:
                 log.debug("Failed to auto-register deliverable %s: %s", fname, exc)
+        # Safety net: scan workspace for recently created output files
+        if not registered:
+            being = self.get_being(being_id)
+            ws_path = self._resolve_workspace_path(
+                (being or {}).get("workspace")
+            ) if being else None
+            if ws_path:
+                import time as _time
+                now = _time.time()
+                for subdir_name in ["deliverables", "outputs", "uploads"]:
+                    subdir = ws_path / subdir_name
+                    if not subdir.is_dir():
+                        continue
+                    for f in subdir.iterdir():
+                        if not f.is_file():
+                            continue
+                        ext = f.suffix.lower()
+                        if ext not in self._OUTPUT_EXTENSIONS:
+                            continue
+                        if now - f.stat().st_mtime > 300:
+                            continue
+                        fpath_str = str(f)
+                        if fpath_str in registered:
+                            continue
+                        fname = f.name
+                        if self._is_internal_file({"filename": fname, "file_path": fpath_str}):
+                            continue
+                        registered.add(fpath_str)
+                        mime, _ = mimetypes.guess_type(fpath_str)
+                        try:
+                            self.create_deliverable(
+                                task_id=task_id, being_id=being_id,
+                                filename=fname, file_type=mime or "file",
+                                file_path=fpath_str,
+                                url=f"/api/mc/deliverables/file?path={fpath_str}",
+                                line_count=0, byte_size=f.stat().st_size,
+                                session_id=session_id,
+                            )
+                            log.info("[AUTO-DELIVERABLE] Workspace scan registered %s", fname)
+                        except Exception as exc:
+                            log.debug("Failed to auto-register %s: %s", fname, exc)
 
     def __init__(
         self,
@@ -1308,6 +1349,13 @@ class DashboardService:
         if self._is_internal_file({"filename": filename, "file_path": file_path, "file_type": file_type}):
             log.debug("Skipping internal file as deliverable: %s", filename)
             return {}
+        if file_path and not url:
+            from pathlib import Path as _Path
+            resolved = _Path(file_path).resolve()
+            if resolved.is_file():
+                url = f"/api/mc/deliverables/file?path={resolved}"
+            else:
+                url = f"/api/mc/deliverables/file?path={file_path}"
         did = f"dlv-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
@@ -2520,9 +2568,21 @@ class DashboardService:
         if self._is_internal_file({"filename": d.get("title", ""), "file_path": d.get("path", ""), "file_type": d.get("type", "")}):
             return
         task_id = d.get("task_id")
+        tenant_id = d.get("tenant_id")
+        session_id = d.get("session_id")
+        row = self._artifact_output_row(d)
+        row["session_id"] = session_id or ""
+        if not tenant_id and task_id:
+            task_row = self.db.execute(
+                "SELECT tenant_id FROM project_tasks WHERE task_id = ?", (task_id,)
+            ).fetchone()
+            if task_row:
+                tenant_id = task_row["tenant_id"]
         if task_id:
-            self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
-            self._emit_event("deliverable_created", self._artifact_output_row(d))
+            self._emit_event("artifact_created", {"task_id": task_id, "artifact": d},
+                            tenant_id=tenant_id, session_id=session_id)
+            self._emit_event("deliverable_created", row,
+                            tenant_id=tenant_id, session_id=session_id)
 
     def get_being_skill_list(self, being_id: str) -> list[dict]:
         """Return skills available to a being with metadata."""
