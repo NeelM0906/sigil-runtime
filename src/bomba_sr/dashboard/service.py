@@ -262,6 +262,65 @@ class DashboardService:
             return True
         return False
 
+    _OUTPUT_EXTENSIONS = {
+        ".mp4", ".mp3", ".wav", ".avi", ".mov", ".webm",
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+        ".pdf", ".docx", ".xlsx", ".xls", ".csv", ".pptx",
+        ".html", ".json", ".xml", ".zip", ".tar", ".gz",
+    }
+
+    def _auto_register_tool_outputs(self, result: dict, task_id: str, being_id: str, session_id: str) -> None:
+        """Safety net: scan write/exec tool results for created files and register as deliverables.
+        Only fires if create_deliverable was NOT already called in this turn."""
+        import mimetypes
+        assistant = result.get("assistant")
+        if not isinstance(assistant, dict):
+            return
+        tool_calls = assistant.get("tool_calls", [])
+        # If being already called create_deliverable, skip
+        if any(isinstance(tc, dict) and tc.get("tool_name") == "create_deliverable" for tc in tool_calls):
+            return
+        registered = set()
+        for tc in tool_calls:
+            if not isinstance(tc, dict):
+                continue
+            tool_name = tc.get("tool_name", "")
+            args = tc.get("arguments") or {}
+            output = tc.get("output") or tc.get("result") or {}
+            if not isinstance(output, dict):
+                continue
+            fpath = ""
+            if tool_name == "write":
+                fpath = str(args.get("path", ""))
+            elif tool_name == "fal_video_generate":
+                fpath = str(output.get("saved_path") or output.get("path") or "")
+            if not fpath:
+                continue
+            fname = fpath.rsplit("/", 1)[-1] if "/" in fpath else fpath
+            ext = "." + fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+            if ext not in self._OUTPUT_EXTENSIONS:
+                continue
+            if self._is_internal_file({"filename": fname, "file_path": fpath}):
+                continue
+            if fpath in registered:
+                continue
+            registered.add(fpath)
+            mime, _ = mimetypes.guess_type(fpath)
+            try:
+                import os as _os
+                byte_size = _os.path.getsize(fpath) if _os.path.isfile(fpath) else 0
+                self.create_deliverable(
+                    task_id=task_id, being_id=being_id,
+                    filename=fname, file_type=mime or "file",
+                    file_path=fpath,
+                    url=f"/api/mc/deliverables/file?path={fpath}" if fpath.startswith("/") else "",
+                    line_count=0, byte_size=byte_size,
+                    session_id=session_id,
+                )
+                log.info("[AUTO-DELIVERABLE] Registered %s from %s tool call", fname, tool_name)
+            except Exception as exc:
+                log.debug("Failed to auto-register deliverable %s: %s", fname, exc)
+
     def __init__(
         self,
         db: RuntimeDB,
@@ -1882,6 +1941,10 @@ class DashboardService:
                     except Exception:
                         pass
 
+        # Safety net: auto-register files created by write/exec if being forgot create_deliverable
+        if task_id and isinstance(result, dict):
+            self._auto_register_tool_outputs(result, task_id, being_id, chat_session_id)
+
         # Transition task to done (or back to backlog on error)
         if task_id:
             if error_occurred:
@@ -2046,6 +2109,9 @@ class DashboardService:
                                 )
                             except Exception:
                                 pass
+
+                # Safety net: auto-register files from write/exec if being forgot create_deliverable
+                self._auto_register_tool_outputs(result, task_id, being_id, chat_session_id)
         except InterruptedError:
             reply = "[Task cancelled]"
             cancelled = True
