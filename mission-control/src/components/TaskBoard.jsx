@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { TASK_STATUSES, timeAgo } from '../store'
 import { useBeings } from '../context/BeingsContext'
 import { tasksApi, actiApi } from '../api'
-import { useSharedSSE } from '../context/SSEContext'
+import { useSharedSSE, SSEContext } from '../context/SSEContext'
 
 const STATUS_CONFIG = {
   backlog: { label: 'Backlog', color: 'text-text-muted', dot: 'bg-text-muted' },
@@ -10,6 +10,7 @@ const STATUS_CONFIG = {
   in_review: { label: 'In Review', color: 'text-accent-amber', dot: 'bg-accent-amber' },
   done: { label: 'Done', color: 'text-accent-green', dot: 'bg-accent-green' },
   cancelled: { label: 'Cancelled', color: 'text-text-muted', dot: 'bg-text-muted' },
+  failed: { label: 'Failed', color: 'text-accent-red', dot: 'bg-accent-red' },
 }
 
 const PRIORITY_CONFIG = {
@@ -735,7 +736,7 @@ function ArtifactList({ artifacts, getBeingById, onPreview }) {
   )
 }
 
-function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
+function TaskCard({ task, onDragStart, onClick, onCancel, getBeingById, onBeingClick }) {
   const prio = PRIORITY_CONFIG[task.priority]
   const isWorking = task.status === 'in_progress' && task.assignees.some(id => {
     const b = getBeingById(id)
@@ -772,6 +773,18 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
       <StepProgress steps={task.steps} created={task.created} />
       <ArtifactBadge artifacts={task.artifacts} />
 
+      {task.status === 'in_progress' && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onCancel(task.id) }}
+          className="text-[10px] text-red-400 hover:text-red-300 mt-1"
+        >
+          Cancel
+        </button>
+      )}
+      {task.status === 'failed' && (
+        <span className="text-[10px] text-red-400 italic">Timed out or failed</span>
+      )}
+
       <div className="flex items-center gap-1">
         {task.assignees.map(id => {
           const being = getBeingById(id)
@@ -797,7 +810,7 @@ function TaskCard({ task, onDragStart, onClick, getBeingById, onBeingClick }) {
 
 // ── Column ───────────────────────────────────────────────────
 
-function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, dragOverStatus, getBeingById, onBeingClick }) {
+function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, onCancel, dragOverStatus, getBeingById, onBeingClick }) {
   const config = STATUS_CONFIG[status]
   const isOver = dragOverStatus === status
 
@@ -820,7 +833,7 @@ function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, d
         isOver ? 'border-accent-blue/40 bg-accent-blue/5' : 'border-transparent'
       }`}>
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} onDragStart={onDragStart} onClick={onCardClick} getBeingById={getBeingById} onBeingClick={onBeingClick} />
+          <TaskCard key={task.id} task={task} onDragStart={onDragStart} onClick={onCardClick} onCancel={onCancel} getBeingById={getBeingById} onBeingClick={onBeingClick} />
         ))}
       </div>
     </div>
@@ -861,11 +874,12 @@ export function TaskBoard({ fullWidth = false }) {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
-  // Periodic polling every 15s for task board freshness
+  const sseCtx = useContext(SSEContext)
   useEffect(() => {
+    if (sseCtx?.connected) return
     const interval = setInterval(fetchTasks, 15000)
     return () => clearInterval(interval)
-  }, [fetchTasks])
+  }, [sseCtx?.connected, fetchTasks])
 
   // Real-time task updates via SSE
   const tasksRef = useRef(tasks)
@@ -1074,6 +1088,7 @@ export function TaskBoard({ fullWidth = false }) {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onCardClick={openDetail}
+              onCancel={handleCancel}
               dragOverStatus={dragOverStatus}
               getBeingById={getBeingById}
               onBeingClick={openBeingDetail}

@@ -1780,14 +1780,18 @@ class DashboardService:
                 include_representation=_inc_rep,
             )
             from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "300"))
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "600"))
             future = self._llm_pool.submit(self.bridge.handle_turn, req)
             try:
                 result = future.result(timeout=_timeout)
             except FuturesTimeout:
                 future.cancel()
                 log.warning("[LLM-TIMEOUT] handle_turn timed out for %s (%ds)", being_id, _timeout)
-                result = {"assistant": {"text": f"My response timed out after {_timeout} seconds. Try breaking the task into smaller steps."}}
+                result = {"assistant": {"text": (
+                    "This task took too long and was stopped after "
+                    f"{_timeout // 60} minutes. The work may be partially complete. "
+                    "Please try again with a simpler request, or break it into smaller steps."
+                )}, "stopped_reason": "timeout"}
                 error_occurred = True
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
@@ -1985,14 +1989,18 @@ class DashboardService:
                 include_representation=_inc_rep,
             )
             from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "600"))
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "1200"))
             future = self._llm_pool.submit(self.bridge.handle_turn, req)
             try:
                 result = future.result(timeout=_timeout)
             except FuturesTimeout:
                 future.cancel()
                 log.warning("[LLM-TIMEOUT] full_task handle_turn timed out for %s (%ds)", being_id, _timeout)
-                result = {"assistant": {"text": f"Task timed out after {_timeout} seconds. The task may have been too complex for a single turn."}}
+                result = {"assistant": {"text": (
+                    "This task took too long and was stopped after "
+                    f"{_timeout // 60} minutes. The work may be partially complete. "
+                    "Please try again with a simpler request, or break it into smaller steps."
+                )}, "stopped_reason": "timeout"}
                 error_occurred = True
             if isinstance(result, dict):
                 assistant = result.get("assistant")
@@ -2268,6 +2276,22 @@ class DashboardService:
                     "action": "updated",
                     "task": {"task_id": row["task_id"], "status": "failed"},
                 }, tenant_id=row.get("tenant_id"))
+                try:
+                    msg_row = self.db.execute(
+                        "SELECT session_id, sender FROM mc_messages WHERE task_ref = ? LIMIT 1",
+                        (row["task_id"],),
+                    ).fetchone()
+                    if msg_row and msg_row["session_id"]:
+                        self.create_message(
+                            sender="prime",
+                            content="A previous task timed out and has been marked as failed. If you still need this done, please send the request again.",
+                            targets=[msg_row["sender"]] if msg_row.get("sender") else [],
+                            msg_type="direct",
+                            session_id=msg_row["session_id"],
+                            tenant_id=row.get("tenant_id"),
+                        )
+                except Exception:
+                    pass
                 count += 1
             except Exception as exc:
                 log.warning("Failed to cleanup stale task %s: %s", row["task_id"][:8], exc)

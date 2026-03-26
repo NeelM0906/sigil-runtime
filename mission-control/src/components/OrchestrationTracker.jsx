@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSharedSSE } from '../context/SSEContext'
+import { useState, useEffect, useCallback, useContext } from 'react'
+import { useSharedSSE, SSEContext } from '../context/SSEContext'
 import { deliverablesApi } from '../api'
 import { useSession } from '../context/SessionContext'
 
@@ -195,11 +195,13 @@ export function OrchestrationTracker() {
       setDeliverables(items)
     }).catch(() => {})
   }, [activeSessionId])
+  const sseCtx = useContext(SSEContext)
   useEffect(() => { loadDeliverables() }, [loadDeliverables])
   useEffect(() => {
-    const interval = setInterval(loadDeliverables, 5000)
+    if (sseCtx?.connected) return
+    const interval = setInterval(loadDeliverables, 10000)
     return () => clearInterval(interval)
-  }, [loadDeliverables])
+  }, [sseCtx?.connected, loadDeliverables])
 
   useSharedSSE({
     orchestration_spawn(data) {

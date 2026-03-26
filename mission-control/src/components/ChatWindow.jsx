@@ -732,12 +732,10 @@ export function ChatWindow() {
   useEffect(() => { fetchMessages() }, [fetchMessages])
 
   useEffect(() => {
-    if (!awaitingReplySince && typingBeings.size === 0) return undefined
-    const interval = window.setInterval(() => {
-      fetchMessages()
-    }, 2000)
-    return () => window.clearInterval(interval)
-  }, [awaitingReplySince, typingBeings, fetchMessages])
+    if (sseCtx?.connected) return
+    const interval = setInterval(fetchMessages, 5000)
+    return () => clearInterval(interval)
+  }, [sseCtx?.connected, fetchMessages])
 
   useEffect(() => {
     const onFocus = () => { fetchMessages() }
