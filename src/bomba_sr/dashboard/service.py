@@ -1623,8 +1623,8 @@ class DashboardService:
         being = self.get_being(being_id) or {}
         being_type = being.get("type", "")
 
-        # Voice agents are not chat-routable -- they use Bland.ai
-        if being_type == TYPE_VOICE_AGENT:
+        # Voice agents are not chat-routable (removed but guard remains)
+        if being_type == "voice":
             self.create_message(
                 sender=being_id,
                 content=f"[{being.get('name', being_id)} is a voice agent — use the Voice panel to trigger calls]",
@@ -3184,25 +3184,8 @@ class DashboardService:
         except Exception:
             pass
 
-        # ── 6c. ACT-I being detail (for type=acti beings) ─────────
+        # ── 6c. ACT-I being detail removed ──────────────────────
         acti_being = None
-        if being.get("type") == TYPE_ACTI:
-            try:
-                from bomba_sr.acti.loader import load_beings as _load_acti, SHARED_HEART_SKILLS as _HS
-                for ab in _load_acti():
-                    if ab["id"] == being_id:
-                        acti_being = {
-                            "acti_id": ab.get("acti_id", ""),
-                            "domain": ab.get("domain", ""),
-                            "positions": ab.get("positions", 0),
-                            "levers": ab.get("levers", []),
-                            "clusters": ab.get("clusters", []),
-                            "shared_heart_skills": [s["name"] for s in _HS],
-                            "sister_id": ab.get("sister_id", ""),
-                        }
-                        break
-            except Exception:
-                pass
 
         # ── 7. Dream logs (sai-memory only) ───────────────────────
         dream_logs: list[dict] | None = None
