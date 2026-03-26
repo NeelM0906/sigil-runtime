@@ -29,6 +29,7 @@ TOOL_GROUPS: dict[str, set[str]] = {
     },
     "group:memory": {"memory_search", "memory_store"},
     "group:web": {"web_search", "web_fetch"},
+    "group:creative": {"video_generate", "video_generate_batch", "video_characters"},
     "group:sessions": {"sessions_list", "sessions_send", "sessions_spawn", "sessions_poll", "session_status"},
     "group:approvals": {"list_approvals", "decide_approval"},
     "group:skills": {"skill_create", "skill_update", "skill_list"},

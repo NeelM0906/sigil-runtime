@@ -138,6 +138,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
         "group:media",         # fal video generation + request tracking
+        "group:creative",      # video_generate, video_generate_batch, video_characters
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:colosseum",     # colosseum tools — Forge's core domain
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
