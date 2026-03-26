@@ -36,8 +36,76 @@ def _register_deliverable(arguments: dict[str, Any], context: ToolContext) -> di
     }
 
 
+def _list_deliverables(arguments: dict[str, Any], context: ToolContext) -> dict[str, Any]:
+    """List existing deliverables/outputs from previous tasks."""
+    import os
+    from bomba_sr.storage.factory import create_shared_db
+
+    search = str(arguments.get("search") or "").strip().lower()
+    limit = int(arguments.get("limit") or 20)
+
+    db = create_shared_db()
+    try:
+        if search:
+            rows = db.execute(
+                "SELECT id, filename, file_type, file_path, url, task_id, session_id, created_at "
+                "FROM mc_deliverables WHERE LOWER(filename) LIKE ? "
+                "ORDER BY created_at DESC LIMIT ?",
+                (f"%{search}%", limit),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                "SELECT id, filename, file_type, file_path, url, task_id, session_id, created_at "
+                "FROM mc_deliverables ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+
+        items = []
+        for r in rows:
+            d = dict(r)
+            fpath = d.get("file_path", "")
+            exists = os.path.isfile(fpath) if fpath else False
+            items.append({
+                "id": d["id"],
+                "filename": d["filename"],
+                "file_type": d["file_type"],
+                "file_path": fpath,
+                "url": d.get("url", ""),
+                "exists_on_disk": exists,
+                "created_at": d.get("created_at", ""),
+            })
+        return {"deliverables": items, "count": len(items)}
+    finally:
+        db.close()
+
+
 def builtin_deliverable_tools() -> list[ToolDefinition]:
     return [
+        ToolDefinition(
+            name="list_deliverables",
+            description=(
+                "Search and list existing deliverables/outputs from previous tasks. "
+                "Use when a user asks 'where are my files?', 'can I get the MP4s?', "
+                "'show me what was generated'. Returns file paths and download URLs."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string",
+                        "description": "Optional search term to filter by filename (e.g., 'mp4', 'video', 'lance')",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results to return (default 20)",
+                    },
+                },
+                "additionalProperties": False,
+            },
+            risk_level="low",
+            action_type="read",
+            execute=_list_deliverables,
+        ),
         ToolDefinition(
             name="create_deliverable",
             description=(
