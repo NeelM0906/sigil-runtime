@@ -15,6 +15,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Key dependencies:** `PyYAML`, `croniter`, `bcrypt`, `boto3`, `pypdf`, `openpyxl`, `xlrd`
 
 ## Build & Run Commands
+
+**CRITICAL: All commands MUST run from the project root** (`/Users/studio2/Projects/sigil-runtime`).
+Background tasks via `run_in_background` execute in a temp directory — always `cd` to project root first:
+```bash
+cd /Users/studio2/Projects/sigil-runtime && source .venv/bin/activate && ...
+```
+
 ```bash
 # Activate venv (REQUIRED)
 source .venv/bin/activate
@@ -25,7 +32,8 @@ PYTHONPATH=src python -m pytest tests/ -q
 # Run single test
 PYTHONPATH=src python -m pytest tests/test_file.py::TestClass::test_method -v
 
-# Start API server
+# Start API server (MUST be from project root)
+cd /Users/studio2/Projects/sigil-runtime
 set -a && source .env && set +a
 PYTHONPATH=src python scripts/run_api_server.py --host 0.0.0.0 --port 8787
 

@@ -648,8 +648,8 @@ export function ChatWindow() {
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  // Operator users default to recovery; admins broadcast to prime
-  const defaultTarget = user?.role === 'admin' ? [] : ['recovery']
+  // All users default to Prime — the general-purpose being
+  const defaultTarget = ['prime']
   const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
@@ -902,7 +902,7 @@ export function ChatWindow() {
     try {
       const formData = new FormData()
       for (const f of selectedFiles) formData.append('files', f)
-      formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
+      formData.append('being_id', targets[0] || defaultTarget[0] || 'prime')
       const stored = localStorage.getItem('mc_auth')
       const token = stored ? JSON.parse(stored).token : ''
       const res = await fetch('/api/mc/upload/batch', {
