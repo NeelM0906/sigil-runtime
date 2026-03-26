@@ -2801,6 +2801,11 @@ class DashboardService:
                 "created_at": art.get("created_at"),
             })
 
+        # ── Outputs: extract links/URLs from the reply text ──
+        import re as _re
+        reply_text = ""
+        assistant = result.get("assistant")
+
         # ── Outputs: explicitly registered deliverables via create_deliverable tool ──
         if isinstance(assistant, dict):
             for tc in assistant.get("tool_calls", []):
@@ -2819,11 +2824,6 @@ class DashboardService:
                             "file_size": result_data.get("file_size", 0),
                             "created_at": None,
                         })
-
-        # ── Outputs: extract links/URLs from the reply text ──
-        import re as _re
-        reply_text = ""
-        assistant = result.get("assistant")
         if isinstance(assistant, dict):
             reply_text = assistant.get("text", "")
         url_pattern = _re.compile(r'https?://[^\s<>\'")\]]+')
