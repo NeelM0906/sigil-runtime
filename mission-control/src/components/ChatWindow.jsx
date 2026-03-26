@@ -904,10 +904,18 @@ export function ChatWindow() {
         body: formData,
       })
       if (res.status === 401) { setUploadedFiles([]); return }
-      if (!res.ok) { console.error('Upload failed:', await res.json().catch(() => ({}))); return }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        console.error('Upload failed:', err)
+        alert(`Upload failed: ${err.detail || res.statusText}`)
+        return
+      }
       const data = await res.json()
       if (data.results?.length > 0) setUploadedFiles(prev => [...prev, ...data.results])
-      if (data.errors?.length > 0) console.warn('Some files failed:', data.errors)
+      if (data.errors?.length > 0) {
+        const names = data.errors.map(e => `${e.filename}: ${e.error}`).join('\n')
+        alert(`Some files failed:\n${names}`)
+      }
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {

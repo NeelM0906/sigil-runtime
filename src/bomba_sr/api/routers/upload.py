@@ -213,7 +213,13 @@ def upload_files_batch(
             if being_ws:
                 uploads_dir = being_ws / "uploads"
                 uploads_dir.mkdir(parents=True, exist_ok=True)
-                dest = uploads_dir / (file.filename or f"upload-{result['doc_id']}{ext}")
+                base_name = file.filename or f"upload-{result['doc_id']}{ext}"
+                dest = uploads_dir / base_name
+                # Avoid overwriting files with the same name
+                if dest.exists():
+                    stem = Path(base_name).stem
+                    suffix = Path(base_name).suffix
+                    dest = uploads_dir / f"{stem}-{result['doc_id'][:8]}{suffix}"
                 shutil.copy2(tmp_path, str(dest))
                 result["saved_to"] = str(dest)
 
