@@ -46,9 +46,6 @@ MC_PROJECT_NAME = "Mission Control"
 # Being types
 TYPE_SISTER = "sister"
 TYPE_RUNTIME = "runtime"       # Prime — the host runtime itself
-TYPE_VOICE_AGENT = "voice"     # Bland.ai voice agents — not chat-routable
-TYPE_SUBAGENT = "subagent"     # BD-PIP, BD-WC etc.
-TYPE_ACTI = "acti"             # ACT-I specialized beings
 
 log = logging.getLogger(__name__)
 
@@ -758,141 +755,9 @@ class DashboardService:
             except (json.JSONDecodeError, KeyError, OSError):
                 pass
 
-        # ── Tier 1b: Recovery sub-agents (BD-PIP, BD-WC) ─────────
-        bd_agents_dir = _PROJECT_ROOT / "workspaces" / "recovery" / "agents"
-        if bd_agents_dir.is_dir():
-            bd_configs = {
-                "sai-bd-pip": {
-                    "id": "bd-pip",
-                    "color": "#EF4444",
-                    "role": "PIP business development specialist",
-                },
-                "sai-bd-wc": {
-                    "id": "bd-wc",
-                    "color": "#F59E0B",
-                    "role": "Workers comp business development specialist",
-                },
-            }
-            for dirname, cfg in bd_configs.items():
-                agent_dir = bd_agents_dir / dirname
-                if not (agent_dir / "IDENTITY.md").exists():
-                    continue
-                soul = self._load_soul_safe(agent_dir)
-                beings.append({
-                    "id": cfg["id"],
-                    "name": soul.name if soul else dirname.upper(),
-                    "role": cfg["role"],
-                    "avatar": soul.emoji if soul else "🎯",
-                    "status": "offline",
-                    "description": cfg["role"],
-                    "type": TYPE_SUBAGENT,
-                    "tools": [],
-                    "skills": [],
-                    "color": cfg["color"],
-                    "model_id": "",
-                    "workspace": f"workspaces/recovery/agents/{dirname}",
-                    "tenant_id": "tenant-recovery",
-                    "auto_start": False,
-                })
+        # ── Tier 1b: Sub-agents removed ─────────────────────────
 
-        # ── Tier 2: Voice agents from Bland configs ───────────────
-        configs_dir = _PROJECT_ROOT / "workspaces" / "prime" / "configs"
-        if configs_dir.is_dir():
-            voice_configs = {
-                "callie-sean-config.json": {
-                    "id": "callie",
-                    "name": "Callie",
-                    "avatar": "📞",
-                    "color": "#EC4899",
-                    "role": "Voice agent — Sean's dedicated Bland.ai assistant",
-                },
-                "athena-bella-hoi-config.json": {
-                    "id": "athena-hoi",
-                    "name": "Athena (HOI)",
-                    "avatar": "🎙️",
-                    "color": "#6366F1",
-                    "role": "Voice agent — Heart of Influence Bella pathway",
-                },
-                "athena-leadership-config.json": {
-                    "id": "athena-leadership",
-                    "name": "Athena (Leadership)",
-                    "avatar": "🎙️",
-                    "color": "#7C3AED",
-                    "role": "Voice agent — Leadership pathway",
-                },
-                "mylo-template.json": {
-                    "id": "mylo",
-                    "name": "Mylo",
-                    "avatar": "🎤",
-                    "color": "#14B8A6",
-                    "role": "Voice agent — Template configuration",
-                },
-            }
-            for filename, cfg in voice_configs.items():
-                config_path = configs_dir / filename
-                if not config_path.exists():
-                    continue
-                try:
-                    bland_data = json.loads(config_path.read_text(encoding="utf-8"))
-                    agent_block = bland_data.get("agent", bland_data)
-                    agent_id = agent_block.get("agent_id", "")
-                except (json.JSONDecodeError, OSError):
-                    agent_id = ""
-
-                beings.append({
-                    "id": cfg["id"],
-                    "name": cfg["name"],
-                    "role": cfg["role"],
-                    "avatar": cfg["avatar"],
-                    "status": "offline",
-                    "description": cfg["role"],
-                    "type": TYPE_VOICE_AGENT,
-                    "tools": [],
-                    "skills": ["voice_call"],
-                    "color": cfg["color"],
-                    "model_id": "",
-                    "workspace": "",
-                    "tenant_id": "",
-                    "auto_start": False,
-                    "agent_id": agent_id,
-                })
-
-        # ── Tier 3: ACT-I specialized beings ──────────────────────
-        try:
-            from bomba_sr.acti.loader import load_beings as load_acti_beings, SHARED_HEART_SKILLS as _ACTI_HEART
-
-            # Build a lookup for sister tenant_id/workspace/color/model from already-loaded beings
-            sister_lookup: dict[str, dict] = {}
-            for b in beings:
-                if b.get("type") == TYPE_SISTER:
-                    sister_lookup[b["id"]] = b
-
-            acti_beings = load_acti_beings()
-            for ab in acti_beings:
-                # Skip apex beings (Prime, Executive Assistant) — they're already loaded
-                if ab["id"] in ("sai-prime", "executive-assistant"):
-                    continue
-                sister_id = ab.get("sister_id", "")
-                parent = sister_lookup.get(sister_id, {})
-                top_clusters = ab.get("clusters", [])[:3]
-                beings.append({
-                    "id": ab["id"],
-                    "name": ab["name"],
-                    "role": (ab.get("domain") or "")[:200],
-                    "avatar": "\U0001f3af",  # 🎯
-                    "status": "offline",
-                    "description": ab.get("domain", ""),
-                    "type": TYPE_ACTI,
-                    "tools": [],
-                    "skills": [s["name"] for s in _ACTI_HEART] + [c["name"] for c in top_clusters],
-                    "color": parent.get("color", self._color_for_sister(sister_id)),
-                    "model_id": parent.get("model_id", ""),
-                    "workspace": parent.get("workspace", f"workspaces/{sister_id}"),
-                    "tenant_id": parent.get("tenant_id", f"tenant-{sister_id}"),
-                    "auto_start": False,
-                })
-        except Exception:
-            pass  # ACT-I data not available — skip silently
+        # ── Voice agents and ACT-I beings removed ─────────────────
 
         # ── Upsert all beings ─────────────────────────────────────
         now = self._now()
