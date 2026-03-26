@@ -923,8 +923,11 @@ export function ChatWindow() {
     }
   }
 
+  const [sending, setSending] = useState(false)
   const handleSend = async () => {
+    if (sending) return
     if (!input.trim() && uploadedFiles.length === 0) return
+    setSending(true)
 
     // Prepend file context tags if files are attached
     let content = input.trim()
@@ -978,6 +981,8 @@ export function ChatWindow() {
     } catch (err) {
       console.error('Failed to send message:', err)
       setAwaitingReplySince(null)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -1212,10 +1217,10 @@ export function ChatWindow() {
           </button>
           <button
             onClick={handleSend}
-            disabled={!input.trim() && uploadedFiles.length === 0}
+            disabled={sending || (!input.trim() && uploadedFiles.length === 0)}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            Send
+            {sending ? 'Sending...' : 'Send'}
           </button>
         </div>
 
