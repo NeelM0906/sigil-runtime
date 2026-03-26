@@ -5,8 +5,10 @@ import { useAuth } from './AuthContext'
 
 const BeingsContext = createContext(null)
 
-// Operators only see these beings. Admins see all.
+// Operators only see these beings. Admins see all core beings.
 const OPERATOR_ALLOWED_BEINGS = new Set(['prime', 'recovery'])
+// These types are hidden from ALL users
+const HIDDEN_TYPES = new Set(['voice', 'subagent', 'acti'])
 
 export function BeingsProvider({ children }) {
   const [allBeings, setAllBeings] = useState([])
@@ -40,10 +42,11 @@ export function BeingsProvider({ children }) {
     },
   })
 
-  // Role-based filtering: operators see only prime + recovery
+  // Filter: hide voice/subagent/acti from ALL users, then role-based
   const beings = useMemo(() => {
-    if (user?.role === 'admin') return allBeings
-    return allBeings.filter(b => OPERATOR_ALLOWED_BEINGS.has(b.id))
+    const visible = allBeings.filter(b => !HIDDEN_TYPES.has(b.type))
+    if (user?.role === 'admin') return visible
+    return visible.filter(b => OPERATOR_ALLOWED_BEINGS.has(b.id))
   }, [allBeings, user?.role])
 
   const getBeingById = useCallback((id) => {

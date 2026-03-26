@@ -24,13 +24,10 @@ const TYPE_BADGES = {
   custom: { label: 'CUSTOM', color: 'text-text-muted bg-bg-hover border-border' },
 }
 
-// Section config: SAI at the top, sisters under her, then voice and sub-agents
+// Section config: core beings only
 const SECTIONS = [
   { key: 'sai', label: 'SAI', dot: 'bg-accent-orange', types: ['runtime'] },
   { key: 'sisters', label: 'Sisters', dot: 'bg-accent-purple', types: ['sister'] },
-  { key: 'acti', label: 'ACT-I Beings', dot: 'bg-accent-cyan', types: ['acti'] },
-  { key: 'subagents', label: 'Sub-Agents', dot: 'bg-accent-amber', types: ['subagent'] },
-  { key: 'voice', label: 'Voice Agents', dot: 'bg-accent-pink', types: ['voice'] },
 ]
 
 function BeingCard({ being, isExpanded, onToggle, onOpenDetail }) {
@@ -168,9 +165,6 @@ export function BeingsRegistry({ compact = false }) {
               <option value="">All Types</option>
               <option value="runtime">Runtime</option>
               <option value="sister">Sisters</option>
-              <option value="acti">ACT-I Beings</option>
-              <option value="voice">Voice Agents</option>
-              <option value="subagent">Sub-Agents</option>
             </select>
           )}
           <span className="text-[10px] text-text-muted font-mono">

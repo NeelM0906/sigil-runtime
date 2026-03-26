@@ -8,7 +8,7 @@ import { BeingsRegistry } from './components/BeingsRegistry'
 import { BeingDetail } from './components/BeingDetail'
 import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
-import { SubAgentTracker } from './components/SubAgentTracker'
+// SubAgentTracker removed — not needed
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { TeamPage } from './components/TeamPage'
 import { ProjectsHub } from './components/ProjectsHub'
@@ -46,7 +46,6 @@ function Dashboard() {
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
                 <CronPanel />
-                <SubAgentTracker />
               </div>
               <div className="lg:col-span-8">
                 <TaskBoard />
