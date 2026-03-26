@@ -280,6 +280,11 @@ class DashboardService:
         self._ws_manager = None  # Set from app lifespan
         self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
         self._session_locks: dict[str, threading.Lock] = {}  # session_id -> serialize being calls
+        from concurrent.futures import ThreadPoolExecutor
+        self._llm_pool = ThreadPoolExecutor(
+            max_workers=int(os.getenv("BOMBA_MAX_CONCURRENT_LLM", "5")),
+            thread_name_prefix="llm",
+        )
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -1490,13 +1495,26 @@ class DashboardService:
         lock = self._get_session_lock(chat_session_id) if chat_session_id else None
 
         def _run():
-            if lock:
-                with lock:
+            try:
+                if lock:
+                    with lock:
+                        self._route_to_being_sync(being_id, content, sender, chat_session_id)
+                else:
                     self._route_to_being_sync(being_id, content, sender, chat_session_id)
-            else:
-                self._route_to_being_sync(being_id, content, sender, chat_session_id)
+            except Exception as exc:
+                log.exception("[ROUTE-FAIL] route_to_being failed for %s in session %s", being_id, chat_session_id[:12])
+                try:
+                    self.create_message(
+                        sender=being_id,
+                        content=f"I encountered an error processing your message. Please try again.\n\nError: {str(exc)[:200]}",
+                        targets=[sender],
+                        msg_type="direct",
+                        session_id=chat_session_id,
+                    )
+                except Exception:
+                    pass
 
-        t = threading.Thread(target=_run, daemon=True, name=f"route-{being_id}")
+        t = threading.Thread(target=_run, daemon=True, name=f"route-{being_id}-{chat_session_id[:8]}")
         t.start()
 
     @staticmethod
@@ -1770,7 +1788,15 @@ class DashboardService:
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            result = self.bridge.handle_turn(req)
+            from concurrent.futures import TimeoutError as FuturesTimeout
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "180"))
+            future = self._llm_pool.submit(self.bridge.handle_turn, req)
+            try:
+                result = future.result(timeout=_timeout)
+            except FuturesTimeout:
+                future.cancel()
+                log.warning("[LLM-TIMEOUT] handle_turn timed out for %s (%ds)", being_id, _timeout)
+                result = {"assistant": {"text": f"My response timed out after {_timeout} seconds. Try breaking the task into smaller steps."}}
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
             msg_metadata: dict | None = None
@@ -1956,7 +1982,15 @@ class DashboardService:
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            result = self.bridge.handle_turn(req)
+            from concurrent.futures import TimeoutError as FuturesTimeout
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "300"))
+            future = self._llm_pool.submit(self.bridge.handle_turn, req)
+            try:
+                result = future.result(timeout=_timeout)
+            except FuturesTimeout:
+                future.cancel()
+                log.warning("[LLM-TIMEOUT] full_task handle_turn timed out for %s (%ds)", being_id, _timeout)
+                result = {"assistant": {"text": f"Task timed out after {_timeout} seconds. The task may have been too complex for a single turn."}}
             if isinstance(result, dict):
                 assistant = result.get("assistant")
                 if isinstance(assistant, dict):

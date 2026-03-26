@@ -146,7 +146,16 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok"}
+        import threading as _threading
+        active = _threading.active_count()
+        llm_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("llm-"))
+        route_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("route-"))
+        return {
+            "status": "ok" if active < 100 else "degraded",
+            "threads": active,
+            "llm_active": llm_threads,
+            "route_active": route_threads,
+        }
 
     # ── Serve mission-control frontend (SPA with fallback) ───────────
     MC_DIST = Path(__file__).resolve().parent.parent.parent.parent / "mission-control" / "dist"
