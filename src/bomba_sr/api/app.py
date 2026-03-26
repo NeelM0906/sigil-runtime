@@ -55,17 +55,17 @@ async def lifespan(app: FastAPI):
         logger.info("mission control: loaded %d beings, orchestration ready", loaded)
 
         # Cleanup tasks stuck in_progress from a previous crash/restart
-        stale = dashboard_svc.cleanup_stale_tasks(max_age_hours=2)
+        stale = dashboard_svc.cleanup_stale_tasks(max_age_hours=0.25)
         if stale:
             logger.info("cleaned up %d stale in_progress tasks on startup", stale)
 
-        # Periodic cleanup of stuck tasks (every hour)
+        # Periodic cleanup of stuck tasks (every 5 minutes)
         def _periodic_task_cleanup():
             import time as _time
             while True:
-                _time.sleep(3600)
+                _time.sleep(300)
                 try:
-                    dashboard_svc.cleanup_stale_tasks(max_age_hours=2)
+                    dashboard_svc.cleanup_stale_tasks(max_age_hours=0.25)
                 except Exception:
                     pass
 

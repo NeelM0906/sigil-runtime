@@ -1788,6 +1788,7 @@ class DashboardService:
                 future.cancel()
                 log.warning("[LLM-TIMEOUT] handle_turn timed out for %s (%ds)", being_id, _timeout)
                 result = {"assistant": {"text": f"My response timed out after {_timeout} seconds. Try breaking the task into smaller steps."}}
+                error_occurred = True
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
             msg_metadata: dict | None = None
@@ -1867,9 +1868,14 @@ class DashboardService:
             self._auto_register_tool_outputs(result, task_id, being_id, chat_session_id)
 
         # Transition task to done (or back to backlog on error)
+        stopped = ""
+        if isinstance(result, dict):
+            stopped = (result.get("assistant") or {}).get("stopped_reason") or ""
         if task_id:
             if error_occurred:
-                self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+                self._auto_update_task_status(task_id, "failed", tenant_id=sender_tenant_id)
+            elif stopped == "max_iterations":
+                pass  # Keep in_progress — user can say "continue"
             else:
                 self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
 
@@ -1973,7 +1979,7 @@ class DashboardService:
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
                 profile=TurnProfile.TASK_EXECUTION,
-                max_loop_iterations=50,
+                max_loop_iterations=75,
                 on_iteration=_on_loop_iteration if all_steps else None,
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
@@ -1987,6 +1993,7 @@ class DashboardService:
                 future.cancel()
                 log.warning("[LLM-TIMEOUT] full_task handle_turn timed out for %s (%ds)", being_id, _timeout)
                 result = {"assistant": {"text": f"Task timed out after {_timeout} seconds. The task may have been too complex for a single turn."}}
+                error_occurred = True
             if isinstance(result, dict):
                 assistant = result.get("assistant")
                 if isinstance(assistant, dict):
@@ -2051,10 +2058,15 @@ class DashboardService:
             }, session_id=chat_session_id)
 
         # Complete task
+        stopped = ""
+        if isinstance(result, dict):
+            stopped = (result.get("assistant") or {}).get("stopped_reason") or ""
         if cancelled:
             self._auto_update_task_status(task_id, "cancelled", tenant_id=sender_tenant_id)
         elif error_occurred:
-            self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+            self._auto_update_task_status(task_id, "failed", tenant_id=sender_tenant_id)
+        elif stopped == "max_iterations":
+            pass  # Keep in_progress — user can say "continue"
         else:
             for step in self.get_task_steps(task_id):
                 if step["status"] != "done":

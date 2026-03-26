@@ -36,13 +36,13 @@ def estimate_cost(model_id: str, input_tokens: int, output_tokens: int) -> float
 
 @dataclass(frozen=True)
 class LoopConfig:
-    max_iterations: int = 25
+    max_iterations: int = 75
     max_tool_calls_per_iteration: int = 10
     token_budget_fraction: float = 0.7
     loop_detection_window: int = 5
     stop_on_approval_required: bool = True
-    budget_limit_usd: float = 2.0
-    budget_hard_stop_pct: float = 0.9
+    budget_limit_usd: float = 50.0
+    budget_hard_stop_pct: float = 0.95
     parallel_read_tools: bool = True
     max_parallel_workers: int = 4
     progress_callback: Any = None
@@ -250,6 +250,23 @@ class AgenticLoop:
                 state.stopped_reason = "loop_detected"
                 break
         else:
+            # Reached max iterations — append a continuation message so the
+            # user knows they can say "continue" to resume.
+            tool_calls_made = len(state.tool_calls_history)
+            summary = (
+                f"\n\n---\n"
+                f"I've reached my processing limit for this turn "
+                f"({state.iteration} iterations, {tool_calls_made} tool calls). "
+                f"Here's where I am so far. "
+                f"Say **'continue'** and I'll pick up where I left off."
+            )
+            if state.final_text:
+                state.final_text += summary
+            else:
+                state.final_text = (
+                    f"I've been working on this task for {state.iteration} iterations "
+                    f"and need to pause.{summary}"
+                )
             state.stopped_reason = "max_iterations"
 
         # ── Hallucination detection: completion claims with 0 tool calls ──
