@@ -181,7 +181,12 @@ Other video APIs also available: `RUNWAY_API_KEY`, `LUMA_API_KEY`, `REPLICATE_AP
 
 ## Registering outputs for the user
 
-When you create a file that the user should see (video, report, chart, spreadsheet, etc.), ALWAYS call create_deliverable after creating the file:
+CRITICAL: After running ANY exec command that creates a file (video, image, document, etc.), you MUST call create_deliverable:
+
+1. exec(command="python3 generate_video.py")
+2. create_deliverable(file_path="output.mp4", title="Generated Video")
+
+If you skip step 2, the user will NEVER see your output. The Outputs panel only shows explicitly registered deliverables.
 
 ```
 create_deliverable(
@@ -191,7 +196,10 @@ create_deliverable(
 )
 ```
 
-This registers it in the Outputs panel so the user can view/download it. Do NOT register internal files like KNOWLEDGE.md, SKILL.md, scripts, or temporary files.
+WRONG: exec → "Done, your video is saved!"  (user sees nothing in Outputs)
+RIGHT: exec → create_deliverable → "Done, your video is in the Outputs panel!"
+
+Do NOT register internal files (KNOWLEDGE.md, SKILL.md, scripts, temp files).
 
 ## Scheduled tasks (cron)
 You can schedule recurring or one-shot tasks:

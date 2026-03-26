@@ -197,7 +197,7 @@ export function OrchestrationTracker() {
   }, [activeSessionId])
   useEffect(() => { loadDeliverables() }, [loadDeliverables])
   useEffect(() => {
-    const interval = setInterval(loadDeliverables, 20000)
+    const interval = setInterval(loadDeliverables, 5000)
     return () => clearInterval(interval)
   }, [loadDeliverables])
 
@@ -216,10 +216,16 @@ export function OrchestrationTracker() {
       })
     },
     deliverable_created(data) {
+      if (data.session_id && data.session_id !== activeSessionId) return
       setDeliverables(prev => {
         if (prev.some(d => d.id === data.id)) return prev
         return [data, ...prev]
       })
+    },
+    being_typing(data) {
+      if (!data.active) {
+        setTimeout(loadDeliverables, 1000)
+      }
     },
   })
 

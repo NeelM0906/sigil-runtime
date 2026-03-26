@@ -1318,7 +1318,14 @@ class DashboardService:
         )
         row = self.db.execute("SELECT * FROM mc_deliverables WHERE id = ?", (did,)).fetchone()
         d = dict(row)
-        self._emit_event("deliverable_created", d)
+        task_tenant = None
+        if task_id:
+            task_row = self.db.execute(
+                "SELECT tenant_id FROM project_tasks WHERE task_id = ?", (task_id,)
+            ).fetchone()
+            if task_row:
+                task_tenant = task_row["tenant_id"]
+        self._emit_event("deliverable_created", d, tenant_id=task_tenant, session_id=session_id)
         return d
 
     @staticmethod
@@ -1780,6 +1787,7 @@ class DashboardService:
                 msg_type="direct",
                 task_ref=task_id,
                 session_id=chat_session_id,
+                tenant_id=sender_tenant_id,
             )
 
             self._execute_full_task_background(
@@ -1960,6 +1968,7 @@ class DashboardService:
             task_ref=task_id,
             session_id=chat_session_id,
             metadata=msg_metadata,
+            tenant_id=sender_tenant_id,
         )
 
     def _execute_full_task_background(
@@ -2148,7 +2157,18 @@ class DashboardService:
             task_ref=task_id,
             session_id=chat_session_id,
             metadata=msg_metadata,
+            tenant_id=sender_tenant_id,
         )
+
+        # Verify the response was stored
+        if chat_session_id:
+            verify = self.db.execute(
+                "SELECT COUNT(*) as cnt FROM mc_messages WHERE session_id = ? AND sender = ?",
+                (chat_session_id, being_id),
+            ).fetchone()
+            if verify:
+                log.info("[FULL-TASK-DONE] %s in %s: %d total messages from being",
+                         being_id, chat_session_id[:12], verify["cnt"])
 
     def init_orchestration(self, project_svc: Any) -> None:
         """Initialize the orchestration engine. Call after bridge + project_svc are set."""
