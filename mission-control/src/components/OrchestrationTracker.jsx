@@ -216,7 +216,9 @@ export function OrchestrationTracker() {
       })
     },
     deliverable_created(data) {
-      if (data.session_id && data.session_id !== activeSessionId) return
+      if (!activeSessionId) return
+      if (!data.session_id) return
+      if (data.session_id !== activeSessionId) return
       setDeliverables(prev => {
         if (prev.some(d => d.id === data.id)) return prev
         return [data, ...prev]

@@ -782,7 +782,8 @@ export function ChatWindow() {
   // SSE: incoming LLM responses and system messages arrive here
   useSharedSSE({
     chat_message(data) {
-      if (data.sender === 'user') return
+      // Skip own messages (sender is user's UUID, not the string "user")
+      if (data.sender === user?.user_id) return
       setTypingBeings(prev => {
         const next = new Map(prev)
         next.delete(data.sender)
