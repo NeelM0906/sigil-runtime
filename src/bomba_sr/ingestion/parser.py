@@ -62,6 +62,26 @@ def _extract_pdf(file_path: Path, byte_size: int) -> dict:
         text = "\n\n".join(pages)
     except Exception as exc:
         log.debug("pypdf extraction failed: %s", exc)
+
+    # OCR fallback for scanned PDFs (no embedded text)
+    if not text.strip():
+        try:
+            from pdf2image import convert_from_bytes
+            import pytesseract
+            images = convert_from_bytes(raw_bytes, dpi=200, first_page=1, last_page=20)
+            ocr_pages = []
+            for img in images:
+                ocr_text = pytesseract.image_to_string(img, lang="eng")
+                if ocr_text.strip():
+                    ocr_pages.append(ocr_text.strip())
+            if ocr_pages:
+                text = "\n\n".join(ocr_pages)
+                log.info("OCR extracted %d chars from %d pages of %s", len(text), len(ocr_pages), file_path.name)
+        except ImportError:
+            log.debug("OCR not available (install pytesseract + pdf2image)")
+        except Exception as exc:
+            log.debug("OCR failed for %s: %s", file_path.name, exc)
+
     return {
         "text": text,
         "format": "pdf",
