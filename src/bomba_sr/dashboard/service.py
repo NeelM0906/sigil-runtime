@@ -1585,15 +1585,11 @@ class DashboardService:
             classification,
         )
 
-        # ── Orchestration intercept: full_task to Prime triggers multi-being orchestration ──
-        if (
-            classification == "full_task"
-            and being_id == "prime"
-            and self.orchestration_engine is not None
-            and self.project_service is not None
-        ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id, tenant_id=sender_tenant_id)
-            return
+        # ── Orchestration: disabled as forced intercept ──
+        # Prime runs on Opus 4.6 with full tool access (exec, web_search, sisters_message,
+        # sessions_spawn). It decides on its own when to delegate to other beings via those
+        # tools — no forced routing to the orchestration engine.
+        # The orchestration engine is still available for explicit API calls if needed.
 
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
