@@ -110,12 +110,9 @@ def builtin_exec_tools(default_max_output_chars: int = 50000) -> list[ToolDefini
         ToolDefinition(
             name="exec",
             description=(
-                "Execute a shell command on the host machine. Use this to run Python "
-                "scripts, install packages, process data, run git commands, or any "
-                "terminal operation. The command runs in the being's workspace directory. "
-                "Examples: 'python3 script.py', 'pip install pandas', 'ls -la uploads/', "
-                "'cat file.txt | grep keyword'. Output (stdout + stderr) is captured. "
-                "Timeout default: 120s."
+                "Execute a shell command in the workspace directory. "
+                "Use for running scripts, installing packages, processing data, or any terminal operation. "
+                "Output (stdout + stderr) is captured. Timeout default: 120s."
             ),
             parameters={
                 "type": "object",

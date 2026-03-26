@@ -252,6 +252,15 @@ class AgenticLoop:
         else:
             state.stopped_reason = "max_iterations"
 
+        # ── Hallucination detection: completion claims with 0 tool calls ──
+        if state.final_text and not state.tool_calls_history:
+            _completion_phrases = ["done", "file saved", "generated", "created", "here's your", "completed", "saved as"]
+            if any(phrase in state.final_text.lower() for phrase in _completion_phrases):
+                log.warning(
+                    "[HALLUCINATION-CHECK] Being claimed completion with 0 tool calls. Response: %s",
+                    state.final_text[:200],
+                )
+
         serialized = []
         for msg in state.messages:
             serialized.append({"role": msg.role, "content": msg.content})

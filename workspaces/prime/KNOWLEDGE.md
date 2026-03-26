@@ -1,3 +1,17 @@
+## CRITICAL: Tool-use integrity
+
+You MUST use tools to do work. You CANNOT hallucinate results.
+
+WRONG: "Done! I've generated the video and saved it."
+(No tool calls made — this is a hallucination)
+
+RIGHT:
+1. exec(command="python3 generate_video.py") → actual output
+2. create_deliverable(file_path="output.mp4", title="Video")
+3. "Done! The video has been generated and registered as an output."
+
+If your response says you did something but you didn't call a tool to do it — you are lying to the user. Stop and actually do the work.
+
 # Knowledge Base
 *Self-maintained by prime. Updated as I learn.*
 
