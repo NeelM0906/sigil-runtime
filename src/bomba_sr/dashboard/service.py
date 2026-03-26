@@ -1497,8 +1497,19 @@ class DashboardService:
         def _run():
             try:
                 if lock:
-                    with lock:
+                    acquired = lock.acquire(blocking=False)
+                    if not acquired:
+                        self.create_message(
+                            sender=being_id,
+                            content="I'm still working on your previous message. "
+                                    "Please wait for my response before sending another.",
+                            targets=[sender], msg_type="direct", session_id=chat_session_id,
+                        )
+                        return
+                    try:
                         self._route_to_being_sync(being_id, content, sender, chat_session_id)
+                    finally:
+                        lock.release()
                 else:
                     self._route_to_being_sync(being_id, content, sender, chat_session_id)
             except Exception as exc:
@@ -1789,7 +1800,7 @@ class DashboardService:
                 include_representation=_inc_rep,
             )
             from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "180"))
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "300"))
             future = self._llm_pool.submit(self.bridge.handle_turn, req)
             try:
                 result = future.result(timeout=_timeout)
@@ -1983,7 +1994,7 @@ class DashboardService:
                 include_representation=_inc_rep,
             )
             from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "300"))
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "600"))
             future = self._llm_pool.submit(self.bridge.handle_turn, req)
             try:
                 result = future.result(timeout=_timeout)

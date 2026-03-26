@@ -667,6 +667,13 @@ export function ChatWindow() {
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
+  // Safety timeout: unlock input after 5 min if response never arrives
+  useEffect(() => {
+    if (!awaitingReplySince) return
+    const timeout = setTimeout(() => setAwaitingReplySince(null), 300000)
+    return () => clearTimeout(timeout)
+  }, [awaitingReplySince])
+
   // Subscribe to WS events for the active session (enables shared session delivery)
   const sseCtx = useContext(SSEContext)
   useEffect(() => {
@@ -1190,7 +1197,8 @@ export function ChatWindow() {
             value={input}
             onChange={(e) => { handleInputChange(e); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px' }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleKeyDown(e) } else { handleKeyDown(e) } }}
-            placeholder="Message... (@ to mention a being, Shift+Enter for newline)"
+            disabled={sending || !!awaitingReplySince}
+            placeholder={awaitingReplySince ? "Waiting for response..." : "Message... (@ to mention a being, Shift+Enter for newline)"}
             rows={1}
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors resize-none overflow-hidden"
             style={{ minHeight: '38px', maxHeight: '200px' }}
@@ -1217,10 +1225,10 @@ export function ChatWindow() {
           </button>
           <button
             onClick={handleSend}
-            disabled={sending || (!input.trim() && uploadedFiles.length === 0)}
+            disabled={sending || !!awaitingReplySince || (!input.trim() && uploadedFiles.length === 0)}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            {sending ? 'Sending...' : 'Send'}
+            {sending ? 'Sending...' : awaitingReplySince ? 'Waiting...' : 'Send'}
           </button>
         </div>
 
