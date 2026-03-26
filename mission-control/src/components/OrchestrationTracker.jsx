@@ -183,9 +183,7 @@ function SessionHeader({ name, activeCount, totalCount }) {
 // ── Main tracker ─────────────────────────────────────────────
 
 export function OrchestrationTracker() {
-  const [spawns, setSpawns] = useState([])
   const [deliverables, setDeliverables] = useState([])
-  const [activeSection, setActiveSection] = useState('agents')
   const { activeSessionId } = useSession()
 
   // Load deliverables scoped to active session
@@ -204,19 +202,6 @@ export function OrchestrationTracker() {
   }, [sseCtx?.connected, loadDeliverables])
 
   useSharedSSE({
-    orchestration_spawn(data) {
-      setSpawns(prev => {
-        const key = `${data.task_id}:${data.being_id}`
-        const idx = prev.findIndex(s => s._key === key)
-        const entry = { ...data, _key: key, _ts: Date.now() }
-        if (idx >= 0) {
-          const updated = [...prev]
-          updated[idx] = entry
-          return updated
-        }
-        return [...prev, entry]
-      })
-    },
     deliverable_created(data) {
       if (!activeSessionId) return
       if (!data.session_id) return
@@ -233,120 +218,30 @@ export function OrchestrationTracker() {
     },
   })
 
-  const active = spawns.filter(s => s.status === 'spawning')
-
-  // Group agents by session
-  const sessionIds = [...new Set(spawns.map(s => s.session_id || 'general'))]
-  const sessionGroups = sessionIds.map(sid => {
-    const items = spawns.filter(s => (s.session_id || 'general') === sid)
-    const name = items[0]?.session_name || (sid === 'general' ? 'General' : sid.slice(0, 12))
-    const activeCount = items.filter(s => s.status === 'spawning').length
-    return { sid, name, items, activeCount }
-  })
-
   return (
     <div className="bg-bg-secondary border border-border rounded-lg flex flex-col" style={{ maxHeight: 'calc(100vh - 100px)' }}>
-      {/* Tab header */}
-      <div className="flex items-center border-b border-border shrink-0">
-        <button
-          onClick={() => setActiveSection('agents')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-            activeSection === 'agents'
-              ? 'text-text-primary border-b-2 border-accent-blue'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full ${active.length > 0 ? 'bg-accent-blue animate-pulse' : 'bg-accent-green'}`} />
-          Agents
-          {spawns.length > 0 && (
-            <span className="text-[9px] font-mono ml-1 opacity-60">{spawns.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveSection('outputs')}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-            activeSection === 'outputs'
-              ? 'text-text-primary border-b-2 border-accent-purple'
-              : 'text-text-muted hover:text-text-secondary'
-          }`}
-        >
-          Outputs
-          {deliverables.length > 0 && (
-            <span className="text-[9px] font-mono ml-1 text-accent-purple">{deliverables.length}</span>
-          )}
-        </button>
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-primary">Outputs</span>
+        {deliverables.length > 0 && (
+          <span className="text-[9px] font-mono text-accent-purple">{deliverables.length}</span>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-
-        {/* ── Agents section ── */}
-        {activeSection === 'agents' && (
-          <>
-            {spawns.length === 0 && (
-              <div className="text-center py-8">
-                <div className="text-text-muted text-xs mb-1">No active agents</div>
-                <div className="text-text-muted text-[10px]">Send a task to see agents spawn here</div>
-              </div>
-            )}
-
-            {sessionGroups.map(({ sid, name, items, activeCount }) => (
-              <div key={sid}>
-                <SessionHeader
-                  name={name}
-                  activeCount={activeCount}
-                  totalCount={items.length}
-                />
-
-                {/* Progress bar */}
-                <div className="mx-1 mb-2 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-bg-primary overflow-hidden flex">
-                    {items.map(s => (
-                      <div
-                        key={s._key}
-                        className={`h-full transition-all duration-500 ${
-                          s.status === 'completed' ? 'bg-accent-green'
-                          : s.status === 'failed' ? 'bg-accent-red'
-                          : 'bg-accent-blue animate-pulse'
-                        }`}
-                        style={{ width: `${100 / items.length}%` }}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-[10px] text-text-muted font-mono">
-                    {items.filter(s => s.status !== 'spawning').length}/{items.length}
-                  </span>
-                </div>
-
-                {/* Spawn cards */}
-                <div className="flex flex-col gap-1.5">
-                  {items
-                    .sort((a, b) => (a.status === 'spawning' ? -1 : 1))
-                    .map(s => <SpawnCard key={s._key} spawn={s} />)
-                  }
-                </div>
-              </div>
-            ))}
-          </>
+        {deliverables.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-text-muted text-xs mb-1">No outputs yet</div>
+            <div className="text-text-muted text-[10px]">Files, videos, and documents will appear here</div>
+          </div>
         )}
 
-        {/* ── Outputs section ── */}
-        {activeSection === 'outputs' && (
-          <>
-            {deliverables.length === 0 && (
-              <div className="text-center py-8">
-                <div className="text-text-muted text-xs mb-1">No outputs yet</div>
-                <div className="text-text-muted text-[10px]">Files, websites, and documents will appear here</div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              {deliverables.map(d => (
-                <DeliverableCard key={d.id} item={d} />
-              ))}
-            </div>
-          </>
-        )}
+        <div className="flex flex-col gap-1.5">
+          {deliverables.map(d => (
+            <DeliverableCard key={d.id} item={d} />
+          ))}
+        </div>
       </div>
     </div>
   )
