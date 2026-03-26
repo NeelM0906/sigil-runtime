@@ -26,20 +26,23 @@ def ingest_to_memory(
     doc_id = uuid.uuid4().hex[:12]
     text = extracted.get("text") or ""
 
-    # Store full document as a working note
-    memory_store.append_working_note(
-        user_id=user_id,
-        session_id=f"upload-{doc_id}",
-        title=f"Uploaded: {filename}",
-        content=text[:50000],
-        tags=["upload", extracted.get("format", ""), filename],
-        confidence=1.0,
-        being_id=being_id,
-    )
+    # Store full document as a working note (skip if empty — scanned PDFs)
+    if text.strip():
+        memory_store.append_working_note(
+            user_id=user_id,
+            session_id=f"upload-{doc_id}",
+            title=f"Uploaded: {filename}",
+            content=text[:50000],
+            tags=["upload", extracted.get("format", ""), filename],
+            confidence=1.0,
+            being_id=being_id,
+        )
 
-    # Chunk and store as semantic memories
+    # Chunk and store as semantic memories (skip empty chunks)
     chunks = chunk_text(text)
     for i, chunk in enumerate(chunks):
+        if not chunk.strip():
+            continue
         consolidator.upsert(MemoryCandidate(
             user_id=f"{user_id}->prime->{being_id}",
             key=f"doc::{doc_id}::chunk-{i}",
