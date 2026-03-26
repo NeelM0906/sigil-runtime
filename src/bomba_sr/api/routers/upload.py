@@ -69,6 +69,7 @@ def upload_file(
         if not text and can_native:
             text = f"[Native document: {file.filename} — content readable by LLM via direct file access]"
             extracted["text"] = text
+            extracted["_is_native_placeholder"] = True
 
         # Get tenant's memory store
         runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime"))
@@ -100,10 +101,14 @@ def upload_file(
             shutil.copy2(tmp_path, str(dest))
             result["saved_to"] = str(dest)
 
-        # Background: embed into Pinecone
+        if extracted.get("_is_native_placeholder"):
+            result["text_extracted"] = False
+            result["note"] = "Scanned/image PDF — no text extracted. File saved for manual processing."
+
+        # Background: embed into Pinecone (skip native placeholders)
         pc_map = _load_tenant_pinecone_map()
         pc_cfg = pc_map.get(auth["tenant_id"], {})
-        if pc_cfg.get("index") and pc_cfg.get("namespace") and extracted.get("text"):
+        if pc_cfg.get("index") and pc_cfg.get("namespace") and extracted.get("text") and not extracted.get("_is_native_placeholder"):
             ingest_to_pinecone_background(
                 text=extracted["text"],
                 doc_id=result["doc_id"],
@@ -200,6 +205,7 @@ def upload_files_batch(
             if not text and can_native:
                 text = f"[Native document: {file.filename}]"
                 extracted["text"] = text
+                extracted["_is_native_placeholder"] = True
 
             result = ingest_to_memory(
                 extracted=extracted,
@@ -223,7 +229,11 @@ def upload_files_batch(
                 shutil.copy2(tmp_path, str(dest))
                 result["saved_to"] = str(dest)
 
-            if pc_cfg.get("index") and pc_cfg.get("namespace") and text:
+            if extracted.get("_is_native_placeholder"):
+                result["text_extracted"] = False
+                result["note"] = "Scanned/image PDF — no text extracted. File saved for manual processing."
+
+            if pc_cfg.get("index") and pc_cfg.get("namespace") and text and not extracted.get("_is_native_placeholder"):
                 ingest_to_pinecone_background(
                     text=text, doc_id=result["doc_id"],
                     tenant_id=tenant_id, being_id=being_id,
