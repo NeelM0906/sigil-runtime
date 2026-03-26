@@ -1470,8 +1470,10 @@ class DashboardService:
 
     def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "") -> None:
         """Route a message to a being via LLM in a background thread.
-        Serializes calls per session to prevent interleaving in shared sessions."""
+        Serializes calls per session to prevent interleaving in shared sessions.
+        Session lock has a hard timeout to prevent zombie threads."""
         lock = self._get_session_lock(chat_session_id) if chat_session_id else None
+        _lock_timeout = int(os.getenv("BOMBA_SESSION_LOCK_TIMEOUT", "1200"))  # 20 min max
 
         def _run():
             try:
@@ -1485,10 +1487,27 @@ class DashboardService:
                             targets=[sender], msg_type="direct", session_id=chat_session_id,
                         )
                         return
+                    # Use a timer to force-release the lock if _route_to_being_sync hangs
+                    _released = threading.Event()
+                    def _force_release():
+                        if not _released.is_set():
+                            try:
+                                lock.release()
+                            except RuntimeError:
+                                pass
+                            log.error("[LOCK-TIMEOUT] Force-released session lock for %s after %ds", chat_session_id[:12], _lock_timeout)
+                    watchdog = threading.Timer(_lock_timeout, _force_release)
+                    watchdog.daemon = True
+                    watchdog.start()
                     try:
                         self._route_to_being_sync(being_id, content, sender, chat_session_id)
                     finally:
-                        lock.release()
+                        _released.set()
+                        watchdog.cancel()
+                        try:
+                            lock.release()
+                        except RuntimeError:
+                            pass  # Already released by watchdog
                 else:
                     self._route_to_being_sync(being_id, content, sender, chat_session_id)
             except Exception as exc:
@@ -2315,20 +2334,28 @@ class DashboardService:
         if len(stripped) < 4 or _NOT_TASK_PATTERNS.match(stripped):
             return "not_task"
 
-        # LLM classification
+        # LLM classification (with timeout to prevent thread blocking)
         try:
             from bomba_sr.llm.providers import ChatMessage, provider_from_env
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FT
             provider = provider_from_env()
-            resp = provider.generate(
-                model=_CLASSIFY_MODEL,
-                messages=[
-                    ChatMessage(role="system", content=_CLASSIFY_SYSTEM_PROMPT),
-                    ChatMessage(
-                        role="user",
-                        content=_CLASSIFY_PROMPT_TEMPLATE.format(message=stripped[:500]),
-                    ),
-                ],
-            )
+            def _do_classify():
+                return provider.generate(
+                    model=_CLASSIFY_MODEL,
+                    messages=[
+                        ChatMessage(role="system", content=_CLASSIFY_SYSTEM_PROMPT),
+                        ChatMessage(
+                            role="user",
+                            content=_CLASSIFY_PROMPT_TEMPLATE.format(message=stripped[:500]),
+                        ),
+                    ],
+                )
+            with ThreadPoolExecutor(max_workers=1) as _ex:
+                try:
+                    resp = _ex.submit(_do_classify).result(timeout=15)
+                except _FT:
+                    log.warning("[CLASSIFY-TIMEOUT] Classification timed out after 15s, defaulting to light_task")
+                    return "light_task"
             payload = _extract_json(resp.text)
             if payload:
                 classification = payload.get("classification", "light_task")
