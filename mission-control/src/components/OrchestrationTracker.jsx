@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSharedSSE } from '../context/SSEContext'
 import { deliverablesApi } from '../api'
+import { useSession } from '../context/SessionContext'
 
 function authUrl(url) {
   if (!url) return url
@@ -185,14 +186,15 @@ export function OrchestrationTracker() {
   const [spawns, setSpawns] = useState([])
   const [deliverables, setDeliverables] = useState([])
   const [activeSection, setActiveSection] = useState('agents')
+  const { activeSessionId } = useSession()
 
-  // Load deliverables on mount + periodic refresh
+  // Load deliverables scoped to active session
   const loadDeliverables = useCallback(() => {
-    deliverablesApi.list().then(data => {
+    deliverablesApi.list(null, activeSessionId).then(data => {
       const items = Array.isArray(data) ? data : data?.deliverables || []
       setDeliverables(items)
     }).catch(() => {})
-  }, [])
+  }, [activeSessionId])
   useEffect(() => { loadDeliverables() }, [loadDeliverables])
   useEffect(() => {
     const interval = setInterval(loadDeliverables, 20000)

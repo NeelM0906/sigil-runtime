@@ -141,8 +141,11 @@ export const chatApi = {
 // ── Deliverables API ─────────────────────────────────────────
 
 export const deliverablesApi = {
-  list(taskId = null) {
-    const qs = taskId ? `?task_id=${taskId}` : ''
+  list(taskId = null, sessionId = null) {
+    const params = []
+    if (taskId) params.push(`task_id=${taskId}`)
+    if (sessionId) params.push(`session_id=${sessionId}`)
+    const qs = params.length ? `?${params.join('&')}` : ''
     return request(`/api/mc/deliverables${qs}`)
   },
 }

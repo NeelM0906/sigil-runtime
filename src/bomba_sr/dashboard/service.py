@@ -230,6 +230,38 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 class DashboardService:
     """Service layer for the Mission Control dashboard."""
 
+    _INTERNAL_FILE_PATTERNS = {
+        "KNOWLEDGE.md", "INDEX.md", "SKILL.md", "SOUL.md",
+        "IDENTITY.md", "HEARTBEAT.md", "MISSION.md", "PRIORITIES.md",
+        "FORMULA.md", "TEAM_CONTEXT.md", "REPRESENTATION.md", "VISION.md",
+        "CONTEXT_OFFLOAD_OPS.md", "DISCUSSION_CAPTURE_OPS.md",
+        "_meta.json", "README.md", "CLAUDE.md", ".DS_Store",
+    }
+    _INTERNAL_PATH_PREFIXES = (
+        "workspaces/", "./workspaces/", "skills/", "configs/",
+        ".runtime/", ".claude/",
+    )
+    _INTERNAL_FILE_TYPES = {
+        "ASSISTANT-CODE-SNIPPET", "assistant-code-snippet",
+    }
+
+    @classmethod
+    def _is_internal_file(cls, item: dict) -> bool:
+        """Return True if the item represents an internal workspace file."""
+        filename = str(item.get("filename") or item.get("file_name") or "")
+        path = str(item.get("file_path") or item.get("path") or "")
+        file_type = str(item.get("file_type") or item.get("type") or "").upper()
+
+        if filename in cls._INTERNAL_FILE_PATTERNS:
+            return True
+        if file_type in {ft.upper() for ft in cls._INTERNAL_FILE_TYPES}:
+            return True
+        if any(path.startswith(p) for p in cls._INTERNAL_PATH_PREFIXES):
+            return True
+        if filename.startswith(".") or filename.startswith("_"):
+            return True
+        return False
+
     def __init__(
         self,
         db: RuntimeDB,
@@ -449,6 +481,10 @@ class DashboardService:
         # Migration: add user_id to mc_deliverables
         _add_column("mc_deliverables", "user_id")
         self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
+        self.db.commit()
+
+        # Migration: add session_id to mc_deliverables for session-scoped outputs
+        _add_column("mc_deliverables", "session_id", default="")
         self.db.commit()
 
         # Migration: add tenant_id to mc_users
@@ -1203,14 +1239,18 @@ class DashboardService:
         being_id: str | None = None,
         line_count: int = 0,
         byte_size: int = 0,
+        session_id: str = "",
     ) -> dict:
+        if self._is_internal_file({"filename": filename, "file_path": file_path, "file_type": file_type}):
+            log.debug("Skipping internal file as deliverable: %s", filename)
+            return {}
         did = f"dlv-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
             """INSERT INTO mc_deliverables
-               (id, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (did, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, now),
+               (id, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, created_at, session_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (did, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, now, session_id),
         )
         row = self.db.execute("SELECT * FROM mc_deliverables WHERE id = ?", (did,)).fetchone()
         d = dict(row)
@@ -1259,6 +1299,7 @@ class DashboardService:
         ).fetchall()
         items = [dict(r) for r in rows]
         items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id, tenant_id=tenant_id))
+        items = [item for item in items if not self._is_internal_file(item)]
         return sorted(items, key=self._output_sort_key, reverse=True)
 
     def list_all_deliverables(self, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
@@ -1280,6 +1321,48 @@ class DashboardService:
                 )
             except Exception:
                 pass
+        items = [item for item in items if not self._is_internal_file(item)]
+        deduped: dict[str, dict] = {}
+        for item in sorted(items, key=self._output_sort_key, reverse=True):
+            key = str(item.get("id") or item.get("artifact_id") or uuid.uuid4().hex)
+            deduped.setdefault(key, item)
+        return list(deduped.values())[:limit]
+
+    def list_session_deliverables(self, session_id: str, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
+        """List deliverables scoped to a specific chat session."""
+        # Match deliverables that were explicitly tagged with this session_id,
+        # OR whose task_id was referenced in a message within this session.
+        rows = self.db.execute(
+            """SELECT DISTINCT d.* FROM mc_deliverables d
+            LEFT JOIN project_tasks t ON t.task_id = d.task_id
+            WHERE (d.session_id = ? OR d.task_id IN (
+                SELECT DISTINCT m.task_ref FROM mc_messages m
+                WHERE m.session_id = ? AND m.task_ref IS NOT NULL AND m.task_ref != ''
+            ))
+            AND (t.tenant_id = ? OR t.tenant_id IS NULL)
+            ORDER BY d.created_at DESC LIMIT ?""",
+            (session_id, session_id, tenant_id, limit),
+        ).fetchall()
+        items = [dict(r) for r in rows]
+        # Also include artifacts tied to tasks referenced in this session
+        task_ids_in_session = {r["task_id"] for r in rows}
+        msg_task_refs = self.db.execute(
+            "SELECT DISTINCT task_ref FROM mc_messages WHERE session_id = ? AND task_ref IS NOT NULL AND task_ref != ''",
+            (session_id,),
+        ).fetchall()
+        for ref_row in msg_task_refs:
+            tid = ref_row["task_ref"]
+            if tid not in task_ids_in_session:
+                task_ids_in_session.add(tid)
+        store = getattr(self, "_artifact_store", None)
+        if store:
+            for tid in task_ids_in_session:
+                try:
+                    for art in self.list_task_artifacts(tid, tenant_id=tenant_id):
+                        items.append(self._artifact_output_row(art) if "artifact_id" not in art else art)
+                except Exception:
+                    pass
+        items = [item for item in items if not self._is_internal_file(item)]
         deduped: dict[str, dict] = {}
         for item in sorted(items, key=self._output_sort_key, reverse=True):
             key = str(item.get("id") or item.get("artifact_id") or uuid.uuid4().hex)
@@ -1728,6 +1811,7 @@ class DashboardService:
                             url=f"/api/mc/artifacts/{aid}/download" if aid else "",
                             line_count=0,
                             byte_size=art.get("byte_size") or 0,
+                            session_id=chat_session_id,
                         )
                     else:
                         self._emit_event("deliverable_created", {
@@ -1737,6 +1821,7 @@ class DashboardService:
                             "url": f"/api/mc/artifacts/{aid}/download" if aid else "",
                             "byte_size": art.get("byte_size") or 0,
                             "being_id": being_id,
+                            "session_id": chat_session_id,
                         }, tenant_id=tenant_id)
                 except Exception as exc:
                     log.debug("Failed to register artifact as deliverable: %s", exc)
@@ -1874,6 +1959,7 @@ class DashboardService:
                             url=f"/api/mc/artifacts/{aid}/download" if aid else "",
                             line_count=0,
                             byte_size=art.get("byte_size") or 0,
+                            session_id=chat_session_id,
                         )
                     except Exception as exc:
                         log.debug("Failed to register artifact as deliverable: %s", exc)
@@ -2070,6 +2156,31 @@ class DashboardService:
         self._auto_update_task_status(task_id, "cancelled", tenant_id=tenant_id)
         return True
 
+    def cleanup_stale_tasks(self, max_age_hours: int = 2) -> int:
+        """Mark tasks as 'failed' if they've been in_progress longer than max_age_hours."""
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+        rows = self.db.execute(
+            "SELECT task_id, tenant_id FROM project_tasks WHERE status = 'in_progress' AND updated_at < ?",
+            (cutoff,),
+        ).fetchall()
+        count = 0
+        for row in rows:
+            try:
+                self.db.execute_commit(
+                    "UPDATE project_tasks SET status = 'failed', updated_at = ? WHERE task_id = ?",
+                    (self._now(), row["task_id"]),
+                )
+                self._emit_event("task_update", {
+                    "action": "updated",
+                    "task": {"task_id": row["task_id"], "status": "failed"},
+                }, tenant_id=row.get("tenant_id"))
+                count += 1
+            except Exception as exc:
+                log.warning("Failed to cleanup stale task %s: %s", row["task_id"][:8], exc)
+        if count:
+            log.info("Cleaned up %d stale in_progress tasks", count)
+        return count
+
     # ------------------------------------------------------------------
     # Task classification
     # ------------------------------------------------------------------
@@ -2237,6 +2348,8 @@ class DashboardService:
     def notify_artifact_created(self, record) -> None:
         """SSE notification when an artifact is created during task execution."""
         d = record.to_dict() if hasattr(record, "to_dict") else record
+        if self._is_internal_file({"filename": d.get("title", ""), "file_path": d.get("path", ""), "file_type": d.get("type", "")}):
+            return
         task_id = d.get("task_id")
         if task_id:
             self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
@@ -2725,6 +2838,8 @@ class DashboardService:
         if auto_retrieval and auto_retrieval.get("sources"):
             retrieval_sources = auto_retrieval["sources"]
             retrieval_latency = auto_retrieval.get("latency_ms", 0)
+
+        outputs = [o for o in outputs if not self._is_internal_file({"filename": o.get("title", ""), "file_path": o.get("path", ""), "file_type": o.get("type", "")})]
 
         if not outputs and not agents and not retrieval_sources:
             return None

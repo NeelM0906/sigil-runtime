@@ -14,6 +14,7 @@ import { TeamPage } from './components/TeamPage'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
+import { SessionProvider } from './context/SessionContext'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -34,6 +35,7 @@ function Dashboard() {
   const show = (tab) => activeTab === tab ? {} : { display: 'none' }
 
   return (
+    <SessionProvider>
     <SSEProvider>
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
@@ -82,6 +84,7 @@ function Dashboard() {
       </div>
     </BeingsProvider>
     </SSEProvider>
+    </SessionProvider>
   )
 }
 

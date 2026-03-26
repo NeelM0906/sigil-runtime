@@ -4,6 +4,7 @@ import { useBeings } from '../context/BeingsContext'
 import { useAuth } from '../context/AuthContext'
 import { chatApi, tasksApi, deliverablesApi, teamsApi } from '../api'
 import { useSharedSSE, SSEContext } from '../context/SSEContext'
+import { useSession } from '../context/SessionContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -658,23 +659,13 @@ export function ChatWindow() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Session state — persist active session across reloads
+  // Session state — shared via SessionContext so OrchestrationTracker can scope outputs
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState(() => {
-    try { return localStorage.getItem('mc_active_session') } catch { return null }
-  })
+  const { activeSessionId, setActiveSessionId } = useSession()
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
-
-  // Persist activeSessionId to localStorage
-  useEffect(() => {
-    try {
-      if (activeSessionId) localStorage.setItem('mc_active_session', activeSessionId)
-      else localStorage.removeItem('mc_active_session')
-    } catch { /* ignore */ }
-  }, [activeSessionId])
 
   // Subscribe to WS events for the active session (enables shared session delivery)
   const sseCtx = useContext(SSEContext)

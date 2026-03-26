@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +53,23 @@ async def lifespan(app: FastAPI):
         loaded = dashboard_svc.load_beings_from_configs()
         dashboard_svc.init_orchestration(project_svc)
         logger.info("mission control: loaded %d beings, orchestration ready", loaded)
+
+        # Cleanup tasks stuck in_progress from a previous crash/restart
+        stale = dashboard_svc.cleanup_stale_tasks(max_age_hours=2)
+        if stale:
+            logger.info("cleaned up %d stale in_progress tasks on startup", stale)
+
+        # Periodic cleanup of stuck tasks (every hour)
+        def _periodic_task_cleanup():
+            import time as _time
+            while True:
+                _time.sleep(3600)
+                try:
+                    dashboard_svc.cleanup_stale_tasks(max_age_hours=2)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_periodic_task_cleanup, daemon=True, name="task-cleanup").start()
     except Exception as exc:
         import traceback
         logger.warning("mission control init failed (%s), MC endpoints disabled", exc)
