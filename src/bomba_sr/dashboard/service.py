@@ -1826,6 +1826,25 @@ class DashboardService:
                 except Exception as exc:
                     log.debug("Failed to register artifact as deliverable: %s", exc)
 
+        # Register explicitly created deliverables from tool calls
+        if task_id and msg_metadata and isinstance(msg_metadata.get("outputs"), list):
+            for out in msg_metadata["outputs"]:
+                if out.get("type") == "file" and out.get("path"):
+                    try:
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=out.get("title") or out["path"].rsplit("/", 1)[-1],
+                            file_type=out.get("mime_type") or "file",
+                            file_path=out["path"],
+                            url=f"/api/mc/deliverables/file?path={out['path']}",
+                            line_count=0,
+                            byte_size=out.get("file_size", 0),
+                            session_id=chat_session_id,
+                        )
+                    except Exception:
+                        pass
+
         # Transition task to done (or back to backlog on error)
         if task_id:
             if error_occurred:
@@ -1963,6 +1982,25 @@ class DashboardService:
                         )
                     except Exception as exc:
                         log.debug("Failed to register artifact as deliverable: %s", exc)
+
+                # Register explicitly created deliverables from tool calls
+                if msg_metadata and isinstance(msg_metadata.get("outputs"), list):
+                    for out in msg_metadata["outputs"]:
+                        if out.get("type") == "file" and out.get("path"):
+                            try:
+                                self.create_deliverable(
+                                    task_id=task_id,
+                                    being_id=being_id,
+                                    filename=out.get("title") or out["path"].rsplit("/", 1)[-1],
+                                    file_type=out.get("mime_type") or "file",
+                                    file_path=out["path"],
+                                    url=f"/api/mc/deliverables/file?path={out['path']}",
+                                    line_count=0,
+                                    byte_size=out.get("file_size", 0),
+                                    session_id=chat_session_id,
+                                )
+                            except Exception:
+                                pass
         except InterruptedError:
             reply = "[Task cancelled]"
             cancelled = True
@@ -2762,6 +2800,25 @@ class DashboardService:
                 "path": art.get("path"),
                 "created_at": art.get("created_at"),
             })
+
+        # ── Outputs: explicitly registered deliverables via create_deliverable tool ──
+        if isinstance(assistant, dict):
+            for tc in assistant.get("tool_calls", []):
+                if not isinstance(tc, dict):
+                    continue
+                if tc.get("tool_name") == "create_deliverable":
+                    result_data = tc.get("output") or tc.get("result") or {}
+                    if isinstance(result_data, dict) and result_data.get("_is_deliverable"):
+                        outputs.append({
+                            "id": None,
+                            "type": "file",
+                            "title": result_data.get("title") or result_data.get("filename", "output"),
+                            "mime_type": result_data.get("mime_type"),
+                            "preview": result_data.get("description"),
+                            "path": result_data.get("file_path", ""),
+                            "file_size": result_data.get("file_size", 0),
+                            "created_at": None,
+                        })
 
         # ── Outputs: extract links/URLs from the reply text ──
         import re as _re

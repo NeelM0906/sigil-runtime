@@ -13,6 +13,16 @@ If you need to do something you don't have a specific tool for:
 NEVER say "I can't do that." You have terminal access — figure it out.
 NEVER hallucinate having a tool you don't have. Be honest, then build it.
 
+## Registering outputs for the user
+
+When you create a file the user should see (report, spreadsheet, document, etc.), call create_deliverable:
+
+```
+create_deliverable(file_path="path/to/report.pdf", title="Case Analysis Report")
+```
+
+This makes it appear in the Outputs panel for download. Only register user-facing work products, not internal files.
+
 ## Key Facts
 
 ### Full System Audit Completed (March 25, 2026)
@@ -26,21 +36,21 @@ NEVER hallucinate having a tool you don't have. Be honest, then build it.
 
 ## Domain Expertise
 
-### Pinecone Infrastructure State (March 26, 2026 — Audit #3, Latest)
+### Pinecone Infrastructure State (March 26, 2026 — Audit #4, Latest)
 - **18 total indexes, 17 have vectors** — only `uimira` is empty (0 vectors)
-- **Total ecosystem vectors: ~391,695** (up ~678 from previous audit)
+- **Total ecosystem vectors: ~391,891** (up ~196 from previous audit)
 - Top indexes by size:
-  - `uicontextualmemory`: 242,781 (+456 since last)
+  - `uicontextualmemory`: 242,976 (+195 since last)
   - `ublib2`: 82,915 ← MASTER KNOWLEDGE LIBRARY STABLE
-  - `athenacontextualmemory`: 21,614 (+59)
-  - `adamathenacontextualmemory`: 13,413 (+59)
-  - `miracontextualmemory`: 8,128 (+77)
-  - `saimemory`: 7,446 (+5)
+  - `athenacontextualmemory`: 21,614 (stable)
+  - `adamathenacontextualmemory`: 13,413 (stable)
+  - `miracontextualmemory`: 8,128 (stable)
+  - `saimemory`: 7,447 (+1)
   - `acti-judges`: 4,491 (stable)
-  - `basgeneralathenacontextualmemory`: 2,626 (+4)
+  - `basgeneralathenacontextualmemory`: 2,626 (stable)
   - `kumar-pfd`: 2,512 (stable)
-  - `baslawyerathenacontextualmemory`: 2,039 (+4)
-  - `hoiengagementathenamemory`: 1,686 (+4)
+  - `baslawyerathenacontextualmemory`: 2,039 (stable)
+  - `hoiengagementathenamemory`: 1,686 (stable)
   - `seancallieupdates`: 814 (stable)
   - `ariatelegrambeing`: 584 (stable)
   - `kumar-requirements`: 468 (stable)
@@ -48,10 +58,7 @@ NEVER hallucinate having a tool you don't have. Be honest, then build it.
   - `stratablue`: 32 (stable)
   - `012626bellavcalliememory`: 12 (stable)
   - `uimira`: 0
-- **Batch patterns detected:**
-  - Athena family: `athenacontextualmemory` and `adamathenacontextualmemory` both +59 — coordinated upload
-  - BAS+HOI cluster: general, lawyer, HOI all +4 — small coordinated batch
-  - `miracontextualmemory` +77 — active Mira usage
+- **Primary growth:** `uicontextualmemory` +195 — active Athena UI usage
 - Default namespace used by runtime: `longterm`
 - All indexes: 1536-dim, cosine metric
 - **8 indexes not yet documented for ownership:** adamathenacontextualmemory, miracontextualmemory, kumar-pfd, basgeneralathenacontextualmemory, baslawyerathenacontextualmemory, hoiengagementathenamemory, ariatelegrambeing, kumar-requirements
@@ -73,10 +80,9 @@ NEVER hallucinate having a tool you don't have. Be honest, then build it.
 - 66 files in `dream_logs/` (March 4 → March 25) — stable, no new growth
 - `recovery-task-system/` subproject with docs and templates
 - `skills/` — 1 skill installed (unblinded-translator)
-- **Missing:** INDEX.md, TEAM_CONTEXT.md (referenced but not present)
+- **Missing:** INDEX.md, TEAM_CONTEXT.
 
 ## Learned Patterns
 
 ### Task Board Creation Pattern (March 22, 2026)
-- The `project_list` returns projects indexed from the file system, but `task_create` requires projects registered via `project_create` in the runtime DB (tenant-scoped).
-- File-system-discovered projects (like `main-deliverables`) are NOT the same as runtime-registered projects — they fail with "project not found" on t
+- The `project_list` returns projects indexed from the file system, but `task_create` requires pro
