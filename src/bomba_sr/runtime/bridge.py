@@ -80,6 +80,7 @@ from bomba_sr.tools.builtin_browser import builtin_browser_tools
 from bomba_sr.tools.builtin_seo import builtin_seo_tools
 from bomba_sr.tools.builtin_deliverables import builtin_deliverable_tools
 from bomba_sr.tools.builtin_video import builtin_video_tools
+from bomba_sr.tools.builtin_pad import builtin_pad_tools
 
 logger = logging.getLogger(__name__)
 
@@ -2679,6 +2680,7 @@ class RuntimeBridge:
             tool_executor.register_many(builtin_fs_tools())
             tool_executor.register_many(builtin_deliverable_tools())
             tool_executor.register_many(builtin_video_tools())
+            tool_executor.register_many(builtin_pad_tools())
             tool_executor.register_many(
                 builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
             )

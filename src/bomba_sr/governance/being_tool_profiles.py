@@ -130,6 +130,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
         "group:creative",      # video_generate, video_generate_batch, video_characters
+        "group:pad",           # pad_query, pad_tables, pad_describe — Callagy PAD database (read-only)
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
         "group:skills",        # skill_create, skill_list, skill_update
         "group:sessions",      # sessions_list, sessions_spawn, sessions_poll
@@ -177,12 +178,11 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
-        "group:voice",         # voice_list_calls, voice_get_transcript, voice_make_call, voice_list_pathways
         "group:fs",            # read, write, edit, glob, grep, parse_document (for case files)
+        "group:pad",           # pad_query, pad_tables, pad_describe — Callagy PAD database (read-only)
         "group:knowledge",     # update_knowledge
-        "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
+        "group:sessions",      # sessions_spawn, sessions_poll
         "group:skills",        # skill_create, skill_update, skill_list
-        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
         "group:exec",          # exec, process — run scripts and shell commands
     )),
