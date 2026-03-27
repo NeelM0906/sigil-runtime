@@ -149,9 +149,12 @@ def get_task_orchestration(
     dashboard_svc=Depends(get_dashboard_svc),
     project_svc=Depends(get_project_svc),
 ):
-    task = dashboard_svc.get_task_with_orchestration(
-        project_svc, task_id, tenant_id=auth["tenant_id"],
-    )
+    try:
+        task = dashboard_svc.get_task_with_orchestration(
+            project_svc, task_id, tenant_id=auth["tenant_id"],
+        )
+    except (ValueError, KeyError):
+        raise HTTPException(404, f"Task not found: {task_id}")
     return {"task": task}
 
 
@@ -162,7 +165,10 @@ def get_task(
     dashboard_svc=Depends(get_dashboard_svc),
     project_svc=Depends(get_project_svc),
 ):
-    task = dashboard_svc.get_task(project_svc, task_id, tenant_id=auth["tenant_id"])
+    try:
+        task = dashboard_svc.get_task(project_svc, task_id, tenant_id=auth["tenant_id"])
+    except (ValueError, KeyError):
+        raise HTTPException(404, f"Task not found: {task_id}")
     return {"task": task}
 
 

@@ -122,7 +122,24 @@ def _expand_groups(*items: str) -> set[str]:
 # Sisters reference profiles by name via "tool_profile" in sisters.json.
 
 TOOL_PROFILES: dict[str, frozenset[str] | None] = {
-    # Full access (Prime and any unrestricted being)
+    # Prime — general-purpose agent with focused tool set
+    "prime": frozenset(_expand_groups(
+        "group:fs",            # read, write, edit, glob, grep, parse_document, create_deliverable, list_deliverables
+        "group:exec",          # exec, process
+        "group:memory",        # memory_search, memory_store
+        "group:web",           # web_search, web_fetch
+        "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
+        "group:creative",      # video_generate, video_generate_batch, video_characters
+        "group:pad",           # pad_query, pad_tables, pad_describe — Callagy PAD database (read-only)
+        "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
+        "group:skills",        # skill_create, skill_list, skill_update
+        "group:sessions",      # sessions_list, sessions_spawn, sessions_poll
+        "group:knowledge",     # update_knowledge
+        "group:team_context",  # update_team_context
+        "group:sisters",       # sisters_list, sisters_message, sisters_spawn, sisters_status, sisters_stop
+    )),
+
+    # Full access (any unrestricted being)
     "full": None,
 
     # Forge — creative + code + production
@@ -138,6 +155,7 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:knowledge",     # update_knowledge
         "group:sessions",      # sessions_spawn, sessions_poll, sessions_list
         "group:media",         # fal video generation + request tracking
+        "group:creative",      # video_generate, video_generate_batch, video_characters
         "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:colosseum",     # colosseum tools — Forge's core domain
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
@@ -160,13 +178,13 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
         "group:memory",        # memory_search, memory_store
         "group:web",           # web_search, web_fetch
         "group:pinecone",      # pinecone_query, pinecone_multi_query, pinecone_upsert, pinecone_list_indexes
-        "group:voice",         # voice_list_calls, voice_get_transcript, voice_make_call, voice_list_pathways
         "group:fs",            # read, write, edit, glob, grep, parse_document (for case files)
+        "group:pad",           # pad_query, pad_tables, pad_describe — Callagy PAD database (read-only)
         "group:knowledge",     # update_knowledge
-        "group:sessions",      # sessions_spawn, sessions_poll (for BD-PIP, BD-WC sub-agents)
+        "group:sessions",      # sessions_spawn, sessions_poll
         "group:skills",        # skill_create, skill_update, skill_list
-        "group:seo",           # SEO research tools (KeywordsPeopleUse)
         "group:cron",          # schedule_task, list_schedules, remove_schedule, set_schedule_enabled
+        "group:exec",          # exec, process — run scripts and shell commands
     )),
 
     # Memory — memory specialist + Pinecone
@@ -181,8 +199,8 @@ TOOL_PROFILES: dict[str, frozenset[str] | None] = {
 
 # Legacy mapping: tenant_id -> profile name (for callers that don't have SisterConfig)
 _TENANT_PROFILE_MAP: dict[str, str] = {
-    "tenant-local": "full",
-    "tenant-prime": "full",
+    "tenant-local": "prime",
+    "tenant-prime": "prime",
     "tenant-forge": "creative",
     "tenant-scholar": "research",
     "tenant-recovery": "revenue",

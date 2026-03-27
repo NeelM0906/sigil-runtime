@@ -25,30 +25,47 @@ def ingest_to_memory(
     now = datetime.now(timezone.utc).isoformat()
     doc_id = uuid.uuid4().hex[:12]
     text = extracted.get("text") or ""
+    is_placeholder = extracted.get("_is_native_placeholder", False)
 
-    # Store full document as a working note
-    memory_store.append_working_note(
-        user_id=user_id,
-        session_id=f"upload-{doc_id}",
-        title=f"Uploaded: {filename}",
-        content=text[:50000],
-        tags=["upload", extracted.get("format", ""), filename],
-        confidence=1.0,
-        being_id=being_id,
-    )
-
-    # Chunk and store as semantic memories
-    chunks = chunk_text(text)
-    for i, chunk in enumerate(chunks):
-        consolidator.upsert(MemoryCandidate(
-            user_id=f"{user_id}->prime->{being_id}",
-            key=f"doc::{doc_id}::chunk-{i}",
-            content=chunk,
-            tier="semantic",
-            evidence_refs=(f"upload://{filename}#chunk-{i}",),
-            recency_ts=now,
+    if text.strip() and not is_placeholder:
+        # Real extracted text — store as working note + semantic chunks
+        memory_store.append_working_note(
+            user_id=user_id,
+            session_id=f"upload-{doc_id}",
+            title=f"Uploaded: {filename}",
+            content=text[:50000],
+            tags=["upload", extracted.get("format", ""), filename],
+            confidence=1.0,
             being_id=being_id,
-        ))
+        )
+
+        chunks = chunk_text(text)
+        for i, chunk in enumerate(chunks):
+            if not chunk.strip():
+                continue
+            consolidator.upsert(MemoryCandidate(
+                user_id=f"{user_id}->prime->{being_id}",
+                key=f"doc::{doc_id}::chunk-{i}",
+                content=chunk,
+                tier="semantic",
+                evidence_refs=(f"upload://{filename}#chunk-{i}",),
+                recency_ts=now,
+                being_id=being_id,
+            ))
+    else:
+        # Native/scanned file — store metadata-only record (no chunking/embedding)
+        memory_store.append_working_note(
+            user_id=user_id,
+            session_id=f"upload-{doc_id}",
+            title=f"Uploaded: {filename}",
+            content=f"Scanned/native document uploaded: {filename}. "
+                    f"File saved to workspace uploads directory. "
+                    f"Use parse_document or exec with OCR to extract content.",
+            tags=["upload", "native", extracted.get("format", ""), filename],
+            confidence=0.5,
+            being_id=being_id,
+        )
+        chunks = []
 
     try:
         consolidator.db.commit()

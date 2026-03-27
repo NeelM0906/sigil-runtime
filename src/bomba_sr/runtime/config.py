@@ -90,11 +90,11 @@ class RuntimeConfig:
     plugin_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_PLUGIN_DENY")))
     tool_allow: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_ALLOW")))
     tool_deny: tuple[str, ...] = field(default_factory=lambda: _split_env(os.getenv("BOMBA_TOOL_DENY")))
-    max_loop_iterations: int = int(os.getenv("BOMBA_MAX_LOOP_ITERATIONS", "50"))
+    max_loop_iterations: int = int(os.getenv("BOMBA_MAX_LOOP_ITERATIONS", "75"))
     loop_detection_window: int = int(os.getenv("BOMBA_LOOP_DETECTION_WINDOW", "5"))
     agentic_loop_enabled: bool = os.getenv("BOMBA_AGENTIC_LOOP_ENABLED", "true").lower() != "false"
-    budget_limit_usd: float = float(os.getenv("BOMBA_BUDGET_LIMIT_USD", "2.0"))
-    budget_hard_stop_pct: float = float(os.getenv("BOMBA_BUDGET_HARD_STOP_PCT", "0.9"))
+    budget_limit_usd: float = float(os.getenv("BOMBA_BUDGET_LIMIT_USD", "50.0"))
+    budget_hard_stop_pct: float = float(os.getenv("BOMBA_BUDGET_HARD_STOP_PCT", "0.95"))
     tool_result_max_chars: int = int(os.getenv("BOMBA_TOOL_RESULT_MAX_CHARS", "15000"))
     shell_output_max_chars: int = int(os.getenv("BOMBA_SHELL_OUTPUT_MAX_CHARS", "50000"))
     parallel_read_tools: bool = os.getenv("BOMBA_PARALLEL_READ_TOOLS", "true").lower() != "false"

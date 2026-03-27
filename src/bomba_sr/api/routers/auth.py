@@ -167,6 +167,15 @@ def register(body: RegisterRequest, dashboard_svc=Depends(get_dashboard_svc)):
 
 # ── Protected endpoints (require auth) ──────────────────────────────
 
+@router.get("/users")
+def list_users(auth: dict = Depends(get_current_user), dashboard_svc=Depends(get_dashboard_svc)):
+    """List all users. Any authenticated user can see the user list (needed for sharing)."""
+    rows = dashboard_svc.db.execute(
+        "SELECT id, name, email, role FROM mc_users ORDER BY name"
+    ).fetchall()
+    return {"users": [dict(r) for r in rows]}
+
+
 @router.get("/me")
 def me(auth: dict = Depends(get_current_user), dashboard_svc=Depends(get_dashboard_svc)):
     row = dashboard_svc.db.execute(

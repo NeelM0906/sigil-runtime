@@ -5,52 +5,87 @@ const SSEContext = createContext(null)
 export function SSEProvider({ children }) {
   const listenersRef = useRef({})
   const [connected, setConnected] = useState(false)
+  const wsRef = useRef(null)
+  const reconnectTimeoutRef = useRef(null)
 
-  useEffect(() => {
-    let sseUrl = '/api/mc/events'
+  const connect = useCallback(() => {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.host
+    let token = ''
     try {
       const stored = localStorage.getItem('mc_auth')
-      if (stored) {
-        const { token } = JSON.parse(stored)
-        if (token) sseUrl = `/api/mc/events?token=${encodeURIComponent(token)}`
-      }
+      if (stored) token = JSON.parse(stored).token || ''
     } catch { /* ignore */ }
 
-    const source = new EventSource(sseUrl)
+    if (!token) return
 
-    const eventTypes = [
-      'chat_message', 'being_status', 'task_update', 'task_steps_update',
-      'artifact_created', 'subagent_event', 'being_typing', 'being_progress',
-      'chat_session', 'deliverable_created', 'orchestration_spawn',
-    ]
+    const ws = new WebSocket(`${proto}//${host}/ws?token=${encodeURIComponent(token)}`)
+    wsRef.current = ws
 
-    for (const type of eventTypes) {
-      source.addEventListener(type, (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          const handlers = listenersRef.current[type] || []
-          for (const handler of handlers) handler(data)
-        } catch (err) {
-          console.error(`SSE parse error (${type}):`, err)
-        }
-      })
+    ws.onopen = () => {
+      setConnected(true)
+      console.log('[WS] Connected')
     }
 
-    source.onopen = () => setConnected(true)
-    source.onerror = () => setConnected(false)
-    return () => source.close()
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        const eventType = msg.event
+        if (!eventType || eventType === 'keepalive' || eventType === 'pong') return
+        const handlers = listenersRef.current[eventType] || []
+        for (const handler of handlers) {
+          try { handler(msg.data) } catch (err) { console.error(`[WS] Handler error (${eventType}):`, err) }
+        }
+      } catch (err) {
+        console.error('[WS] Parse error:', err)
+      }
+    }
+
+    ws.onclose = (event) => {
+      setConnected(false)
+      wsRef.current = null
+      if (event.code === 4001) {
+        console.error('[WS] Auth failed — not reconnecting')
+        return
+      }
+      console.warn(`[WS] Closed (code=${event.code}). Reconnecting...`)
+      const delay = Math.min(1000 * Math.pow(2, Math.random() * 3), 10000)
+      reconnectTimeoutRef.current = setTimeout(connect, delay)
+    }
+
+    ws.onerror = () => { /* onclose fires after onerror */ }
   }, [])
+
+  useEffect(() => {
+    connect()
+    return () => {
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
+      if (wsRef.current) wsRef.current.close()
+    }
+  }, [connect])
 
   const subscribe = useCallback((eventType, handler) => {
     if (!listenersRef.current[eventType]) listenersRef.current[eventType] = []
     listenersRef.current[eventType].push(handler)
     return () => {
-      listenersRef.current[eventType] = listenersRef.current[eventType].filter(h => h !== handler)
+      listenersRef.current[eventType] = (listenersRef.current[eventType] || []).filter(h => h !== handler)
+    }
+  }, [])
+
+  const send = useCallback((type, data) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type, ...data }))
+    }
+  }, [])
+
+  const subscribeSession = useCallback((sessionId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'subscribe_session', session_id: sessionId }))
     }
   }, [])
 
   return (
-    <SSEContext.Provider value={{ subscribe, connected }}>
+    <SSEContext.Provider value={{ subscribe, connected, send, subscribeSession }}>
       {children}
     </SSEContext.Provider>
   )
@@ -72,3 +107,10 @@ export function useSharedSSE(handlers) {
     return () => unsubs.forEach(u => u())
   }, [ctx])
 }
+
+export function useWSSend() {
+  const ctx = useContext(SSEContext)
+  return ctx?.send || (() => {})
+}
+
+export { SSEContext }

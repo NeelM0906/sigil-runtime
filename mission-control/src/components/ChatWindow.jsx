@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback, Children } from 'react'
+import { useState, useRef, useEffect, useCallback, useContext, memo, Children } from 'react'
 import Markdown from 'react-markdown'
 import { useBeings } from '../context/BeingsContext'
 import { useAuth } from '../context/AuthContext'
-import { chatApi, tasksApi, deliverablesApi } from '../api'
-import { useSharedSSE } from '../context/SSEContext'
+import { chatApi, tasksApi, deliverablesApi, teamsApi } from '../api'
+import { useSharedSSE, SSEContext } from '../context/SSEContext'
+import { useSession } from '../context/SessionContext'
 import { timeAgo } from '../store'
 
 // ── Inline Task Card ─────────────────────────────────────────
@@ -41,7 +42,7 @@ function InlineTaskCard({ taskId }) {
 
 // ── Message Bubble ───────────────────────────────────────────
 
-function MessageBubble({ msg, getBeingById, onBeingClick }) {
+const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick, isCollaborative }) {
   const isUser = msg.sender === 'user'
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
@@ -97,7 +98,11 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
       <div className={`max-w-[75%] ${isUser ? 'text-right' : ''}`}>
         {/* Header: sender + targets + mode + type */}
         <div className={`flex items-center gap-1.5 mb-0.5 flex-wrap ${isUser ? 'justify-end' : ''}`}>
-          <span className="text-xs font-medium">{isUser ? 'You' : being?.name || msg.sender}</span>
+          <span className="text-xs font-medium">
+            {isUser
+              ? (isCollaborative && msg.metadata?.sender_name ? msg.metadata.sender_name : 'You')
+              : being?.name || msg.metadata?.sender_name || msg.sender}
+          </span>
 
           {msg.targets && msg.targets.length > 0 && (
             <span className="text-[10px] text-text-muted">
@@ -164,7 +169,7 @@ function MessageBubble({ msg, getBeingById, onBeingClick }) {
       </div>
     </div>
   )
-}
+})
 
 // ── Deliverable Card ─────────────────────────────────────────
 
@@ -432,11 +437,95 @@ function ChatFilters({ filters, setFilters, beings, onClear }) {
 
 // ── Session Sidebar ──────────────────────────────────────────
 
-function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete }) {
+function SessionItem({ session: s, active, onSelect, onRename, onDelete, onShare, isShared, isChannel }) {
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+
+  const handleRename = () => {
+    if (!editName.trim() || !onRename) return
+    onRename(s.id, editName.trim())
+    setEditing(false)
+  }
+
+  return (
+    <div
+      onClick={() => onSelect(s.id)}
+      className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition-colors ${
+        active
+          ? 'bg-accent-blue/10 text-accent-blue border-l-2 border-accent-blue'
+          : 'text-text-secondary hover:bg-bg-hover border-l-2 border-transparent'
+      }`}
+    >
+      {editing ? (
+        <input
+          autoFocus
+          value={editName}
+          onChange={e => setEditName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setEditing(false) }}
+          onBlur={handleRename}
+          className="flex-1 bg-bg-card border border-border rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none"
+          onClick={e => e.stopPropagation()}
+        />
+      ) : (
+        <>
+          {isChannel ? (
+            <span className="w-3 h-3 shrink-0 text-[10px] font-bold text-accent-purple opacity-70">#</span>
+          ) : isShared ? (
+            <span className="w-3 h-3 shrink-0 text-[10px] text-accent-amber opacity-70">👥</span>
+          ) : (
+            <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+          )}
+          <span className="flex-1 truncate">{isChannel ? (s.channel_name || s.name) : s.name}</span>
+          {!isShared && !isChannel && (
+            <div className="hidden group-hover:flex items-center gap-0.5">
+              {onShare && (
+                <button
+                  onClick={e => { e.stopPropagation(); onShare(s.id) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-blue"
+                  title="Share with team"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+              )}
+              {onRename && (
+                <button
+                  onClick={e => { e.stopPropagation(); setEditing(true); setEditName(s.name) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-primary"
+                  title="Rename"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && s.id !== 'general' && (
+                <button
+                  onClick={e => { e.stopPropagation(); onDelete(s.id) }}
+                  className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-red"
+                  title="Delete"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRename, onDelete, onShare }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editName, setEditName] = useState('')
+  const [shareSessionId, setShareSessionId] = useState(null)
+  const [teams, setTeams] = useState(null)  // null = not loaded, [] = no teams
 
   const handleCreate = () => {
     if (!newName.trim()) return
@@ -445,25 +534,56 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
     setCreating(false)
   }
 
-  const handleRename = (id) => {
-    if (!editName.trim()) return
-    onRename(id, editName.trim())
-    setEditingId(null)
+  const handleShareClick = async (sessionId) => {
+    setShareSessionId(sessionId)
+    if (teams === null) {
+      try {
+        const { teams: t } = await teamsApi.list()
+        setTeams(t || [])
+      } catch { setTeams([]) }
+    }
   }
 
+  const handleShareToTeam = async (teamId) => {
+    if (!shareSessionId) return
+    try {
+      await onShare(teamId, shareSessionId)
+      setShareSessionId(null)
+    } catch (err) { alert('Share failed: ' + err.message) }
+  }
+
+  const own = sessions.filter(s => !s._shared && !s._channel)
+  const shared = sessions.filter(s => s._shared)
+  const channels = sessions.filter(s => s._channel)
+
   return (
-    <div className="w-48 border-r border-border flex flex-col shrink-0">
+    <div className="w-52 border-r border-border bg-bg-secondary flex flex-col shrink-0">
+      {/* Share modal */}
+      {shareSessionId && (
+        <div className="absolute z-50 left-1 top-12 w-48 bg-bg-secondary border border-border rounded-lg shadow-lg p-2">
+          <div className="text-[10px] font-semibold text-text-muted uppercase mb-1.5">Share with team</div>
+          {(teams || []).length === 0 ? (
+            <p className="text-[10px] text-text-muted py-1">No teams available</p>
+          ) : (teams || []).map(t => (
+            <button
+              key={t.id}
+              onClick={() => handleShareToTeam(t.id)}
+              className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-hover rounded transition-colors"
+            >
+              {t.name} <span className="text-text-muted text-[10px]">({t.members?.length || 0})</span>
+            </button>
+          ))}
+          <button onClick={() => setShareSessionId(null)} className="w-full text-center text-[10px] text-text-muted hover:text-text-primary pt-1">Cancel</button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between px-2 py-2 border-b border-border/50">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Sessions</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-primary">Conversations</span>
         <button
           onClick={() => setCreating(!creating)}
           className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-colors"
           title="New session"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
+        >+</button>
       </div>
 
       {creating && (
@@ -480,58 +600,40 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
       )}
 
       <div className="flex-1 overflow-y-auto">
-        {sessions.map(s => (
-          <div
-            key={s.id}
-            onClick={() => onSelect(s.id)}
-            className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer text-xs transition-colors ${
-              s.id === activeSessionId
-                ? 'bg-accent-blue/10 text-accent-blue border-l-2 border-accent-blue'
-                : 'text-text-secondary hover:bg-bg-hover border-l-2 border-transparent'
-            }`}
-          >
-            {editingId === s.id ? (
-              <input
-                autoFocus
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleRename(s.id); if (e.key === 'Escape') setEditingId(null) }}
-                onBlur={() => handleRename(s.id)}
-                className="flex-1 bg-bg-card border border-border rounded px-1 py-0.5 text-xs text-text-primary focus:outline-none"
-                onClick={e => e.stopPropagation()}
-              />
-            ) : (
-              <>
-                <svg className="w-3 h-3 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                <span className="flex-1 truncate">{s.name}</span>
-                <div className="hidden group-hover:flex items-center gap-0.5">
-                  <button
-                    onClick={e => { e.stopPropagation(); setEditingId(s.id); setEditName(s.name) }}
-                    className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-primary"
-                    title="Rename"
-                  >
-                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  {s.id !== 'general' && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onDelete(s.id) }}
-                      className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent-red"
-                      title="Delete"
-                    >
-                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+        {/* My Sessions */}
+        <div className="px-2 pt-2 pb-1">
+          <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">My Sessions</span>
+        </div>
+        {own.map(s => (
+          <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+            onSelect={onSelect} onRename={onRename} onDelete={onDelete} onShare={handleShareClick} />
         ))}
+
+        {/* Shared With Me */}
+        {shared.length > 0 && (
+          <>
+            <div className="px-2 pt-3 pb-1">
+              <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Shared With Me</span>
+            </div>
+            {shared.map(s => (
+              <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+                onSelect={onSelect} isShared />
+            ))}
+          </>
+        )}
+
+        {/* Team Channels */}
+        {channels.length > 0 && (
+          <>
+            <div className="px-2 pt-3 pb-1">
+              <span className="text-[9px] font-semibold text-text-muted uppercase tracking-wider">Team Channels</span>
+            </div>
+            {channels.map(s => (
+              <SessionItem key={s.id} session={s} active={s.id === activeSessionId}
+                onSelect={onSelect} isChannel />
+            ))}
+          </>
+        )}
       </div>
     </div>
   )
@@ -546,33 +648,39 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  // Operator users default to recovery; admins broadcast to prime
-  const defaultTarget = user?.role === 'admin' ? [] : ['recovery']
+  // All users default to Prime — the general-purpose being
+  const defaultTarget = ['prime']
   const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
   const [showFilters, setShowFilters] = useState(false)
+  const [collabTyping, setCollabTyping] = useState(new Map())
   const [typingBeings, setTypingBeings] = useState(new Map())
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Session state — persist active session across reloads
+  // Session state — shared via SessionContext so OrchestrationTracker can scope outputs
   const [sessions, setSessions] = useState([])
-  const [activeSessionId, setActiveSessionId] = useState(() => {
-    try { return localStorage.getItem('mc_active_session') } catch { return null }
-  })
+  const { activeSessionId, setActiveSessionId } = useSession()
   const [showSessions, setShowSessions] = useState(true)
   const activeSessionRef = useRef(activeSessionId)
   activeSessionRef.current = activeSessionId
   const [awaitingReplySince, setAwaitingReplySince] = useState(null)
 
-  // Persist activeSessionId to localStorage
+  // Safety timeout: unlock input after 5 min if response never arrives
   useEffect(() => {
-    try {
-      if (activeSessionId) localStorage.setItem('mc_active_session', activeSessionId)
-      else localStorage.removeItem('mc_active_session')
-    } catch { /* ignore */ }
-  }, [activeSessionId])
+    if (!awaitingReplySince) return
+    const timeout = setTimeout(() => setAwaitingReplySince(null), 300000)
+    return () => clearTimeout(timeout)
+  }, [awaitingReplySince])
+
+  // Subscribe to WS events for the active session (enables shared session delivery)
+  const sseCtx = useContext(SSEContext)
+  useEffect(() => {
+    if (activeSessionId && sseCtx?.subscribeSession) {
+      sseCtx.subscribeSession(activeSessionId)
+    }
+  }, [activeSessionId, sseCtx])
 
   // Load sessions on mount — auto-create if none exist
   useEffect(() => {
@@ -625,12 +733,10 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   useEffect(() => { fetchMessages() }, [fetchMessages])
 
   useEffect(() => {
-    if (!awaitingReplySince && typingBeings.size === 0) return undefined
-    const interval = window.setInterval(() => {
-      fetchMessages()
-    }, 2000)
-    return () => window.clearInterval(interval)
-  }, [awaitingReplySince, typingBeings, fetchMessages])
+    if (sseCtx?.connected) return
+    const interval = setInterval(fetchMessages, 5000)
+    return () => clearInterval(interval)
+  }, [sseCtx?.connected, fetchMessages])
 
   useEffect(() => {
     const onFocus = () => { fetchMessages() }
@@ -675,7 +781,8 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
   // SSE: incoming LLM responses and system messages arrive here
   useSharedSSE({
     chat_message(data) {
-      if (data.sender === 'user') return
+      // Skip own messages (sender is user's UUID, not the string "user")
+      if (data.sender === user?.user_id) return
       setTypingBeings(prev => {
         const next = new Map(prev)
         next.delete(data.sender)
@@ -714,6 +821,8 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
       })
     },
     being_typing(data) {
+      // Only show typing for the active session (or unscoped global events)
+      if (data.session_id && data.session_id !== activeSessionRef.current) return
       setTypingBeings(prev => {
         const next = new Map(prev)
         if (data.active) {
@@ -723,6 +832,23 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           window.setTimeout(() => {
             fetchMessages()
           }, 250)
+        }
+        return next
+      })
+    },
+    collab_typing(data) {
+      if (data.session_id !== activeSessionRef.current) return
+      if (data.user_id === user?.user_id) return
+      setCollabTyping(prev => {
+        const next = new Map(prev)
+        if (data.active) {
+          next.set(data.user_id, data.user_name)
+          // Auto-clear after 10s (in case active:false never arrives)
+          setTimeout(() => {
+            setCollabTyping(p => { const n = new Map(p); n.delete(data.user_id); return n })
+          }, 10000)
+        } else {
+          next.delete(data.user_id)
         }
         return next
       })
@@ -766,37 +892,37 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
 
   const fileInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState(null) // staged upload result
+  const [uploadedFiles, setUploadedFiles] = useState([])
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = '' // reset for re-upload of same file
+    const selectedFiles = Array.from(e.target.files || [])
+    if (!selectedFiles.length) return
+    e.target.value = ''
     setUploading(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
-      formData.append('being_id', targets[0] || defaultTarget[0] || 'recovery')
+      for (const f of selectedFiles) formData.append('files', f)
+      formData.append('being_id', targets[0] || defaultTarget[0] || 'prime')
       const stored = localStorage.getItem('mc_auth')
       const token = stored ? JSON.parse(stored).token : ''
-      const res = await fetch('/api/mc/upload', {
+      const res = await fetch('/api/mc/upload/batch', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       })
-      if (res.status === 401) {
-        // Don't trigger reload loop — just show error
-        setUploadedFile(null)
-        return
-      }
+      if (res.status === 401) { setUploadedFiles([]); return }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         console.error('Upload failed:', err)
+        alert(`Upload failed: ${err.detail || res.statusText}`)
         return
       }
-      const result = await res.json()
-      // Stage the upload — show as chip, don't inject into input text
-      setUploadedFile(result)
+      const data = await res.json()
+      if (data.results?.length > 0) setUploadedFiles(prev => [...prev, ...data.results])
+      if (data.errors?.length > 0) {
+        const names = data.errors.map(e => `${e.filename}: ${e.error}`).join('\n')
+        alert(`Some files failed:\n${names}`)
+      }
     } catch (err) {
       console.error('Upload failed:', err)
     } finally {
@@ -804,14 +930,19 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     }
   }
 
+  const [sending, setSending] = useState(false)
   const handleSend = async () => {
-    if (!input.trim() && !uploadedFile) return
+    if (sending) return
+    if (!input.trim() && uploadedFiles.length === 0) return
+    setSending(true)
 
-    // Prepend file context tag if a file is attached
+    // Prepend file context tags if files are attached
     let content = input.trim()
-    if (uploadedFile) {
-      const tag = `[${uploadedFile.filename}: ${uploadedFile.chunks} chunks indexed${uploadedFile.tables ? `, ${uploadedFile.tables} tables` : ''}]`
-      content = content ? `${tag} ${content}` : tag
+    if (uploadedFiles.length > 0) {
+      const tags = uploadedFiles.map(f =>
+        `[${f.filename}: ${f.chunks} chunks indexed${f.tables ? `, ${f.tables} tables` : ''}]`
+      ).join(' ')
+      content = content ? `${tags} ${content}` : tags
     }
     const mode = targets.length > 1 ? execMode : (targets.length === 1 ? null : null)
 
@@ -829,7 +960,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     setMessages(prev => [...prev, tempMsg])
     setAwaitingReplySince(tempMsg.timestamp)
     setInput('')
-    setUploadedFile(null)
+    setUploadedFiles([])
     setTargets(defaultTarget)
 
     try {
@@ -857,6 +988,8 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     } catch (err) {
       console.error('Failed to send message:', err)
       setAwaitingReplySince(null)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -871,6 +1004,9 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
     setTargets(targets.filter(t => t !== id))
   }
 
+  const activeSession = sessions.find(s => s.id === activeSessionId)
+  const isCollaborative = !!(activeSession?._shared || activeSession?._channel)
+
   return (
     <div className="bg-bg-secondary border border-border rounded-lg flex h-[calc(100vh-80px)]">
       {/* Session Sidebar */}
@@ -882,6 +1018,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           onCreate={handleCreateSession}
           onRename={handleRenameSession}
           onDelete={handleDeleteSession}
+          onShare={(teamId, sessionId) => teamsApi.shareSession(teamId, sessionId).then(() => chatApi.sessions().then(({ sessions: s }) => setSessions(s)))}
         />
       )}
 
@@ -939,12 +1076,18 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
         {!loading && messages.length === 0 && (
           <div className="text-center text-xs text-text-muted py-8">No messages yet. Start a conversation.</div>
         )}
-        {messages.map(msg => (
+        {messages.length > 100 && (
+          <div className="text-center text-[10px] text-text-muted py-2">
+            Showing last 100 of {messages.length} messages
+          </div>
+        )}
+        {(messages.length > 100 ? messages.slice(-100) : messages).map(msg => (
           <MessageBubble
             key={msg.id}
             msg={msg}
             getBeingById={getBeingById}
             onBeingClick={openBeingDetail}
+            isCollaborative={isCollaborative}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -964,6 +1107,15 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
               <span className="text-text-muted">is responding...</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Collaborative typing indicators */}
+      {collabTyping.size > 0 && (
+        <div className="px-3 py-1 border-t border-border/20">
+          <span className="text-[10px] text-text-muted italic">
+            {[...collabTyping.values()].join(', ')} {collabTyping.size === 1 ? 'is' : 'are'} typing...
+          </span>
         </div>
       )}
 
@@ -1015,25 +1167,20 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           </div>
         )}
 
-        {/* Attached file chip */}
-        {uploadedFile && (
-          <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-accent-purple/10 border border-accent-purple/30 rounded-lg w-fit">
-            <svg className="w-4 h-4 text-accent-purple flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-accent-purple">{uploadedFile.filename}</span>
-              <span className="text-[10px] text-text-muted">{uploadedFile.chunks} chunks indexed{uploadedFile.tables ? ` · ${uploadedFile.tables} tables` : ''}</span>
-            </div>
-            <button
-              onClick={() => setUploadedFile(null)}
-              className="ml-1 text-text-muted hover:text-accent-red transition-colors"
-              title="Remove attachment"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        {/* Attached file chips */}
+        {uploadedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {uploadedFiles.map((f, i) => (
+              <div key={i} className="inline-flex items-center gap-1.5 px-2 py-1 bg-accent-purple/10 border border-accent-purple/30 rounded-lg">
+                <span className="text-[10px]">📎</span>
+                <span className="text-[11px] font-medium text-accent-purple">{f.filename}</span>
+                <span className="text-[9px] text-text-muted">{f.chunks}ch</span>
+                <button
+                  onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
+                  className="text-text-muted hover:text-accent-red transition-colors text-[10px]"
+                >×</button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -1050,7 +1197,8 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
             value={input}
             onChange={(e) => { handleInputChange(e); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px' }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleKeyDown(e) } else { handleKeyDown(e) } }}
-            placeholder="Message... (@ to mention a being, Shift+Enter for newline)"
+            disabled={sending || !!awaitingReplySince}
+            placeholder={awaitingReplySince ? "Waiting for response..." : "Message... (@ to mention a being, Shift+Enter for newline)"}
             rows={1}
             className="flex-1 bg-bg-card border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors resize-none overflow-hidden"
             style={{ minHeight: '38px', maxHeight: '200px' }}
@@ -1058,6 +1206,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
             onChange={handleFileUpload}
             className="hidden"
@@ -1085,10 +1234,10 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
           </button>
           <button
             onClick={handleSend}
-            disabled={!input.trim() && !uploadedFile}
+            disabled={sending || !!awaitingReplySince || (!input.trim() && uploadedFiles.length === 0)}
             className="px-4 py-2 bg-accent-blue text-white text-xs font-medium rounded-lg hover:bg-accent-blue/80 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            Send
+            {sending ? 'Sending...' : awaitingReplySince ? 'Waiting...' : 'Send'}
           </button>
         </div>
 

@@ -57,26 +57,45 @@ class OpenAICompatibleProvider:
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
-        try:
-            with urlopen(req) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except HTTPError as exc:
-            details = ""
+        import time as _time
+        import logging as _log
+        _logger = _log.getLogger(__name__)
+        max_retries = 3
+        for attempt in range(max_retries):
             try:
-                details = exc.read().decode("utf-8")
-            except Exception:
+                with urlopen(req) as response:
+                    body = json.loads(response.read().decode("utf-8"))
+                break
+            except HTTPError as exc:
                 details = ""
-            hint = ""
-            if exc.code in {401, 403}:
-                hint = " Check OPENROUTER_API_KEY / OPENAI_API_KEY and base URL."
-            provider_label = self.provider_name
-            import logging as _log
-            _log.getLogger(__name__).error(
-                "%s %d: %s | model=%s msgs=%d tools=%d payload_bytes=%d",
-                provider_label, exc.code, details[:500], model,
-                len(messages), len(tools or []), len(json.dumps(payload)),
-            )
-            raise RuntimeError(f"{provider_label} request failed ({exc.code}): {details or exc.reason}.{hint}") from exc
+                try:
+                    details = exc.read().decode("utf-8")
+                except Exception:
+                    details = ""
+                # Strip HTML from error responses (e.g., Cloudflare 502 pages)
+                if "<html" in details.lower():
+                    import re as _re
+                    title_match = _re.search(r"<title>(.*?)</title>", details, _re.IGNORECASE)
+                    details = title_match.group(1) if title_match else f"HTTP {exc.code}"
+                hint = ""
+                if exc.code in {401, 403}:
+                    hint = " Check OPENROUTER_API_KEY / OPENAI_API_KEY and base URL."
+                provider_label = self.provider_name
+                # Retry on transient errors (502, 503, 429)
+                if exc.code in {502, 503, 429} and attempt < max_retries - 1:
+                    wait = (attempt + 1) * 2
+                    _logger.warning(
+                        "%s %d (attempt %d/%d, retrying in %ds): %s",
+                        provider_label, exc.code, attempt + 1, max_retries, wait, details[:200],
+                    )
+                    _time.sleep(wait)
+                    continue
+                _logger.error(
+                    "%s %d: %s | model=%s msgs=%d tools=%d",
+                    provider_label, exc.code, details[:300], model,
+                    len(messages), len(tools or []),
+                )
+                raise RuntimeError(f"{provider_label} request failed ({exc.code}): {details[:200]}.{hint}") from exc
 
         choices = body.get("choices") or []
         text = ""

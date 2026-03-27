@@ -66,8 +66,11 @@ def rename_session(
     dashboard_svc=Depends(get_dashboard_svc),
 ):
     existing = dashboard_svc.get_session(session_id)
-    if not existing or existing.get("user_id") != auth["user_id"]:
-        raise HTTPException(403, "Forbidden")
+    if not existing:
+        raise HTTPException(404, "Session not found")
+    is_owner = existing.get("user_id") == auth["user_id"]
+    if not is_owner:
+        raise HTTPException(403, "Only the session owner can rename")
     session = dashboard_svc.rename_session(
         session_id, body.name, tenant_id=auth["tenant_id"],
     )
@@ -81,7 +84,16 @@ def delete_session(
     dashboard_svc=Depends(get_dashboard_svc),
 ):
     existing = dashboard_svc.get_session(session_id)
-    if not existing or existing.get("user_id") != auth["user_id"]:
+    if not existing:
+        raise HTTPException(404, "Session not found")
+    is_owner = existing.get("user_id") == auth["user_id"]
+    is_team_admin = False
+    if not is_owner:
+        access = dashboard_svc.can_access_session(auth["user_id"], session_id)
+        if access and access["access"] in ("shared", "channel"):
+            team = dashboard_svc.get_team(access["team_id"])
+            is_team_admin = team and team.get("admin_user_id") == auth["user_id"]
+    if not is_owner and not is_team_admin:
         raise HTTPException(403, "Forbidden")
     ok = dashboard_svc.delete_session(session_id, tenant_id=auth["tenant_id"])
     if not ok:
@@ -102,6 +114,11 @@ def list_messages(
     auth: dict = Depends(get_current_user),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
+    # Access check for shared sessions
+    if session_id:
+        access = dashboard_svc.can_access_session(auth["user_id"], session_id)
+        if not access:
+            raise HTTPException(403, "No access to this session")
     msgs = dashboard_svc.list_messages(
         sender=sender,
         target=target,
@@ -128,6 +145,12 @@ def send_message(
     if not targets:
         targets = ["prime"]
 
+    # Access check: user must own or have shared access to this session
+    if body.session_id:
+        access = dashboard_svc.can_access_session(sender, session_id)
+        if not access:
+            raise HTTPException(403, "No access to this session")
+
     msg_type = "broadcast"
     if len(targets) == 1:
         msg_type = "direct"
@@ -145,6 +168,15 @@ def send_message(
         tenant_id=auth["tenant_id"],
     )
 
+    # Emit collaborative typing indicator so other session viewers see activity
+    sender_name = msg.get("metadata", {}).get("sender_name") if isinstance(msg.get("metadata"), dict) else None
+    dashboard_svc._emit_event("collab_typing", {
+        "session_id": session_id,
+        "user_id": sender,
+        "user_name": sender_name or sender,
+        "active": True,
+    }, session_id=session_id)
+
     # Route to each targeted being in background
     for tid in targets:
         dashboard_svc.route_to_being(tid, body.content, sender=sender, chat_session_id=session_id)
@@ -158,15 +190,18 @@ def delete_message(
     auth: dict = Depends(get_current_user),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
-    # Ownership check via session
+    # Check access via session (owner or collaborator)
     msg_row = dashboard_svc.db.execute(
-        "SELECT m.session_id FROM mc_messages m "
-        "JOIN mc_chat_sessions s ON s.id = m.session_id "
-        "WHERE m.id = ? AND s.user_id = ?",
-        (message_id, auth["user_id"]),
+        "SELECT session_id, sender FROM mc_messages WHERE id = ?",
+        (message_id,),
     ).fetchone()
     if not msg_row:
-        raise HTTPException(403, "Forbidden")
+        raise HTTPException(404, "Message not found")
+    # Only the message sender or session owner can delete
+    if msg_row["sender"] != auth["user_id"]:
+        session = dashboard_svc.get_session(msg_row["session_id"])
+        if not session or session.get("user_id") != auth["user_id"]:
+            raise HTTPException(403, "Forbidden")
     ok = dashboard_svc.delete_message(message_id)
     if not ok:
         raise HTTPException(404, "Message not found")

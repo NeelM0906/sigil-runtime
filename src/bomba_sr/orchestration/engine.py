@@ -574,14 +574,15 @@ class OrchestrationEngine:
             try:
                 fail_state = self._get_state(task_id)
                 self._persist_task_result(task_id, fail_state, f"[FAILED: {exc}]")
-            except Exception:
-                pass
+            except Exception as pr_exc:
+                log.warning("Failed to persist partial result for task %s: %s", task_id[:8], pr_exc)
 
             # Mark task as failed on the board
             try:
-                self.dashboard.update_task(self.project_svc, task_id, status="failed")
-            except Exception:
-                pass
+                self.dashboard.update_task(self.project_svc, task_id, status="failed",
+                                           tenant_id=self._get_orch_tenant(task_id))
+            except Exception as ut_exc:
+                log.warning("Failed to update task %s to 'failed': %s", task_id[:8], ut_exc)
 
             self.dashboard._log_task_history(
                 task_id, "orchestration_failed", {"error": str(exc)},
@@ -1463,7 +1464,8 @@ class OrchestrationEngine:
         )
 
         # Mark parent task as done
-        self.dashboard.update_task(self.project_svc, task_id, status="done")
+        self.dashboard.update_task(self.project_svc, task_id, status="done",
+                                   tenant_id=self._get_orch_tenant(task_id))
         self._set_status(task_id, STATUS_COMPLETED)
 
         self.dashboard._log_task_history(
@@ -2166,9 +2168,10 @@ class OrchestrationEngine:
                         (STATUS_FAILED, now.isoformat(), task_id),
                     )
                     try:
-                        self.dashboard.update_task(self.project_svc, task_id, status="failed")
-                    except Exception:
-                        pass
+                        self.dashboard.update_task(self.project_svc, task_id, status="failed",
+                                                   tenant_id=self.prime_tenant_id)
+                    except Exception as ut_exc:
+                        log.warning("Failed to update stale task %s to 'failed': %s", task_id[:8], ut_exc)
                     self.dashboard._log_task_history(
                         task_id, "orchestration_cleanup",
                         {"reason": "Too stale to resume (>24h) — marked failed"},
@@ -2303,13 +2306,14 @@ class OrchestrationEngine:
                         session_id=orch_session,
                         reason=f"resume failed: {exc}",
                     )
-                except Exception:
-                    pass
+                except Exception as cs_exc:
+                    log.warning("cascade_stop_session failed during resume cleanup for %s: %s", task_id[:8], cs_exc)
 
             try:
-                self.dashboard.update_task(self.project_svc, task_id, status="failed")
-            except Exception:
-                pass
+                self.dashboard.update_task(self.project_svc, task_id, status="failed",
+                                           tenant_id=self.prime_tenant_id)
+            except Exception as ut_exc:
+                log.warning("Failed to update resumed task %s to 'failed': %s", task_id[:8], ut_exc)
         finally:
             try:
                 self.dashboard.update_being("prime", {"status": "online"})

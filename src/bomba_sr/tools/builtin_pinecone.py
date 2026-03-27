@@ -610,14 +610,9 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ToolDefinition(
             name="pinecone_query",
             description=(
-                "Search your knowledge bases for information from past conversations, "
-                "uploaded documents, case data, contracts, and institutional knowledge. "
-                "USE THIS when you need to recall specific facts, case details, contract "
-                "terms, fee schedules, carrier information, or methodology that isn't in "
-                "your immediate conversation history. "
-                "Default searches your operational memory (saimemory). "
-                "Pass index_name='ublib2' to search the master knowledge library for "
-                "coaching frameworks, business methodology, and the Formula."
+                "Search your knowledge bases for facts, case details, contracts, or methodology "
+                "not in your conversation history. Default: saimemory (operational memory). "
+                "Pass index_name='ublib2' for the master knowledge library."
             ),
             parameters={
                 "type": "object",
@@ -660,10 +655,8 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ToolDefinition(
             name="pinecone_upsert",
             description=(
-                "Store important information as vectors in your knowledge base for "
-                "long-term recall. Use this when you learn something that should persist "
-                "across sessions — case outcomes, contract patterns, process improvements, "
-                "key decisions."
+                "Store information as vectors in your knowledge base for long-term recall. "
+                "Use when you learn something that should persist across sessions."
             ),
             parameters={
                 "type": "object",
@@ -688,10 +681,8 @@ def builtin_pinecone_tools(default_index: str = "ublib2", default_namespace: str
         ToolDefinition(
             name="pinecone_multi_query",
             description=(
-                "Search BOTH your operational memory AND the master knowledge library "
-                "in a single call. Use when you need comprehensive results — for example, "
-                "analyzing a case (saimemory) while grounding your approach in methodology (ublib2). "
-                "Returns merged results ranked by relevance."
+                "Search multiple knowledge bases in a single call. "
+                "Use when you need results from both saimemory and ublib2. Returns merged results ranked by relevance."
             ),
             parameters={
                 "type": "object",

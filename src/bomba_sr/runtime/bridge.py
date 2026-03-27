@@ -78,8 +78,25 @@ from bomba_sr.tools.builtin_voice import builtin_voice_tools
 from bomba_sr.tools.builtin_web import builtin_web_tools
 from bomba_sr.tools.builtin_browser import builtin_browser_tools
 from bomba_sr.tools.builtin_seo import builtin_seo_tools
+from bomba_sr.tools.builtin_deliverables import builtin_deliverable_tools
+from bomba_sr.tools.builtin_video import builtin_video_tools
+from bomba_sr.tools.builtin_pad import builtin_pad_tools
 
 logger = logging.getLogger(__name__)
+
+# Anti-hallucination: tool-use enforcement (must be first in context)
+_TOOL_USE_ENFORCEMENT = """<critical_behavior>
+NEVER claim you completed a task unless you can point to actual tool calls you made. If you say "Done" or "File saved" or "Video generated" without having called exec, write, fal_video_generate, create_deliverable, or another action tool in THIS turn, you are hallucinating.
+
+RULES:
+1. To create a file → you MUST call write or exec. No exceptions.
+2. To generate a video → you MUST call exec with a script. No exceptions.
+3. To register an output for the user → you MUST call create_deliverable. No exceptions.
+4. If you cannot complete a task with your tools, say so honestly. Do not fabricate results.
+5. After completing work, ALWAYS call create_deliverable for any file the user should see.
+
+If you find yourself typing "Done" or "Saved" or "Generated" without having made tool calls first — STOP. Go back and actually do the work.
+</critical_behavior>"""
 
 
 @dataclass(frozen=True)
@@ -611,7 +628,7 @@ class RuntimeBridge:
                 tenant_id=request.tenant_id,
                 session_id=request.session_id,
                 user_id=request.user_id,
-                limit=500,  # Load full session — replay budget caps what actually fits
+                limit=50,  # Recent turns — session summary covers older context
             )
         session_summary = runtime.memory.get_session_summary(
             tenant_id=request.tenant_id,
@@ -659,7 +676,7 @@ class RuntimeBridge:
         if task_block:
             task_state["text"] += f" Active task={task_block['title']}({task_block['task_id']}) status={task_block['status']}."
 
-        system_prefix_parts: list[str] = []
+        system_prefix_parts: list[str] = [_TOOL_USE_ENFORCEMENT]
         # For casual chat, only load core identity (SOUL + IDENTITY).
         # Heavy files (MISSION, VISION, FORMULA, PRIORITIES, KNOWLEDGE, etc.)
         # are only injected for task_execution/planning profiles.
@@ -754,7 +771,14 @@ class RuntimeBridge:
                     {"text": f"persona_summary={profile_before['persona_summary']}"},
                 ],
                 "semantic_candidates": semantic_candidates,
-                "recent_history": [],  # Full transcript in replay_messages — no need to duplicate here
+                "recent_history": [
+                    {"text": f"session_id={request.session_id}"},
+                    (
+                        {"text": f"session_summary={session_summary['summary_text']}"}
+                        if session_summary is not None
+                        else {"text": "session_summary=None"}
+                    ),
+                ],
                 "procedural_candidates": procedural_candidates,
                 "pending_predictions": [{"text": "User may request artifacts or code changes next."}],
                 "tool_results": tool_results,
@@ -898,13 +922,18 @@ class RuntimeBridge:
                     model_context_length=capabilities.context_length,
                 ),
             )
+            _tool_schemas_for_loop = [] if request.disable_tools else runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format)
+            _tool_names_for_log = [s.get("function", {}).get("name") or s.get("name", "?") for s in _tool_schemas_for_loop]
+            logger.info("[TOOLS] Assembled %d tools for being %s: %s", len(_tool_schemas_for_loop), request.tenant_id, _tool_names_for_log[:30])
+            if "create_deliverable" not in _tool_names_for_log:
+                logger.warning("[TOOLS] create_deliverable NOT in tool list for %s", request.tenant_id)
             loop_result = loop.run(
                 initial_messages=[
                     ChatMessage(role="system", content=system_prompt, cache_control={"type": "ephemeral"}),
                     *replay_messages,
                     ChatMessage(role="user", content=context_result.context_text),
                 ],
-                tool_schemas=[] if request.disable_tools else runtime.tool_executor.available_tool_schemas(resolved_policy, format=tool_format),
+                tool_schemas=_tool_schemas_for_loop,
                 context=tool_context,
                 resolved_policy=resolved_policy,
                 model_id=model_id,
@@ -2649,6 +2678,9 @@ class RuntimeBridge:
                 tool_result_max_chars=self.config.tool_result_max_chars,
             )
             tool_executor.register_many(builtin_fs_tools())
+            tool_executor.register_many(builtin_deliverable_tools())
+            tool_executor.register_many(builtin_video_tools())
+            tool_executor.register_many(builtin_pad_tools())
             tool_executor.register_many(
                 builtin_exec_tools(default_max_output_chars=self.config.shell_output_max_chars)
             )

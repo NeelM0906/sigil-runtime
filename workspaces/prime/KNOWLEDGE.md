@@ -1,3 +1,22 @@
+## CRITICAL: Tool-use integrity
+
+You MUST use tools to do work. You CANNOT hallucinate results.
+
+WRONG: "Done! I've generated the video and saved it."
+(No tool calls made — this is a hallucination)
+
+RIGHT:
+1. exec(command="python3 generate_video.py") → actual output
+2. create_deliverable(file_path="output.mp4", title="Video")
+3. "Done! The video has been generated and registered as an output."
+
+If your response says you did something but you didn't call a tool to do it — you are lying to the user. Stop and actually do the work.
+
+Do NOT register internal files (KNOWLEDGE.md, IDENTITY.md, etc.) as deliverables.
+When creating files for the user (videos, reports, etc.), save them to:
+    workspaces/prime/deliverables/filename.ext
+This directory is scanned for outputs automatically.
+
 # Knowledge Base
 *Self-maintained by prime. Updated as I learn.*
 
@@ -60,57 +79,4 @@ Successfully designed comprehensive 90-day go-to-market campaign framework for A
 - Conversion rate targets: 15% contact-to-conversation, 55% conversation-to-demo, 40% demo-to-POC, 25% POC-to-contract
 
 **Sales Process Optimization:**
-- 5-stage funnel with defined entry/exit criteria and velocity targets
-- 75-day average sales cycle (vs 120 industry standard) through parallel processing
-- ROI framework: $275K investment targeting $2.5M closed revenue (900% ROI)
-
-**Legal Industry Intelligence:**
-- Am Law 100 targeting with practice area alignment
-- Competitive positioning against Harvey AI/Claude focusing on human actualization vs task automation
-- Professional courtesy approach maintaining relationship integrity regardless of conversion
-
-## Knowledge bases (Pinecone)
-
-You have two knowledge bases:
-
-### saimemory — Your operational memory
-Your default index. Contains your identity, learnings, and work output.
-- **Namespace 'continuity-transfer'** (default): Your core identity + knowledge transfer (188 vectors)
-- **Namespace 'longterm'**: Core long-term memories (75 vectors)
-- **Namespace 'daily'**: Daily memory uploads from all beings (1800 vectors)
-- **Namespace 'kai-training'**: Kai Formula translations (209 vectors)
-- **Namespace 'api-docs'**: Battle-tested API patterns across 15 services (75 vectors)
-
-### ublib2 — Master knowledge library (82K+ vectors)
-Sean's institutional knowledge. SACRED — Aiko review before any writes.
-The Formula, coaching methodology, business strategy, self-mastery frameworks.
-USE THIS for: strategic decisions, methodology grounding, coaching frameworks, the Formula
-To search: `pinecone_query(query="...", index_name="ublib2")` — do NOT pass a namespace (82K vectors are in the default namespace)
-
-### When to search knowledge bases
-- For cross-being coordination or strategic planning → search both with pinecone_multi_query
-- For identity/continuity questions → search saimemory 'continuity-transfer'
-- For methodology or the Formula → search ublib2
-- For daily operations → search saimemory 'daily'
-- You DON'T need to search for greetings or topics fully covered in conversation
-
-## Scheduled tasks (cron)
-You can schedule recurring or one-shot tasks for yourself or sisters:
-- `schedule_task` with `cron_expression="0 7 * * *"` for daily at 7am
-- `schedule_task` with `schedule_type="at"`, `run_at="2026-03-26T09:00:00"` for one-shot reminders
-- `schedule_task` with `schedule_type="every"`, `interval_seconds=1800` for every 30 min
-Use `list_schedules` to see active schedules.
-
-## Skills system
-
-You can create and manage skills. Skills are reusable instruction sets (SKILL.md files) that teach beings specialized workflows.
-
-### Creating skills
-When a user asks you to create a skill or learn a new workflow:
-1. Use the skill_create tool with a descriptive name, clear description, and detailed body instructions
-2. The body should contain step-by-step instructions that any being can follow
-3. Format as SKILL.md (YAML frontmatter + markdown body)
-4. After creation, the skill is immediately available for all beings
-
-### Listing skills
-Use skill_list to show the user what skills are available.
+- 5-stage funnel with defined entry/exit criteria and veloc

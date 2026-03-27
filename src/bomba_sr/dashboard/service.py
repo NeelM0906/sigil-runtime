@@ -46,9 +46,6 @@ MC_PROJECT_NAME = "Mission Control"
 # Being types
 TYPE_SISTER = "sister"
 TYPE_RUNTIME = "runtime"       # Prime — the host runtime itself
-TYPE_VOICE_AGENT = "voice"     # Bland.ai voice agents — not chat-routable
-TYPE_SUBAGENT = "subagent"     # BD-PIP, BD-WC etc.
-TYPE_ACTI = "acti"             # ACT-I specialized beings
 
 log = logging.getLogger(__name__)
 
@@ -230,6 +227,138 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 class DashboardService:
     """Service layer for the Mission Control dashboard."""
 
+    _INTERNAL_FILE_PATTERNS = {
+        "KNOWLEDGE.md", "INDEX.md", "SKILL.md", "SOUL.md",
+        "IDENTITY.md", "HEARTBEAT.md", "MISSION.md", "PRIORITIES.md",
+        "FORMULA.md", "TEAM_CONTEXT.md", "REPRESENTATION.md", "VISION.md",
+        "CONTEXT_OFFLOAD_OPS.md", "DISCUSSION_CAPTURE_OPS.md",
+        "_meta.json", "README.md", "CLAUDE.md", ".DS_Store",
+    }
+    _INTERNAL_PATH_PREFIXES = (
+        "workspaces/", "./workspaces/", "skills/", "configs/",
+        ".runtime/", ".claude/",
+    )
+    _INTERNAL_FILE_TYPES = {
+        "ASSISTANT-CODE-SNIPPET", "assistant-code-snippet",
+    }
+
+    @classmethod
+    def _is_internal_file(cls, item: dict) -> bool:
+        """Return True if the item represents an internal workspace file."""
+        filename = str(item.get("filename") or item.get("file_name") or "")
+        path = str(item.get("file_path") or item.get("path") or "")
+        file_type = str(item.get("file_type") or item.get("type") or "").upper()
+
+        if filename in cls._INTERNAL_FILE_PATTERNS:
+            return True
+        if file_type in {ft.upper() for ft in cls._INTERNAL_FILE_TYPES}:
+            return True
+        if any(path.startswith(p) for p in cls._INTERNAL_PATH_PREFIXES):
+            return True
+        if filename.startswith(".") or filename.startswith("_"):
+            return True
+        return False
+
+    _OUTPUT_EXTENSIONS = {
+        ".mp4", ".mp3", ".wav", ".avi", ".mov", ".webm",
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+        ".pdf", ".docx", ".xlsx", ".xls", ".csv", ".pptx",
+        ".html", ".json", ".xml", ".zip", ".tar", ".gz",
+    }
+
+    def _auto_register_tool_outputs(self, result: dict, task_id: str, being_id: str, session_id: str) -> None:
+        """Safety net: scan write/exec tool results for created files and register as deliverables.
+        Only fires if create_deliverable was NOT already called in this turn."""
+        import mimetypes
+        assistant = result.get("assistant")
+        if not isinstance(assistant, dict):
+            return
+        tool_calls = assistant.get("tool_calls", [])
+        # If being already called create_deliverable, skip
+        if any(isinstance(tc, dict) and tc.get("tool_name") == "create_deliverable" for tc in tool_calls):
+            return
+        registered = set()
+        for tc in tool_calls:
+            if not isinstance(tc, dict):
+                continue
+            tool_name = tc.get("tool_name", "")
+            args = tc.get("arguments") or {}
+            output = tc.get("output") or tc.get("result") or {}
+            if not isinstance(output, dict):
+                continue
+            fpath = ""
+            if tool_name == "write":
+                fpath = str(args.get("path", ""))
+            elif tool_name == "fal_video_generate":
+                fpath = str(output.get("saved_path") or output.get("path") or "")
+            if not fpath:
+                continue
+            fname = fpath.rsplit("/", 1)[-1] if "/" in fpath else fpath
+            ext = "." + fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+            if ext not in self._OUTPUT_EXTENSIONS:
+                continue
+            if self._is_internal_file({"filename": fname, "file_path": fpath}):
+                continue
+            if fpath in registered:
+                continue
+            registered.add(fpath)
+            mime, _ = mimetypes.guess_type(fpath)
+            try:
+                import os as _os
+                byte_size = _os.path.getsize(fpath) if _os.path.isfile(fpath) else 0
+                self.create_deliverable(
+                    task_id=task_id, being_id=being_id,
+                    filename=fname, file_type=mime or "file",
+                    file_path=fpath,
+                    url=f"/api/mc/deliverables/file?path={fpath}" if fpath.startswith("/") else "",
+                    line_count=0, byte_size=byte_size,
+                    session_id=session_id,
+                )
+                log.info("[AUTO-DELIVERABLE] Registered %s from %s tool call", fname, tool_name)
+            except Exception as exc:
+                log.debug("Failed to auto-register deliverable %s: %s", fname, exc)
+        # Safety net: scan workspace for recently created output files
+        if not registered:
+            being = self.get_being(being_id)
+            ws_path = self._resolve_workspace_path(
+                (being or {}).get("workspace")
+            ) if being else None
+            if ws_path:
+                import time as _time
+                now = _time.time()
+                for subdir_name in ["deliverables", "outputs", "uploads"]:
+                    subdir = ws_path / subdir_name
+                    if not subdir.is_dir():
+                        continue
+                    for f in subdir.iterdir():
+                        if not f.is_file():
+                            continue
+                        ext = f.suffix.lower()
+                        if ext not in self._OUTPUT_EXTENSIONS:
+                            continue
+                        if now - f.stat().st_mtime > 300:
+                            continue
+                        fpath_str = str(f)
+                        if fpath_str in registered:
+                            continue
+                        fname = f.name
+                        if self._is_internal_file({"filename": fname, "file_path": fpath_str}):
+                            continue
+                        registered.add(fpath_str)
+                        mime, _ = mimetypes.guess_type(fpath_str)
+                        try:
+                            self.create_deliverable(
+                                task_id=task_id, being_id=being_id,
+                                filename=fname, file_type=mime or "file",
+                                file_path=fpath_str,
+                                url=f"/api/mc/deliverables/file?path={fpath_str}",
+                                line_count=0, byte_size=f.stat().st_size,
+                                session_id=session_id,
+                            )
+                            log.info("[AUTO-DELIVERABLE] Workspace scan registered %s", fname)
+                        except Exception as exc:
+                            log.debug("Failed to auto-register %s: %s", fname, exc)
+
     def __init__(
         self,
         db: RuntimeDB,
@@ -245,7 +374,14 @@ class DashboardService:
         self.openclaw_sync: OpenClawSync | None = None
         self._sse_clients: dict[str, dict] = {}  # client_id -> {"queue": Queue, "tenant_id": str}
         self._sse_lock = threading.Lock()
+        self._ws_manager = None  # Set from app lifespan
         self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
+        self._session_locks: dict[str, threading.Lock] = {}  # session_id -> serialize being calls
+        from concurrent.futures import ThreadPoolExecutor
+        self._llm_pool = ThreadPoolExecutor(
+            max_workers=int(os.getenv("BOMBA_MAX_CONCURRENT_LLM", "5")),
+            thread_name_prefix="llm",
+        )
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -397,6 +533,48 @@ class DashboardService:
         self.db.execute("UPDATE mc_chat_sessions SET user_id = 'user-admin' WHERE user_id IS NULL")
         self.db.commit()
 
+        # Teams / collaboration schema
+        self.db.script("""
+            CREATE TABLE IF NOT EXISTS mc_teams (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              admin_user_id TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS mc_team_members (
+              id TEXT PRIMARY KEY,
+              team_id TEXT NOT NULL,
+              user_id TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'member',
+              joined_at TEXT NOT NULL,
+              UNIQUE(team_id, user_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_team_members_team ON mc_team_members(team_id);
+            CREATE INDEX IF NOT EXISTS idx_mc_team_members_user ON mc_team_members(user_id);
+            CREATE TABLE IF NOT EXISTS mc_session_shares (
+              id TEXT PRIMARY KEY,
+              session_id TEXT NOT NULL,
+              team_id TEXT NOT NULL,
+              shared_by TEXT NOT NULL,
+              share_mode TEXT NOT NULL DEFAULT 'live',
+              created_at TEXT NOT NULL,
+              UNIQUE(session_id, team_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_mc_session_shares_team ON mc_session_shares(team_id);
+            CREATE TABLE IF NOT EXISTS mc_team_channels (
+              id TEXT PRIMARY KEY,
+              team_id TEXT NOT NULL,
+              session_id TEXT NOT NULL,
+              name TEXT NOT NULL,
+              created_by TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              UNIQUE(team_id, session_id)
+            );
+        """)
+        self.db.commit()
+
         # Migration: add user_id to mc_messages
         _add_column("mc_messages", "user_id")
         self.db.execute("UPDATE mc_messages SET user_id = 'user-admin' WHERE user_id IS NULL")
@@ -405,6 +583,10 @@ class DashboardService:
         # Migration: add user_id to mc_deliverables
         _add_column("mc_deliverables", "user_id")
         self.db.execute("UPDATE mc_deliverables SET user_id = 'user-admin' WHERE user_id IS NULL")
+        self.db.commit()
+
+        # Migration: add session_id to mc_deliverables for session-scoped outputs
+        _add_column("mc_deliverables", "session_id", default="")
         self.db.commit()
 
         # Migration: add tenant_id to mc_users
@@ -573,141 +755,9 @@ class DashboardService:
             except (json.JSONDecodeError, KeyError, OSError):
                 pass
 
-        # ── Tier 1b: Recovery sub-agents (BD-PIP, BD-WC) ─────────
-        bd_agents_dir = _PROJECT_ROOT / "workspaces" / "recovery" / "agents"
-        if bd_agents_dir.is_dir():
-            bd_configs = {
-                "sai-bd-pip": {
-                    "id": "bd-pip",
-                    "color": "#EF4444",
-                    "role": "PIP business development specialist",
-                },
-                "sai-bd-wc": {
-                    "id": "bd-wc",
-                    "color": "#F59E0B",
-                    "role": "Workers comp business development specialist",
-                },
-            }
-            for dirname, cfg in bd_configs.items():
-                agent_dir = bd_agents_dir / dirname
-                if not (agent_dir / "IDENTITY.md").exists():
-                    continue
-                soul = self._load_soul_safe(agent_dir)
-                beings.append({
-                    "id": cfg["id"],
-                    "name": soul.name if soul else dirname.upper(),
-                    "role": cfg["role"],
-                    "avatar": soul.emoji if soul else "🎯",
-                    "status": "offline",
-                    "description": cfg["role"],
-                    "type": TYPE_SUBAGENT,
-                    "tools": [],
-                    "skills": [],
-                    "color": cfg["color"],
-                    "model_id": "",
-                    "workspace": f"workspaces/recovery/agents/{dirname}",
-                    "tenant_id": "tenant-recovery",
-                    "auto_start": False,
-                })
+        # ── Tier 1b: Sub-agents removed ─────────────────────────
 
-        # ── Tier 2: Voice agents from Bland configs ───────────────
-        configs_dir = _PROJECT_ROOT / "workspaces" / "prime" / "configs"
-        if configs_dir.is_dir():
-            voice_configs = {
-                "callie-sean-config.json": {
-                    "id": "callie",
-                    "name": "Callie",
-                    "avatar": "📞",
-                    "color": "#EC4899",
-                    "role": "Voice agent — Sean's dedicated Bland.ai assistant",
-                },
-                "athena-bella-hoi-config.json": {
-                    "id": "athena-hoi",
-                    "name": "Athena (HOI)",
-                    "avatar": "🎙️",
-                    "color": "#6366F1",
-                    "role": "Voice agent — Heart of Influence Bella pathway",
-                },
-                "athena-leadership-config.json": {
-                    "id": "athena-leadership",
-                    "name": "Athena (Leadership)",
-                    "avatar": "🎙️",
-                    "color": "#7C3AED",
-                    "role": "Voice agent — Leadership pathway",
-                },
-                "mylo-template.json": {
-                    "id": "mylo",
-                    "name": "Mylo",
-                    "avatar": "🎤",
-                    "color": "#14B8A6",
-                    "role": "Voice agent — Template configuration",
-                },
-            }
-            for filename, cfg in voice_configs.items():
-                config_path = configs_dir / filename
-                if not config_path.exists():
-                    continue
-                try:
-                    bland_data = json.loads(config_path.read_text(encoding="utf-8"))
-                    agent_block = bland_data.get("agent", bland_data)
-                    agent_id = agent_block.get("agent_id", "")
-                except (json.JSONDecodeError, OSError):
-                    agent_id = ""
-
-                beings.append({
-                    "id": cfg["id"],
-                    "name": cfg["name"],
-                    "role": cfg["role"],
-                    "avatar": cfg["avatar"],
-                    "status": "offline",
-                    "description": cfg["role"],
-                    "type": TYPE_VOICE_AGENT,
-                    "tools": [],
-                    "skills": ["voice_call"],
-                    "color": cfg["color"],
-                    "model_id": "",
-                    "workspace": "",
-                    "tenant_id": "",
-                    "auto_start": False,
-                    "agent_id": agent_id,
-                })
-
-        # ── Tier 3: ACT-I specialized beings ──────────────────────
-        try:
-            from bomba_sr.acti.loader import load_beings as load_acti_beings, SHARED_HEART_SKILLS as _ACTI_HEART
-
-            # Build a lookup for sister tenant_id/workspace/color/model from already-loaded beings
-            sister_lookup: dict[str, dict] = {}
-            for b in beings:
-                if b.get("type") == TYPE_SISTER:
-                    sister_lookup[b["id"]] = b
-
-            acti_beings = load_acti_beings()
-            for ab in acti_beings:
-                # Skip apex beings (Prime, Executive Assistant) — they're already loaded
-                if ab["id"] in ("sai-prime", "executive-assistant"):
-                    continue
-                sister_id = ab.get("sister_id", "")
-                parent = sister_lookup.get(sister_id, {})
-                top_clusters = ab.get("clusters", [])[:3]
-                beings.append({
-                    "id": ab["id"],
-                    "name": ab["name"],
-                    "role": (ab.get("domain") or "")[:200],
-                    "avatar": "\U0001f3af",  # 🎯
-                    "status": "offline",
-                    "description": ab.get("domain", ""),
-                    "type": TYPE_ACTI,
-                    "tools": [],
-                    "skills": [s["name"] for s in _ACTI_HEART] + [c["name"] for c in top_clusters],
-                    "color": parent.get("color", self._color_for_sister(sister_id)),
-                    "model_id": parent.get("model_id", ""),
-                    "workspace": parent.get("workspace", f"workspaces/{sister_id}"),
-                    "tenant_id": parent.get("tenant_id", f"tenant-{sister_id}"),
-                    "auto_start": False,
-                })
-        except Exception:
-            pass  # ACT-I data not available — skip silently
+        # ── Voice agents and ACT-I beings removed ─────────────────
 
         # ── Upsert all beings ─────────────────────────────────────
         now = self._now()
@@ -905,11 +955,50 @@ class DashboardService:
     def list_sessions(self, user_id: str) -> list[dict]:
         if not user_id:
             raise ValueError("user_id is required")
-        rows = self.db.execute(
+        # User's own sessions
+        own = self.db.execute(
             "SELECT * FROM mc_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
             (user_id,),
         ).fetchall()
-        result = [dict(r) for r in rows]
+        result = [dict(r) for r in own]
+        seen = {r["id"] for r in result}
+        # Team-shared sessions (live)
+        try:
+            shared = self.db.execute(
+                """SELECT s.* FROM mc_chat_sessions s
+                JOIN mc_session_shares sh ON s.id = sh.session_id
+                JOIN mc_team_members m ON sh.team_id = m.team_id
+                WHERE m.user_id = ? AND s.user_id != ?
+                ORDER BY s.updated_at DESC""",
+                (user_id, user_id),
+            ).fetchall()
+            for r in shared:
+                d = dict(r)
+                if d["id"] not in seen:
+                    d["_shared"] = True
+                    result.append(d)
+                    seen.add(d["id"])
+        except Exception:
+            pass
+        # Team channel sessions
+        try:
+            channels = self.db.execute(
+                """SELECT s.*, tc.name as channel_name FROM mc_chat_sessions s
+                JOIN mc_team_channels tc ON s.id = tc.session_id
+                JOIN mc_team_members m ON tc.team_id = m.team_id
+                WHERE m.user_id = ?
+                ORDER BY s.updated_at DESC""",
+                (user_id,),
+            ).fetchall()
+            for r in channels:
+                d = dict(r)
+                if d["id"] not in seen:
+                    d["_channel"] = True
+                    result.append(d)
+                    seen.add(d["id"])
+        except Exception:
+            pass
+        result.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
         log.info("[sessions] list_sessions user=%s → %d sessions", user_id, len(result))
         return result
 
@@ -957,6 +1046,156 @@ class DashboardService:
         return False
 
     # ------------------------------------------------------------------
+    # Teams
+    # ------------------------------------------------------------------
+
+    def create_team(self, name: str, admin_user_id: str, description: str = "") -> dict:
+        team_id = f"team-{uuid.uuid4().hex[:8]}"
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT INTO mc_teams (id, name, description, admin_user_id, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+            (team_id, name, description, admin_user_id, now, now),
+        )
+        self.db.execute_commit(
+            "INSERT INTO mc_team_members (id, team_id, user_id, role, joined_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, admin_user_id, "admin", now),
+        )
+        return self.get_team(team_id)
+
+    def get_team(self, team_id: str) -> dict | None:
+        row = self.db.execute("SELECT * FROM mc_teams WHERE id = ?", (team_id,)).fetchone()
+        if not row:
+            return None
+        team = dict(row)
+        team["members"] = self._get_team_members(team_id)
+        return team
+
+    def _get_team_members(self, team_id: str) -> list[dict]:
+        rows = self.db.execute(
+            """SELECT m.user_id, m.role, m.joined_at, u.name, u.email
+            FROM mc_team_members m JOIN mc_users u ON m.user_id = u.id
+            WHERE m.team_id = ? ORDER BY m.joined_at""",
+            (team_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def list_user_teams(self, user_id: str) -> list[dict]:
+        rows = self.db.execute(
+            """SELECT t.* FROM mc_teams t
+            JOIN mc_team_members m ON t.id = m.team_id
+            WHERE m.user_id = ? ORDER BY t.name""",
+            (user_id,),
+        ).fetchall()
+        teams = []
+        for r in rows:
+            team = dict(r)
+            team["members"] = self._get_team_members(team["id"])
+            teams.append(team)
+        return teams
+
+    def add_team_member(self, team_id: str, user_id: str, role: str = "member") -> dict:
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT OR IGNORE INTO mc_team_members (id, team_id, user_id, role, joined_at) VALUES (?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, user_id, role, now),
+        )
+        self.db.execute_commit(
+            "UPDATE mc_teams SET updated_at = ? WHERE id = ?", (now, team_id),
+        )
+        return {"added": True, "team_id": team_id, "user_id": user_id}
+
+    def remove_team_member(self, team_id: str, user_id: str) -> dict:
+        self.db.execute_commit(
+            "DELETE FROM mc_team_members WHERE team_id = ? AND user_id = ?",
+            (team_id, user_id),
+        )
+        return {"removed": True}
+
+    def share_session_with_team(
+        self, session_id: str, team_id: str, shared_by: str,
+    ) -> dict:
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT OR IGNORE INTO mc_session_shares (id, session_id, team_id, shared_by, share_mode, created_at) VALUES (?,?,?,?,?,?)",
+            (str(uuid.uuid4()), session_id, team_id, shared_by, "live", now),
+        )
+        return {"shared": True, "session_id": session_id, "team_id": team_id}
+
+    def create_team_channel(self, team_id: str, name: str, created_by: str) -> dict:
+        session = self.create_session(name=f"#{name}", user_id=created_by)
+        now = self._now()
+        self.db.execute_commit(
+            "INSERT INTO mc_team_channels (id, team_id, session_id, name, created_by, created_at) VALUES (?,?,?,?,?,?)",
+            (str(uuid.uuid4()), team_id, session["id"], name, created_by, now),
+        )
+        return {"channel_id": session["id"], "name": name, "team_id": team_id}
+
+    def list_team_channels(self, team_id: str) -> list[dict]:
+        rows = self.db.execute(
+            "SELECT * FROM mc_team_channels WHERE team_id = ? ORDER BY name",
+            (team_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def can_access_session(self, user_id: str, session_id: str) -> dict | None:
+        """Check if user can access a session (owner, shared, or channel)."""
+        own = self.db.execute(
+            "SELECT * FROM mc_chat_sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        ).fetchone()
+        if own:
+            return {"access": "owner", "session": dict(own)}
+        shared = self.db.execute(
+            """SELECT sh.team_id, sh.share_mode, s.*
+            FROM mc_session_shares sh
+            JOIN mc_chat_sessions s ON s.id = sh.session_id
+            JOIN mc_team_members m ON sh.team_id = m.team_id
+            WHERE sh.session_id = ? AND m.user_id = ? AND sh.share_mode = 'live'""",
+            (session_id, user_id),
+        ).fetchone()
+        if shared:
+            return {"access": "shared", "session": dict(shared), "team_id": shared["team_id"]}
+        channel = self.db.execute(
+            """SELECT tc.team_id, s.*
+            FROM mc_team_channels tc
+            JOIN mc_chat_sessions s ON s.id = tc.session_id
+            JOIN mc_team_members m ON tc.team_id = m.team_id
+            WHERE tc.session_id = ? AND m.user_id = ?""",
+            (session_id, user_id),
+        ).fetchone()
+        if channel:
+            return {"access": "channel", "session": dict(channel), "team_id": channel["team_id"]}
+        return None
+
+    def _emit_to_session_collaborators(
+        self, session_id: str, event_type: str, payload: dict,
+        exclude_tenant: str | None = None,
+    ) -> None:
+        """Emit an event to all team members with access to this session."""
+        tenant_ids = set()
+        for query in [
+            """SELECT DISTINCT u.tenant_id
+            FROM mc_team_members m
+            JOIN mc_users u ON m.user_id = u.id
+            JOIN mc_session_shares sh ON sh.team_id = m.team_id
+            WHERE sh.session_id = ? AND sh.share_mode = 'live'""",
+            """SELECT DISTINCT u.tenant_id
+            FROM mc_team_members m
+            JOIN mc_users u ON m.user_id = u.id
+            JOIN mc_team_channels tc ON tc.team_id = m.team_id
+            WHERE tc.session_id = ?""",
+        ]:
+            try:
+                for r in self.db.execute(query, (session_id,)).fetchall():
+                    tid = r["tenant_id"]
+                    if tid and tid != exclude_tenant:
+                        tenant_ids.add(tid)
+            except Exception:
+                pass
+        for tid in tenant_ids:
+            self._emit_event(event_type, payload, tenant_id=tid)
+
+    # ------------------------------------------------------------------
     # Deliverables
     # ------------------------------------------------------------------
 
@@ -970,18 +1209,36 @@ class DashboardService:
         being_id: str | None = None,
         line_count: int = 0,
         byte_size: int = 0,
+        session_id: str = "",
     ) -> dict:
+        if self._is_internal_file({"filename": filename, "file_path": file_path, "file_type": file_type}):
+            log.debug("Skipping internal file as deliverable: %s", filename)
+            return {}
+        if file_path and not url:
+            from pathlib import Path as _Path
+            resolved = _Path(file_path).resolve()
+            if resolved.is_file():
+                url = f"/api/mc/deliverables/file?path={resolved}"
+            else:
+                url = f"/api/mc/deliverables/file?path={file_path}"
         did = f"dlv-{uuid.uuid4().hex[:8]}"
         now = self._now()
         self.db.execute_commit(
             """INSERT INTO mc_deliverables
-               (id, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (did, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, now),
+               (id, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, created_at, session_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (did, task_id, being_id, filename, file_type, file_path, url, line_count, byte_size, now, session_id),
         )
         row = self.db.execute("SELECT * FROM mc_deliverables WHERE id = ?", (did,)).fetchone()
         d = dict(row)
-        self._emit_event("deliverable_created", d)
+        task_tenant = None
+        if task_id:
+            task_row = self.db.execute(
+                "SELECT tenant_id FROM project_tasks WHERE task_id = ?", (task_id,)
+            ).fetchone()
+            if task_row:
+                task_tenant = task_row["tenant_id"]
+        self._emit_event("deliverable_created", d, tenant_id=task_tenant, session_id=session_id)
         return d
 
     @staticmethod
@@ -1026,6 +1283,7 @@ class DashboardService:
         ).fetchall()
         items = [dict(r) for r in rows]
         items.extend(self._artifact_output_row(item) for item in self.list_task_artifacts(task_id, tenant_id=tenant_id))
+        items = [item for item in items if not self._is_internal_file(item)]
         return sorted(items, key=self._output_sort_key, reverse=True)
 
     def list_all_deliverables(self, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
@@ -1047,6 +1305,48 @@ class DashboardService:
                 )
             except Exception:
                 pass
+        items = [item for item in items if not self._is_internal_file(item)]
+        deduped: dict[str, dict] = {}
+        for item in sorted(items, key=self._output_sort_key, reverse=True):
+            key = str(item.get("id") or item.get("artifact_id") or uuid.uuid4().hex)
+            deduped.setdefault(key, item)
+        return list(deduped.values())[:limit]
+
+    def list_session_deliverables(self, session_id: str, limit: int = 50, tenant_id: str = MC_TENANT) -> list[dict]:
+        """List deliverables scoped to a specific chat session."""
+        # Match deliverables that were explicitly tagged with this session_id,
+        # OR whose task_id was referenced in a message within this session.
+        rows = self.db.execute(
+            """SELECT DISTINCT d.* FROM mc_deliverables d
+            LEFT JOIN project_tasks t ON t.task_id = d.task_id
+            WHERE (d.session_id = ? OR d.task_id IN (
+                SELECT DISTINCT m.task_ref FROM mc_messages m
+                WHERE m.session_id = ? AND m.task_ref IS NOT NULL AND m.task_ref != ''
+            ))
+            AND (t.tenant_id = ? OR t.tenant_id IS NULL)
+            ORDER BY d.created_at DESC LIMIT ?""",
+            (session_id, session_id, tenant_id, limit),
+        ).fetchall()
+        items = [dict(r) for r in rows]
+        # Also include artifacts tied to tasks referenced in this session
+        task_ids_in_session = {r["task_id"] for r in rows}
+        msg_task_refs = self.db.execute(
+            "SELECT DISTINCT task_ref FROM mc_messages WHERE session_id = ? AND task_ref IS NOT NULL AND task_ref != ''",
+            (session_id,),
+        ).fetchall()
+        for ref_row in msg_task_refs:
+            tid = ref_row["task_ref"]
+            if tid not in task_ids_in_session:
+                task_ids_in_session.add(tid)
+        store = getattr(self, "_artifact_store", None)
+        if store:
+            for tid in task_ids_in_session:
+                try:
+                    for art in self.list_task_artifacts(tid, tenant_id=tenant_id):
+                        items.append(self._artifact_output_row(art) if "artifact_id" not in art else art)
+                except Exception:
+                    pass
+        items = [item for item in items if not self._is_internal_file(item)]
         deduped: dict[str, dict] = {}
         for item in sorted(items, key=self._output_sort_key, reverse=True):
             key = str(item.get("id") or item.get("artifact_id") or uuid.uuid4().hex)
@@ -1064,7 +1364,7 @@ class DashboardService:
         search: str | None = None,
         session_id: str | None = None,
         user_id: str | None = None,
-        limit: int = 500,
+        limit: int = 100,
         offset: int = 0,
     ) -> list[dict]:
         sql = "SELECT * FROM mc_messages WHERE 1=1"
@@ -1110,6 +1410,18 @@ class DashboardService:
     ) -> dict:
         if not session_id:
             session_id = f"sess-{uuid.uuid4().hex[:8]}"
+        # Auto-populate sender_name for collaborative sessions
+        if sender and sender != "system":
+            if metadata is None:
+                metadata = {}
+            if "sender_name" not in metadata:
+                row = self.db.execute("SELECT name FROM mc_users WHERE id = ?", (sender,)).fetchone()
+                if row and row["name"]:
+                    metadata["sender_name"] = row["name"]
+                else:
+                    being = self.get_being(sender)
+                    if being:
+                        metadata["sender_name"] = being.get("name", sender)
         msg_id = f"msg-{uuid.uuid4().hex[:8]}"
         now = self._now()
         with self.db.transaction() as conn:
@@ -1134,7 +1446,7 @@ class DashboardService:
                 "SELECT * FROM mc_messages WHERE id = ?", (msg_id,)
             ).fetchone()
         )
-        self._emit_event("chat_message", msg, tenant_id=tenant_id)
+        self._emit_event("chat_message", msg, tenant_id=tenant_id, session_id=session_id)
         return msg
 
     def create_system_message(
@@ -1151,13 +1463,67 @@ class DashboardService:
         )
         return cur.rowcount > 0
 
+    def _get_session_lock(self, session_id: str) -> threading.Lock:
+        if session_id not in self._session_locks:
+            self._session_locks[session_id] = threading.Lock()
+        return self._session_locks[session_id]
+
     def route_to_being(self, being_id: str, content: str, sender: str = "user", chat_session_id: str = "") -> None:
-        """Route a message to a being via LLM in a background thread."""
-        t = threading.Thread(
-            target=self._route_to_being_sync,
-            args=(being_id, content, sender, chat_session_id),
-            daemon=True,
-        )
+        """Route a message to a being via LLM in a background thread.
+        Serializes calls per session to prevent interleaving in shared sessions.
+        Session lock has a hard timeout to prevent zombie threads."""
+        lock = self._get_session_lock(chat_session_id) if chat_session_id else None
+        _lock_timeout = int(os.getenv("BOMBA_SESSION_LOCK_TIMEOUT", "1200"))  # 20 min max
+
+        def _run():
+            try:
+                if lock:
+                    acquired = lock.acquire(blocking=False)
+                    if not acquired:
+                        self.create_message(
+                            sender=being_id,
+                            content="I'm still working on your previous message. "
+                                    "Please wait for my response before sending another.",
+                            targets=[sender], msg_type="direct", session_id=chat_session_id,
+                        )
+                        return
+                    # Use a timer to force-release the lock if _route_to_being_sync hangs
+                    _released = threading.Event()
+                    def _force_release():
+                        if not _released.is_set():
+                            try:
+                                lock.release()
+                            except RuntimeError:
+                                pass
+                            log.error("[LOCK-TIMEOUT] Force-released session lock for %s after %ds", chat_session_id[:12], _lock_timeout)
+                    watchdog = threading.Timer(_lock_timeout, _force_release)
+                    watchdog.daemon = True
+                    watchdog.start()
+                    try:
+                        self._route_to_being_sync(being_id, content, sender, chat_session_id)
+                    finally:
+                        _released.set()
+                        watchdog.cancel()
+                        try:
+                            lock.release()
+                        except RuntimeError:
+                            pass  # Already released by watchdog
+                else:
+                    self._route_to_being_sync(being_id, content, sender, chat_session_id)
+            except Exception as exc:
+                log.exception("[ROUTE-FAIL] route_to_being failed for %s in session %s", being_id, chat_session_id[:12])
+                try:
+                    self.create_message(
+                        sender=being_id,
+                        content=f"I encountered an error processing your message. Please try again.\n\nError: {str(exc)[:200]}",
+                        targets=[sender],
+                        msg_type="direct",
+                        session_id=chat_session_id,
+                    )
+                except Exception:
+                    pass
+
+        t = threading.Thread(target=_run, daemon=True, name=f"route-{being_id}-{chat_session_id[:8]}")
         t.start()
 
     @staticmethod
@@ -1276,8 +1642,8 @@ class DashboardService:
         being = self.get_being(being_id) or {}
         being_type = being.get("type", "")
 
-        # Voice agents are not chat-routable -- they use Bland.ai
-        if being_type == TYPE_VOICE_AGENT:
+        # Voice agents are not chat-routable (removed but guard remains)
+        if being_type == "voice":
             self.create_message(
                 sender=being_id,
                 content=f"[{being.get('name', being_id)} is a voice agent — use the Voice panel to trigger calls]",
@@ -1329,15 +1695,11 @@ class DashboardService:
             classification,
         )
 
-        # ── Orchestration intercept: full_task to Prime triggers multi-being orchestration ──
-        if (
-            classification == "full_task"
-            and being_id == "prime"
-            and self.orchestration_engine is not None
-            and self.project_service is not None
-        ):
-            self._handle_orchestrated_task(being_id, being, content, sender, session_id, chat_session_id=chat_session_id, tenant_id=sender_tenant_id)
-            return
+        # ── Orchestration: disabled as forced intercept ──
+        # Prime runs on Opus 4.6 with full tool access (exec, web_search, sisters_message,
+        # sessions_spawn). It decides on its own when to delegate to other beings via those
+        # tools — no forced routing to the orchestration engine.
+        # The orchestration engine is still available for explicit API calls if needed.
 
         task_id: str | None = None
         if classification in ("light_task", "full_task"):
@@ -1357,6 +1719,7 @@ class DashboardService:
                 msg_type="direct",
                 task_ref=task_id,
                 session_id=chat_session_id,
+                tenant_id=sender_tenant_id,
             )
 
             self._execute_full_task_background(
@@ -1381,7 +1744,8 @@ class DashboardService:
             "being_id": being_id,
             "being_name": being.get("name", being_id),
             "active": True,
-        })
+            "session_id": chat_session_id,
+        }, session_id=chat_session_id)
 
         # Transition task to in_progress
         if task_id:
@@ -1409,7 +1773,7 @@ class DashboardService:
                     "session_id": chat_session_id,
                     "text": progress_text,
                     "iteration": data.get("iteration", 0),
-                }, tenant_id=tenant_id)
+                }, tenant_id=tenant_id, session_id=chat_session_id)
 
         error_occurred = False
         result = None
@@ -1434,7 +1798,20 @@ class DashboardService:
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            result = self.bridge.handle_turn(req)
+            from concurrent.futures import TimeoutError as FuturesTimeout
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "600"))
+            future = self._llm_pool.submit(self.bridge.handle_turn, req)
+            try:
+                result = future.result(timeout=_timeout)
+            except FuturesTimeout:
+                future.cancel()
+                log.warning("[LLM-TIMEOUT] handle_turn timed out for %s (%ds)", being_id, _timeout)
+                result = {"assistant": {"text": (
+                    "This task took too long and was stopped after "
+                    f"{_timeout // 60} minutes. The work may be partially complete. "
+                    "Please try again with a simpler request, or break it into smaller steps."
+                )}, "stopped_reason": "timeout"}
+                error_occurred = True
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
             msg_metadata: dict | None = None
@@ -1457,7 +1834,8 @@ class DashboardService:
                 "being_id": being_id,
                 "being_name": being.get("name", being_id),
                 "active": False,
-            })
+                "session_id": chat_session_id,
+            }, session_id=chat_session_id)
 
         # Register artifacts as deliverables so they appear in the Outputs panel
         if isinstance(result, dict):
@@ -1474,6 +1852,7 @@ class DashboardService:
                             url=f"/api/mc/artifacts/{aid}/download" if aid else "",
                             line_count=0,
                             byte_size=art.get("byte_size") or 0,
+                            session_id=chat_session_id,
                         )
                     else:
                         self._emit_event("deliverable_created", {
@@ -1483,14 +1862,43 @@ class DashboardService:
                             "url": f"/api/mc/artifacts/{aid}/download" if aid else "",
                             "byte_size": art.get("byte_size") or 0,
                             "being_id": being_id,
+                            "session_id": chat_session_id,
                         }, tenant_id=tenant_id)
                 except Exception as exc:
                     log.debug("Failed to register artifact as deliverable: %s", exc)
 
+        # Register explicitly created deliverables from tool calls
+        if task_id and msg_metadata and isinstance(msg_metadata.get("outputs"), list):
+            for out in msg_metadata["outputs"]:
+                if out.get("type") == "file" and out.get("path"):
+                    try:
+                        self.create_deliverable(
+                            task_id=task_id,
+                            being_id=being_id,
+                            filename=out.get("title") or out["path"].rsplit("/", 1)[-1],
+                            file_type=out.get("mime_type") or "file",
+                            file_path=out["path"],
+                            url=f"/api/mc/deliverables/file?path={out['path']}",
+                            line_count=0,
+                            byte_size=out.get("file_size", 0),
+                            session_id=chat_session_id,
+                        )
+                    except Exception:
+                        pass
+
+        # Safety net: auto-register files created by write/exec if being forgot create_deliverable
+        if task_id and isinstance(result, dict):
+            self._auto_register_tool_outputs(result, task_id, being_id, chat_session_id)
+
         # Transition task to done (or back to backlog on error)
+        stopped = ""
+        if isinstance(result, dict):
+            stopped = (result.get("assistant") or {}).get("stopped_reason") or ""
         if task_id:
             if error_occurred:
-                self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+                self._auto_update_task_status(task_id, "failed", tenant_id=sender_tenant_id)
+            elif stopped == "max_iterations":
+                pass  # Keep in_progress — user can say "continue"
             else:
                 self._auto_update_task_status(task_id, "done", tenant_id=sender_tenant_id)
 
@@ -1502,6 +1910,7 @@ class DashboardService:
             task_ref=task_id,
             session_id=chat_session_id,
             metadata=msg_metadata,
+            tenant_id=sender_tenant_id,
         )
 
     def _execute_full_task_background(
@@ -1526,7 +1935,8 @@ class DashboardService:
             "being_id": being_id,
             "being_name": being.get("name", being_id),
             "active": True,
-        })
+            "session_id": chat_session_id,
+        }, session_id=chat_session_id)
         self._auto_update_task_status(task_id, "in_progress", tenant_id=sender_tenant_id)
 
         all_steps = self.get_task_steps(task_id)
@@ -1565,7 +1975,7 @@ class DashboardService:
                     "session_id": chat_session_id,
                     "text": progress_text,
                     "iteration": data.get("iteration", 0),
-                }, tenant_id=tenant_id)
+                }, tenant_id=tenant_id, session_id=chat_session_id)
 
         error_occurred = False
         cancelled = False
@@ -1592,12 +2002,25 @@ class DashboardService:
                 task_id=task_id,
                 project_id=MC_PROJECT_ID,
                 profile=TurnProfile.TASK_EXECUTION,
-                max_loop_iterations=50,
+                max_loop_iterations=75,
                 on_iteration=_on_loop_iteration if all_steps else None,
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            result = self.bridge.handle_turn(req)
+            from concurrent.futures import TimeoutError as FuturesTimeout
+            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "1200"))
+            future = self._llm_pool.submit(self.bridge.handle_turn, req)
+            try:
+                result = future.result(timeout=_timeout)
+            except FuturesTimeout:
+                future.cancel()
+                log.warning("[LLM-TIMEOUT] full_task handle_turn timed out for %s (%ds)", being_id, _timeout)
+                result = {"assistant": {"text": (
+                    "This task took too long and was stopped after "
+                    f"{_timeout // 60} minutes. The work may be partially complete. "
+                    "Please try again with a simpler request, or break it into smaller steps."
+                )}, "stopped_reason": "timeout"}
+                error_occurred = True
             if isinstance(result, dict):
                 assistant = result.get("assistant")
                 if isinstance(assistant, dict):
@@ -1619,9 +2042,32 @@ class DashboardService:
                             url=f"/api/mc/artifacts/{aid}/download" if aid else "",
                             line_count=0,
                             byte_size=art.get("byte_size") or 0,
+                            session_id=chat_session_id,
                         )
                     except Exception as exc:
                         log.debug("Failed to register artifact as deliverable: %s", exc)
+
+                # Register explicitly created deliverables from tool calls
+                if msg_metadata and isinstance(msg_metadata.get("outputs"), list):
+                    for out in msg_metadata["outputs"]:
+                        if out.get("type") == "file" and out.get("path"):
+                            try:
+                                self.create_deliverable(
+                                    task_id=task_id,
+                                    being_id=being_id,
+                                    filename=out.get("title") or out["path"].rsplit("/", 1)[-1],
+                                    file_type=out.get("mime_type") or "file",
+                                    file_path=out["path"],
+                                    url=f"/api/mc/deliverables/file?path={out['path']}",
+                                    line_count=0,
+                                    byte_size=out.get("file_size", 0),
+                                    session_id=chat_session_id,
+                                )
+                            except Exception:
+                                pass
+
+                # Safety net: auto-register files from write/exec if being forgot create_deliverable
+                self._auto_register_tool_outputs(result, task_id, being_id, chat_session_id)
         except InterruptedError:
             reply = "[Task cancelled]"
             cancelled = True
@@ -1635,13 +2081,19 @@ class DashboardService:
                 "being_id": being_id,
                 "being_name": being.get("name", being_id),
                 "active": False,
-            })
+                "session_id": chat_session_id,
+            }, session_id=chat_session_id)
 
         # Complete task
+        stopped = ""
+        if isinstance(result, dict):
+            stopped = (result.get("assistant") or {}).get("stopped_reason") or ""
         if cancelled:
             self._auto_update_task_status(task_id, "cancelled", tenant_id=sender_tenant_id)
         elif error_occurred:
-            self._auto_update_task_status(task_id, "backlog", tenant_id=sender_tenant_id)
+            self._auto_update_task_status(task_id, "failed", tenant_id=sender_tenant_id)
+        elif stopped == "max_iterations":
+            pass  # Keep in_progress — user can say "continue"
         else:
             for step in self.get_task_steps(task_id):
                 if step["status"] != "done":
@@ -1657,7 +2109,18 @@ class DashboardService:
             task_ref=task_id,
             session_id=chat_session_id,
             metadata=msg_metadata,
+            tenant_id=sender_tenant_id,
         )
+
+        # Verify the response was stored
+        if chat_session_id:
+            verify = self.db.execute(
+                "SELECT COUNT(*) as cnt FROM mc_messages WHERE session_id = ? AND sender = ?",
+                (chat_session_id, being_id),
+            ).fetchone()
+            if verify:
+                log.info("[FULL-TASK-DONE] %s in %s: %d total messages from being",
+                         being_id, chat_session_id[:12], verify["cnt"])
 
     def init_orchestration(self, project_svc: Any) -> None:
         """Initialize the orchestration engine. Call after bridge + project_svc are set."""
@@ -1814,6 +2277,47 @@ class DashboardService:
         self._auto_update_task_status(task_id, "cancelled", tenant_id=tenant_id)
         return True
 
+    def cleanup_stale_tasks(self, max_age_hours: int = 2) -> int:
+        """Mark tasks as 'failed' if they've been in_progress longer than max_age_hours."""
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+        rows = self.db.execute(
+            "SELECT task_id, tenant_id FROM project_tasks WHERE status = 'in_progress' AND updated_at < ?",
+            (cutoff,),
+        ).fetchall()
+        count = 0
+        for row in rows:
+            try:
+                self.db.execute_commit(
+                    "UPDATE project_tasks SET status = 'failed', updated_at = ? WHERE task_id = ?",
+                    (self._now(), row["task_id"]),
+                )
+                self._emit_event("task_update", {
+                    "action": "updated",
+                    "task": {"task_id": row["task_id"], "status": "failed"},
+                }, tenant_id=row.get("tenant_id"))
+                try:
+                    msg_row = self.db.execute(
+                        "SELECT session_id, sender FROM mc_messages WHERE task_ref = ? LIMIT 1",
+                        (row["task_id"],),
+                    ).fetchone()
+                    if msg_row and msg_row["session_id"]:
+                        self.create_message(
+                            sender="prime",
+                            content="A previous task timed out and has been marked as failed. If you still need this done, please send the request again.",
+                            targets=[msg_row["sender"]] if msg_row.get("sender") else [],
+                            msg_type="direct",
+                            session_id=msg_row["session_id"],
+                            tenant_id=row.get("tenant_id"),
+                        )
+                except Exception:
+                    pass
+                count += 1
+            except Exception as exc:
+                log.warning("Failed to cleanup stale task %s: %s", row["task_id"][:8], exc)
+        if count:
+            log.info("Cleaned up %d stale in_progress tasks", count)
+        return count
+
     # ------------------------------------------------------------------
     # Task classification
     # ------------------------------------------------------------------
@@ -1830,20 +2334,28 @@ class DashboardService:
         if len(stripped) < 4 or _NOT_TASK_PATTERNS.match(stripped):
             return "not_task"
 
-        # LLM classification
+        # LLM classification (with timeout to prevent thread blocking)
         try:
             from bomba_sr.llm.providers import ChatMessage, provider_from_env
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FT
             provider = provider_from_env()
-            resp = provider.generate(
-                model=_CLASSIFY_MODEL,
-                messages=[
-                    ChatMessage(role="system", content=_CLASSIFY_SYSTEM_PROMPT),
-                    ChatMessage(
-                        role="user",
-                        content=_CLASSIFY_PROMPT_TEMPLATE.format(message=stripped[:500]),
-                    ),
-                ],
-            )
+            def _do_classify():
+                return provider.generate(
+                    model=_CLASSIFY_MODEL,
+                    messages=[
+                        ChatMessage(role="system", content=_CLASSIFY_SYSTEM_PROMPT),
+                        ChatMessage(
+                            role="user",
+                            content=_CLASSIFY_PROMPT_TEMPLATE.format(message=stripped[:500]),
+                        ),
+                    ],
+                )
+            with ThreadPoolExecutor(max_workers=1) as _ex:
+                try:
+                    resp = _ex.submit(_do_classify).result(timeout=15)
+                except _FT:
+                    log.warning("[CLASSIFY-TIMEOUT] Classification timed out after 15s, defaulting to light_task")
+                    return "light_task"
             payload = _extract_json(resp.text)
             if payload:
                 classification = payload.get("classification", "light_task")
@@ -1981,10 +2493,24 @@ class DashboardService:
     def notify_artifact_created(self, record) -> None:
         """SSE notification when an artifact is created during task execution."""
         d = record.to_dict() if hasattr(record, "to_dict") else record
+        if self._is_internal_file({"filename": d.get("title", ""), "file_path": d.get("path", ""), "file_type": d.get("type", "")}):
+            return
         task_id = d.get("task_id")
+        tenant_id = d.get("tenant_id")
+        session_id = d.get("session_id")
+        row = self._artifact_output_row(d)
+        row["session_id"] = session_id or ""
+        if not tenant_id and task_id:
+            task_row = self.db.execute(
+                "SELECT tenant_id FROM project_tasks WHERE task_id = ?", (task_id,)
+            ).fetchone()
+            if task_row:
+                tenant_id = task_row["tenant_id"]
         if task_id:
-            self._emit_event("artifact_created", {"task_id": task_id, "artifact": d})
-        self._emit_event("deliverable_created", self._artifact_output_row(d))
+            self._emit_event("artifact_created", {"task_id": task_id, "artifact": d},
+                            tenant_id=tenant_id, session_id=session_id)
+            self._emit_event("deliverable_created", row,
+                            tenant_id=tenant_id, session_id=session_id)
 
     def get_being_skill_list(self, being_id: str) -> list[dict]:
         """Return skills available to a being with metadata."""
@@ -2398,12 +2924,36 @@ class DashboardService:
         import re as _re
         reply_text = ""
         assistant = result.get("assistant")
+
+        # ── Outputs: explicitly registered deliverables via create_deliverable tool ──
+        if isinstance(assistant, dict):
+            for tc in assistant.get("tool_calls", []):
+                if not isinstance(tc, dict):
+                    continue
+                if tc.get("tool_name") == "create_deliverable":
+                    result_data = tc.get("output") or tc.get("result") or {}
+                    if isinstance(result_data, dict) and result_data.get("_is_deliverable"):
+                        outputs.append({
+                            "id": None,
+                            "type": "file",
+                            "title": result_data.get("title") or result_data.get("filename", "output"),
+                            "mime_type": result_data.get("mime_type"),
+                            "preview": result_data.get("description"),
+                            "path": result_data.get("file_path", ""),
+                            "file_size": result_data.get("file_size", 0),
+                            "created_at": None,
+                        })
         if isinstance(assistant, dict):
             reply_text = assistant.get("text", "")
         url_pattern = _re.compile(r'https?://[^\s<>\'")\]]+')
         seen_urls: set[str] = set()
         for url in url_pattern.findall(reply_text):
             url_clean = url.rstrip(".,;:!?")
+            # Skip internal workspace/file paths that aren't real deliverables
+            if url_clean.startswith("/") or url_clean.startswith("./") or url_clean.startswith("workspaces/"):
+                continue
+            if url_clean.endswith(".md") and not url_clean.startswith("http"):
+                continue
             if url_clean not in seen_urls:
                 seen_urls.add(url_clean)
                 outputs.append({
@@ -2465,6 +3015,8 @@ class DashboardService:
             retrieval_sources = auto_retrieval["sources"]
             retrieval_latency = auto_retrieval.get("latency_ms", 0)
 
+        outputs = [o for o in outputs if not self._is_internal_file({"filename": o.get("title", ""), "file_path": o.get("path", ""), "file_type": o.get("type", "")})]
+
         if not outputs and not agents and not retrieval_sources:
             return None
 
@@ -2520,7 +3072,7 @@ class DashboardService:
         except queue.Empty:
             return None
 
-    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None) -> None:
+    def _emit_event(self, event_type: str, payload: dict, tenant_id: str | None = None, session_id: str | None = None) -> None:
         now = self._now()
         # Persist
         self.db.execute_commit(
@@ -2528,7 +3080,11 @@ class DashboardService:
             (event_type, json.dumps(payload, default=str), now),
         )
 
-        # Fan-out (scoped by tenant_id when provided, broadcast when None)
+        # WebSocket fan-out (primary) — delivers to tenant match OR session subscribers
+        if self._ws_manager is not None:
+            self._ws_manager.emit_event_sync(event_type, payload, tenant_id=tenant_id, session_id=session_id)
+
+        # Legacy SSE fan-out (fallback — tenant-scoped only)
         evt = {"event": event_type, "data": payload, "ts": now}
         with self._sse_lock:
             dead: list[str] = []
@@ -2691,25 +3247,8 @@ class DashboardService:
         except Exception:
             pass
 
-        # ── 6c. ACT-I being detail (for type=acti beings) ─────────
+        # ── 6c. ACT-I being detail removed ──────────────────────
         acti_being = None
-        if being.get("type") == TYPE_ACTI:
-            try:
-                from bomba_sr.acti.loader import load_beings as _load_acti, SHARED_HEART_SKILLS as _HS
-                for ab in _load_acti():
-                    if ab["id"] == being_id:
-                        acti_being = {
-                            "acti_id": ab.get("acti_id", ""),
-                            "domain": ab.get("domain", ""),
-                            "positions": ab.get("positions", 0),
-                            "levers": ab.get("levers", []),
-                            "clusters": ab.get("clusters", []),
-                            "shared_heart_skills": [s["name"] for s in _HS],
-                            "sister_id": ab.get("sister_id", ""),
-                        }
-                        break
-            except Exception:
-                pass
 
         # ── 7. Dream logs (sai-memory only) ───────────────────────
         dream_logs: list[dict] | None = None

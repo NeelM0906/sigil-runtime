@@ -43,11 +43,14 @@ def _auth_header_or_query(request: Request, token: Optional[str] = Query(None)) 
 @router.get("/deliverables")
 def list_deliverables(
     task_id: Optional[str] = Query(None),
+    session_id: Optional[str] = Query(None),
     auth: dict = Depends(get_current_user),
     dashboard_svc=Depends(get_dashboard_svc),
 ):
     if task_id:
         deliverables = dashboard_svc.list_deliverables(task_id, tenant_id=auth["tenant_id"])
+    elif session_id:
+        deliverables = dashboard_svc.list_session_deliverables(session_id, tenant_id=auth["tenant_id"])
     else:
         deliverables = dashboard_svc.list_all_deliverables(tenant_id=auth["tenant_id"])
     return {"deliverables": deliverables}
@@ -84,6 +87,24 @@ def _find_artifact(artifact_id: str, dashboard_svc, tenant_id: str | None = None
         except Exception:
             pass
     return None
+
+
+@router.get("/deliverables/file")
+def download_deliverable_file(
+    path: str = Query(...),
+    auth: dict = Depends(_auth_header_or_query),
+    dashboard_svc=Depends(get_dashboard_svc),
+):
+    """Download a workspace file by path (for deliverables created via exec/write)."""
+    import os
+    fpath = Path(path).resolve()
+    project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    runtime_home = Path(os.getenv("BOMBA_RUNTIME_HOME", ".runtime")).resolve()
+    if not any(str(fpath).startswith(str(r)) for r in [project_root, runtime_home]):
+        raise HTTPException(403, "Access denied")
+    if not fpath.is_file():
+        raise HTTPException(404, "File not found")
+    return FileResponse(path=str(fpath), filename=fpath.name)
 
 
 @router.get("/artifacts/{artifact_id}/download")

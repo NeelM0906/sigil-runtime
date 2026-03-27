@@ -8,7 +8,7 @@ import { BeingsRegistry } from './components/BeingsRegistry'
 import { BeingDetail } from './components/BeingDetail'
 import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
-import { SubAgentTracker } from './components/SubAgentTracker'
+// SubAgentTracker removed — not needed
 import { OrchestrationTracker } from './components/OrchestrationTracker'
 import { AgentTeams } from './components/AgentTeams'
 import { CodeWorkspace } from './components/CodeWorkspace'
@@ -16,6 +16,7 @@ import { CodeStatusCard } from './components/CodeStatusCard'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
+import { SessionProvider } from './context/SessionContext'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -42,6 +43,7 @@ function Dashboard() {
   const show = (tab) => activeTab === tab ? {} : { display: 'none' }
 
   return (
+    <SessionProvider>
     <SSEProvider>
     <BeingsProvider>
       <div className="min-h-screen bg-bg-primary text-text-primary">
@@ -76,8 +78,8 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          <div style={show('teams')}>
-            <AgentTeams />
+          <div style={show('team')}>
+            <TeamPage />
           </div>
           <div style={show('code')}>
             <CodeWorkspace
@@ -97,6 +99,7 @@ function Dashboard() {
       </div>
     </BeingsProvider>
     </SSEProvider>
+    </SessionProvider>
   )
 }
 

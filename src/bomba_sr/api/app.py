@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger(__name__)
@@ -52,10 +53,33 @@ async def lifespan(app: FastAPI):
         loaded = dashboard_svc.load_beings_from_configs()
         dashboard_svc.init_orchestration(project_svc)
         logger.info("mission control: loaded %d beings, orchestration ready", loaded)
+
+        # Cleanup tasks stuck in_progress from a previous crash/restart
+        stale = dashboard_svc.cleanup_stale_tasks(max_age_hours=0.25)
+        if stale:
+            logger.info("cleaned up %d stale in_progress tasks on startup", stale)
+
+        # Periodic cleanup of stuck tasks (every 5 minutes)
+        def _periodic_task_cleanup():
+            import time as _time
+            while True:
+                _time.sleep(300)
+                try:
+                    dashboard_svc.cleanup_stale_tasks(max_age_hours=0.25)
+                except Exception:
+                    pass
+
+        threading.Thread(target=_periodic_task_cleanup, daemon=True, name="task-cleanup").start()
     except Exception as exc:
         import traceback
         logger.warning("mission control init failed (%s), MC endpoints disabled", exc)
         logger.warning("".join(traceback.format_exception(exc)))
+
+    # Wire WebSocket manager into dashboard service
+    from bomba_sr.api.ws import manager as ws_manager
+    if dashboard_svc is not None:
+        dashboard_svc._ws_manager = ws_manager
+    app.state.ws_manager = ws_manager
 
     app.state.dashboard_svc = dashboard_svc
     app.state.project_svc = project_svc
@@ -86,7 +110,7 @@ def create_app() -> FastAPI:
     # Routers
     from bomba_sr.api.routers import (
         acti, admin, auth, beings, chat, cron, deliverables,
-        events, orchestration, projects, skills, subagents, tasks, upload,
+        events, orchestration, projects, skills, subagents, tasks, teams, upload,
     )
     app.include_router(acti.router)
     app.include_router(admin.router)
@@ -101,7 +125,15 @@ def create_app() -> FastAPI:
     app.include_router(skills.router)
     app.include_router(subagents.router)
     app.include_router(tasks.router)
+    app.include_router(teams.router)
     app.include_router(upload.router)
+
+    # WebSocket endpoint for real-time events (replaces SSE as primary transport)
+    from bomba_sr.api.ws import websocket_endpoint
+
+    @app.websocket("/ws")
+    async def ws_route(websocket: WebSocket, token: str = Query("")):
+        await websocket_endpoint(websocket, token=token)
 
     from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse
@@ -114,7 +146,16 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok"}
+        import threading as _threading
+        active = _threading.active_count()
+        llm_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("llm-"))
+        route_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("route-"))
+        return {
+            "status": "ok" if active < 100 else "degraded",
+            "threads": active,
+            "llm_active": llm_threads,
+            "route_active": route_threads,
+        }
 
     # ── Serve mission-control frontend (SPA with fallback) ───────────
     MC_DIST = Path(__file__).resolve().parent.parent.parent.parent / "mission-control" / "dist"
@@ -130,10 +171,14 @@ def create_app() -> FastAPI:
         # SPA fallback: any non-API, non-asset path serves index.html
         @app.get("/{full_path:path}")
         def spa_fallback(full_path: str):
+            from starlette.responses import Response
             file_path = MC_DIST / full_path
             if full_path and file_path.is_file() and ".." not in full_path:
                 return FileResponse(str(file_path))
-            return FileResponse(str(MC_DIST / "index.html"))
+            # No-cache on index.html so deploys take effect immediately
+            resp = FileResponse(str(MC_DIST / "index.html"))
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            return resp
 
     return app
 

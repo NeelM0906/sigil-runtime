@@ -1,16 +1,67 @@
 # Knowledge Base
 *Self-maintained. Updated as I learn.*
 
+## Problem-solving with exec
+
+If you need to do something you don't have a specific tool for:
+1. Search the web for how to do it programmatically
+2. Write a Python script
+3. Install dependencies with pip via exec
+4. Execute and verify the output
+5. Save as a skill if it works
+
+NEVER say "I can't do that." You have terminal access — figure it out.
+NEVER hallucinate having a tool you don't have. Be honest, then build it.
+
+## Registering outputs for the user
+
+When you create a file the user should see (report, spreadsheet, document, etc.), call create_deliverable:
+
+```
+create_deliverable(file_path="path/to/report.pdf", title="Case Analysis Report")
+```
+
+This makes it appear in the Outputs panel for download. Only register user-facing work products, not internal files.
+
 ## Key Facts
+
+### Full System Audit Completed (March 25, 2026)
+- Audit report: `memory/FULL_SYSTEM_AUDIT_2026-03-25.md`
+- **Critical finding:** KNOWLEDGE.md was severely stale — claimed 14 indexes empty when only 1 is empty
+- **ublib2 is LIVE with 82,915 vectors** — the master knowledge library works and sisters can query it
+- **athenacontextualmemory restored** — 21,555 vectors (was reported as 0)
+- 13 critical/moderate/minor gaps identified and prioritized
+- Dream logs growing unbounded (73 files, no compaction)
+- Context Offloading System and Cross-Sister Extraction Protocol: designed but never deployed
 
 ## Domain Expertise
 
-### Pinecone Infrastructure State (March 22, 2026)
-- **18 total indexes**, only 4 have vectors: `uicontextualmemory` (222,788), `saimemory` (6,212), `seancallieupdates` (814), `seanmiracontextualmemory` (154)
-- **14 indexes are EMPTY (0 vectors)** — including `ublib2`, `athenacontextualmemory`, `stratablue`, `acti-judges` — these were documented as having data but have been reset/emptied
-- Previous KNOWLEDGE.md stated ublib2=41K, athenacontextualmemory=11K — **those numbers are now stale**
+### Pinecone Infrastructure State (March 26, 2026 — Audit #4, Latest)
+- **18 total indexes, 17 have vectors** — only `uimira` is empty (0 vectors)
+- **Total ecosystem vectors: ~391,891** (up ~196 from previous audit)
+- Top indexes by size:
+  - `uicontextualmemory`: 242,976 (+195 since last)
+  - `ublib2`: 82,915 ← MASTER KNOWLEDGE LIBRARY STABLE
+  - `athenacontextualmemory`: 21,614 (stable)
+  - `adamathenacontextualmemory`: 13,413 (stable)
+  - `miracontextualmemory`: 8,128 (stable)
+  - `saimemory`: 7,447 (+1)
+  - `acti-judges`: 4,491 (stable)
+  - `basgeneralathenacontextualmemory`: 2,626 (stable)
+  - `kumar-pfd`: 2,512 (stable)
+  - `baslawyerathenacontextualmemory`: 2,039 (stable)
+  - `hoiengagementathenamemory`: 1,686 (stable)
+  - `seancallieupdates`: 814 (stable)
+  - `ariatelegrambeing`: 584 (stable)
+  - `kumar-requirements`: 468 (stable)
+  - `seanmiracontextualmemory`: 154 (stable)
+  - `stratablue`: 32 (stable)
+  - `012626bellavcalliememory`: 12 (stable)
+  - `uimira`: 0
+- **Primary growth:** `uicontextualmemory` +195 — active Athena UI usage
 - Default namespace used by runtime: `longterm`
 - All indexes: 1536-dim, cosine metric
+- **8 indexes not yet documented for ownership:** adamathenacontextualmemory, miracontextualmemory, kumar-pfd, basgeneralathenacontextualmemory, baslawyerathenacontextualmemory, hoiengagementathenamemory, ariatelegrambeing, kumar-requirements
 
 ### Context Offloading System Design (March 22, 2026)
 - **Namespace strategy:** Use `offload` namespace within `saimemory` index (not a new index)
@@ -20,55 +71,18 @@
 - **Chunking:** Section-aware (split on H2), max 2000 chars, 100 char overlap, min 200 chars
 - **Never offload:** IDENTITY.md, KNOWLEDGE.md, TEAM_CONTEXT.md, INDEX.md
 - **Scale threshold:** Migrate to dedicated index if offload vectors exceed 50K
+- **STATUS: DESIGNED ONLY — NOT IMPLEMENTED**
 - Full plan: `memory/CONTEXT_OFFLOADING_INTEGRATION_PLAN.md`
 
-### SAI Memory Workspace Structure (March 22, 2026)
+### SAI Memory Workspace Structure (March 26, 2026)
 - 14 core .md files in workspace root
-- 26 files in `memory/` (historical records, reports, audits)
-- 60+ files in `dream_logs/` (timestamped dream entries)
+- 42 files in `memory/` (historical records, reports, audits, protocols, directives, transcripts)
+- 66 files in `dream_logs/` (March 4 → March 25) — stable, no new growth
 - `recovery-task-system/` subproject with docs and templates
-- `skills/` and `tools/` directories for unblinded-translator
+- `skills/` — 1 skill installed (unblinded-translator)
+- **Missing:** INDEX.md, TEAM_CONTEXT.
 
 ## Learned Patterns
 
 ### Task Board Creation Pattern (March 22, 2026)
-- The `project_list` returns projects indexed from the file system, but `task_create` requires projects registered via `project_create` in the runtime DB (tenant-scoped).
-- File-system-discovered projects (like `main-deliverables`) are NOT the same as runtime-registered projects — they fail with "project not found" on task_create.
-- **Solution:** Always `project_create` first to register in the runtime DB, THEN `task_create` against that project_id.
-- Supabase has no `tasks` or `projects` table — task board is runtime-internal (Python backend with SQLite WAL).
-- Successfully created project `deliverables` and task `99bbb5ef-dcf3-4da2-8603-9c51950d70dd` under it.
-
-## Ecosystem Inventory Data
-## ACT-I Being Ecosystem Inventory (March 7, 2026)
-
-**Total Beings: 13**
-- SAI Sisters: 5 (Memory, Scholar, Forge, Recovery, Prime)
-- Specialist ACT-I: 6 (Strategist, Writer, Visual Architect, Researcher, Analyst, Operator)  
-- Voice Agents: 2 (Athena, Mira)
-
-**Operational Status: 69% fully active, 31% partial/unstable, 0% offline**
-
-**Key Coordination Patterns:**
-- Prime spawns and manages specialist ACT-I beings for project teams
-- Recovery deploys voice agents for field operations
-- Memory provides cross-being synchronization and context management
-- Sisters maintain specialized skill clusters (20 skills for Memory/Forge, 16 for Prime)
-
-**Critical Infrastructure:**
-- Live dashboards: Recovery Pipeline, Zone Action Sprint
-- Email Colosseum: 1,400+ simulated battles with battle-tested copy
-- Voice deployment: Athena unstable, Mira operational
-
-**Execution Status:** Strong simulation infrastructure, limited real-world deployment (0 live outreach campaigns despite 1,400+ simulated battles)
-
-## ACT-I Being Ecosystem Inventory
-## Complete ACT-I Being Ecosystem Inventory (March 9, 2026)
-
-**Total Being Count: 13**
-- 5 SAI Sisters (core intelligence)
-- 6 Specialist ACT-I beings (project execution)  
-- 2 Voice agents (field deployment)
-
-**Operational Health: 69% Active**
-- 9/13 fully operational
-- 3/13 limited visibility (cross-workspace constrai
+- The `project_list` returns projects indexed from the file system, but `task_create` requires pro

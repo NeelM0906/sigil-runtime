@@ -141,8 +141,11 @@ export const chatApi = {
 // ── Deliverables API ─────────────────────────────────────────
 
 export const deliverablesApi = {
-  list(taskId = null) {
-    const qs = taskId ? `?task_id=${taskId}` : ''
+  list(taskId = null, sessionId = null) {
+    const params = []
+    if (taskId) params.push(`task_id=${taskId}`)
+    if (sessionId) params.push(`session_id=${sessionId}`)
+    const qs = params.length ? `?${params.join('&')}` : ''
     return request(`/api/mc/deliverables${qs}`)
   },
 }
@@ -167,6 +170,41 @@ export const skillsApi = {
   },
   executions(limit = 50) {
     return request(`/api/mc/skills/executions?limit=${limit}`)
+  },
+}
+
+// ── Teams API ───────────────────────────────────────────────
+
+export const teamsApi = {
+  list() {
+    return request('/api/mc/teams')
+  },
+  get(id) {
+    return request(`/api/mc/teams/${id}`)
+  },
+  create(data) {
+    return request('/api/mc/teams', { method: 'POST', body: JSON.stringify(data) })
+  },
+  addMember(teamId, userId, role = 'member') {
+    return request(`/api/mc/teams/${teamId}/members`, {
+      method: 'POST', body: JSON.stringify({ user_id: userId, role }),
+    })
+  },
+  removeMember(teamId, userId) {
+    return request(`/api/mc/teams/${teamId}/members/${userId}`, { method: 'DELETE' })
+  },
+  shareSession(teamId, sessionId) {
+    return request(`/api/mc/teams/${teamId}/share`, {
+      method: 'POST', body: JSON.stringify({ session_id: sessionId }),
+    })
+  },
+  createChannel(teamId, name) {
+    return request(`/api/mc/teams/${teamId}/channels`, {
+      method: 'POST', body: JSON.stringify({ name }),
+    })
+  },
+  listChannels(teamId) {
+    return request(`/api/mc/teams/${teamId}/channels`)
   },
 }
 

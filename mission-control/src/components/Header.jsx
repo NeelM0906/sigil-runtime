@@ -4,6 +4,7 @@ import { codeApi } from '../api'
 
 export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
   const { beings } = useBeings()
+  const sseCtx = useContext(SSEContext)
   const onlineCount = beings.filter(b => b.status === 'online').length
   const busyCount = beings.filter(b => b.status === 'busy').length
 
@@ -50,7 +51,10 @@ export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
         {/* Right: Status + User */}
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
+            <span
+              className={`w-2 h-2 rounded-full ${sseCtx?.connected ? 'bg-accent-green' : 'bg-red-500 animate-pulse'}`}
+              title={sseCtx?.connected ? 'Connected' : 'Reconnecting...'}
+            />
             <span className="text-text-secondary">{onlineCount} online</span>
           </div>
           {busyCount > 0 && (
