@@ -1,12 +1,21 @@
-import { useContext } from 'react'
+import { useState, useEffect } from 'react'
 import { useBeings } from '../context/BeingsContext'
-import { SSEContext } from '../context/SSEContext'
+import { codeApi } from '../api'
 
 export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
   const { beings } = useBeings()
   const sseCtx = useContext(SSEContext)
   const onlineCount = beings.filter(b => b.status === 'online').length
   const busyCount = beings.filter(b => b.status === 'busy').length
+
+  // Code agent status polling
+  const [codeStatus, setCodeStatus] = useState(null)
+  useEffect(() => {
+    const check = () => codeApi.health().then(setCodeStatus).catch(() => setCodeStatus(null))
+    check()
+    const interval = setInterval(check, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <header className="bg-bg-secondary border-b border-border sticky top-0 z-50">
@@ -25,13 +34,16 @@ export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
                 activeTab === tab.id
                   ? 'bg-accent-blue/20 text-accent-blue'
                   : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
               }`}
             >
               {tab.label}
+              {tab.id === 'code' && codeStatus?.running && (
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
+              )}
             </button>
           ))}
         </nav>
@@ -49,6 +61,12 @@ export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-accent-amber" />
               <span className="text-text-secondary">{busyCount} busy</span>
+            </div>
+          )}
+          {codeStatus && (
+            <div className="flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${codeStatus.running ? 'bg-accent-purple animate-pulse' : 'bg-text-muted'}`} />
+              <span className="text-text-secondary">code {codeStatus.running ? 'active' : 'idle'}</span>
             </div>
           )}
           {user && (

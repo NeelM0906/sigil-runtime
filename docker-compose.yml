@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: bomba_mc
       POSTGRES_USER: bomba
-      POSTGRES_PASSWORD: ${BOMBA_POSTGRES_PASSWORD:-bomba_secure_2026}
+      POSTGRES_PASSWORD: ${BOMBA_POSTGRES_PASSWORD:?Set BOMBA_POSTGRES_PASSWORD in .env}
     ports:
       - "5432:5432"
     volumes:

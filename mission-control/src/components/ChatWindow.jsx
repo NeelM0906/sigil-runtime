@@ -642,7 +642,7 @@ function SessionSidebar({ sessions, activeSessionId, onSelect, onCreate, onRenam
 
 // ── Main Chat Window ─────────────────────────────────────────
 
-export function ChatWindow() {
+export function ChatWindow({ userId, onOpenInCode = null }) {
   const { beings, getBeingById, openBeingDetail } = useBeings()
   const { user } = useAuth()
   const [messages, setMessages] = useState([])
@@ -706,6 +706,7 @@ export function ChatWindow() {
   // Load messages from API
   const isInitialLoad = useRef(true)
   const fetchMessages = useCallback(async () => {
+    if (!activeSessionId) return
     if (isInitialLoad.current) setLoading(true)
     try {
       const apiFilters = { session_id: activeSessionId }
@@ -1219,6 +1220,15 @@ export function ChatWindow() {
             onChange={handleFileUpload}
             className="hidden"
           />
+          {onOpenInCode && input.trim() && (
+            <button
+              onClick={() => { onOpenInCode(input.trim()); setInput('') }}
+              className="px-3 py-2 bg-accent-purple/20 text-accent-purple text-xs font-medium rounded-lg hover:bg-accent-purple/30 transition-colors"
+              title="Send to Code agent instead"
+            >
+              Code
+            </button>
+          )}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}

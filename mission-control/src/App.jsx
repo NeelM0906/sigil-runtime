@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from './context/AuthContext'
 import { BeingsProvider } from './context/BeingsContext'
 import { SSEProvider } from './context/SSEContext'
@@ -10,7 +10,9 @@ import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
 // SubAgentTracker removed — not needed
 import { OrchestrationTracker } from './components/OrchestrationTracker'
-import { TeamPage } from './components/TeamPage'
+import { AgentTeams } from './components/AgentTeams'
+import { CodeWorkspace } from './components/CodeWorkspace'
+import { CodeStatusCard } from './components/CodeStatusCard'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
@@ -20,10 +22,9 @@ import { SessionProvider } from './context/SessionContext'
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Task Board' },
-  { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
-  { id: 'team', label: 'Team' },
-  { id: 'workspace', label: 'Workspace' },
+  { id: 'teams', label: 'Agent Teams' },
+  { id: 'code', label: 'Code' },
   { id: 'skills', label: 'Skills' },
 ]
 
@@ -31,6 +32,12 @@ function Dashboard() {
   const { user, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [crossLinkTask, setCrossLinkTask] = useState(null)
+  const [codeInitialPrompt, setCodeInitialPrompt] = useState(null)
+
+  const openInCode = useCallback((prompt) => {
+    setCodeInitialPrompt(prompt)
+    setActiveTab('code')
+  }, [])
 
   // Use CSS display toggling instead of conditional rendering
   // so components stay mounted (SSE connections persist, state preserved)
@@ -48,14 +55,16 @@ function Dashboard() {
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <BeingsRegistry />
                 <CronPanel />
+                <SubAgentTracker />
+                <CodeStatusCard onOpenCode={() => setActiveTab('code')} />
               </div>
               <div className="lg:col-span-8">
-                <TaskBoard />
+                <TaskBoard onOpenInCode={openInCode} />
               </div>
             </div>
           </div>
           <div style={show('tasks')}>
-            <TaskBoard fullWidth />
+            <TaskBoard fullWidth onOpenInCode={openInCode} />
           </div>
           <div style={show('projects')}>
             <ProjectsHub />
@@ -63,7 +72,7 @@ function Dashboard() {
           <div style={show('chat')}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
               <div className="lg:col-span-8">
-                <ChatWindow />
+                <ChatWindow userId={user?.id} onOpenInCode={openInCode} />
               </div>
               <div className="lg:col-span-4 flex flex-col gap-3">
                 <OrchestrationTracker />
@@ -73,8 +82,11 @@ function Dashboard() {
           <div style={show('team')}>
             <TeamPage />
           </div>
-          <div style={show('workspace')}>
-            <WorkspaceManager />
+          <div style={show('code')}>
+            <CodeWorkspace
+              initialPrompt={codeInitialPrompt}
+              onConsumePrompt={() => setCodeInitialPrompt(null)}
+            />
           </div>
           <div style={show('skills')}>
             <SkillsPage />

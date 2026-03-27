@@ -315,3 +315,58 @@ export const actiApi = {
     return request(`/api/mc/acti/sisters/${id}`)
   },
 }
+
+// ── Code Agent API (Pi Bridge) ─────────────────────────────
+
+export const codeApi = {
+  health() {
+    return request('/api/mc/code/health')
+  },
+  sessions() {
+    return request('/api/mc/code/sessions')
+  },
+  createSession(title = 'New session', workspaceRoot = null) {
+    const body = { title }
+    if (workspaceRoot) body.workspace_root = workspaceRoot
+    return request('/api/mc/code/sessions', { method: 'POST', body: JSON.stringify(body) })
+  },
+  deleteSession(id) {
+    return request(`/api/mc/code/sessions/${id}`, { method: 'DELETE' })
+  },
+  prompt(sessionId, message) {
+    return request(`/api/mc/code/sessions/${sessionId}/prompt`, {
+      method: 'POST', body: JSON.stringify({ message }),
+    })
+  },
+  abort(sessionId) {
+    return request(`/api/mc/code/sessions/${sessionId}/abort`, { method: 'POST' })
+  },
+  messages(sessionId) {
+    return request(`/api/mc/code/sessions/${sessionId}/messages`)
+  },
+  state() {
+    return request('/api/mc/code/state')
+  },
+  respondUi(sessionId, requestId, response) {
+    return request(`/api/mc/code/sessions/${sessionId}/respond-ui`, {
+      method: 'POST', body: JSON.stringify({ request_id: requestId, response }),
+    })
+  },
+  files(depth = 3, workspace = null) {
+    const params = new URLSearchParams({ depth })
+    if (workspace) params.set('workspace', workspace)
+    return request(`/api/mc/code/files?${params}`)
+  },
+  readFile(filePath, workspace = null) {
+    const params = new URLSearchParams({ path: filePath })
+    if (workspace) params.set('workspace', workspace)
+    return request(`/api/mc/code/files/read?${params}`)
+  },
+  diff(workspace = null, sessionId = null) {
+    const params = new URLSearchParams()
+    if (workspace) params.set('workspace', workspace)
+    if (sessionId) params.set('session_id', sessionId)
+    const qs = params.toString()
+    return request(`/api/mc/code/diff${qs ? `?${qs}` : ''}`)
+  },
+}
