@@ -57,7 +57,12 @@ class ConnectionManager:
         tenant_id: str | None = None, session_id: str | None = None,
     ):
         """Called from ANY thread. Thread-safe via stdlib Queue + call_soon_threadsafe."""
-        evt = {"event": event_type, "data": payload, "ts": datetime.now(timezone.utc).isoformat()}
+        # Roundtrip through JSON to ensure no datetime objects survive to send_json
+        try:
+            safe_payload = json.loads(json.dumps(payload, default=str))
+        except (TypeError, ValueError):
+            safe_payload = payload
+        evt = {"event": event_type, "data": safe_payload, "ts": datetime.now(timezone.utc).isoformat()}
         dead = []
         delivered: set[str] = set()
         for cid, entry in list(self._connections.items()):

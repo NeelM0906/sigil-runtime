@@ -1428,7 +1428,7 @@ class DashboardService:
                     msg_id, msg_type, sender,
                     json.dumps(targets or []),
                     content, now, mode, task_ref, session_id,
-                    json.dumps(metadata) if metadata else None,
+                    json.dumps(metadata, default=str) if metadata else None,
                 ),
             )
             # Update session timestamp

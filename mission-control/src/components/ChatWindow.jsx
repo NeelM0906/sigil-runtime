@@ -649,8 +649,8 @@ export function ChatWindow() {
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [mentionFilter, setMentionFilter] = useState(null)
-  // All users default to Prime — the general-purpose being
-  const defaultTarget = ['prime']
+  // Recovery team defaults to SAI Recovery; everyone else to Prime
+  const defaultTarget = user?.tenant_id?.startsWith('tenant-recovery') ? ['recovery'] : ['prime']
   const [targets, setTargets] = useState(defaultTarget)
   const [execMode, setExecMode] = useState('auto')
   const [filters, setFilters] = useState({ search: '', sender: '', target: '' })
@@ -1215,7 +1215,7 @@ export function ChatWindow() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv,.html,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            accept="*/*"
             onChange={handleFileUpload}
             className="hidden"
           />

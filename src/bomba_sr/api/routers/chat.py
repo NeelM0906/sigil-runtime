@@ -141,9 +141,13 @@ def send_message(
     targets = body.targets
     session_id = body.session_id or f"sess-{uuid.uuid4().hex}"
 
-    # Auto-route broadcast (no targets) to prime
+    # Auto-route broadcast (no targets) to the tenant's default being
     if not targets:
-        targets = ["prime"]
+        tenant = auth.get("tenant_id", "")
+        if tenant.startswith("tenant-recovery"):
+            targets = ["recovery"]
+        else:
+            targets = ["prime"]
 
     # Access check: user must own or have shared access to this session
     if body.session_id:

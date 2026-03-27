@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
       email: data.email,
       name: data.name,
       role: data.role,
+      tenant_id: data.tenant_id,
       token: data.token,
     }
     setUser(userData)

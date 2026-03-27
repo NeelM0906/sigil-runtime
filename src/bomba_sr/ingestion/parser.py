@@ -213,6 +213,25 @@ def _extract_image(file_path: Path, byte_size: int) -> dict:
     }
 
 
+def chunk_text(text: str, max_chars: int = 3000, overlap: int = 300) -> list[str]:
+    """Chunk plain text by paragraph boundaries with overlap."""
+    if len(text) <= max_chars:
+        return [text]
+    chunks: list[str] = []
+    start = 0
+    while start < len(text):
+        end = start + max_chars
+        if end < len(text):
+            for sep in ['\n\n', '\n', '. ', ' ']:
+                pos = text.rfind(sep, start + max_chars // 2, end)
+                if pos > start:
+                    end = pos + len(sep)
+                    break
+        chunks.append(text[start:end].strip())
+        start = max(end - overlap, start + 1)
+    return [c for c in chunks if c]
+
+
 def chunk_code(text: str, max_chars: int = 3000, overlap: int = 300) -> list[str]:
     """Chunk source code by function/class boundaries.
 
