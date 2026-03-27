@@ -739,6 +739,12 @@ export function ChatWindow() {
   }, [sseCtx?.connected, fetchMessages])
 
   useEffect(() => {
+    const onReconnect = () => fetchMessages()
+    window.addEventListener('ws-reconnected', onReconnect)
+    return () => window.removeEventListener('ws-reconnected', onReconnect)
+  }, [fetchMessages])
+
+  useEffect(() => {
     const onFocus = () => { fetchMessages() }
     window.addEventListener('focus', onFocus)
     document.addEventListener('visibilitychange', onFocus)

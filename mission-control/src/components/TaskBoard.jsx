@@ -874,6 +874,12 @@ export function TaskBoard({ fullWidth = false }) {
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
 
+  useEffect(() => {
+    const onReconnect = () => fetchTasks()
+    window.addEventListener('ws-reconnected', onReconnect)
+    return () => window.removeEventListener('ws-reconnected', onReconnect)
+  }, [fetchTasks])
+
   const sseCtx = useContext(SSEContext)
   useEffect(() => {
     if (sseCtx?.connected) return

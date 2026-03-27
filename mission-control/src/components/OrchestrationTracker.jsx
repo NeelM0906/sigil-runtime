@@ -196,6 +196,11 @@ export function OrchestrationTracker() {
   const sseCtx = useContext(SSEContext)
   useEffect(() => { loadDeliverables() }, [loadDeliverables])
   useEffect(() => {
+    const onReconnect = () => loadDeliverables()
+    window.addEventListener('ws-reconnected', onReconnect)
+    return () => window.removeEventListener('ws-reconnected', onReconnect)
+  }, [loadDeliverables])
+  useEffect(() => {
     if (sseCtx?.connected) return
     const interval = setInterval(loadDeliverables, 10000)
     return () => clearInterval(interval)
