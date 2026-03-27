@@ -58,4 +58,4 @@
 
 **Competitive snapshot stored at:** /Users/zidane/Downloads/PROJEKT/workspaces/scholar/COMPETITIVE_LANDSCAPE_SNAPSHOT.md
 
-### AI Agent Memory Architecture — Best Pract
+### AI Model Benchmark Landscape (July 2025)

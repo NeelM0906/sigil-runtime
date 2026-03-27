@@ -334,7 +334,7 @@ function TaskModal({ task, onSave, onClose, beings }) {
 
 // ── Task Detail Slide-out ────────────────────────────────────
 
-function TaskDetail({ task, history, onClose, onEdit, onDelete, onCancel, getBeingById, onBeingClick, onPreview }) {
+function TaskDetail({ task, history, onClose, onEdit, onDelete, onCancel, getBeingById, onBeingClick, onPreview, onOpenInCode }) {
   const config = STATUS_CONFIG[task.status]
   const prio = PRIORITY_CONFIG[task.priority]
 
@@ -361,6 +361,15 @@ function TaskDetail({ task, history, onClose, onEdit, onDelete, onCancel, getBei
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {onOpenInCode && (
+              <button
+                onClick={() => onOpenInCode(`Work on task: ${task.title}\n\nDescription: ${task.description || 'No description'}\n\nStatus: ${task.status}, Priority: ${task.priority}`)}
+                className="px-2 py-1 text-[10px] text-accent-purple hover:text-accent-purple/80 transition-colors font-medium"
+                title="Open in Code workspace"
+              >
+                Code
+              </button>
+            )}
             {task.status === 'in_progress' && (
               <button
                 onClick={() => { if (confirm('Cancel this running task?')) onCancel(task.id) }}
@@ -842,7 +851,7 @@ function Column({ status, tasks, onDragOver, onDrop, onDragStart, onCardClick, o
 
 // ── Main TaskBoard ───────────────────────────────────────────
 
-export function TaskBoard({ fullWidth = false }) {
+export function TaskBoard({ fullWidth = false, onOpenInCode = null }) {
   const { beings, getBeingById, openBeingDetail } = useBeings()
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1119,6 +1128,7 @@ export function TaskBoard({ fullWidth = false }) {
           getBeingById={getBeingById}
           onBeingClick={openBeingDetail}
           onPreview={setPreviewArtifact}
+          onOpenInCode={onOpenInCode}
         />
       )}
 
