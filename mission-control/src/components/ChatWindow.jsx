@@ -307,6 +307,7 @@ function MarkdownSegment({ content, getBeingById }) {
 const DELIVERABLE_RE = /\[DELIVERABLE:(.*?):(.*?):(.*?):(\d+):(\d+)\]/g
 
 function HighlightedContent({ content, getBeingById }) {
+  if (!content) return null
   // Split on deliverable markers first
   const segments = content.split(DELIVERABLE_RE)
 
@@ -781,21 +782,23 @@ export function ChatWindow() {
   useSharedSSE({
     chat_message(data) {
       // Skip own messages (sender is user's UUID, not the string "user")
+      if (!data || !data.id || !data.sender) return  // Malformed event
       if (data.sender === user?.user_id) return
       setTypingBeings(prev => {
         const next = new Map(prev)
         next.delete(data.sender)
         return next
       })
-      // Only show messages for the active session (or if no session_id, show in general)
+      // Only show messages for the active session
       const msgSession = data.session_id || 'general'
       if (msgSession !== activeSessionRef.current) return
       setAwaitingReplySince(null)
+      // Ensure content is a string to prevent render crashes
+      const safeMsg = { ...data, content: data.content || '' }
       setMessages(prev => {
-        // Remove progress placeholder when final response arrives
         const without = prev.filter(m => m.id !== `progress-${data.sender}`)
-        if (without.some(m => m.id === data.id)) return without
-        return [...without, data]
+        if (without.some(m => m.id === safeMsg.id)) return without
+        return [...without, safeMsg]
       })
     },
     being_progress(data) {

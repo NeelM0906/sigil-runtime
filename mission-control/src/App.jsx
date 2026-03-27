@@ -87,10 +87,35 @@ function Dashboard() {
   )
 }
 
+import { Component } from 'react'
+
+class ErrorBoundary extends Component {
+  state = { error: null }
+  static getDerivedStateFromError(error) { return { error } }
+  componentDidCatch(error, info) { console.error('[CRASH]', error, info) }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+          <div className="text-center p-8">
+            <div className="text-2xl mb-2">Something went wrong</div>
+            <div className="text-text-muted text-sm mb-4">{this.state.error.message}</div>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.reload() }}
+              className="px-4 py-2 bg-accent-blue text-white rounded hover:bg-accent-blue/80"
+            >Reload</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export default function App() {
   const { user, loading } = useAuth()
 
   if (loading) return <div className="min-h-screen bg-bg-primary" />
   if (!user) return <LoginPage />
-  return <Dashboard />
+  return <ErrorBoundary><Dashboard /></ErrorBoundary>
 }
