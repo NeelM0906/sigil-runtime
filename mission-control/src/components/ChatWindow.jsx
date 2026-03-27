@@ -42,8 +42,8 @@ function InlineTaskCard({ taskId }) {
 
 // ── Message Bubble ───────────────────────────────────────────
 
-const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick, isCollaborative }) {
-  const isUser = msg.sender === 'user'
+const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingClick, isCollaborative, userId }) {
+  const isUser = msg.sender === 'user' || (userId && msg.sender === userId)
   const isSystem = msg.type === 'system'
   const being = (!isUser && !isSystem) ? getBeingById(msg.sender) : null
 
@@ -95,7 +95,7 @@ const MessageBubble = memo(function MessageBubble({ msg, getBeingById, onBeingCl
         {isUser ? 'U' : being?.avatar || '?'}
       </button>
 
-      <div className={`max-w-[75%] ${isUser ? 'text-right' : ''}`}>
+      <div className="max-w-[75%]">
         {/* Header: sender + targets + mode + type */}
         <div className={`flex items-center gap-1.5 mb-0.5 flex-wrap ${isUser ? 'justify-end' : ''}`}>
           <span className="text-xs font-medium">
@@ -1097,6 +1097,7 @@ export function ChatWindow({ userId, onOpenInCode = null }) {
             getBeingById={getBeingById}
             onBeingClick={openBeingDetail}
             isCollaborative={isCollaborative}
+            userId={user?.id}
           />
         ))}
         <div ref={messagesEndRef} />
