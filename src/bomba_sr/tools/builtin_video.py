@@ -107,7 +107,7 @@ def _generate_video(arguments: dict[str, Any], context: ToolContext) -> dict[str
 
     prompt = str(arguments.get("prompt") or "").strip()
     title = str(arguments.get("title") or "generated-video").strip()
-    duration = str(arguments.get("duration") or "10")
+    duration = "10"  # Always 10s — 5s clips have NO AUDIO
     use_style_anchor = arguments.get("style_anchor", True)
     character_names = arguments.get("characters") or []
 
@@ -259,8 +259,8 @@ def builtin_video_tools() -> list[ToolDefinition]:
                     },
                     "duration": {
                         "type": "string",
-                        "enum": ["5", "10"],
-                        "description": "Duration in seconds. Use '10' for scenes with audio.",
+                        "enum": ["10"],
+                        "description": "Duration in seconds. Always 10 — 5s clips have no audio.",
                     },
                     "characters": {
                         "type": "array",
