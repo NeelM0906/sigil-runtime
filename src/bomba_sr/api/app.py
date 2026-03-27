@@ -14,9 +14,16 @@ from fastapi.middleware.cors import CORSMiddleware
 logger = logging.getLogger(__name__)
 
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize bridge, dashboard_svc, project_svc on startup."""
+    # Increase threadpool for sync endpoints — default 40 is too low for 10+ concurrent users
+    import anyio
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    limiter.total_tokens = int(os.getenv("BOMBA_SYNC_THREADPOOL", "200"))
+    logger.info("sync threadpool set to %d", limiter.total_tokens)
+
     from bomba_sr.runtime.bridge import RuntimeBridge
 
     bridge = RuntimeBridge()
@@ -148,13 +155,16 @@ def create_app() -> FastAPI:
     def health():
         import threading as _threading
         active = _threading.active_count()
-        llm_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("llm-"))
         route_threads = sum(1 for t in _threading.enumerate() if t.name.startswith("route-"))
+        ws_count = 0
+        if hasattr(app.state, 'ws_manager') and app.state.ws_manager:
+            ws_count = app.state.ws_manager.active_count
         return {
-            "status": "ok" if active < 100 else "degraded",
+            "status": "ok" if active < 200 else "degraded",
             "threads": active,
-            "llm_active": llm_threads,
             "route_active": route_threads,
+            "ws_connections": ws_count,
+            "cpu_count": os.cpu_count(),
         }
 
     # ── Serve mission-control frontend (SPA with fallback) ───────────
