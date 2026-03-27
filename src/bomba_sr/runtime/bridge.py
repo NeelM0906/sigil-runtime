@@ -719,6 +719,29 @@ class RuntimeBridge:
                     + '\n</representation>'
                 )
 
+            # Inject workspace uploads listing so the being knows what files are available
+            try:
+                ws_path = Path(request.workspace_root) if request.workspace_root else None
+                if ws_path and (ws_path / "uploads").is_dir():
+                    uploads_dir = ws_path / "uploads"
+                    file_list = []
+                    for f in sorted(uploads_dir.iterdir()):
+                        if f.is_file():
+                            size = f.stat().st_size
+                            size_str = f"{size // 1024}KB" if size >= 1024 else f"{size}B"
+                            file_list.append(f"  - {f.name} ({size_str})")
+                    if file_list:
+                        system_prefix_parts.append(
+                            "<workspace-uploads>\n"
+                            "These files are available in your workspace uploads directory. "
+                            "Users uploaded them for you to reference. You can read them using fs_read tool "
+                            "with the path: " + str(uploads_dir) + "/<filename>\n"
+                            + "\n".join(file_list[:50])
+                            + "\n</workspace-uploads>"
+                        )
+            except Exception:
+                pass
+
         if runtime.soul is not None:
             # Identity comes from workspace SoulConfig — nothing else
             system_prefix_parts.append(
