@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { useBeings } from '../context/BeingsContext'
+import { SSEContext } from '../context/SSEContext'
 import { codeApi } from '../api'
 
 export function Header({ activeTab, setActiveTab, tabs, user, onLogout }) {
