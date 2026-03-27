@@ -117,7 +117,7 @@ def create_app() -> FastAPI:
     # Routers
     from bomba_sr.api.routers import (
         acti, admin, auth, beings, chat, cron, deliverables,
-        events, orchestration, projects, skills, subagents, tasks, teams, upload,
+        events, orchestration, projects, skills, subagents, tasks, teams, upload, workspace,
     )
     app.include_router(acti.router)
     app.include_router(admin.router)
@@ -134,6 +134,7 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(teams.router)
     app.include_router(upload.router)
+    app.include_router(workspace.router)
 
     # WebSocket endpoint for real-time events (replaces SSE as primary transport)
     from bomba_sr.api.ws import websocket_endpoint

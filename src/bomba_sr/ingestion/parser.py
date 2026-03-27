@@ -213,7 +213,68 @@ def _extract_image(file_path: Path, byte_size: int) -> dict:
     }
 
 
-def chunk_text(text: str, max_chars: int = 1500, overlap: int = 200) -> list[str]:
+def chunk_code(text: str, max_chars: int = 3000, overlap: int = 300) -> list[str]:
+    """Chunk source code by function/class boundaries.
+
+    Tries to split at function/class definitions so each chunk is a
+    self-contained logical unit. Falls back to line-based splitting
+    if no boundaries are found.
+    """
+    import re
+
+    # Patterns that typically start a new logical block in common languages
+    boundary_re = re.compile(
+        r'^(?:'
+        r'(?:public|private|protected|static|abstract|final|async)?\s*'
+        r'(?:function|class|interface|trait|def|const|let|var|export|module)\s'
+        r'|/\*\*'               # doc-comment blocks
+        r'|#{1,3}\s'            # markdown headings (in .md files)
+        r'|(?:CREATE|ALTER|DROP)\s'  # SQL DDL
+        r')',
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    lines = text.split('\n')
+    chunks: list[str] = []
+    current_lines: list[str] = []
+    current_len = 0
+
+    for line in lines:
+        is_boundary = bool(boundary_re.match(line.lstrip()))
+
+        # If we hit a boundary and current chunk is big enough, flush
+        if is_boundary and current_len > 500:
+            chunk = '\n'.join(current_lines).strip()
+            if chunk:
+                chunks.append(chunk)
+            # Keep last few lines as overlap context
+            overlap_lines = current_lines[-5:] if len(current_lines) > 5 else []
+            current_lines = overlap_lines + [line]
+            current_len = sum(len(l) for l in current_lines)
+            continue
+
+        current_lines.append(line)
+        current_len += len(line) + 1
+
+        # Hard split if chunk gets too large
+        if current_len >= max_chars:
+            chunk = '\n'.join(current_lines).strip()
+            if chunk:
+                chunks.append(chunk)
+            overlap_lines = current_lines[-5:] if len(current_lines) > 5 else []
+            current_lines = overlap_lines
+            current_len = sum(len(l) for l in current_lines)
+
+    # Flush remaining
+    if current_lines:
+        chunk = '\n'.join(current_lines).strip()
+        if chunk:
+            chunks.append(chunk)
+
+    return chunks if chunks else [text[:max_chars]]
+
+
+
     """Chunk text for embedding storage."""
     paragraphs = text.split("\n\n")
     chunks: list[str] = []

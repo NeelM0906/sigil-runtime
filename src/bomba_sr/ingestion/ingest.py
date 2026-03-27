@@ -19,13 +19,18 @@ def ingest_to_memory(
     consolidator,
 ) -> dict:
     """Store extracted document text in local memory. Returns summary."""
-    from bomba_sr.ingestion.parser import chunk_text
+    from bomba_sr.ingestion.parser import chunk_code, chunk_text
     from bomba_sr.memory.consolidation import MemoryCandidate
 
     now = datetime.now(timezone.utc).isoformat()
     doc_id = uuid.uuid4().hex[:12]
     text = extracted.get("text") or ""
     is_placeholder = extracted.get("_is_native_placeholder", False)
+    fmt = extracted.get("format", "")
+
+    # Code files get a higher working note limit (150K vs 50K)
+    CODE_FORMATS = {"php", "py", "js", "jsx", "ts", "tsx", "sql", "sh", "bash", "css", "scss", "html"}
+    note_limit = 150_000 if fmt in CODE_FORMATS else 50_000
 
     if text.strip() and not is_placeholder:
         # Real extracted text — store as working note + semantic chunks
@@ -33,13 +38,13 @@ def ingest_to_memory(
             user_id=user_id,
             session_id=f"upload-{doc_id}",
             title=f"Uploaded: {filename}",
-            content=text[:50000],
-            tags=["upload", extracted.get("format", ""), filename],
+            content=text[:note_limit],
+            tags=["upload", fmt, filename],
             confidence=1.0,
             being_id=being_id,
         )
 
-        chunks = chunk_text(text)
+        chunks = chunk_code(text) if fmt in CODE_FORMATS else chunk_text(text)
         for i, chunk in enumerate(chunks):
             if not chunk.strip():
                 continue
