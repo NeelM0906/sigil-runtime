@@ -8,23 +8,24 @@ import { BeingsRegistry } from './components/BeingsRegistry'
 import { BeingDetail } from './components/BeingDetail'
 import { TaskBoard } from './components/TaskBoard'
 import { ChatWindow } from './components/ChatWindow'
-// SubAgentTracker removed — not needed
+import { SubAgentTracker } from './components/SubAgentTracker'
 import { OrchestrationTracker } from './components/OrchestrationTracker'
-import { AgentTeams } from './components/AgentTeams'
 import { CodeWorkspace } from './components/CodeWorkspace'
 import { CodeStatusCard } from './components/CodeStatusCard'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
 import { WorkspaceManager } from './components/WorkspaceManager'
+import { TeamPage } from './components/TeamPage'
 import { SessionProvider } from './context/SessionContext'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Task Board' },
   { id: 'chat', label: 'Comms' },
-  { id: 'teams', label: 'Agent Teams' },
+  { id: 'team', label: 'Team' },
   { id: 'code', label: 'Code' },
+  { id: 'workspace', label: 'Workspace' },
   { id: 'skills', label: 'Skills' },
 ]
 
@@ -87,6 +88,9 @@ function Dashboard() {
               initialPrompt={codeInitialPrompt}
               onConsumePrompt={() => setCodeInitialPrompt(null)}
             />
+          </div>
+          <div style={show('workspace')}>
+            <WorkspaceManager />
           </div>
           <div style={show('skills')}>
             <SkillsPage />
