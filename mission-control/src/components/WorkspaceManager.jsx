@@ -3,13 +3,14 @@ import { workspaceApi } from '../api'
 import { useBeings } from '../context/BeingsContext'
 
 const CATEGORY_ICONS = {
-  document: '\u{1F4C4}',
-  spreadsheet: '\u{1F4CA}',
-  image: '\u{1F5BC}',
-  code: '\u{1F4BB}',
-  text: '\u{1F4DD}',
-  data: '\u{1F4E6}',
-  other: '\u{1F4CE}',
+  document: 'DOC',
+  spreadsheet: 'XLS',
+  image: 'IMG',
+  code: '</>',
+  text: 'TXT',
+  data: 'DAT',
+  video: 'VID',
+  other: 'FILE',
 }
 
 const CATEGORY_COLORS = {
@@ -19,6 +20,7 @@ const CATEGORY_COLORS = {
   code: 'text-accent-cyan',
   text: 'text-text-secondary',
   data: 'text-accent-amber',
+  video: 'text-accent-orange',
   other: 'text-text-muted',
 }
 
@@ -93,6 +95,16 @@ export function WorkspaceManager() {
     setPreviewLoading(true)
     try {
       const data = await workspaceApi.preview(selectedBeing, filename)
+      // Append auth token to media URLs so <img>/<video> can load them
+      if (data.media_url) {
+        try {
+          const stored = localStorage.getItem('mc_auth')
+          if (stored) {
+            const { token } = JSON.parse(stored)
+            if (token) data.media_url += `&token=${encodeURIComponent(token)}`
+          }
+        } catch { /* ignore */ }
+      }
       setPreview(data)
     } catch (err) {
       setPreview({ filename, preview: null, message: 'Failed to load preview' })
@@ -178,10 +190,10 @@ export function WorkspaceManager() {
           <div className="divide-y divide-border">
             {/* Table header */}
             <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-bg-secondary text-[10px] text-text-muted uppercase tracking-wider font-medium">
-              <div className="col-span-6">Name</div>
+              <div className="col-span-5">Name</div>
               <div className="col-span-2">Type</div>
               <div className="col-span-2 text-right">Size</div>
-              <div className="col-span-2 text-right">Actions</div>
+              <div className="col-span-3 text-right">Actions</div>
             </div>
             {filtered.map(file => (
               <FileRow
@@ -190,6 +202,7 @@ export function WorkspaceManager() {
                 isPreviewOpen={preview?.filename === file.name}
                 deleteConfirm={deleteConfirm}
                 onPreview={() => handlePreview(file.name)}
+                rawUrl={workspaceApi.rawUrl(selectedBeing, file.name)}
                 onDeleteClick={() => setDeleteConfirm(file.name)}
                 onDeleteConfirm={() => handleDelete(file.name)}
                 onDeleteCancel={() => setDeleteConfirm(null)}
@@ -218,9 +231,21 @@ export function WorkspaceManager() {
               Close
             </button>
           </div>
-          <div className="p-3 max-h-[500px] overflow-auto">
+          <div className="p-3 max-h-[600px] overflow-auto">
             {previewLoading ? (
               <div className="text-xs text-text-muted">Loading preview...</div>
+            ) : preview.media_url && preview.category === 'image' ? (
+              <img
+                src={preview.media_url}
+                alt={preview.filename}
+                className="max-w-full max-h-[500px] rounded object-contain mx-auto"
+              />
+            ) : preview.media_url && preview.category === 'video' ? (
+              <video
+                src={preview.media_url}
+                controls
+                className="max-w-full max-h-[500px] rounded mx-auto"
+              />
             ) : preview.preview ? (
               <pre className="text-[11px] text-text-secondary font-mono whitespace-pre-wrap break-words leading-relaxed">
                 {preview.preview}
@@ -235,14 +260,14 @@ export function WorkspaceManager() {
   )
 }
 
-function FileRow({ file, isPreviewOpen, deleteConfirm, onPreview, onDeleteClick, onDeleteConfirm, onDeleteCancel }) {
+function FileRow({ file, isPreviewOpen, deleteConfirm, onPreview, rawUrl, onDeleteClick, onDeleteConfirm, onDeleteCancel }) {
   const icon = CATEGORY_ICONS[file.category] || CATEGORY_ICONS.other
   const colorClass = CATEGORY_COLORS[file.category] || CATEGORY_COLORS.other
   const isConfirming = deleteConfirm === file.name
 
   return (
     <div className={`grid grid-cols-12 gap-2 px-3 py-2.5 items-center hover:bg-bg-hover transition-colors ${isPreviewOpen ? 'bg-bg-hover' : ''}`}>
-      <div className="col-span-6 flex items-center gap-2 min-w-0">
+      <div className="col-span-5 flex items-center gap-2 min-w-0">
         <span className="text-sm flex-shrink-0">{icon}</span>
         <button
           onClick={onPreview}
@@ -263,14 +288,24 @@ function FileRow({ file, isPreviewOpen, deleteConfirm, onPreview, onDeleteClick,
       <div className="col-span-2 text-right text-[11px] text-text-muted font-mono">
         {file.size_display}
       </div>
-      <div className="col-span-2 flex justify-end gap-1">
-        <button
-          onClick={onPreview}
-          className="px-1.5 py-0.5 rounded text-[10px] text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 transition-colors"
-          title="Preview"
+      <div className="col-span-3 flex justify-end gap-1">
+        <a
+          href={rawUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-1.5 py-0.5 rounded text-[10px] text-accent-blue hover:bg-accent-blue/10 transition-colors"
+          title="Open in new tab"
         >
-          View
-        </button>
+          Open
+        </a>
+        <a
+          href={rawUrl}
+          download={file.name}
+          className="px-1.5 py-0.5 rounded text-[10px] text-text-muted hover:text-accent-purple hover:bg-accent-purple/10 transition-colors"
+          title="Download"
+        >
+          DL
+        </a>
         {isConfirming ? (
           <div className="flex gap-1">
             <button

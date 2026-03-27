@@ -262,6 +262,14 @@ export const workspaceApi = {
   preview(beingId, filename, maxChars = 8000) {
     return request(`/api/mc/workspace/files/preview?being_id=${beingId}&filename=${encodeURIComponent(filename)}&max_chars=${maxChars}`)
   },
+  rawUrl(beingId, filename) {
+    let token = ''
+    try {
+      const stored = localStorage.getItem('mc_auth')
+      if (stored) token = JSON.parse(stored).token || ''
+    } catch { /* ignore */ }
+    return `/api/mc/workspace/files/raw?being_id=${encodeURIComponent(beingId)}&filename=${encodeURIComponent(filename)}&token=${encodeURIComponent(token)}`
+  },
   deleteFile(beingId, filename) {
     return request(`/api/mc/workspace/files?being_id=${beingId}&filename=${encodeURIComponent(filename)}`, { method: 'DELETE' })
   },

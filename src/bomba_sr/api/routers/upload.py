@@ -41,8 +41,6 @@ def upload_file(
 
     # Read file (sync — FastAPI runs def endpoints in threadpool)
     contents = file.file.read()
-    if len(contents) > MAX_SIZE:
-        raise HTTPException(413, "File too large (max 50MB)")
 
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
@@ -186,9 +184,6 @@ def upload_files_batch(
 
     for file in files:
         contents = file.file.read()
-        if len(contents) > MAX_SIZE:
-            errors.append({"filename": file.filename, "error": "File too large (max 50MB)"})
-            continue
         ext = Path(file.filename or "").suffix.lower()
         if ext not in ALLOWED_EXTENSIONS:
             errors.append({"filename": file.filename, "error": f"Unsupported type: {ext}"})
