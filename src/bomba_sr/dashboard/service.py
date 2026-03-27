@@ -1589,8 +1589,12 @@ class DashboardService:
             if not doc_text:
                 return content
 
-            if len(doc_text) > 100_000:
-                doc_text = doc_text[:100_000] + "\n\n[... document truncated at 100K chars ...]"
+            # Code files get 200K limit (they compress well in LLM context)
+            fmt = extracted.get("format", "")
+            code_formats = {"php", "py", "js", "jsx", "ts", "tsx", "sql", "sh", "css", "html"}
+            char_limit = 200_000 if fmt in code_formats else 100_000
+            if len(doc_text) > char_limit:
+                doc_text = doc_text[:char_limit] + f"\n\n[... document truncated at {char_limit // 1000}K chars ...]"
 
             return (
                 f'<uploaded_document filename="{filename}" format="{extracted.get("format", "")}">\n'
