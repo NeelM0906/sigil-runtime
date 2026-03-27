@@ -18,6 +18,9 @@ ALLOWED_EXTENSIONS = {
     ".pdf", ".docx", ".pptx", ".xlsx", ".xls",
     ".html", ".txt", ".md", ".csv", ".tsv",
     ".png", ".jpg", ".jpeg", ".gif", ".webp",
+    ".php", ".py", ".js", ".jsx", ".ts", ".tsx",
+    ".sql", ".json", ".xml", ".yaml", ".yml",
+    ".sh", ".bash", ".css", ".scss",
 }
 MAX_SIZE = 50 * 1024 * 1024
 
