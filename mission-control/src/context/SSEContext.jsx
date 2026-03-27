@@ -25,6 +25,7 @@ export function SSEProvider({ children }) {
     ws.onopen = () => {
       setConnected(true)
       console.log('[WS] Connected')
+      window.dispatchEvent(new Event('ws-reconnected'))
     }
 
     ws.onmessage = (event) => {

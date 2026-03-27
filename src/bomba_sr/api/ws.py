@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import queue as thread_queue
 import uuid
 from datetime import datetime, timezone
 
@@ -18,17 +19,20 @@ class ConnectionManager:
 
     def __init__(self):
         self._connections: dict[str, dict] = {}
-        # client_id -> {"ws", "tenant_id", "user_id", "queue", "session_ids"}
         self._lock = asyncio.Lock()
 
     async def connect(self, client_id: str, websocket: WebSocket, tenant_id: str, user_id: str):
-        q: asyncio.Queue = asyncio.Queue(maxsize=500)
+        q = thread_queue.Queue(maxsize=500)
+        notify = asyncio.Event()
+        loop = asyncio.get_event_loop()
         async with self._lock:
             self._connections[client_id] = {
                 "ws": websocket,
                 "tenant_id": tenant_id,
                 "user_id": user_id,
                 "queue": q,
+                "notify": notify,
+                "loop": loop,
                 "session_ids": set(),
             }
         log.info("[WS] Client connected: %s (tenant=%s, user=%s)", client_id, tenant_id, user_id)
@@ -52,8 +56,7 @@ class ConnectionManager:
         self, event_type: str, payload: dict,
         tenant_id: str | None = None, session_id: str | None = None,
     ):
-        """Fan-out event. Delivers to clients matching tenant_id OR subscribed to session_id.
-        Thread-safe: asyncio.Queue.put_nowait is safe from any thread."""
+        """Called from ANY thread. Thread-safe via stdlib Queue + call_soon_threadsafe."""
         evt = {"event": event_type, "data": payload, "ts": datetime.now(timezone.utc).isoformat()}
         dead = []
         delivered: set[str] = set()
@@ -70,8 +73,11 @@ class ConnectionManager:
             if should_deliver and cid not in delivered:
                 try:
                     entry["queue"].put_nowait(evt)
+                    entry["loop"].call_soon_threadsafe(entry["notify"].set)
                     delivered.add(cid)
-                except asyncio.QueueFull:
+                except thread_queue.Full:
+                    dead.append(cid)
+                except RuntimeError:
                     dead.append(cid)
         for cid in dead:
             self._connections.pop(cid, None)
@@ -132,15 +138,24 @@ async def websocket_endpoint(websocket: WebSocket, token: str = ""):
             return
         ws = entry["ws"]
         q = entry["queue"]
+        notify = entry["notify"]
         try:
             while True:
                 try:
-                    evt = await asyncio.wait_for(q.get(), timeout=25.0)
-                    if ws.client_state == WebSocketState.CONNECTED:
-                        await ws.send_json(evt)
+                    await asyncio.wait_for(notify.wait(), timeout=25.0)
+                    notify.clear()
                 except asyncio.TimeoutError:
                     if ws.client_state == WebSocketState.CONNECTED:
                         await ws.send_json({"event": "keepalive", "ts": datetime.now(timezone.utc).isoformat()})
+                    continue
+                # Drain all queued events
+                while True:
+                    try:
+                        evt = q.get_nowait()
+                        if ws.client_state == WebSocketState.CONNECTED:
+                            await ws.send_json(evt)
+                    except thread_queue.Empty:
+                        break
         except (WebSocketDisconnect, RuntimeError, OSError):
             pass
 

@@ -377,11 +377,6 @@ class DashboardService:
         self._ws_manager = None  # Set from app lifespan
         self._cancel_events: dict[str, threading.Event] = {}  # task_id -> cancel signal
         self._session_locks: dict[str, threading.Lock] = {}  # session_id -> serialize being calls
-        from concurrent.futures import ThreadPoolExecutor
-        self._llm_pool = ThreadPoolExecutor(
-            max_workers=int(os.getenv("BOMBA_MAX_CONCURRENT_LLM", "5")),
-            thread_name_prefix="llm",
-        )
         self._ensure_schema()
         self._sanitize_stored_paths()
 
@@ -1480,10 +1475,17 @@ class DashboardService:
                 if lock:
                     acquired = lock.acquire(blocking=False)
                     if not acquired:
+                        # Show what's happening — check for active task
+                        _active_task = self.db.execute(
+                            "SELECT title FROM project_tasks WHERE tenant_id = (SELECT tenant_id FROM mc_users WHERE id = ? LIMIT 1) AND status = 'in_progress' LIMIT 1",
+                            (sender,),
+                        ).fetchone()
+                        if _active_task:
+                            _busy_msg = f"I'm still working on: **{_active_task['title'][:80]}**. Please wait for my response."
+                        else:
+                            _busy_msg = "I'm still processing your previous message. Please wait for my response."
                         self.create_message(
-                            sender=being_id,
-                            content="I'm still working on your previous message. "
-                                    "Please wait for my response before sending another.",
+                            sender=being_id, content=_busy_msg,
                             targets=[sender], msg_type="direct", session_id=chat_session_id,
                         )
                         return
@@ -1594,8 +1596,12 @@ class DashboardService:
             if not doc_text:
                 return content
 
-            if len(doc_text) > 100_000:
-                doc_text = doc_text[:100_000] + "\n\n[... document truncated at 100K chars ...]"
+            # Code files get 200K limit (they compress well in LLM context)
+            fmt = extracted.get("format", "")
+            code_formats = {"php", "py", "js", "jsx", "ts", "tsx", "sql", "sh", "css", "html"}
+            char_limit = 200_000 if fmt in code_formats else 100_000
+            if len(doc_text) > char_limit:
+                doc_text = doc_text[:char_limit] + f"\n\n[... document truncated at {char_limit // 1000}K chars ...]"
 
             return (
                 f'<uploaded_document filename="{filename}" format="{extracted.get("format", "")}">\n'
@@ -1798,20 +1804,7 @@ class DashboardService:
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT", "600"))
-            future = self._llm_pool.submit(self.bridge.handle_turn, req)
-            try:
-                result = future.result(timeout=_timeout)
-            except FuturesTimeout:
-                future.cancel()
-                log.warning("[LLM-TIMEOUT] handle_turn timed out for %s (%ds)", being_id, _timeout)
-                result = {"assistant": {"text": (
-                    "This task took too long and was stopped after "
-                    f"{_timeout // 60} minutes. The work may be partially complete. "
-                    "Please try again with a simpler request, or break it into smaller steps."
-                )}, "stopped_reason": "timeout"}
-                error_occurred = True
+            result = self.bridge.handle_turn(req)
             # handle_turn returns {"assistant": {"text": "..."}, ...}
             reply = ""
             msg_metadata: dict | None = None
@@ -2007,20 +2000,7 @@ class DashboardService:
                 on_progress=_on_progress,
                 include_representation=_inc_rep,
             )
-            from concurrent.futures import TimeoutError as FuturesTimeout
-            _timeout = int(os.getenv("BOMBA_LLM_TIMEOUT_TASK", "1200"))
-            future = self._llm_pool.submit(self.bridge.handle_turn, req)
-            try:
-                result = future.result(timeout=_timeout)
-            except FuturesTimeout:
-                future.cancel()
-                log.warning("[LLM-TIMEOUT] full_task handle_turn timed out for %s (%ds)", being_id, _timeout)
-                result = {"assistant": {"text": (
-                    "This task took too long and was stopped after "
-                    f"{_timeout // 60} minutes. The work may be partially complete. "
-                    "Please try again with a simpler request, or break it into smaller steps."
-                )}, "stopped_reason": "timeout"}
-                error_occurred = True
+            result = self.bridge.handle_turn(req)
             if isinstance(result, dict):
                 assistant = result.get("assistant")
                 if isinstance(assistant, dict):

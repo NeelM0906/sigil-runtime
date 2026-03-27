@@ -253,6 +253,38 @@ export const authApi = {
   }),
 }
 
+// ── Workspace API ──────────────────────────────────────────
+
+export const workspaceApi = {
+  files(beingId = 'recovery') {
+    return request(`/api/mc/workspace/files?being_id=${beingId}`)
+  },
+  preview(beingId, filename, maxChars = 8000) {
+    return request(`/api/mc/workspace/files/preview?being_id=${beingId}&filename=${encodeURIComponent(filename)}&max_chars=${maxChars}`)
+  },
+  deleteFile(beingId, filename) {
+    return request(`/api/mc/workspace/files?being_id=${beingId}&filename=${encodeURIComponent(filename)}`, { method: 'DELETE' })
+  },
+  upload(beingId, files) {
+    const formData = new FormData()
+    formData.append('being_id', beingId)
+    for (const f of files) formData.append('files', f)
+    const headers = {}
+    try {
+      const stored = localStorage.getItem('mc_auth')
+      if (stored) {
+        const { token } = JSON.parse(stored)
+        if (token) headers['Authorization'] = `Bearer ${token}`
+      }
+    } catch { /* ignore */ }
+    return fetch('/api/mc/workspace/upload', { method: 'POST', headers, body: formData })
+      .then(res => {
+        if (!res.ok) throw new Error('Upload failed')
+        return res.json()
+      })
+  },
+}
+
 // ── ACT-I Architecture API ──────────────────────────────────
 
 export const actiApi = {
