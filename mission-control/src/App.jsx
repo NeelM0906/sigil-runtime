@@ -14,6 +14,7 @@ import { TeamPage } from './components/TeamPage'
 import { ProjectsHub } from './components/ProjectsHub'
 import { SkillsPage } from './components/SkillsPage'
 import { CronPanel } from './components/CronPanel'
+import { WorkspaceManager } from './components/WorkspaceManager'
 import { SessionProvider } from './context/SessionContext'
 
 const TABS = [
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'projects', label: 'Projects' },
   { id: 'chat', label: 'Comms' },
   { id: 'team', label: 'Team' },
+  { id: 'workspace', label: 'Workspace' },
   { id: 'skills', label: 'Skills' },
 ]
 
@@ -70,6 +72,9 @@ function Dashboard() {
           </div>
           <div style={show('team')}>
             <TeamPage />
+          </div>
+          <div style={show('workspace')}>
+            <WorkspaceManager />
           </div>
           <div style={show('skills')}>
             <SkillsPage />
