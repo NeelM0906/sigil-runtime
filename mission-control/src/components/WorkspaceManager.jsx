@@ -3,13 +3,14 @@ import { workspaceApi } from '../api'
 import { useBeings } from '../context/BeingsContext'
 
 const CATEGORY_ICONS = {
-  document: '\u{1F4C4}',
-  spreadsheet: '\u{1F4CA}',
-  image: '\u{1F5BC}',
-  code: '\u{1F4BB}',
-  text: '\u{1F4DD}',
-  data: '\u{1F4E6}',
-  other: '\u{1F4CE}',
+  document: 'DOC',
+  spreadsheet: 'XLS',
+  image: 'IMG',
+  code: '</>',
+  text: 'TXT',
+  data: 'DAT',
+  video: 'VID',
+  other: 'FILE',
 }
 
 const CATEGORY_COLORS = {
@@ -19,6 +20,7 @@ const CATEGORY_COLORS = {
   code: 'text-accent-cyan',
   text: 'text-text-secondary',
   data: 'text-accent-amber',
+  video: 'text-accent-orange',
   other: 'text-text-muted',
 }
 
@@ -93,6 +95,16 @@ export function WorkspaceManager() {
     setPreviewLoading(true)
     try {
       const data = await workspaceApi.preview(selectedBeing, filename)
+      // Append auth token to media URLs so <img>/<video> can load them
+      if (data.media_url) {
+        try {
+          const stored = localStorage.getItem('mc_auth')
+          if (stored) {
+            const { token } = JSON.parse(stored)
+            if (token) data.media_url += `&token=${encodeURIComponent(token)}`
+          }
+        } catch { /* ignore */ }
+      }
       setPreview(data)
     } catch (err) {
       setPreview({ filename, preview: null, message: 'Failed to load preview' })
@@ -218,9 +230,21 @@ export function WorkspaceManager() {
               Close
             </button>
           </div>
-          <div className="p-3 max-h-[500px] overflow-auto">
+          <div className="p-3 max-h-[600px] overflow-auto">
             {previewLoading ? (
               <div className="text-xs text-text-muted">Loading preview...</div>
+            ) : preview.media_url && preview.category === 'image' ? (
+              <img
+                src={preview.media_url}
+                alt={preview.filename}
+                className="max-w-full max-h-[500px] rounded object-contain mx-auto"
+              />
+            ) : preview.media_url && preview.category === 'video' ? (
+              <video
+                src={preview.media_url}
+                controls
+                className="max-w-full max-h-[500px] rounded mx-auto"
+              />
             ) : preview.preview ? (
               <pre className="text-[11px] text-text-secondary font-mono whitespace-pre-wrap break-words leading-relaxed">
                 {preview.preview}

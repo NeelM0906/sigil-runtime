@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, Query
 
 from bomba_sr.api.deps import get_current_user, get_dashboard_svc
 
@@ -22,7 +22,7 @@ ALLOWED_EXTENSIONS = {
     ".sql", ".json", ".xml", ".yaml", ".yml",
     ".sh", ".bash", ".css", ".scss",
 }
-MAX_SIZE = 50 * 1024 * 1024
+MAX_SIZE = 500 * 1024 * 1024  # 500MB
 
 EXT_CATEGORIES = {
     ".pdf": "document", ".docx": "document", ".pptx": "document",
@@ -33,6 +33,7 @@ EXT_CATEGORIES = {
     ".ts": "code", ".tsx": "code", ".sql": "code", ".json": "data",
     ".xml": "data", ".yaml": "data", ".yml": "data",
     ".sh": "code", ".bash": "code", ".css": "code", ".scss": "code",
+    ".mp4": "video", ".mov": "video", ".webm": "video", ".avi": "video",
 }
 
 
@@ -128,13 +129,13 @@ def preview_workspace_file(
     ext = target.suffix.lower()
     category = EXT_CATEGORIES.get(ext, "other")
 
-    # Images — no text preview
-    if category == "image":
+    # Images & videos — return a URL for inline preview
+    if category in ("image", "video"):
         return {
             "filename": filename,
             "category": category,
             "preview": None,
-            "message": "Image files cannot be previewed as text.",
+            "media_url": f"/api/mc/workspace/files/raw?being_id={being_id}&filename={filename}",
         }
 
     # Try extraction for documents
@@ -164,6 +165,43 @@ def preview_workspace_file(
     except Exception as exc:
         return {"filename": filename, "category": category, "preview": None,
                 "message": f"Read error: {exc}"}
+
+
+@router.get("/files/raw")
+def serve_workspace_file(
+    being_id: str = Query(...),
+    filename: str = Query(...),
+    token: str = Query(""),
+    request: Request = None,
+    dashboard_svc=Depends(get_dashboard_svc),
+):
+    """Serve a raw workspace file. Accepts auth via header or ?token= query param."""
+    from fastapi.responses import FileResponse
+
+    # Auth: try header first, then query param
+    auth_header = ""
+    if request:
+        auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer ") and not token:
+        raise HTTPException(401, "Unauthorized")
+    check_token = token if token else auth_header[7:]
+    row = dashboard_svc.db.execute(
+        "SELECT user_id FROM mc_sessions_auth WHERE token = ?", (check_token,)
+    ).fetchone()
+    if not row:
+        raise HTTPException(401, "Unauthorized")
+
+    uploads = _get_workspace_uploads(dashboard_svc, being_id)
+    if not uploads:
+        raise HTTPException(404, "Workspace not found")
+
+    target = uploads / filename
+    if ".." in filename or not target.resolve().is_relative_to(uploads.resolve()):
+        raise HTTPException(400, "Invalid filename")
+    if not target.exists():
+        raise HTTPException(404, f"File not found: {filename}")
+
+    return FileResponse(str(target), filename=filename)
 
 
 @router.post("/upload")
@@ -204,13 +242,7 @@ def upload_to_workspace(
 
     for file in files:
         contents = file.file.read()
-        if len(contents) > MAX_SIZE:
-            errors.append({"filename": file.filename, "error": "File too large (max 50MB)"})
-            continue
         ext = Path(file.filename or "").suffix.lower()
-        if ext not in ALLOWED_EXTENSIONS:
-            errors.append({"filename": file.filename, "error": f"Unsupported type: {ext}"})
-            continue
 
         # Save to workspace
         dest = uploads / (file.filename or f"upload{ext}")
