@@ -1475,10 +1475,17 @@ class DashboardService:
                 if lock:
                     acquired = lock.acquire(blocking=False)
                     if not acquired:
+                        # Show what's happening — check for active task
+                        _active_task = self.db.execute(
+                            "SELECT title FROM project_tasks WHERE tenant_id = (SELECT tenant_id FROM mc_users WHERE id = ? LIMIT 1) AND status = 'in_progress' LIMIT 1",
+                            (sender,),
+                        ).fetchone()
+                        if _active_task:
+                            _busy_msg = f"I'm still working on: **{_active_task['title'][:80]}**. Please wait for my response."
+                        else:
+                            _busy_msg = "I'm still processing your previous message. Please wait for my response."
                         self.create_message(
-                            sender=being_id,
-                            content="I'm still working on your previous message. "
-                                    "Please wait for my response before sending another.",
+                            sender=being_id, content=_busy_msg,
                             targets=[sender], msg_type="direct", session_id=chat_session_id,
                         )
                         return
